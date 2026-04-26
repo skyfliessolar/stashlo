@@ -311,11 +311,20 @@ html,body{font-family:var(--font);background:var(--bg);color:var(--text);height:
   <div class="s-hdr"><div class="s-row"><div class="s-title">Settings</div></div></div>
   <div class="set-body">
     <div class="set-sec">
-      <div class="set-sec-t">Location</div>
+      <div class="set-sec-t">Location & notifications</div>
       <div class="set-item">
         <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
         <div style="flex:1"><div class="si-n">Location detection</div><div class="si-s">Auto-open cards when nearby</div></div>
         <div class="tog" id="loc-tog" onclick="toggleLoc()"><div class="tog-th"></div></div>
+      </div>
+      <div class="set-item" onclick="enableNotifs()">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></div>
+        <div style="flex:1"><div class="si-n">Push notifications</div><div class="si-s" id="notif-status">Tap to enable — get alerted near stores</div></div>
+        <div class="tog" id="notif-tog"><div class="tog-th"></div></div>
+      </div>
+      <div class="set-item" onclick="openReminderModal()">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div style="flex:1"><div class="si-n">Daily reminder</div><div class="si-s" id="reminder-status">Get a morning reminder before you shop</div></div>
       </div>
     </div>
     <div class="set-sec">
@@ -363,6 +372,20 @@ html,body{font-family:var(--font);background:var(--bg);color:var(--text);height:
   </div>
 </div>
 
+
+<div id="remind-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:210;display:none;align-items:flex-end">
+  <div class="lm-sheet">
+    <div class="n-pill"></div>
+    <div class="lm-t">Daily reminder</div>
+    <div class="lm-s">We'll send a notification at this time each day you have Stashlo installed — handy before your morning shop.</div>
+    <div class="fl">
+      <div class="fl-lbl">Reminder time</div>
+      <input type="time" id="remind-time" value="08:30" style="width:100%;padding:13px 16px;background:var(--surface);border:1.5px solid rgba(0,0,0,.1);border-radius:var(--rs);font-size:18px;font-family:var(--mono);color:var(--text);outline:none">
+    </div>
+    <button class="btn-p" onclick="saveReminder()" style="background:var(--dark)">Set reminder</button>
+    <button class="btn-g" onclick="document.getElementById('remind-modal').style.display='none'" style="margin-top:8px">Cancel</button>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -392,8 +415,8 @@ const BRANDS=[
 
 let S={cards:[],history:[],locOn:false,watchId:null},CUR=null,tmpLat=null,tmpLng=null,mLat=null,mLng=null,selBrand=null,notifId=null,notifTime=0;
 
-function save(){try{localStorage.setItem('sl',JSON.stringify({cards:S.cards,history:S.history,locOn:S.locOn}))}catch(e){}}
-function load(){try{const d=JSON.parse(localStorage.getItem('sl')||'{}');S.cards=d.cards||[];S.history=d.history||[];S.locOn=d.locOn||false}catch(e){}}
+function save(){try{localStorage.setItem('sl',JSON.stringify({cards:S.cards,history:S.history,locOn:S.locOn,notifsOn:S.notifsOn,reminderTime:S.reminderTime}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem('sl')||'{}');S.cards=d.cards||[];S.history=d.history||[];S.locOn=d.locOn||false;S.notifsOn=d.notifsOn||false;S.reminderTime=d.reminderTime||null}catch(e){}}
 
 const MAIN=['home','near','hist','set'];
 function go(sc){
@@ -488,7 +511,7 @@ function renderHist(){
   list.innerHTML=S.history.map(h=>{const d=new Date(h.ts);const w=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+' · '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});return`<div class="h-item"><div class="h-init" style="background:${h.color}">${h.init}</div><div style="flex:1"><div class="h-name">${h.name}</div><div class="h-loc">📍 ${h.loc}</div><div class="h-when">${w}</div></div>${h.auto?'<div class="h-auto">Auto</div>':''}</div>`;}).join('');
 }
 
-function applySet(){document.getElementById('loc-tog').classList.toggle('on',S.locOn);}
+function applySet(){document.getElementById('loc-tog').classList.toggle('on',S.locOn);updateNotifUI();}
 function toggleLoc(){S.locOn=!S.locOn;save();applySet();if(S.locOn)startWatch();else stopWatch();toast(S.locOn?'Location on':'Location off');renderNear();}
 function clearAll(){if(confirm('Delete everything?')){S.cards=[];S.history=[];save();renderHome();toast('Cleared');}}
 
@@ -499,17 +522,130 @@ function stopWatch(){if(S.watchId){navigator.geolocation.clearWatch(S.watchId);S
 
 function checkFences(lat,lng){if(Date.now()-notifTime<90000)return;for(const c of S.cards){if(!c.lat||!c.lng)continue;const d=haversine(lat,lng,c.lat,c.lng);if(d<200&&notifId!==c.id){notifId=c.id;notifTime=Date.now();showNotif(c,Math.round(d));return;}}notifId=null;}
 
-function showNotif(c,dist){document.getElementById('n-brand').textContent=c.name;document.getElementById('n-loc').textContent=c.locationName||'Nearby';document.getElementById('n-dist').textContent=dist+'m away';document.getElementById('notif').style.display='flex';document.getElementById('n-open').onclick=()=>{document.getElementById('notif').style.display='none';openCard(c.id,true);};document.getElementById('n-dis').onclick=()=>{document.getElementById('notif').style.display='none';};}
+function showNotif(c,dist){
+  document.getElementById('n-brand').textContent=c.name;
+  document.getElementById('n-loc').textContent=c.locationName||'Nearby';
+  document.getElementById('n-dist').textContent=dist+'m away';
+  document.getElementById('notif').style.display='flex';
+  document.getElementById('n-open').onclick=()=>{document.getElementById('notif').style.display='none';openCard(c.id,true);};
+  document.getElementById('n-dis').onclick=()=>{document.getElementById('notif').style.display='none';};
+  if('serviceWorker' in navigator && 'Notification' in window && Notification.permission==='granted'){
+    navigator.serviceWorker.ready.then(reg=>{
+      reg.showNotification('Stashlo — '+c.name,{
+        body:'📍 You are '+dist+'m from '+c.locationName+'. Your card is ready.',
+        icon:'icon-192.png',
+        badge:'icon-192.png',
+        tag:'sl-loc-'+c.id,
+        renotify:true,
+        data:{cardId:c.id},
+        actions:[{action:'open',title:'Open card'}]
+      });
+    }).catch(()=>{});
+  }
+};document.getElementById('n-dis').onclick=()=>{document.getElementById('notif').style.display='none';};}
 
 let tTimer;function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(tTimer);tTimer=setTimeout(()=>t.classList.remove('on'),2800);}
 
-function onStart(){if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>{S.locOn=true;save();startWatch();go('home');},()=>go('home'),{enableHighAccuracy:true,timeout:8000});}else go('home');}
+
+async function enableNotifs(){
+  if(!('Notification' in window)){toast('Notifications not supported on this device');return;}
+  const p=await Notification.requestPermission();
+  const tog=document.getElementById('notif-tog');
+  const status=document.getElementById('notif-status');
+  if(p==='granted'){
+    tog.classList.add('on');
+    status.textContent='Enabled — you'll be alerted near stores';
+    toast('Notifications enabled ✓');
+    S.notifsOn=true;save();
+  } else {
+    tog.classList.remove('on');
+    status.textContent='Blocked — enable in phone Settings → Safari → Notifications';
+    toast('Permission denied — check Settings');
+    S.notifsOn=false;save();
+  }
+}
+
+function openReminderModal(){
+  if(Notification.permission!=='granted'){toast('Enable notifications first');enableNotifs();return;}
+  if(S.reminderTime)document.getElementById('remind-time').value=S.reminderTime;
+  document.getElementById('remind-modal').style.display='flex';
+}
+
+function saveReminder(){
+  const t=document.getElementById('remind-time').value;
+  S.reminderTime=t;save();
+  scheduleReminder(t);
+  document.getElementById('remind-modal').style.display='none';
+  document.getElementById('reminder-status').textContent='Daily at '+t+' ✓';
+  toast('Reminder set for '+t+' daily ✓');
+}
+
+function scheduleReminder(timeStr){
+  if(!('serviceWorker' in navigator)||Notification.permission!=='granted')return;
+  navigator.serviceWorker.ready.then(reg=>{
+    const [hh,mm]=timeStr.split(':').map(Number);
+    const now=new Date();
+    const next=new Date();
+    next.setHours(hh,mm,0,0);
+    if(next<=now)next.setDate(next.getDate()+1);
+    const delay=next-now;
+    // Store reminder in SW via postMessage
+    if(reg.active){
+      reg.active.postMessage({type:'SCHEDULE_REMINDER',time:timeStr,delay});
+    }
+    toast('Next reminder in '+Math.round(delay/3600000)+'h');
+  });
+}
+
+function updateNotifUI(){
+  const tog=document.getElementById('notif-tog');
+  const status=document.getElementById('notif-status');
+  if(!tog||!status)return;
+  const granted=Notification.permission==='granted';
+  tog.classList.toggle('on',granted);
+  status.textContent=granted
+    ?'Enabled — you'll be alerted near stores'
+    :('Notification' in window?'Tap to enable':'Not supported on this browser');
+  if(S.reminderTime){
+    const rs=document.getElementById('reminder-status');
+    if(rs)rs.textContent='Daily at '+S.reminderTime+' ✓';
+  }
+}
+async function askNotifPerm(){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='default'){
+    const p=await Notification.requestPermission();
+    if(p==='granted') toast('Notifications enabled ✓');
+  }
+}
+
+function onStart(){
+  askNotifPerm();
+  if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>{S.locOn=true;save();startWatch();go('home');},()=>go('home'),{enableHighAccuracy:true,timeout:8000});}else go('home');
+}
 
 window.addEventListener('load',()=>{
   load();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      // Handle notification clicks from SW
+      navigator.serviceWorker.addEventListener('message',e=>{
+        if(e.data?.type==='OPEN_CARD'&&e.data.cardId){
+          openCard(e.data.cardId,false);
+        }
+      });
+      // Re-schedule reminder if set
+      if(S.reminderTime&&Notification.permission==='granted'){
+        scheduleReminder(S.reminderTime);
+      }
+    }).catch(()=>{});
+  }
   const seen=localStorage.getItem('sl_seen');
-  if(seen){go('home');}else{localStorage.setItem('sl_seen','1');}
+  if(seen){go('home');}else{
+    localStorage.setItem('sl_seen','1');
+    // Ask notification permission after 2s on first launch
+    setTimeout(()=>askNotifPerm(),2000);
+  }
   if(S.locOn)startWatch();
   renderBrands(BRANDS);
 });
