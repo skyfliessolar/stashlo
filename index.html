@@ -5,1232 +5,513 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0a0a14">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stashlo">
-<title>Stashlo — Smart Loyalty Wallet</title>
+<title>Stashlo</title>
 <link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <style>
-:root{
-  --bg:#f0efff;--surface:#fff;--dark:#0a0a14;--accent:#00897B;--accent-light:#4DB6AC;
-  --text:#1a1a2e;--muted:#706f87;--nav-h:68px;
-  --st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px);
-  --font:'Plus Jakarta Sans',system-ui,sans-serif;--mono:'DM Mono','Courier New',monospace;
-  --r:20px;--rs:12px;--rx:8px;
-}
+:root{--bg:#f0efff;--dark:#0a0a14;--accent:#00897B;--surface:#fff;--text:#1a1a2e;--muted:#706f87;--nav:68px;--r:20px;--rs:12px;--font:'Plus Jakarta Sans',system-ui,sans-serif;--mono:'DM Mono',monospace}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{font-family:var(--font);background:var(--bg);color:var(--text);height:100%;overflow:hidden;user-select:none;-webkit-user-select:none}
+html,body{font-family:var(--font);background:var(--bg);color:var(--text);height:100%;overflow:hidden;-webkit-user-select:none;user-select:none}
 #app{position:relative;width:100%;height:100dvh;overflow:hidden}
-.screen{position:absolute;inset:0;display:none;flex-direction:column;background:var(--bg);overflow:hidden}
-.screen.active{display:flex;animation:fadeIn .2s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;background:var(--bg)}
+.screen.on{display:flex;animation:fi .2s ease}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
 
 /* SPLASH */
-#screen-splash{background:var(--dark);align-items:center;justify-content:center;gap:0;padding:40px 32px}
-.splash-logo{width:84px;height:84px;background:var(--accent);border-radius:24px;display:flex;align-items:center;justify-content:center;margin-bottom:24px}
-.splash-logo svg{width:46px;height:46px}
-.splash-title{font-size:40px;font-weight:800;color:#fff;letter-spacing:-1.5px;margin-bottom:10px}
-.splash-sub{font-size:15px;color:rgba(255,255,255,.5);text-align:center;line-height:1.75;max-width:260px;margin-bottom:36px}
-.btn-primary{width:100%;padding:16px;background:var(--accent);color:#fff;border:none;border-radius:var(--rs);font-family:var(--font);font-size:16px;font-weight:700;cursor:pointer;transition:opacity .15s;margin-bottom:10px}
-.btn-primary:active{opacity:.85}
-.btn-ghost{width:100%;padding:14px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.12);border-radius:var(--rs);font-family:var(--font);font-size:15px;cursor:pointer}
-.btn-ghost:active{opacity:.75}
+#s-splash{background:var(--dark);align-items:center;justify-content:center;padding:40px 32px;gap:0}
+.logo{width:80px;height:80px;background:var(--accent);border-radius:22px;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.logo svg{width:44px;height:44px}
+.app-name{font-size:42px;font-weight:800;color:#fff;letter-spacing:-1.5px;margin-bottom:10px}
+.tagline{font-size:15px;color:rgba(255,255,255,.5);text-align:center;line-height:1.7;max-width:260px;margin-bottom:32px}
+.btn-p{width:100%;padding:16px;background:var(--accent);color:#fff;border:none;border-radius:var(--rs);font-family:var(--font);font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px}
+.btn-g{width:100%;padding:14px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.65);border:1px solid rgba(255,255,255,.15);border-radius:var(--rs);font-family:var(--font);font-size:15px;cursor:pointer}
 
-/* HOME HEADER */
-#screen-home{padding-bottom:var(--nav-h)}
-.home-hdr{padding:calc(var(--st) + 20px) 20px 16px;background:var(--dark);flex-shrink:0}
-.home-greeting{font-size:13px;color:rgba(255,255,255,.45);font-weight:500;margin-bottom:2px}
-.home-title-row{display:flex;align-items:center;justify-content:space-between}
-.home-title{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px}
-.loc-dot{width:9px;height:9px;border-radius:50%;background:#555;transition:background .4s}
-.loc-dot.on{background:#00e676;box-shadow:0 0 0 3px rgba(0,230,118,.2)}
-.loc-dot.off{background:#ff5252}
-.home-count{font-size:12px;color:rgba(255,255,255,.35);margin-top:4px}
-
-/* CARDS SCROLL */
-.cards-scroll{flex:1;overflow-y:auto;padding:16px 20px;-webkit-overflow-scrolling:touch}
-.card-item{background:var(--surface);border-radius:var(--r);overflow:hidden;margin-bottom:14px;box-shadow:0 2px 14px rgba(0,0,0,.07);cursor:pointer;transition:transform .15s;position:relative}
+/* HOME */
+#s-home{padding-bottom:var(--nav)}
+.home-hdr{padding:calc(env(safe-area-inset-top,0px) + 20px) 20px 16px;background:var(--dark);flex-shrink:0}
+.greet{font-size:13px;color:rgba(255,255,255,.45);margin-bottom:2px}
+.h-row{display:flex;align-items:center;justify-content:space-between}
+.h-title{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px}
+.ldot{width:9px;height:9px;border-radius:50%;background:#555;transition:background .4s}
+.ldot.on{background:#00e676;box-shadow:0 0 0 3px rgba(0,230,118,.2)}
+.h-sub{font-size:12px;color:rgba(255,255,255,.35);margin-top:4px}
+.scroll{flex:1;overflow-y:auto;padding:16px 20px;-webkit-overflow-scrolling:touch}
+.card-item{background:var(--surface);border-radius:var(--r);overflow:hidden;margin-bottom:14px;box-shadow:0 2px 14px rgba(0,0,0,.07);cursor:pointer;transition:transform .15s}
 .card-item:active{transform:scale(.98)}
-.card-top{padding:16px 18px 12px;display:flex;align-items:center;gap:12px}
-.card-init{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;font-family:var(--mono)}
-.card-info{flex:1;min-width:0}
-.card-name{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card-num-prev{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px}
-.card-loc-tag{display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:var(--accent);background:#E0F2F1;padding:4px 8px;border-radius:20px;flex-shrink:0;white-space:nowrap}
-.card-bar{height:3px}
-.card-footer{padding:8px 18px;font-size:11px;color:var(--muted);background:#fafafa;border-top:1px solid rgba(0,0,0,.04)}
-.empty-state{text-align:center;padding:64px 32px}
-.empty-icon{width:64px;height:64px;background:#E0F2F1;border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
-.empty-icon svg{width:32px;height:32px;fill:var(--accent)}
-.empty-title{font-size:19px;font-weight:700;color:var(--text);margin-bottom:8px}
-.empty-sub{font-size:14px;color:var(--muted);line-height:1.65}
+.c-bar{height:3px}
+.c-top{padding:16px 18px 12px;display:flex;align-items:center;gap:12px}
+.c-init{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;font-family:var(--mono)}
+.c-name{font-size:15px;font-weight:600;color:var(--text)}
+.c-num{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.c-loc{font-size:10px;font-weight:600;color:var(--accent);background:#E0F2F1;padding:4px 8px;border-radius:20px;margin-left:auto;flex-shrink:0}
+.c-foot{padding:8px 18px;font-size:11px;color:var(--muted);background:#fafafa;border-top:1px solid rgba(0,0,0,.04)}
+.empty{text-align:center;padding:60px 28px}
+.e-icon{width:64px;height:64px;background:#E0F2F1;border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+.e-icon svg{width:32px;height:32px;fill:var(--accent)}
+.e-t{font-size:19px;font-weight:700;color:var(--text);margin-bottom:8px}
+.e-s{font-size:14px;color:var(--muted);line-height:1.65}
 
 /* FAB */
-.fab{position:fixed;bottom:calc(var(--nav-h) + 16px + var(--sb));right:20px;width:58px;height:58px;border-radius:18px;background:var(--accent);color:#fff;border:none;font-size:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 24px rgba(108,92,231,.4);z-index:50;transition:transform .15s;line-height:1}
+.fab{position:fixed;bottom:calc(var(--nav) + 16px + env(safe-area-inset-bottom,0px));right:20px;width:56px;height:56px;border-radius:18px;background:var(--accent);color:#fff;border:none;font-size:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 24px rgba(0,137,123,.4);z-index:50;transition:transform .15s;line-height:1}
 .fab:active{transform:scale(.9)}
 
-/* BOTTOM NAV */
-#bottom-nav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--nav-h) + var(--sb));padding-bottom:var(--sb);background:var(--surface);border-top:1px solid rgba(0,0,0,.07);display:flex;align-items:flex-start;padding-top:8px;z-index:100}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 0;border:none;background:none;font-family:var(--font);color:#bbb;transition:color .15s}
-.nav-item.active{color:var(--accent)}
-.nav-item svg{width:22px;height:22px}
-.nav-label{font-size:10px;font-weight:700;letter-spacing:.3px}
+/* NAV */
+#nav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--nav) + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);background:var(--surface);border-top:1px solid rgba(0,0,0,.07);display:flex;align-items:flex-start;padding-top:8px;z-index:100}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border:none;background:none;font-family:var(--font);color:#bbb;padding:4px 0;transition:color .15s}
+.ni.on{color:var(--accent)}
+.ni svg{width:22px;height:22px}
+.ni span{font-size:10px;font-weight:700;letter-spacing:.3px}
 
 /* SCREEN HEADER */
-.scr-hdr{padding:calc(var(--st) + 16px) 20px 14px;background:var(--surface);border-bottom:1px solid rgba(0,0,0,.06);flex-shrink:0}
-.hdr-row{display:flex;align-items:center;gap:12px}
-.hdr-back{width:36px;height:36px;border-radius:50%;background:var(--bg);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-.hdr-back svg{width:20px;height:20px;stroke:var(--text);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.hdr-title{font-size:19px;font-weight:700;color:var(--text);flex:1}
-.hdr-badge{font-size:12px;font-weight:600;color:var(--accent);background:#E0F2F1;padding:4px 10px;border-radius:20px}
+.s-hdr{padding:calc(env(safe-area-inset-top,0px)+16px) 20px 14px;background:var(--surface);border-bottom:1px solid rgba(0,0,0,.06);flex-shrink:0}
+.s-row{display:flex;align-items:center;gap:12px}
+.bk{width:36px;height:36px;border-radius:50%;background:var(--bg);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.bk svg{width:20px;height:20px;stroke:var(--text);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.s-title{font-size:19px;font-weight:700;flex:1}
+.s-badge{font-size:12px;font-weight:600;color:var(--accent);background:#E0F2F1;padding:4px 10px;border-radius:20px}
 
-/* ADD CARD */
-#screen-add{padding-bottom:0}
-.add-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.add-step{display:none}.add-step.active{display:block}
-.search-wrap{padding:14px 20px;background:var(--surface);border-bottom:1px solid rgba(0,0,0,.05)}
-.search-inp{width:100%;padding:11px 16px;background:var(--bg);border:1.5px solid rgba(108,92,231,.15);border-radius:var(--rs);font-family:var(--font);font-size:15px;color:var(--text);outline:none}
-.search-inp:focus{border-color:var(--accent)}
-.brands-section{padding:16px 20px}
-.brands-lbl{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px}
-.brands-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.brand-tile{background:var(--surface);border-radius:var(--rs);padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;border:1.5px solid transparent;transition:border-color .15s,transform .1s;box-shadow:0 1px 6px rgba(0,0,0,.05)}
-.brand-tile:active{transform:scale(.94)}
-.brand-tile.selected{border-color:var(--accent)}
-.brand-tile-dot{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--mono)}
-.brand-tile-name{font-size:10px;font-weight:600;color:var(--text);text-align:center;line-height:1.3}
-.card-details-wrap{padding:20px}
-.brand-preview{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:var(--rs);padding:14px 16px;margin-bottom:18px;border:1.5px solid rgba(108,92,231,.15)}
-.brand-prev-init{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--mono);flex-shrink:0}
-.brand-prev-name{font-size:15px;font-weight:600;color:var(--text);flex:1}
-.brand-prev-change{font-size:12px;color:var(--accent);font-weight:700;cursor:pointer}
-.field-grp{margin-bottom:18px}
-.field-lbl{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.3px;margin-bottom:7px;text-transform:uppercase}
-.field-inp{width:100%;padding:13px 16px;background:var(--surface);border:1.5px solid rgba(0,0,0,.1);border-radius:var(--rs);font-family:var(--mono);font-size:16px;color:var(--text);outline:none;transition:border-color .15s;letter-spacing:1px}
-.field-inp:focus{border-color:var(--accent)}
-.field-inp::placeholder{font-family:var(--font);color:#bbb;font-size:14px;letter-spacing:0}
-.loc-section{background:var(--surface);border-radius:var(--rs);padding:16px;margin-bottom:20px;border:1.5px solid rgba(0,0,0,.06)}
-.loc-section-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px}
-.loc-section-sub{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.55}
-.btn-loc{width:100%;padding:12px;background:#E0F2F1;color:var(--accent);border:none;border-radius:var(--rx);font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px}
-.btn-loc svg{width:15px;height:15px;fill:var(--accent)}
-.btn-loc:active{opacity:.8}
-.loc-set-ok{display:none;align-items:center;gap:8px;padding:10px 12px;background:#e6f9f1;border-radius:var(--rx);margin-top:8px;border:1px solid #a5d6c0}
-.loc-set-ok.show{display:flex}
-.loc-set-ok span{font-size:13px;color:#1b6b46;font-weight:500}
+/* ADD */
+#s-add{padding-bottom:0}
+.add-c{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.add-step{display:none}.add-step.on{display:block}
+.srch-w{padding:14px 20px;background:var(--surface);border-bottom:1px solid rgba(0,0,0,.05)}
+.srch{width:100%;padding:11px 16px;background:var(--bg);border:1.5px solid rgba(0,137,123,.2);border-radius:var(--rs);font-family:var(--font);font-size:15px;color:var(--text);outline:none}
+.srch:focus{border-color:var(--accent)}
+.b-sec{padding:16px 20px}
+.b-lbl{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px}
+.b-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.b-tile{background:var(--surface);border-radius:var(--rs);padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;border:1.5px solid transparent;transition:border-color .15s,transform .1s;box-shadow:0 1px 6px rgba(0,0,0,.05)}
+.b-tile:active{transform:scale(.94)}
+.b-tile.sel{border-color:var(--accent)}
+.b-dot{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--mono)}
+.b-name{font-size:10px;font-weight:600;color:var(--text);text-align:center;line-height:1.3}
+.det-w{padding:20px}
+.b-prev{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:var(--rs);padding:14px 16px;margin-bottom:18px;border:1.5px solid rgba(0,137,123,.15)}
+.p-init{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--mono);flex-shrink:0}
+.p-name{font-size:15px;font-weight:600;flex:1}
+.p-chg{font-size:12px;color:var(--accent);font-weight:700;cursor:pointer}
+.fl{margin-bottom:18px}
+.fl-lbl{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.3px;margin-bottom:7px;text-transform:uppercase}
+.fl-inp{width:100%;padding:13px 16px;background:var(--surface);border:1.5px solid rgba(0,0,0,.1);border-radius:var(--rs);font-family:var(--mono);font-size:16px;color:var(--text);outline:none;letter-spacing:1px}
+.fl-inp:focus{border-color:var(--accent)}
+.fl-inp::placeholder{font-family:var(--font);color:#bbb;font-size:14px;letter-spacing:0}
+.loc-box{background:var(--surface);border-radius:var(--rs);padding:16px;margin-bottom:20px;border:1.5px solid rgba(0,0,0,.06)}
+.loc-t{font-size:14px;font-weight:700;margin-bottom:3px}
+.loc-s{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.55}
+.loc-btn{width:100%;padding:12px;background:#E0F2F1;color:var(--accent);border:none;border-radius:8px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;margin-top:6px}
+.loc-ok{display:none;padding:8px 12px;background:#e6f9f1;border-radius:8px;margin-top:8px;font-size:12px;color:#1b6b46;font-weight:500}
+.loc-ok.on{display:block}
 
 /* CARD DETAIL */
-#screen-card{background:var(--dark)}
-.card-det-hdr{padding:calc(var(--st)+16px) 20px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0}
-.det-back{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.1);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.det-back svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.det-title{font-size:18px;font-weight:700;color:#fff;flex:1}
-.det-del{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.det-del svg{width:18px;height:18px;stroke:rgba(255,120,120,.8);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.card-display{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 20px 24px;overflow-y:auto;gap:14px}
-.card-visual{width:100%;background:var(--surface);border-radius:var(--r);overflow:hidden;flex-shrink:0}
-.card-vis-hdr{padding:18px 18px 14px;display:flex;align-items:center;gap:12px}
-.card-vis-init{width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;font-family:var(--mono)}
-.card-vis-name{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px}
-.card-vis-type{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}
-.card-bc-area{background:#fff;margin:0 16px 18px;border-radius:12px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:110px;justify-content:center}
-#card-bc-svg{max-width:100%}
-#card-qr-div{display:flex;justify-content:center}
-.card-num-disp{font-family:var(--mono);font-size:14px;color:#555;letter-spacing:2px;text-align:center;margin-top:4px}
-.card-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
-.card-stat{background:rgba(255,255,255,.07);border-radius:var(--rs);padding:14px;text-align:center}
+#s-card{background:var(--dark)}
+.cd-hdr{padding:calc(env(safe-area-inset-top,0px)+16px) 20px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.cd-bk{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.1);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.cd-bk svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cd-title{font-size:18px;font-weight:700;color:#fff;flex:1}
+.cd-del{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.cd-del svg{width:18px;height:18px;stroke:rgba(255,120,120,.8);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cd-body{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 20px 24px;overflow-y:auto;gap:14px}
+.card-vis{width:100%;background:var(--surface);border-radius:var(--r);overflow:hidden}
+.cv-hdr{padding:18px;display:flex;align-items:center;gap:12px}
+.cv-init{width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;font-family:var(--mono)}
+.cv-name{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.cv-type{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}
+.bc-area{background:#fff;margin:0 16px 18px;border-radius:12px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:110px;justify-content:center}
+.cd-num{font-family:var(--mono);font-size:14px;color:#555;letter-spacing:2px;text-align:center;margin-top:4px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.stat{background:rgba(255,255,255,.07);border-radius:var(--rs);padding:14px;text-align:center}
 .stat-v{font-size:20px;font-weight:800;color:#fff}
 .stat-l{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px}
-.card-loc-btn{width:100%;padding:14px;background:rgba(108,92,231,.2);border:1.5px solid rgba(108,92,231,.35);border-radius:var(--rs);color:var(--accent-light);font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
-.card-loc-btn svg{width:15px;height:15px;fill:var(--accent-light)}
-.auto-badge{display:flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(0,230,118,.1);border-radius:20px;font-size:12px;color:#00e676;font-weight:600;border:1px solid rgba(0,230,118,.2)}
-.auto-dot{width:6px;height:6px;border-radius:50%;background:#00e676;animation:pulse 1.5s infinite}
+.loc-btn2{width:100%;padding:14px;background:rgba(0,137,123,.2);border:1.5px solid rgba(0,137,123,.35);border-radius:var(--rs);color:#4DB6AC;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
 
 /* NEARBY */
-#screen-nearby{padding-bottom:var(--nav-h)}
-.nearby-hdr{padding:calc(var(--st)+20px) 20px 16px;background:var(--dark);flex-shrink:0}
-.nearby-status-card{background:rgba(255,255,255,.07);border-radius:var(--rs);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-top:12px}
-.nearby-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:#555;transition:background .3s}
-.nearby-dot.on{background:#00e676;box-shadow:0 0 0 4px rgba(0,230,118,.15)}
-.nearby-dot.off{background:#ff5252}
-.nearby-status-txt{font-size:13px;color:rgba(255,255,255,.65);flex:1}
-.nearby-action{font-size:12px;color:var(--accent-light);font-weight:700;cursor:pointer}
-.nearby-content{flex:1;overflow-y:auto;padding:20px}
-.nearby-card{background:var(--surface);border-radius:var(--rs);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:10px;cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.05)}
-.nearby-card:active{opacity:.8}
-.nearby-init{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--mono);flex-shrink:0}
-.nearby-info{flex:1}
-.nearby-name{font-size:14px;font-weight:600;color:var(--text)}
-.nearby-loc{font-size:12px;color:var(--muted);margin-top:2px}
-.nearby-arrow{font-size:18px;color:var(--accent)}
+#s-near{padding-bottom:var(--nav)}
+.near-hdr{padding:calc(env(safe-area-inset-top,0px)+20px) 20px 16px;background:var(--dark);flex-shrink:0}
+.ns-card{background:rgba(255,255,255,.07);border-radius:var(--rs);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-top:12px}
+.ns-dot{width:10px;height:10px;border-radius:50%;background:#555;flex-shrink:0;transition:background .3s}
+.ns-dot.on{background:#00e676;box-shadow:0 0 0 4px rgba(0,230,118,.15)}
+.ns-txt{font-size:13px;color:rgba(255,255,255,.65);flex:1}
+.ns-act{font-size:12px;color:#4DB6AC;font-weight:700;cursor:pointer}
+.near-list{flex:1;overflow-y:auto;padding:20px}
+.ni-card{background:var(--surface);border-radius:var(--rs);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:10px;cursor:pointer}
+.ni-init{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--mono);flex-shrink:0}
+.ni-name{font-size:14px;font-weight:600}
+.ni-loc{font-size:12px;color:var(--muted);margin-top:2px}
 
 /* HISTORY */
-#screen-history{padding-bottom:var(--nav-h)}
-.history-list{flex:1;overflow-y:auto;padding:16px 20px}
-.history-item{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:var(--rs);padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
-.hist-init{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--mono);flex-shrink:0}
-.hist-info{flex:1}
-.hist-name{font-size:14px;font-weight:600;color:var(--text)}
-.hist-when{font-size:11px;color:var(--muted);margin-top:2px}
-.hist-loc{font-size:11px;color:var(--muted)}
-.hist-auto{margin-left:auto;font-size:10px;font-weight:700;background:#E0F2F1;color:var(--accent);padding:3px 8px;border-radius:20px;flex-shrink:0}
+#s-hist{padding-bottom:var(--nav)}
+.hist-list{flex:1;overflow-y:auto;padding:16px 20px}
+.h-item{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:var(--rs);padding:14px;margin-bottom:10px}
+.h-init{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--mono);flex-shrink:0}
+.h-name{font-size:14px;font-weight:600}
+.h-loc{font-size:11px;color:var(--muted);margin-top:1px}
+.h-when{font-size:11px;color:var(--muted)}
+.h-auto{margin-left:auto;font-size:10px;font-weight:700;background:#E0F2F1;color:var(--accent);padding:3px 8px;border-radius:20px;flex-shrink:0}
 
 /* SETTINGS */
-#screen-settings{padding-bottom:var(--nav-h)}
-.settings-body{flex:1;overflow-y:auto;padding:20px}
-.settings-sec{margin-bottom:24px}
-.settings-sec-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;padding-left:4px}
-.settings-item{background:var(--surface);border-radius:var(--rs);padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
-.s-icon{width:36px;height:36px;border-radius:10px;background:#E0F2F1;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.s-icon svg{width:18px;height:18px;fill:var(--accent)}
-.s-icon.danger{background:#fff0f0}
-.s-icon.danger svg{fill:#c62828}
-.s-text{flex:1}
-.s-name{font-size:15px;font-weight:500;color:var(--text)}
-.s-name.danger{color:#c62828}
-.s-sub{font-size:12px;color:var(--muted);margin-top:2px}
-.toggle{width:44px;height:26px;background:#ddd;border-radius:13px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
-.toggle.on{background:var(--accent)}
-.toggle-thumb{width:20px;height:20px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.15)}
-.toggle.on .toggle-thumb{transform:translateX(18px)}
-.settings-about{text-align:center;padding:24px 20px;color:var(--muted);font-size:12px;line-height:1.8}
+#s-set{padding-bottom:var(--nav)}
+.set-body{flex:1;overflow-y:auto;padding:20px}
+.set-sec{margin-bottom:24px}
+.set-sec-t{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;padding-left:4px}
+.set-item{background:var(--surface);border-radius:var(--rs);padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer}
+.si-icon{width:36px;height:36px;border-radius:10px;background:#E0F2F1;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.si-icon svg{width:18px;height:18px;fill:var(--accent)}
+.si-icon.danger{background:#fff0f0}
+.si-icon.danger svg{fill:#c62828}
+.si-n{font-size:15px;font-weight:500}
+.si-n.danger{color:#c62828}
+.si-s{font-size:12px;color:var(--muted);margin-top:2px}
+.tog{width:44px;height:26px;background:#ddd;border-radius:13px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.tog.on{background:var(--accent)}
+.tog-th{width:20px;height:20px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.tog.on .tog-th{transform:translateX(18px)}
+.set-about{text-align:center;padding:24px 20px;color:var(--muted);font-size:12px;line-height:1.8}
 
-/* NOTIFICATION OVERLAY */
-#notif-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:flex-end}
-.notif-sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:20px 20px calc(20px + var(--sb));width:100%;animation:slideUp .3s ease}
-.notif-pill{width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 20px}
-.notif-live{display:inline-flex;align-items:center;gap:6px;background:#e8faf3;color:#0a7a4e;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:14px}
-.notif-live-dot{width:6px;height:6px;border-radius:50%;background:#00c853;animation:pulse 1.4s infinite}
-.notif-brand-name{font-size:24px;font-weight:800;color:var(--text);letter-spacing:-.5px;margin-bottom:4px}
-.notif-info{font-size:14px;color:var(--muted);margin-bottom:4px}
-.notif-dist{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:22px}
-.notif-open{width:100%;padding:15px;background:var(--dark);color:#fff;border:none;border-radius:var(--rs);font-family:var(--font);font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px}
-.notif-dismiss{width:100%;padding:13px;background:var(--bg);color:var(--muted);border:none;border-radius:var(--rs);font-family:var(--font);font-size:14px;cursor:pointer}
+/* NOTIF */
+#notif{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:flex-end}
+.n-sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px));width:100%;animation:su .3s ease}
+.n-pill{width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 20px}
+.n-live{display:inline-flex;align-items:center;gap:6px;background:#e8faf3;color:#0a7a4e;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:14px}
+.n-ldot{width:6px;height:6px;border-radius:50%;background:#00c853;animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
+.n-brand{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
+.n-info{font-size:14px;color:var(--muted);margin-bottom:4px}
+.n-dist{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:22px}
+.n-open{width:100%;padding:15px;background:var(--dark);color:#fff;border:none;border-radius:var(--rs);font-family:var(--font);font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px}
+.n-dis{width:100%;padding:13px;background:var(--bg);color:var(--muted);border:none;border-radius:var(--rs);font-family:var(--font);font-size:14px;cursor:pointer}
+
+/* LOC MODAL */
+#loc-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:210;display:none;align-items:flex-end}
+.lm-sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:24px 20px calc(24px + env(safe-area-inset-bottom,0px));width:100%;animation:su .3s ease}
+.lm-t{font-size:20px;font-weight:800;margin-bottom:6px}
+.lm-s{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.55}
 
 /* TOAST */
-#toast{position:fixed;bottom:calc(var(--nav-h) + 20px + var(--sb));left:50%;transform:translateX(-50%) translateY(16px);background:var(--dark);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:300;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-/* LOCATION MODAL */
-#loc-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:210;display:none;align-items:flex-end}
-.loc-modal-sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:24px 20px calc(24px + var(--sb));width:100%;animation:slideUp .3s ease}
-.loc-modal-title{font-size:20px;font-weight:800;color:var(--text);margin-bottom:6px}
-.loc-modal-sub{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.55}
+#toast{position:fixed;bottom:calc(var(--nav) + 16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(16px);background:var(--dark);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:300;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
 <div id="app">
 
-
-
-<!-- ===== SPLASH ===== -->
-<div id="screen-splash" class="screen active">
+<div id="s-splash" class="screen on">
   <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px">
-    <div class="splash-logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="1" y="5" width="22" height="14" rx="3"/>
-        <path d="M1 10h22"/><path d="M5 15h4"/>
-      </svg>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="5" width="22" height="14" rx="3"/><path d="M1 10h22"/><path d="M5 15h4"/></svg>
     </div>
-    <div class="splash-title">Stashlo</div>
-    <p class="splash-sub">Your smart loyalty wallet. Cards open automatically the moment you walk in.</p>
-    <button class="btn-primary" onclick="onGetStarted()">Get started</button>
-    <button class="btn-ghost" onclick="navigate('home')">Skip for now</button>
+    <div class="app-name">Stashlo</div>
+    <p class="tagline">All your UK loyalty cards in one place. Auto-opens when you walk in.</p>
+    <button class="btn-p" onclick="onStart()">Get started</button>
+    <button class="btn-g" onclick="go('home')">Skip for now</button>
   </div>
-  <div style="padding:20px;text-align:center;font-size:11px;color:rgba(255,255,255,.2)">Stashlo · Built for the UK high street</div>
+  <div style="padding:20px;text-align:center;font-size:11px;color:rgba(255,255,255,.2)">Built for the UK high street</div>
 </div>
 
-<!-- ===== HOME ===== -->
-<div id="screen-home" class="screen">
+<div id="s-home" class="screen">
   <div class="home-hdr">
-    <div class="home-greeting" id="greeting">Good morning</div>
-    <div class="home-title-row">
-      <div class="home-title">My cards</div>
-      <div class="loc-dot" id="loc-dot" title="Location status"></div>
-    </div>
-    <div class="home-count" id="cards-count">0 cards saved</div>
+    <div class="greet" id="greet">Good morning</div>
+    <div class="h-row"><div class="h-title">My cards</div><div class="ldot" id="ldot"></div></div>
+    <div class="h-sub" id="h-sub">0 cards saved</div>
   </div>
-  <div class="cards-scroll" id="cards-list"></div>
+  <div class="scroll" id="card-list"></div>
 </div>
 
-<!-- ===== ADD CARD ===== -->
-<div id="screen-add" class="screen">
-  <div class="scr-hdr">
-    <div class="hdr-row">
-      <button class="hdr-back" onclick="navigate('home')">
-        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <div class="hdr-title" id="add-header-title">Add a card</div>
+<div id="s-add" class="screen">
+  <div class="s-hdr"><div class="s-row">
+    <button class="bk" onclick="go('home')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="s-title" id="add-title">Add a card</div>
+  </div></div>
+  <div class="add-c">
+    <div class="add-step on" id="step1">
+      <div class="srch-w"><input class="srch" id="srch" placeholder="Search loyalty programs..." oninput="filterB(this.value)"></div>
+      <div class="b-sec"><div class="b-lbl">UK loyalty programs</div><div class="b-grid" id="b-grid"></div></div>
     </div>
-  </div>
-  <div class="add-content">
-    <!-- Step 1: Pick brand -->
-    <div class="add-step active" id="add-step-1">
-      <div class="search-wrap">
-        <input class="search-inp" id="brand-search" placeholder="Search loyalty programs..." oninput="filterBrands(this.value)">
-      </div>
-      <div class="brands-section">
-        <div class="brands-lbl">UK loyalty programs</div>
-        <div class="brands-grid" id="brands-grid"></div>
-      </div>
-    </div>
-    <!-- Step 2: Card details -->
-    <div class="add-step" id="add-step-2">
-      <div class="card-details-wrap">
-        <div class="brand-preview">
-          <div class="brand-prev-init" id="prev-init"></div>
-          <div class="brand-prev-name" id="prev-name"></div>
-          <span class="brand-prev-change" onclick="showStep(1)">Change</span>
+    <div class="add-step" id="step2">
+      <div class="det-w">
+        <div class="b-prev">
+          <div class="p-init" id="p-init"></div>
+          <div class="p-name" id="p-name"></div>
+          <span class="p-chg" onclick="showStep(1)">Change</span>
         </div>
-        <div class="field-grp" id="custom-name-grp" style="display:none">
-          <div class="field-lbl">Card name</div>
-          <input class="field-inp" id="custom-name" placeholder="e.g. Pret A Manger" style="font-family:var(--font);letter-spacing:0;font-size:15px">
+        <div class="fl" id="cust-grp" style="display:none">
+          <div class="fl-lbl">Card name</div>
+          <input class="fl-inp" id="cust-name" placeholder="e.g. Pret A Manger" style="font-family:var(--font);letter-spacing:0;font-size:15px">
         </div>
-        <div class="field-grp">
-          <div class="field-lbl">Card number</div>
-          <input class="field-inp" id="card-num-inp" placeholder="Enter your card number" type="tel" inputmode="numeric">
+        <div class="fl">
+          <div class="fl-lbl">Card number</div>
+          <input class="fl-inp" id="card-num" placeholder="Enter your number" type="tel" inputmode="numeric">
         </div>
-        <div class="loc-section">
-          <div class="loc-section-title">Set store location <span style="font-size:11px;font-weight:400;color:var(--muted)">(optional)</span></div>
-          <div class="loc-section-sub">Your card will auto-pop up when you walk into this store — even if the app is closed.</div>
-          <div class="field-grp" style="margin-bottom:0">
-            <input class="field-inp" id="store-name-inp" placeholder="Store name (e.g. Tesco Camden Town)" style="font-family:var(--font);letter-spacing:0;font-size:14px">
+        <div class="loc-box">
+          <div class="loc-t">Store location <span style="font-size:11px;font-weight:400;color:var(--muted)">(optional)</span></div>
+          <div class="loc-s">Card auto-pops up when you arrive here</div>
+          <div class="fl" style="margin-bottom:0">
+            <input class="fl-inp" id="store-name" placeholder="e.g. Tesco Camden Town" style="font-family:var(--font);letter-spacing:0;font-size:14px">
           </div>
-          <button class="btn-loc" onclick="captureLocation()">
-            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-            Use my current GPS location
-          </button>
-          <div class="loc-set-ok" id="loc-set-ok">
-            <span style="color:#1b6b46;font-size:16px">✓</span>
-            <span id="loc-set-txt">Location captured</span>
-          </div>
+          <button class="loc-btn" onclick="grabLoc()">Use my GPS location</button>
+          <div class="loc-ok" id="loc-ok">✓ GPS location captured</div>
         </div>
-        <button class="btn-primary" onclick="saveCard()" style="background:var(--dark)">Save card</button>
+        <button class="btn-p" onclick="saveCard()" style="background:var(--dark)">Save card</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ===== CARD DETAIL ===== -->
-<div id="screen-card" class="screen">
-  <div class="card-det-hdr" id="card-det-hdr">
-    <button class="det-back" onclick="navigate('home')">
-      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+<div id="s-card" class="screen">
+  <div class="cd-hdr">
+    <button class="cd-bk" onclick="go('home')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="cd-title" id="cd-title"></div>
+    <button class="cd-del" onclick="delCard()"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+  </div>
+  <div class="cd-body">
+    <div class="card-vis" id="card-vis">
+      <div class="cv-hdr" id="cv-hdr">
+        <div class="cv-init" id="cv-init"></div>
+        <div><div class="cv-name" id="cv-name"></div><div class="cv-type" id="cv-type"></div></div>
+      </div>
+      <div class="bc-area">
+        <svg id="bc-svg"></svg>
+        <div id="qr-div"></div>
+        <div class="cd-num" id="cd-num"></div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-v" id="st-uses">0</div><div class="stat-l">Times used</div></div>
+      <div class="stat"><div class="stat-v" id="st-loc">—</div><div class="stat-l">Store saved</div></div>
+    </div>
+    <button class="loc-btn2" onclick="openLocModal()">
+      <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:#4DB6AC"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      <span id="loc-btn-txt">Set store location</span>
     </button>
-    <div class="det-title" id="det-title"></div>
-    <button class="det-del" onclick="confirmDelete()" title="Delete card">
-      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-    </button>
-  </div>
-  <div class="card-display">
-    <div class="card-visual" id="card-visual">
-      <div class="card-vis-hdr" id="card-vis-hdr">
-        <div class="card-vis-init" id="card-vis-init"></div>
-        <div>
-          <div class="card-vis-name" id="card-vis-name"></div>
-          <div class="card-vis-type" id="card-vis-type"></div>
-        </div>
-      </div>
-      <div class="card-bc-area">
-        <svg id="card-bc-svg"></svg>
-        <div id="card-qr-div"></div>
-        <div class="card-num-disp" id="card-num-disp"></div>
-      </div>
-    </div>
-    <div class="card-stats">
-      <div class="card-stat">
-        <div class="stat-v" id="stat-uses">0</div>
-        <div class="stat-l">Times used</div>
-      </div>
-      <div class="card-stat">
-        <div class="stat-v" id="stat-loc">—</div>
-        <div class="stat-l">Store saved</div>
-      </div>
-    </div>
-    <button class="card-loc-btn" id="card-loc-btn" onclick="openLocModal()">
-      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-      <span id="card-loc-btn-txt">Set store location</span>
-    </button>
-    <div class="auto-badge" id="auto-badge" style="display:none">
-      <div class="auto-dot"></div>
-      Auto-opened from location
-    </div>
   </div>
 </div>
 
-<!-- ===== NEARBY ===== -->
-<div id="screen-nearby" class="screen">
-  <div class="nearby-hdr">
-    <div class="home-greeting">Smart detection</div>
-    <div class="home-title-row">
-      <div class="home-title" style="color:#fff;font-size:26px">Nearby cards</div>
-    </div>
-    <div class="nearby-status-card">
-      <div class="nearby-dot" id="nearby-dot"></div>
-      <div class="nearby-status-txt" id="nearby-status-txt">Location off</div>
-      <span class="nearby-action" id="nearby-action" onclick="toggleLocationFromNearby()">Turn on</span>
+<div id="s-near" class="screen">
+  <div class="near-hdr">
+    <div class="greet">Smart detection</div>
+    <div class="h-row"><div class="h-title" style="color:#fff">Nearby cards</div></div>
+    <div class="ns-card">
+      <div class="ns-dot" id="ns-dot"></div>
+      <div class="ns-txt" id="ns-txt">Location off</div>
+      <span class="ns-act" onclick="toggleLoc()">Turn on</span>
     </div>
   </div>
-  <div class="nearby-content" id="nearby-content">
-    <div style="text-align:center;padding:48px 20px;color:var(--muted)">
-      <div style="font-size:36px;margin-bottom:12px">📍</div>
-      <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">Cards with saved locations</div>
-      <div style="font-size:13px;line-height:1.65">Add a store location to your cards and they'll appear here when you're nearby</div>
+  <div class="near-list" id="near-list"></div>
+</div>
+
+<div id="s-hist" class="screen">
+  <div class="s-hdr"><div class="s-row"><div class="s-title">History</div><div class="s-badge" id="hist-badge">0 uses</div></div></div>
+  <div class="hist-list" id="hist-list"></div>
+</div>
+
+<div id="s-set" class="screen">
+  <div class="s-hdr"><div class="s-row"><div class="s-title">Settings</div></div></div>
+  <div class="set-body">
+    <div class="set-sec">
+      <div class="set-sec-t">Location</div>
+      <div class="set-item">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
+        <div style="flex:1"><div class="si-n">Location detection</div><div class="si-s">Auto-open cards when nearby</div></div>
+        <div class="tog" id="loc-tog" onclick="toggleLoc()"><div class="tog-th"></div></div>
+      </div>
     </div>
+    <div class="set-sec">
+      <div class="set-sec-t">Data</div>
+      <div class="set-item" onclick="clearAll()">
+        <div class="si-icon danger"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></div>
+        <div><div class="si-n danger">Clear all data</div><div class="si-s">Remove all cards and history</div></div>
+      </div>
+    </div>
+    <div class="set-about"><strong style="color:var(--text)">Stashlo</strong> v1.0 · Smart loyalty wallet<br>Built for the UK high street<br><br><span style="font-size:11px">Cards saved privately on your device</span></div>
   </div>
 </div>
 
-<!-- ===== HISTORY ===== -->
-<div id="screen-history" class="screen">
-  <div class="scr-hdr">
-    <div class="hdr-row">
-      <div class="hdr-title">Card history</div>
-      <div class="hdr-badge" id="hist-badge">0 uses</div>
-    </div>
-  </div>
-  <div class="history-list" id="history-list"></div>
-</div>
+<button class="fab" id="fab" onclick="go('add')">+</button>
 
-<!-- ===== SETTINGS ===== -->
-<div id="screen-settings" class="screen">
-  <div class="scr-hdr">
-    <div class="hdr-row">
-      <div class="hdr-title">Settings</div>
-    </div>
-  </div>
-  <div class="settings-body">
-    <div class="settings-sec">
-      <div class="settings-sec-title">Location & alerts</div>
-      <div class="settings-item">
-        <div class="s-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        </div>
-        <div class="s-text">
-          <div class="s-name">Location detection</div>
-          <div class="s-sub">Auto-open cards when nearby</div>
-        </div>
-        <div class="toggle" id="loc-toggle" onclick="toggleLocation()"><div class="toggle-thumb"></div></div>
-      </div>
-      <div class="settings-item">
-        <div class="s-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-        </div>
-        <div class="s-text">
-          <div class="s-name">Push notifications</div>
-          <div class="s-sub">Pop-up alerts near your stores</div>
-        </div>
-        <div class="toggle" id="notif-toggle" onclick="toggleNotifs()"><div class="toggle-thumb"></div></div>
-      </div>
-    </div>
-    <div class="settings-sec">
-      <div class="settings-sec-title">Data</div>
-      <div class="settings-item" onclick="handleAuthAction()" style="cursor:pointer">
-        <div class="s-icon">
-          <svg viewBox="0 0 24 24" style="fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;width:18px;height:18px"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        </div>
-        <div class="s-text">
-          <div class="s-name" id="signout-label">Sync across devices</div>
-          <div class="s-sub" id="signout-email">Sign in with Google to sync your cards</div>
-        </div>
-      </div>
-      <div class="settings-item" onclick="clearAll()" style="cursor:pointer">
-        <div class="s-icon danger">
-          <svg viewBox="0 0 24 24" style="fill:#c62828"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-        </div>
-        <div class="s-text">
-          <div class="s-name danger">Clear all data</div>
-          <div class="s-sub">Remove all cards and history</div>
-        </div>
-      </div>
-    </div>
-    <div class="settings-about">
-      <strong style="color:var(--text)">Stashlo</strong> v1.0<br>
-      Smart loyalty wallet · Built for the UK high street<br><br>
-      <span style="font-size:11px">Your cards are stored privately on your device only.</span>
-    </div>
-  </div>
-</div>
-
-<!-- ===== FAB ===== -->
-<button class="fab" id="fab" onclick="navigate('add')">+</button>
-
-<!-- ===== BOTTOM NAV ===== -->
-<nav id="bottom-nav">
-  <button class="nav-item active" id="nav-cards" onclick="navigate('home')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="5" width="22" height="14" rx="3"/><path d="M1 10h22"/></svg>
-    <span class="nav-label">Cards</span>
-  </button>
-  <button class="nav-item" id="nav-nearby" onclick="navigate('nearby')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="4"/><path d="M12 2C8.13 2 5 5.13 5 10c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
-    <span class="nav-label">Nearby</span>
-  </button>
-  <button class="nav-item" id="nav-history" onclick="navigate('history')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    <span class="nav-label">History</span>
-  </button>
-  <button class="nav-item" id="nav-settings" onclick="navigate('settings')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    <span class="nav-label">Settings</span>
-  </button>
+<nav id="nav">
+  <button class="ni on" id="n-home" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="5" width="22" height="14" rx="3"/><path d="M1 10h22"/></svg><span>Cards</span></button>
+  <button class="ni" id="n-near" onclick="go('near')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="4"/><path d="M12 2C8.13 2 5 5.13 5 10c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg><span>Nearby</span></button>
+  <button class="ni" id="n-hist" onclick="go('hist')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>History</span></button>
+  <button class="ni" id="n-set" onclick="go('set')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Settings</span></button>
 </nav>
 
-<!-- ===== NOTIFICATION OVERLAY ===== -->
-<div id="notif-overlay">
-  <div class="notif-sheet">
-    <div class="notif-pill"></div>
-    <div class="notif-live"><div class="notif-live-dot"></div> You're here</div>
-    <div class="notif-brand-name" id="notif-brand">Tesco Clubcard</div>
-    <div class="notif-info" id="notif-loc-name">Tesco Extra, Camden Town</div>
-    <div class="notif-dist" id="notif-dist">40m away</div>
-    <button class="notif-open" id="notif-open">Open my card →</button>
-    <button class="notif-dismiss" id="notif-dismiss">Not now</button>
+<div id="notif">
+  <div class="n-sheet">
+    <div class="n-pill"></div>
+    <div class="n-live"><div class="n-ldot"></div> You're here</div>
+    <div class="n-brand" id="n-brand"></div>
+    <div class="n-info" id="n-loc"></div>
+    <div class="n-dist" id="n-dist"></div>
+    <button class="n-open" id="n-open">Open my card →</button>
+    <button class="n-dis" id="n-dis">Not now</button>
   </div>
 </div>
 
-<!-- ===== LOCATION MODAL (set location for card from detail screen) ===== -->
 <div id="loc-modal">
-  <div class="loc-modal-sheet">
-    <div class="notif-pill"></div>
-    <div class="loc-modal-title">Set store location</div>
-    <div class="loc-modal-sub">Name the store, then tap "Use GPS" to save your exact location. Next time you arrive, this card opens automatically.</div>
-    <div class="field-grp">
-      <div class="field-lbl">Store name</div>
-      <input class="field-inp" id="modal-store-name" placeholder="e.g. Boots Oxford Street" style="font-family:var(--font);letter-spacing:0;font-size:14px">
-    </div>
-    <button class="btn-loc" onclick="captureLocationModal()" style="margin-bottom:10px">
-      <svg viewBox="0 0 24 24" style="fill:var(--accent)"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-      Use GPS — I'm standing here now
-    </button>
-    <div class="loc-set-ok" id="modal-loc-ok">
-      <span style="color:#1b6b46;font-size:16px">✓</span>
-      <span id="modal-loc-txt">Location captured</span>
-    </div>
-    <button class="btn-primary" onclick="saveLocationFromModal()" style="background:var(--dark);margin-top:14px">Save location</button>
-    <button class="btn-ghost" onclick="closeLocModal()" style="margin-top:8px;background:transparent;color:var(--muted);border-color:rgba(0,0,0,.1)">Cancel</button>
+  <div class="lm-sheet">
+    <div class="n-pill"></div>
+    <div class="lm-t">Set store location</div>
+    <div class="lm-s">Stand in the car park or outside the store, enter the name, then tap Use GPS.</div>
+    <div class="fl"><div class="fl-lbl">Store name</div><input class="fl-inp" id="m-store" placeholder="e.g. Boots Oxford Street" style="font-family:var(--font);letter-spacing:0;font-size:14px"></div>
+    <button class="loc-btn" onclick="grabLocModal()" style="margin-bottom:10px">Use GPS — I'm here now</button>
+    <div class="loc-ok" id="m-loc-ok">✓ GPS captured — tap Save to confirm</div>
+    <button class="btn-p" onclick="saveLocModal()" style="background:var(--dark);margin-top:14px">Save location</button>
+    <button class="btn-g" onclick="closeLocModal()" style="margin-top:8px">Cancel</button>
   </div>
 </div>
 
-<!-- ===== TOAST ===== -->
 <div id="toast"></div>
 
 <script>
-// ===================== FIREBASE CONFIG =====================
-// STEP: Replace these placeholder values with your Firebase project config
-const FB_CONFIG = {
-  apiKey:            "AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y",
-  authDomain:        "stashlo.firebaseapp.com",
-  projectId:         "stashlo",
-  storageBucket:     "stashlo.firebasestorage.app",
-  messagingSenderId: "924928321170",
-  appId:             "1:924928321170:web:e711943ddbe64567eaa84b"
-};
-
-let db = null, fbAuth = null, fbUser = null;
-const FB_ON = FB_CONFIG.apiKey !== "AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y";
-
-if (FB_ON) {
-  firebase.initializeApp(FB_CONFIG);
-  db = firebase.firestore();
-  fbAuth = firebase.auth();
-}
-
-// ===================== AUTH FUNCTIONS =====================
-
-
-function handleAuthAction() {
-  if (fbUser) {
-    if (confirm('Sign out? Your cards stay on this device.')) doSignOut();
-  } else {
-    signInGoogle();
-  }
-}
-function handleSignInClick() {
-  const btn = document.getElementById('google-btn');
-  if (btn) { btn.textContent = 'Opening Google…'; btn.disabled = true; }
-  signInGoogle();
-}
-function isIOS() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
-async function signInGoogle() {
-  if (!FB_ON) { showToast("Firebase not configured yet"); return; }
-  showToast("Opening Google sign in…");
-  try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    if (isIOS()) {
-      // iOS Safari blocks popups — use redirect instead
-      await fbAuth.signInWithRedirect(provider);
-    } else {
-      await fbAuth.signInWithPopup(provider);
-    }
-  } catch(e) {
-    showToast("Sign in failed — try again");
-    console.error("Auth error:", e);
-  }
-}
-
-function skipAuth() {
-  navigate("home");
-}
-
-async function doSignOut() {
-  if (fbAuth && fbUser) {
-    await fbAuth.signOut();
-    fbUser = null;
-    updateSignOutLabel();
-    showToast("Signed out — cards still saved locally");
-  } else {
-    showToast("Not signed in");
-  }
-}
-
-function updateSignOutLabel() {
-  const lbl = document.getElementById("signout-label");
-  const sub = document.getElementById("signout-email");
-  if (lbl) lbl.textContent = fbUser ? "Sign out" : "Sign in with Google";
-  if (sub) sub.textContent = fbUser ? (fbUser.email || fbUser.displayName || "Signed in") : "Not signed in";
-}
-
-// ===================== FIRESTORE OPERATIONS =====================
-async function fbSaveCard(card) {
-  if (!db || !fbUser) return;
-  try {
-    await db.collection("users").doc(fbUser.uid).collection("cards").doc(card.id).set(card);
-  } catch(e) { console.warn("Firestore save failed:", e); }
-}
-
-async function fbDeleteCard(cardId) {
-  if (!db || !fbUser) return;
-  try {
-    await db.collection("users").doc(fbUser.uid).collection("cards").doc(cardId).delete();
-  } catch(e) { console.warn("Firestore delete failed:", e); }
-}
-
-async function fbSaveHistory(h) {
-  if (!db || !fbUser) return;
-  try {
-    await db.collection("users").doc(fbUser.uid).collection("history").doc(String(h.timestamp)).set(h);
-  } catch(e) { console.warn("Firestore history save failed:", e); }
-}
-
-async function fbLoadAll() {
-  if (!db || !fbUser) return;
-  try {
-    showToast("Syncing your cards…");
-    const [cardsSnap, histSnap] = await Promise.all([
-      db.collection("users").doc(fbUser.uid).collection("cards").orderBy("addedAt","desc").get(),
-      db.collection("users").doc(fbUser.uid).collection("history").orderBy("timestamp","desc").limit(50).get()
-    ]);
-    S.cards   = cardsSnap.docs.map(d => d.data());
-    S.history = histSnap.docs.map(d => d.data());
-    saveS();
-    renderHome();
-    showToast("Cards synced ✓");
-  } catch(e) { showToast("Sync failed — working offline"); }
-}
-
-// ===================== BRANDS DATABASE =====================
-const BRANDS = [
-  {id:'tesco',name:'Tesco Clubcard',color:'#00539B',type:'barcode',init:'TC'},
-  {id:'nectar',name:'Nectar',color:'#FF6600',type:'barcode',init:'NC'},
-  {id:'boots',name:'Boots Advantage',color:'#00A3AD',type:'barcode',init:'BA'},
-  {id:'costa',name:'Costa Coffee',color:'#622F22',type:'barcode',init:'CC'},
-  {id:'bp',name:'BP Rewards',color:'#009A44',type:'barcode',init:'BP'},
-  {id:'greggs',name:'Greggs Rewards',color:'#002E5B',type:'qr',init:'GR'},
-  {id:'mcdonalds',name:"McDonald's",color:'#DA291C',type:'qr',init:'MC'},
-  {id:'starbucks',name:'Starbucks',color:'#00704A',type:'qr',init:'SB'},
-  {id:'waterstones',name:'Waterstones',color:'#1B365D',type:'barcode',init:'WP'},
-  {id:'johnlewis',name:'John Lewis',color:'#3D3D3D',type:'barcode',init:'JL'},
-  {id:'ikea',name:'IKEA Family',color:'#0058A3',type:'barcode',init:'IF'},
-  {id:'lidl',name:'Lidl Plus',color:'#0050AA',type:'qr',init:'LP'},
-  {id:'asda',name:'Asda Rewards',color:'#78BE20',type:'qr',init:'AR'},
-  {id:'morrisons',name:'Morrisons More',color:'#F5A623',type:'barcode',init:'MM'},
-  {id:'waitrose',name:'myWaitrose',color:'#2d2d2d',type:'barcode',init:'MW'},
-  {id:'nandos',name:"Nando's",color:'#BE0000',type:'qr',init:'ND'},
-  {id:'pizzaexpress',name:'Pizza Express',color:'#D72027',type:'barcode',init:'PE'},
-  {id:'odeon',name:'ODEON',color:'#E20714',type:'qr',init:'OD'},
-  {id:'vue',name:'Vue Cinemas',color:'#1B1464',type:'barcode',init:'VC'},
-  {id:'cineworld',name:'Cineworld Club',color:'#C41230',type:'barcode',init:'CW'},
-  {id:'custom',name:'Custom / Other',color:'#6C5CE7',type:'barcode',init:'??'},
+const BRANDS=[
+  {id:'tesco',name:'Tesco Clubcard',color:'#00539B',qr:false,init:'TC'},
+  {id:'nectar',name:'Nectar',color:'#FF6600',qr:false,init:'NC'},
+  {id:'boots',name:'Boots Advantage',color:'#00A3AD',qr:false,init:'BA'},
+  {id:'costa',name:'Costa Coffee',color:'#622F22',qr:false,init:'CC'},
+  {id:'bp',name:'BP Rewards',color:'#009A44',qr:false,init:'BP'},
+  {id:'greggs',name:'Greggs Rewards',color:'#002E5B',qr:true,init:'GR'},
+  {id:'mcdonalds',name:"McDonald's",color:'#DA291C',qr:true,init:'MC'},
+  {id:'starbucks',name:'Starbucks',color:'#00704A',qr:true,init:'SB'},
+  {id:'waterstones',name:'Waterstones',color:'#1B365D',qr:false,init:'WP'},
+  {id:'johnlewis',name:'John Lewis',color:'#3D3D3D',qr:false,init:'JL'},
+  {id:'ikea',name:'IKEA Family',color:'#0058A3',qr:false,init:'IF'},
+  {id:'lidl',name:'Lidl Plus',color:'#0050AA',qr:true,init:'LP'},
+  {id:'asda',name:'Asda Rewards',color:'#78BE20',qr:true,init:'AR'},
+  {id:'morrisons',name:'Morrisons More',color:'#F5A623',qr:false,init:'MM'},
+  {id:'waitrose',name:'myWaitrose',color:'#2d2d2d',qr:false,init:'MW'},
+  {id:'nandos',name:"Nando's",color:'#BE0000',qr:true,init:'ND'},
+  {id:'pizzaexpress',name:'Pizza Express',color:'#D72027',qr:false,init:'PE'},
+  {id:'odeon',name:'ODEON',color:'#E20714',qr:true,init:'OD'},
+  {id:'vue',name:'Vue Cinemas',color:'#1B1464',qr:false,init:'VC'},
+  {id:'cineworld',name:'Cineworld',color:'#C41230',qr:false,init:'CW'},
+  {id:'custom',name:'Custom / Other',color:'#00897B',qr:false,init:'??'},
 ];
 
-// ===================== STATE =====================
-let S = {
-  cards: [],
-  history: [],
-  settings: {locationEnabled: false, notifsEnabled: false},
-  currentCard: null,
-  watchId: null,
-  lastPos: null,
-  tempLat: null,
-  tempLng: null,
-  modalTempLat: null,
-  modalTempLng: null,
-  lastNotifiedId: null,
-  lastNotifiedTime: 0,
-  selectedBrand: null,
-  autoOpenedFlag: false,
-};
+let S={cards:[],history:[],locOn:false,watchId:null},CUR=null,tmpLat=null,tmpLng=null,mLat=null,mLng=null,selBrand=null,notifId=null,notifTime=0;
 
-function saveS() {
-  try {
-    localStorage.setItem('sl_cards', JSON.stringify(S.cards));
-    localStorage.setItem('sl_history', JSON.stringify(S.history));
-    localStorage.setItem('sl_settings', JSON.stringify(S.settings));
-    localStorage.setItem('sl_seen_splash', '1');
-  } catch(e){}
-}
+function save(){try{localStorage.setItem('sl',JSON.stringify({cards:S.cards,history:S.history,locOn:S.locOn}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem('sl')||'{}');S.cards=d.cards||[];S.history=d.history||[];S.locOn=d.locOn||false}catch(e){}}
 
-function loadS() {
-  try {
-    S.cards = JSON.parse(localStorage.getItem('sl_cards') || '[]');
-    S.history = JSON.parse(localStorage.getItem('sl_history') || '[]');
-    const saved = localStorage.getItem('sl_settings');
-    if(saved) S.settings = JSON.parse(saved);
-  } catch(e){}
-}
-
-// ===================== ROUTER =====================
-let prevScreen = 'home';
-function navigate(screen, opts={}) {
-  if(screen === 'card' && !opts.card) return;
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-' + screen).classList.add('active');
-  const mainScreens = ['home','nearby','history','settings'];
-  document.getElementById('bottom-nav').style.display = mainScreens.includes(screen) ? 'flex' : 'none';
-  document.getElementById('fab').style.display = screen === 'home' ? 'flex' : 'none';
-  ['cards','nearby','history','settings'].forEach(t => {
-    const btn = document.getElementById('nav-' + t);
-    if(btn) btn.classList.toggle('active', (t==='cards'&&screen==='home') || t===screen);
+const MAIN=['home','near','hist','set'];
+function go(sc){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.getElementById('s-'+sc).classList.add('on');
+  document.getElementById('nav').style.display=MAIN.includes(sc)?'flex':'none';
+  document.getElementById('fab').style.display=sc==='home'?'flex':'none';
+  ['home','near','hist','set'].forEach(t=>{
+    const b=document.getElementById('n-'+t);
+    if(b)b.classList.toggle('on',(t==='home'&&sc==='home')||t===sc);
   });
-  if(screen==='home') renderHome();
-  if(screen==='nearby') renderNearby();
-  if(screen==='history') renderHistory();
-  if(screen==='card' && opts.card) openCard(opts.card, opts.auto);
-  if(screen==='add') initAddScreen();
-  prevScreen = screen;
+  if(sc==='home')renderHome();
+  if(sc==='near')renderNear();
+  if(sc==='hist')renderHist();
+  if(sc==='add')initAdd();
+  if(sc==='set')applySet();
 }
 
-// ===================== GREETING =====================
-function setGreeting() {
-  const h = new Date().getHours();
-  const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  const el = document.getElementById('greeting');
-  if(el) el.textContent = g;
+function setGreet(){const h=new Date().getHours();document.getElementById('greet').textContent=h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
+
+function renderHome(){
+  setGreet();
+  const sub=document.getElementById('h-sub');
+  const list=document.getElementById('card-list');
+  sub.textContent=S.cards.length?S.cards.length+' card'+(S.cards.length===1?'':'s')+' saved':'No cards yet — tap + to add one';
+  if(!S.cards.length){list.innerHTML='<div class="empty"><div class="e-icon"><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="3"/><path d="M1 10h22"/><path d="M5 15h4" stroke="#fff" stroke-width="2" fill="none"/></svg></div><div class="e-t">No cards yet</div><div class="e-s">Tap <strong>+</strong> below to add your first loyalty card</div></div>';return;}
+  list.innerHTML=S.cards.map(c=>`<div class="card-item" onclick="openCard('${c.id}')"><div class="c-bar" style="background:${c.color}"></div><div class="c-top"><div class="c-init" style="background:${c.color}">${c.init}</div><div style="flex:1;min-width:0"><div class="c-name">${c.name}</div><div class="c-num">${mask(c.number)}</div></div>${c.locationName?'<div class="c-loc">📍'+c.locationName.slice(0,15)+'</div>':''}</div><div class="c-foot">${c.lastUsed?'Last used '+ago(c.lastUsed):'Not used yet'} · ${c.useCount||0} uses</div></div>`).join('');
 }
 
-// ===================== HOME =====================
-function renderHome() {
-  setGreeting();
-  const count = document.getElementById('cards-count');
-  const list = document.getElementById('cards-list');
-  if(count) count.textContent = S.cards.length === 0 ? 'No cards yet — tap + to add one' : `${S.cards.length} card${S.cards.length===1?'':'s'} saved`;
-  if(!list) return;
-  if(S.cards.length === 0) {
-    list.innerHTML = `<div class="empty-state">
-      <div class="empty-icon"><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="3"/><path d="M1 10h22"/><path d="M5 15h4" stroke="#fff" stroke-width="2" fill="none"/></svg></div>
-      <div class="empty-title">No cards yet</div>
-      <div class="empty-sub">Tap the <strong>+</strong> button below to add your first loyalty card — Tesco, Boots, Costa and more.</div>
-    </div>`;
-    return;
-  }
-  list.innerHTML = S.cards.map(c => {
-    const last = c.lastUsed ? `Last used ${timeAgo(c.lastUsed)}` : 'Not used yet';
-    const locTag = c.locationName ? `<div class="card-loc-tag"><svg viewBox="0 0 24 24" style="width:10px;height:10px;fill:var(--accent)"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>${c.locationName.length>18?c.locationName.slice(0,18)+'…':c.locationName}</div>` : '';
-    const numPrev = c.number ? maskNum(c.number) : '—';
-    return `<div class="card-item" onclick="navigate('card',{card:'${c.id}'})">
-      <div class="card-bar" style="background:${c.color}"></div>
-      <div class="card-top">
-        <div class="card-init" style="background:${c.color}">${c.init}</div>
-        <div class="card-info">
-          <div class="card-name">${c.name}</div>
-          <div class="card-num-prev">${numPrev}</div>
-        </div>
-        ${locTag}
-      </div>
-      <div class="card-footer">${last} · ${c.useCount||0} uses</div>
-    </div>`;
-  }).join('');
+function mask(n){if(!n)return'—';const s=n.replace(/\s/g,'');return s.length<=4?s:'•••• '+s.slice(-4);}
+function ago(ts){const d=Date.now()-ts,m=Math.floor(d/60000),h=Math.floor(d/3600000),dy=Math.floor(d/86400000);if(m<1)return'just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';if(dy===1)return'yesterday';return dy+'d ago';}
+
+function initAdd(){selBrand=null;tmpLat=null;tmpLng=null;document.getElementById('srch').value='';document.getElementById('card-num').value='';document.getElementById('store-name').value='';document.getElementById('cust-name').value='';document.getElementById('loc-ok').classList.remove('on');document.getElementById('cust-grp').style.display='none';showStep(1);renderBrands(BRANDS);}
+function showStep(n){document.getElementById('step1').classList.toggle('on',n===1);document.getElementById('step2').classList.toggle('on',n===2);document.getElementById('add-title').textContent=n===1?'Add a card':'Card details';}
+function filterB(q){renderBrands(q.trim()?BRANDS.filter(b=>b.name.toLowerCase().includes(q.toLowerCase())):BRANDS);}
+function renderBrands(list){document.getElementById('b-grid').innerHTML=list.map(b=>`<div class="b-tile" onclick="selBrand_fn('${b.id}')"><div class="b-dot" style="background:${b.color}">${b.init}</div><div class="b-name">${b.name}</div></div>`).join('');}
+function selBrand_fn(id){selBrand=BRANDS.find(b=>b.id===id);if(!selBrand)return;document.getElementById('p-init').style.background=selBrand.color;document.getElementById('p-init').textContent=selBrand.init;document.getElementById('p-name').textContent=selBrand.name;document.getElementById('cust-grp').style.display=id==='custom'?'block':'none';showStep(2);}
+
+function grabLoc(){if(!navigator.geolocation){toast('Geolocation not supported');return;}toast('Getting location…');navigator.geolocation.getCurrentPosition(p=>{tmpLat=p.coords.latitude;tmpLng=p.coords.longitude;document.getElementById('loc-ok').classList.add('on');toast('Location captured!');},()=>toast('Could not get location'),{enableHighAccuracy:true,timeout:8000});}
+
+function saveCard(){
+  if(!selBrand){toast('Pick a brand first');showStep(1);return;}
+  const num=document.getElementById('card-num').value.trim();
+  if(!num){toast('Enter your card number');return;}
+  const sn=document.getElementById('store-name').value.trim();
+  const cn=document.getElementById('cust-name').value.trim();
+  const card={id:Date.now().toString(),name:selBrand.id==='custom'?(cn||'My Card'):selBrand.name,color:selBrand.color,qr:selBrand.qr,init:selBrand.id==='custom'?(cn.slice(0,2).toUpperCase()||'??'):selBrand.init,number:num,locationName:sn||null,lat:sn?tmpLat:null,lng:sn?tmpLng:null,addedAt:Date.now(),lastUsed:null,useCount:0};
+  S.cards.unshift(card);save();toast(card.name+' added!');go('home');
 }
 
-function maskNum(n) {
-  if(!n) return '—';
-  const s = n.replace(/\s/g,'');
-  if(s.length <= 4) return s;
-  return '•••• ' + s.slice(-4);
+function openCard(id,auto){
+  const c=S.cards.find(x=>x.id===id);if(!c)return;CUR=c;
+  document.getElementById('cd-title').textContent=c.name;
+  const hdr=document.getElementById('cv-hdr');hdr.style.background=c.color;
+  document.getElementById('cv-init').textContent=c.init;
+  document.getElementById('cv-name').textContent=c.name;
+  document.getElementById('cv-type').textContent=c.qr?'QR Code · Tap to use':'Barcode · Scan at checkout';
+  document.getElementById('cd-num').textContent=fmt(c.number);
+  document.getElementById('st-uses').textContent=c.useCount||0;
+  document.getElementById('st-loc').textContent=c.locationName?'✓':'—';
+  document.getElementById('loc-btn-txt').textContent=c.locationName?'Change: '+c.locationName:'Set store location';
+  const sv=document.getElementById('bc-svg'),qd=document.getElementById('qr-div');
+  sv.innerHTML='';qd.innerHTML='';
+  if(c.qr){sv.style.display='none';qd.style.display='flex';qd.innerHTML='<div style="background:#f5f5f5;padding:16px;border-radius:8px;text-align:center;font-family:var(--mono);font-size:13px;color:#333;word-break:break-all">'+c.number+'</div>';}
+  else{sv.style.display='block';qd.style.display='none';try{JsBarcode(sv,c.number,{format:'CODE128',lineColor:'#111',width:2.2,height:80,displayValue:false,margin:0});}catch(e){sv.innerHTML='';qd.innerHTML='<div style="font-family:var(--mono);font-size:14px;color:#333;text-align:center">'+c.number+'</div>';}}
+  go('card');
+  if(auto){c.lastUsed=Date.now();c.useCount=(c.useCount||0)+1;S.history.unshift({cardId:c.id,name:c.name,color:c.color,init:c.init,loc:c.locationName||'Manual',ts:Date.now(),auto:true});if(S.history.length>100)S.history=S.history.slice(0,100);save();}
 }
 
-function timeAgo(ts) {
-  const diff = Date.now() - ts;
-  const m = Math.floor(diff/60000);
-  const h = Math.floor(diff/3600000);
-  const d = Math.floor(diff/86400000);
-  if(m < 1) return 'just now';
-  if(m < 60) return m + 'm ago';
-  if(h < 24) return h + 'h ago';
-  if(d === 1) return 'yesterday';
-  return d + ' days ago';
+function fmt(n){return n?n.replace(/\s/g,'').replace(/(.{4})/g,'$1 ').trim():'';}
+
+function delCard(){if(!CUR)return;if(confirm('Delete '+CUR.name+'?')){S.cards=S.cards.filter(c=>c.id!==CUR.id);S.history=S.history.filter(h=>h.cardId!==CUR.id);save();toast('Card deleted');go('home');}}
+
+function openLocModal(){mLat=null;mLng=null;document.getElementById('m-store').value=CUR?.locationName||'';document.getElementById('m-loc-ok').classList.remove('on');document.getElementById('loc-modal').style.display='flex';}
+function closeLocModal(){document.getElementById('loc-modal').style.display='none';}
+function grabLocModal(){if(!navigator.geolocation){toast('Geolocation not supported');return;}toast('Getting location…');navigator.geolocation.getCurrentPosition(p=>{mLat=p.coords.latitude;mLng=p.coords.longitude;document.getElementById('m-loc-ok').classList.add('on');toast('Got it!');},()=>toast('Could not get location'),{enableHighAccuracy:true,timeout:8000});}
+function saveLocModal(){if(!CUR)return;const sn=document.getElementById('m-store').value.trim();if(!sn){toast('Enter store name');return;}CUR.locationName=sn;if(mLat){CUR.lat=mLat;CUR.lng=mLng;}save();closeLocModal();openCard(CUR.id);toast('Location saved!');}
+
+function renderNear(){
+  const dot=document.getElementById('ns-dot'),txt=document.getElementById('ns-txt'),list=document.getElementById('near-list');
+  dot.className='ns-dot'+(S.locOn?' on':'');
+  txt.textContent=S.locOn?'Active — watching for your stores':'Location off — enable to auto-open cards';
+  const wl=S.cards.filter(c=>c.lat&&c.lng);
+  if(!wl.length){list.innerHTML='<div style="text-align:center;padding:48px 20px;color:var(--muted)"><div style="font-size:42px;margin-bottom:14px">📍</div><div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">No locations saved</div><div style="font-size:13px;line-height:1.7">Open a card → tap "Set store location"</div></div>';return;}
+  list.innerHTML=wl.map(c=>`<div class="ni-card" onclick="openCard('${c.id}')"><div class="ni-init" style="background:${c.color}">${c.init}</div><div><div class="ni-name">${c.name}</div><div class="ni-loc">📍 ${c.locationName}</div></div><div style="margin-left:auto;font-size:18px;color:var(--accent)">›</div></div>`).join('');
 }
 
-// ===================== ADD CARD =====================
-function initAddScreen() {
-  S.selectedBrand = null;
-  S.tempLat = null;
-  S.tempLng = null;
-  document.getElementById('brand-search').value = '';
-  document.getElementById('card-num-inp').value = '';
-  document.getElementById('store-name-inp').value = '';
-  document.getElementById('custom-name').value = '';
-  document.getElementById('loc-set-ok').classList.remove('show');
-  document.getElementById('custom-name-grp').style.display = 'none';
-  showStep(1);
+function renderHist(){
+  document.getElementById('hist-badge').textContent=S.history.length+' uses';
+  const list=document.getElementById('hist-list');
+  if(!S.history.length){list.innerHTML='<div style="text-align:center;padding:64px 20px;color:var(--muted)"><div style="font-size:42px;margin-bottom:14px">🕐</div><div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">No history yet</div><div style="font-size:13px">Cards used or auto-opened appear here</div></div>';return;}
+  list.innerHTML=S.history.map(h=>{const d=new Date(h.ts);const w=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+' · '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});return`<div class="h-item"><div class="h-init" style="background:${h.color}">${h.init}</div><div style="flex:1"><div class="h-name">${h.name}</div><div class="h-loc">📍 ${h.loc}</div><div class="h-when">${w}</div></div>${h.auto?'<div class="h-auto">Auto</div>':''}</div>`;}).join('');
+}
+
+function applySet(){document.getElementById('loc-tog').classList.toggle('on',S.locOn);}
+function toggleLoc(){S.locOn=!S.locOn;save();applySet();if(S.locOn)startWatch();else stopWatch();toast(S.locOn?'Location on':'Location off');renderNear();}
+function clearAll(){if(confirm('Delete everything?')){S.cards=[];S.history=[];save();renderHome();toast('Cleared');}}
+
+function haversine(a,b,c,d){const R=6371000,r=Math.PI/180,dLat=(c-a)*r,dLng=(d-b)*r,x=Math.sin(dLat/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+
+function startWatch(){if(!navigator.geolocation)return;if(S.watchId)navigator.geolocation.clearWatch(S.watchId);S.watchId=navigator.geolocation.watchPosition(p=>{document.getElementById('ldot').className='ldot on';checkFences(p.coords.latitude,p.coords.longitude);},()=>document.getElementById('ldot').className='ldot',{enableHighAccuracy:true,timeout:12000,maximumAge:20000});}
+function stopWatch(){if(S.watchId){navigator.geolocation.clearWatch(S.watchId);S.watchId=null;}document.getElementById('ldot').className='ldot';}
+
+function checkFences(lat,lng){if(Date.now()-notifTime<90000)return;for(const c of S.cards){if(!c.lat||!c.lng)continue;const d=haversine(lat,lng,c.lat,c.lng);if(d<200&&notifId!==c.id){notifId=c.id;notifTime=Date.now();showNotif(c,Math.round(d));return;}}notifId=null;}
+
+function showNotif(c,dist){document.getElementById('n-brand').textContent=c.name;document.getElementById('n-loc').textContent=c.locationName||'Nearby';document.getElementById('n-dist').textContent=dist+'m away';document.getElementById('notif').style.display='flex';document.getElementById('n-open').onclick=()=>{document.getElementById('notif').style.display='none';openCard(c.id,true);};document.getElementById('n-dis').onclick=()=>{document.getElementById('notif').style.display='none';};}
+
+let tTimer;function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(tTimer);tTimer=setTimeout(()=>t.classList.remove('on'),2800);}
+
+function onStart(){if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>{S.locOn=true;save();startWatch();go('home');},()=>go('home'),{enableHighAccuracy:true,timeout:8000});}else go('home');}
+
+window.addEventListener('load',()=>{
+  load();
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  const seen=localStorage.getItem('sl_seen');
+  if(seen){go('home');}else{localStorage.setItem('sl_seen','1');}
+  if(S.locOn)startWatch();
   renderBrands(BRANDS);
-}
-
-function showStep(n) {
-  document.getElementById('add-step-1').classList.toggle('active', n===1);
-  document.getElementById('add-step-2').classList.toggle('active', n===2);
-  document.getElementById('add-header-title').textContent = n===1 ? 'Add a card' : 'Card details';
-}
-
-function filterBrands(q) {
-  const filtered = q.trim() ? BRANDS.filter(b => b.name.toLowerCase().includes(q.toLowerCase())) : BRANDS;
-  renderBrands(filtered);
-}
-
-function renderBrands(list) {
-  const grid = document.getElementById('brands-grid');
-  grid.innerHTML = list.map(b => `
-    <div class="brand-tile" onclick="selectBrand('${b.id}')">
-      <div class="brand-tile-dot" style="background:${b.color}">${b.init}</div>
-      <div class="brand-tile-name">${b.name}</div>
-    </div>`).join('');
-}
-
-function selectBrand(id) {
-  S.selectedBrand = BRANDS.find(b => b.id === id);
-  if(!S.selectedBrand) return;
-  document.getElementById('prev-init').style.background = S.selectedBrand.color;
-  document.getElementById('prev-init').textContent = S.selectedBrand.init;
-  document.getElementById('prev-name').textContent = S.selectedBrand.name;
-  document.getElementById('custom-name-grp').style.display = id==='custom' ? 'block' : 'none';
-  showStep(2);
-}
-
-function captureLocation() {
-  if(!navigator.geolocation) { showToast('Geolocation not supported on this device'); return; }
-  showToast('Getting your location…');
-  navigator.geolocation.getCurrentPosition(pos => {
-    S.tempLat = pos.coords.latitude;
-    S.tempLng = pos.coords.longitude;
-    document.getElementById('loc-set-ok').classList.add('show');
-    document.getElementById('loc-set-txt').textContent = 'GPS location captured ✓';
-    showToast('Location saved!');
-  }, () => showToast('Could not get location — check permissions'), {enableHighAccuracy:true,timeout:8000});
-}
-
-function saveCard() {
-  if(!S.selectedBrand) { showToast('Please select a brand first'); showStep(1); return; }
-  const num = document.getElementById('card-num-inp').value.trim();
-  if(!num) { showToast('Please enter your card number'); return; }
-  const storeName = document.getElementById('store-name-inp').value.trim();
-  const customName = document.getElementById('custom-name').value.trim();
-  const card = {
-    id: Date.now().toString(),
-    brandId: S.selectedBrand.id,
-    name: S.selectedBrand.id==='custom' ? (customName||'My Card') : S.selectedBrand.name,
-    color: S.selectedBrand.color,
-    type: S.selectedBrand.type,
-    init: S.selectedBrand.id==='custom' ? (customName.slice(0,2).toUpperCase()||'??') : S.selectedBrand.init,
-    number: num,
-    locationName: storeName || null,
-    lat: storeName ? S.tempLat : null,
-    lng: storeName ? S.tempLng : null,
-    addedAt: Date.now(),
-    lastUsed: null,
-    useCount: 0,
-  };
-  S.cards.unshift(card);
-  saveS();
-  fbSaveCard(card);
-  showToast(`${card.name} added!`);
-  navigate('home');
-}
-
-// ===================== CARD DETAIL =====================
-function openCard(idOrCard, auto=false) {
-  const card = typeof idOrCard === 'string' ? S.cards.find(c=>c.id===idOrCard) : S.cards.find(c=>c.id===idOrCard);
-  if(!card) { navigate('home'); return; }
-  S.currentCard = card;
-  S.autoOpenedFlag = auto;
-
-  document.getElementById('det-title').textContent = card.name;
-  const hdr = document.getElementById('card-vis-hdr');
-  hdr.style.background = card.color;
-  document.getElementById('card-vis-init').textContent = card.init;
-  document.getElementById('card-vis-name').textContent = card.name;
-  document.getElementById('card-vis-type').textContent = card.type === 'qr' ? 'QR Code · Tap to use' : 'Barcode · Scan at checkout';
-  document.getElementById('card-num-disp').textContent = formatCardNum(card.number);
-  document.getElementById('stat-uses').textContent = card.useCount || 0;
-  document.getElementById('stat-loc').textContent = card.locationName ? '✓' : '—';
-  document.getElementById('card-loc-btn-txt').textContent = card.locationName ? `Change: ${card.locationName}` : 'Set store location';
-  document.getElementById('auto-badge').style.display = auto ? 'flex' : 'none';
-
-  // Generate barcode or QR
-  const bcSvg = document.getElementById('card-bc-svg');
-  const qrDiv = document.getElementById('card-qr-div');
-  bcSvg.innerHTML = '';
-  qrDiv.innerHTML = '';
-
-  if(card.type === 'qr') {
-    bcSvg.style.display = 'none';
-    qrDiv.style.display = 'flex';
-    try {
-      new QRCode(qrDiv, {text:card.number, width:160, height:160, colorDark:'#111', colorLight:'#fff', correctLevel:QRCode.CorrectLevel.M});
-    } catch(e) {
-      qrDiv.innerHTML = `<div style="text-align:center;padding:10px;font-family:var(--mono);font-size:13px;color:#333">QR: ${card.number}</div>`;
-    }
-  } else {
-    bcSvg.style.display = 'block';
-    qrDiv.style.display = 'none';
-    try {
-      JsBarcode(bcSvg, card.number, {format:'CODE128',lineColor:'#111',width:2.2,height:80,displayValue:false,margin:0});
-    } catch(e) {
-      bcSvg.innerHTML = `<text y="40" x="10" font-size="13" fill="#333">${card.number}</text>`;
-    }
-  }
-
-  // Brighten screen on card view (attempt)
-  try { if(screen && screen.orientation) {} } catch(e){}
-}
-
-function formatCardNum(n) {
-  if(!n) return '';
-  return n.replace(/\s/g,'').replace(/(.{4})/g,'$1 ').trim();
-}
-
-function confirmDelete() {
-  if(!S.currentCard) return;
-  if(confirm(`Delete ${S.currentCard.name}? This cannot be undone.`)) {
-    const delId = S.currentCard.id;
-    S.cards = S.cards.filter(c => c.id !== delId);
-    S.history = S.history.filter(h => h.cardId !== delId);
-    saveS();
-    fbDeleteCard(delId);
-    showToast('Card deleted');
-    navigate('home');
-  }
-}
-
-// ===================== LOCATION MODAL (from card detail) =====================
-function openLocModal() {
-  S.modalTempLat = null; S.modalTempLng = null;
-  document.getElementById('modal-store-name').value = S.currentCard?.locationName || '';
-  document.getElementById('modal-loc-ok').classList.remove('show');
-  document.getElementById('loc-modal').style.display = 'flex';
-}
-
-function closeLocModal() {
-  document.getElementById('loc-modal').style.display = 'none';
-}
-
-function captureLocationModal() {
-  if(!navigator.geolocation) { showToast('Geolocation not supported'); return; }
-  showToast('Getting location…');
-  navigator.geolocation.getCurrentPosition(pos => {
-    S.modalTempLat = pos.coords.latitude;
-    S.modalTempLng = pos.coords.longitude;
-    document.getElementById('modal-loc-ok').classList.add('show');
-    document.getElementById('modal-loc-txt').textContent = 'GPS captured — tap Save to confirm';
-    showToast('Location ready');
-  }, () => showToast('Could not get location'), {enableHighAccuracy:true,timeout:8000});
-}
-
-function saveLocationFromModal() {
-  if(!S.currentCard) { closeLocModal(); return; }
-  const sn = document.getElementById('modal-store-name').value.trim();
-  if(!sn) { showToast('Please enter a store name'); return; }
-  S.currentCard.locationName = sn;
-  if(S.modalTempLat) { S.currentCard.lat = S.modalTempLat; S.currentCard.lng = S.modalTempLng; }
-  saveS();
-  closeLocModal();
-  fbSaveCard(S.currentCard);
-  openCard(S.currentCard.id);
-  showToast('Location saved — card will auto-open here!');
-}
-
-// ===================== NEARBY =====================
-function renderNearby() {
-  const dot = document.getElementById('nearby-dot');
-  const txt = document.getElementById('nearby-status-txt');
-  const action = document.getElementById('nearby-action');
-  const content = document.getElementById('nearby-content');
-  const on = S.settings.locationEnabled;
-  if(dot) { dot.className = 'nearby-dot ' + (on ? 'on' : 'off'); }
-  if(txt) txt.textContent = on ? 'Location active — watching for nearby stores' : 'Location off — enable to auto-open cards';
-  if(action) { action.textContent = on ? 'Working' : 'Turn on'; action.style.color = on ? '#00e676' : 'var(--accent-light)'; }
-
-  const withLoc = S.cards.filter(c => c.lat && c.lng && c.locationName);
-  if(!content) return;
-  if(withLoc.length === 0) {
-    content.innerHTML = `<div style="text-align:center;padding:48px 20px;color:var(--muted)">
-      <div style="font-size:42px;margin-bottom:14px">📍</div>
-      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">No locations saved yet</div>
-      <div style="font-size:13px;line-height:1.7">Open a card and tap <strong>"Set store location"</strong> to enable auto-detection.</div>
-    </div>`;
-    return;
-  }
-  content.innerHTML = withLoc.map(c => `
-    <div class="nearby-card" onclick="navigate('card',{card:'${c.id}'})">
-      <div class="nearby-init" style="background:${c.color}">${c.init}</div>
-      <div class="nearby-info">
-        <div class="nearby-name">${c.name}</div>
-        <div class="nearby-loc">📍 ${c.locationName}</div>
-      </div>
-      <div class="nearby-arrow">›</div>
-    </div>`).join('');
-}
-
-function toggleLocationFromNearby() {
-  toggleLocation();
-  renderNearby();
-}
-
-// ===================== HISTORY =====================
-function renderHistory() {
-  const badge = document.getElementById('hist-badge');
-  const list = document.getElementById('history-list');
-  if(badge) badge.textContent = S.history.length + ' uses';
-  if(!list) return;
-  if(S.history.length === 0) {
-    list.innerHTML = `<div style="text-align:center;padding:64px 20px;color:var(--muted)">
-      <div style="font-size:42px;margin-bottom:14px">🕐</div>
-      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">No history yet</div>
-      <div style="font-size:13px;line-height:1.65">Every time a card is used or auto-opened, it appears here.</div>
-    </div>`;
-    return;
-  }
-  list.innerHTML = S.history.map(h => {
-    const d = new Date(h.timestamp);
-    const when = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) + ' · ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    return `<div class="history-item">
-      <div class="hist-init" style="background:${h.color}">${h.init}</div>
-      <div class="hist-info">
-        <div class="hist-name">${h.brandName}</div>
-        <div class="hist-loc">📍 ${h.locationName}</div>
-        <div class="hist-when">${when}</div>
-      </div>
-      ${h.autoOpened ? '<div class="hist-auto">Auto</div>' : ''}
-    </div>`;
-  }).join('');
-}
-
-// ===================== GEOFENCING =====================
-function haversine(lat1,lng1,lat2,lng2) {
-  const R=6371000, toR=Math.PI/180;
-  const dLat=(lat2-lat1)*toR, dLng=(lng2-lng1)*toR;
-  const a=Math.sin(dLat/2)**2+Math.cos(lat1*toR)*Math.cos(lat2*toR)*Math.sin(dLng/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-function checkGeofences(lat, lng) {
-  const now = Date.now();
-  if(now - S.lastNotifiedTime < 90000) return;
-  for(const card of S.cards) {
-    if(!card.lat || !card.lng) continue;
-    const dist = haversine(lat,lng,card.lat,card.lng);
-    if(dist < 200) {
-      if(S.lastNotifiedId !== card.id) {
-        S.lastNotifiedId = card.id;
-        S.lastNotifiedTime = now;
-        showNotif(card, Math.round(dist));
-      }
-      return;
-    }
-  }
-  S.lastNotifiedId = null;
-}
-
-function showNotif(card, dist) {
-  document.getElementById('notif-brand').textContent = card.name;
-  document.getElementById('notif-loc-name').textContent = card.locationName || 'Nearby';
-  document.getElementById('notif-dist').textContent = dist + 'm away';
-  const overlay = document.getElementById('notif-overlay');
-  overlay.style.display = 'flex';
-  document.getElementById('notif-open').onclick = () => {
-    overlay.style.display = 'none';
-    logHistory(card, true);
-    navigate('card', {card: card.id, auto: true});
-  };
-  document.getElementById('notif-dismiss').onclick = () => { overlay.style.display = 'none'; };
-}
-
-function logHistory(card, auto) {
-  card.lastUsed = Date.now();
-  card.useCount = (card.useCount || 0) + 1;
-  S.history.unshift({
-    cardId: card.id,
-    brandName: card.name,
-    color: card.color,
-    init: card.init,
-    locationName: card.locationName || 'Manual open',
-    timestamp: Date.now(),
-    autoOpened: !!auto,
-  });
-  if(S.history.length > 100) S.history = S.history.slice(0,100);
-  saveS();
-  fbSaveHistory(S.history[0]);
-}
-
-function startWatching() {
-  if(!navigator.geolocation) return;
-  if(S.watchId !== null) { navigator.geolocation.clearWatch(S.watchId); S.watchId = null; }
-  S.watchId = navigator.geolocation.watchPosition(pos => {
-    S.lastPos = pos.coords;
-    updateLocDot(true);
-    checkGeofences(pos.coords.latitude, pos.coords.longitude);
-  }, () => updateLocDot(false), {enableHighAccuracy:true, timeout:12000, maximumAge:20000});
-}
-
-function stopWatching() {
-  if(S.watchId !== null) { navigator.geolocation.clearWatch(S.watchId); S.watchId = null; }
-  updateLocDot(false);
-}
-
-function updateLocDot(on) {
-  const dot = document.getElementById('loc-dot');
-  if(dot) dot.className = 'loc-dot ' + (on ? 'on' : 'off');
-}
-
-// ===================== SETTINGS =====================
-function toggleLocation() {
-  S.settings.locationEnabled = !S.settings.locationEnabled;
-  const toggle = document.getElementById('loc-toggle');
-  if(toggle) toggle.classList.toggle('on', S.settings.locationEnabled);
-  if(S.settings.locationEnabled) {
-    startWatching();
-    showToast('Location detection on');
-  } else {
-    stopWatching();
-    showToast('Location detection off');
-  }
-  saveS();
-  updateLocDot(S.settings.locationEnabled);
-}
-
-function toggleNotifs() {
-  if(!S.settings.notifsEnabled) {
-    if('Notification' in window) {
-      Notification.requestPermission().then(p => {
-        S.settings.notifsEnabled = p === 'granted';
-        document.getElementById('notif-toggle').classList.toggle('on', S.settings.notifsEnabled);
-        showToast(p === 'granted' ? 'Notifications enabled' : 'Permission denied');
-        saveS();
-      });
-      return;
-    }
-  }
-  S.settings.notifsEnabled = !S.settings.notifsEnabled;
-  document.getElementById('notif-toggle').classList.toggle('on', S.settings.notifsEnabled);
-  showToast(S.settings.notifsEnabled ? 'Notifications on' : 'Notifications off');
-  saveS();
-}
-
-function applySettings() {
-  document.getElementById('loc-toggle').classList.toggle('on', S.settings.locationEnabled);
-  document.getElementById('notif-toggle').classList.toggle('on', S.settings.notifsEnabled);
-  if(S.settings.locationEnabled) startWatching();
-  updateLocDot(S.settings.locationEnabled);
-}
-
-function clearAll() {
-  if(confirm('Delete all cards and history? This cannot be undone.')) {
-    S.cards = []; S.history = [];
-    saveS();
-    showToast('All data cleared');
-    renderHome();
-  }
-}
-
-// ===================== SPLASH / ONBOARDING =====================
-function onGetStarted() {
-  if(!navigator.geolocation) { showToast('Geolocation not available'); navigate('home'); return; }
-  navigator.geolocation.getCurrentPosition(pos => {
-    S.settings.locationEnabled = true;
-    S.lastPos = pos.coords;
-    saveS();
-    startWatching();
-    navigate('home');
-    showToast('Location enabled — you\'re set!');
-  }, () => {
-    navigate('home');
-    showToast('Location permission denied — you can enable it in Settings');
-  }, {enableHighAccuracy:true,timeout:8000});
-}
-
-// ===================== TOAST =====================
-let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-// ===================== INIT =====================
-window.addEventListener('load', () => {
-  loadS();
-  applySettings();
-  setGreeting();
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  }
-
-  // Firebase: silently try to restore session — no sign-in wall
-  if (FB_ON) {
-    fbAuth.getRedirectResult().catch(() => {});
-    fbAuth.onAuthStateChanged(user => {
-      fbUser = user;
-      updateSignOutLabel();
-      if (user) fbLoadAll();
-    });
-  }
-
-  // Go straight to app — no sign-in required
-  const seen = localStorage.getItem('sl_seen_splash');
-  if (seen) {
-    navigate('home');
-  } else {
-    document.getElementById('screen-splash').classList.add('active');
-    document.getElementById('bottom-nav').style.display = 'none';
-    document.getElementById('fab').style.display = 'none';
-  }
-});
-  } else {
-    const seenSplash = localStorage.getItem('sl_seen_splash');
-    if(seenSplash) {
-      navigate('home');
-    } else {
-      document.getElementById('screen-splash').classList.add('active');
-      document.getElementById('bottom-nav').style.display = 'none';
-      document.getElementById('fab').style.display = 'none';
-    }
-
-  // Register service worker
-  if('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  }
 });
 </script>
 </body>
