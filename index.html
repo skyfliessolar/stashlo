@@ -529,7 +529,7 @@ function showNotif(c,dist){
   document.getElementById('notif').style.display='flex';
   document.getElementById('n-open').onclick=()=>{document.getElementById('notif').style.display='none';openCard(c.id,true);};
   document.getElementById('n-dis').onclick=()=>{document.getElementById('notif').style.display='none';};
-  if('serviceWorker' in navigator && 'Notification' in window && Notification.permission==='granted'){
+  if('serviceWorker' in navigator && "Notification" in window && Notification.permission==='granted'){
     navigator.serviceWorker.ready.then(reg=>{
       reg.showNotification('Stashlo — '+c.name,{
         body:'📍 You are '+dist+'m from '+c.locationName+'. Your card is ready.',
@@ -549,19 +549,19 @@ let tTimer;function toast(msg){const t=document.getElementById('toast');t.textCo
 
 
 async function enableNotifs(){
-  if(!('Notification' in window)){toast('Notifications not supported on this device');return;}
+  if(!("Notification" in window)){toast("Notifications not supported on this device");return;}
   const p=await Notification.requestPermission();
   const tog=document.getElementById('notif-tog');
   const status=document.getElementById('notif-status');
   if(p==='granted'){
     tog.classList.add('on');
-    status.textContent='Enabled — you'll be alerted near stores';
+    status.textContent="Enabled - you will be alerted near stores";
     toast('Notifications enabled ✓');
     S.notifsOn=true;save();
   } else {
     tog.classList.remove('on');
-    status.textContent='Blocked — enable in phone Settings → Safari → Notifications';
-    toast('Permission denied — check Settings');
+    status.textContent="Blocked — enable in phone Settings → Safari → Notifications";
+    toast("Permission denied — check Settings");
     S.notifsOn=false;save();
   }
 }
@@ -605,15 +605,15 @@ function updateNotifUI(){
   const granted=Notification.permission==='granted';
   tog.classList.toggle('on',granted);
   status.textContent=granted
-    ?'Enabled — you'll be alerted near stores'
-    :('Notification' in window?'Tap to enable':'Not supported on this browser');
+    ?"Enabled - you will be alerted near stores"
+    :("Notification" in window?'Tap to enable':"Not supported on this browser");
   if(S.reminderTime){
     const rs=document.getElementById('reminder-status');
     if(rs)rs.textContent='Daily at '+S.reminderTime+' ✓';
   }
 }
 async function askNotifPerm(){
-  if(!('Notification' in window))return;
+  if(!("Notification" in window))return;
   if(Notification.permission==='default'){
     const p=await Notification.requestPermission();
     if(p==='granted') toast('Notifications enabled ✓');
