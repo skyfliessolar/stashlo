@@ -542,7 +542,8 @@ function showNotif(c,dist){
       });
     }).catch(()=>{});
   }
-};document.getElementById('n-dis').onclick=()=>{document.getElementById('notif').style.display='none';};}
+  document.getElementById('n-dis').onclick=()=>{document.getElementById('notif').style.display='none';};
+}
 
 let tTimer;function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(tTimer);tTimer=setTimeout(()=>t.classList.remove('on'),2800);}
 
