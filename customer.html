@@ -12,3 +12,32 @@
 :root{--bg:#f0efff;--dark:#0a0a14;--accent:#00897B;--accent2:#e0f2f1;--font:'Plus Jakarta Sans',system-ui,sans-serif;--mono:'DM Mono',monospace}
 *{box-sizing:border-box;margin:0;padding:0;font-family:var(--font)}
 body{background:var(--bg);min-height:100vh}
+
+/* LOOKUP */
+#lookup-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--dark)}
+.lookup-box{background:#fff;border-radius:24px;padding:36px 28px;width:100%;max-width:380px}
+.lookup-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.lookup-logo-icon{width:44px;height:44px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center}
+.lookup-logo-icon svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.lookup-shop{font-size:13px;color:#706f87;margin-bottom:4px}
+.lookup-title{font-size:22px;font-weight:800;margin-bottom:6px;color:#1a1a2e}
+.lookup-sub{font-size:14px;color:#706f87;margin-bottom:24px;line-height:1.6}
+.lookup-field label{display:block;font-size:12px;font-weight:700;color:#706f87;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.lookup-inp{width:100%;padding:14px 16px;font-size:20px;font-weight:700;border:2px solid #e5e5ea;border-radius:12px;outline:none;font-family:var(--mono);letter-spacing:2px;margin-bottom:14px;transition:border-color .15s}
+.lookup-inp:focus{border-color:var(--accent)}
+.lookup-btn{width:100%;padding:14px;background:var(--dark);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer}
+.lookup-err{font-size:13px;color:#e53935;margin-top:10px;text-align:center;display:none}
+
+/* CARD SCREEN */
+#card-screen{display:none;min-height:100vh;padding:0 0 40px}
+.card-hero{background:var(--dark);padding:24px 20px 32px;position:relative;overflow:hidden}
+.card-hero::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.04)}
+.card-hero::after{content:'';position:absolute;bottom:-80px;left:-40px;width:220px;height:220px;border-radius:50%;background:rgba(0,137,123,.15)}
+.card-top-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;position:relative;z-index:1}
+.card-shop-name{font-size:16px;font-weight:700;color:#fff}
+.card-powered{font-size:10px;color:rgba(255,255,255,.35)}
+.card-customer-name{font-size:14px;color:rgba(255,255,255,.55);margin-bottom:4px;position:relative;z-index:1}
+.card-points-big{font-size:64px;font-weight:800;color:#fff;letter-spacing:-2px;line-height:1;position:relative;z-index:1}
+.card-pts-label{font-size:16px;color:rgba(255,255,255,.55);margin-bottom:20px;position:relative;z-index:1}
+.progress-wrap{position:relative;z-index:1}
+</partial-style>
