@@ -30,6 +30,8 @@ body{background:var(--bg);min-height:100vh}
 
 /* CARD SCREEN */
 #card-screen{display:none;min-height:100vh;padding:0 0 40px}
+
+/* TOP CARD */
 .card-hero{background:var(--dark);padding:24px 20px 32px;position:relative;overflow:hidden}
 .card-hero::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.04)}
 .card-hero::after{content:'';position:absolute;bottom:-80px;left:-40px;width:220px;height:220px;border-radius:50%;background:rgba(0,137,123,.15)}
@@ -40,4 +42,270 @@ body{background:var(--bg);min-height:100vh}
 .card-points-big{font-size:64px;font-weight:800;color:#fff;letter-spacing:-2px;line-height:1;position:relative;z-index:1}
 .card-pts-label{font-size:16px;color:rgba(255,255,255,.55);margin-bottom:20px;position:relative;z-index:1}
 .progress-wrap{position:relative;z-index:1}
-</partial-style>
+.progress-label{display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.45);margin-bottom:8px}
+.progress-bar{height:8px;background:rgba(255,255,255,.15);border-radius:100px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:100px;transition:width .6s ease}
+.reward-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(0,230,118,.15);border:1px solid rgba(0,230,118,.3);border-radius:100px;padding:8px 16px;margin-top:16px;font-size:13px;font-weight:600;color:#00e676;position:relative;z-index:1}
+
+/* BODY */
+.card-body{padding:20px}
+.section-label{font-size:11px;font-weight:700;color:#706f87;letter-spacing:.6px;text-transform:uppercase;margin-bottom:12px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
+.info-tile{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 6px rgba(0,0,0,.05)}
+.info-val{font-size:22px;font-weight:800;color:#1a1a2e}
+.info-lbl{font-size:12px;color:#706f87;margin-top:3px}
+
+/* REWARD CARD */
+.reward-card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 1px 6px rgba(0,0,0,.05);margin-bottom:24px}
+.reward-card-title{font-size:15px;font-weight:700;color:#1a1a2e;margin-bottom:4px}
+.reward-card-sub{font-size:13px;color:#706f87;line-height:1.55}
+.reward-how{background:var(--accent2);border-radius:10px;padding:12px 14px;margin-top:12px}
+.reward-how-text{font-size:13px;color:#004D40;line-height:1.6}
+.reward-ready{background:#e8faf3;border:1.5px solid #a5d6c0;border-radius:10px;padding:12px 14px;margin-top:12px;font-size:14px;color:#1b6b46;font-weight:600}
+
+/* HISTORY */
+.history-list{display:flex;flex-direction:column;gap:10px}
+.history-item{background:#fff;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.hi-label{font-size:14px;font-weight:500;color:#1a1a2e}
+.hi-sub{font-size:12px;color:#706f87;margin-top:2px}
+.hi-pts{font-size:15px;font-weight:700;color:var(--accent)}
+.hi-pts.neg{color:#e53935}
+.empty-hist{text-align:center;padding:40px;color:#706f87;font-size:14px}
+
+/* REGISTER */
+#register-screen{display:none;min-height:100vh;display:none;align-items:center;justify-content:center;padding:24px;background:var(--dark)}
+.reg-box{background:#fff;border-radius:24px;padding:36px 28px;width:100%;max-width:380px}
+.reg-title{font-size:22px;font-weight:800;margin-bottom:6px;color:#1a1a2e}
+.reg-sub{font-size:14px;color:#706f87;margin-bottom:24px;line-height:1.6}
+.reg-field{margin-bottom:14px}
+.reg-field label{display:block;font-size:12px;font-weight:700;color:#706f87;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.reg-field input{width:100%;padding:12px 14px;font-size:15px;border:1.5px solid #e5e5ea;border-radius:10px;outline:none}
+.reg-field input:focus{border-color:var(--accent)}
+.reg-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer}
+
+.loading{text-align:center;padding:60px;color:#706f87;font-size:15px}
+.err-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--dark);color:#fff;text-align:center}
+</style>
+</head>
+<body>
+
+<div id="lookup-screen">
+  <div class="lookup-box">
+    <div class="lookup-logo">
+      <div class="lookup-logo-icon"><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="3"/><path d="M1 10h22"/><path d="M5 15h4"/></svg></div>
+      <div><div class="lookup-shop" id="lookup-shop-name">Loading...</div><div style="font-size:16px;font-weight:800;color:#1a1a2e">Loyalty card</div></div>
+    </div>
+    <div class="lookup-title">Check your points</div>
+    <div class="lookup-sub">Enter your phone number to see your loyalty points balance</div>
+    <div class="lookup-field">
+      <label>Your phone number</label>
+      <input class="lookup-inp" type="tel" id="lookup-phone" placeholder="07700 900000">
+    </div>
+    <button class="lookup-btn" onclick="lookupCard()">See my points</button>
+    <div class="lookup-err" id="lookup-err"></div>
+    <div style="text-align:center;margin-top:16px;font-size:12px;color:#bbb">Not registered? <span style="color:var(--accent);cursor:pointer;font-weight:600" onclick="showRegForm()">Join the loyalty programme</span></div>
+  </div>
+</div>
+
+<div id="register-screen" style="display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:var(--dark)">
+  <div class="reg-box">
+    <div class="lookup-logo">
+      <div class="lookup-logo-icon"><svg viewBox="0 0 24 24" stroke="#fff" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="5" width="22" height="14" rx="3"/><path d="M1 10h22"/><path d="M5 15h4"/></svg></div>
+      <div style="font-size:16px;font-weight:800;color:#1a1a2e" id="reg-shop-name">Loyalty card</div>
+    </div>
+    <div class="reg-title">Join the loyalty programme</div>
+    <div class="reg-sub">Register your phone number and start earning points today</div>
+    <div class="reg-field"><label>Full name</label><input type="text" id="reg-name" placeholder="Your name"></div>
+    <div class="reg-field"><label>Phone number</label><input type="tel" id="reg-phone" placeholder="07700 900000"></div>
+    <button class="reg-btn" onclick="registerCustomer()">Join &amp; earn points</button>
+    <div style="text-align:center;margin-top:14px;font-size:12px;color:#888">Already registered? <span style="color:var(--accent);cursor:pointer;font-weight:600" onclick="showLookup()">Check my points</span></div>
+    <div class="lookup-err" id="reg-err" style="margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<div id="loading-screen" style="display:none" class="loading">Loading your card...</div>
+<div id="err-screen" class="err-screen" style="display:none"><div><div style="font-size:32px;margin-bottom:16px">😕</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Shop not found</div><div style="font-size:14px;color:rgba(255,255,255,.55)">Check the link you were given and try again</div></div></div>
+
+<div id="card-screen">
+  <div class="card-hero">
+    <div class="card-top-row">
+      <div>
+        <div class="card-shop-name" id="card-shop-name"></div>
+        <div class="card-powered">Powered by Stashlo</div>
+      </div>
+      <div style="font-size:28px;font-weight:800;color:rgba(255,255,255,.15)">S</div>
+    </div>
+    <div class="card-customer-name" id="card-customer-name"></div>
+    <div class="card-points-big" id="card-points-big">0</div>
+    <div class="card-pts-label">loyalty points</div>
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-label-left">0 pts</span>
+        <span id="prog-label-right">Goal: 100 pts</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+    <div class="reward-pill" id="reward-ready-pill" style="display:none">
+      <span>🎉</span><span id="reward-ready-text">Reward ready to redeem!</span>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <div style="background:var(--dark);border-radius:16px;padding:18px;margin:0 0 20px;display:flex;align-items:center;gap:14px">
+      <div style="width:44px;height:44px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="5" width="22" height="14" rx="3"/><path d="M1 10h22"/><path d="M5 15h4"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px">Get the Stashlo app</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.5)">All your loyalty cards — auto-opens at the shop</div>
+      </div>
+      <a href="../index.html" style="padding:8px 14px;background:var(--accent);color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">Get app</a>
+    </div>
+    <div class="section-label">Your stats</div>
+    <div class="info-grid">
+      <div class="info-tile"><div class="info-val" id="stat-visits">0</div><div class="info-lbl">Total visits</div></div>
+      <div class="info-tile"><div class="info-val" id="stat-rewards">0</div><div class="info-lbl">Rewards redeemed</div></div>
+    </div>
+
+    <div class="section-label">Your reward</div>
+    <div class="reward-card">
+      <div class="reward-card-title" id="reward-title">Earn points, get rewards</div>
+      <div class="reward-card-sub" id="reward-sub"></div>
+      <div class="reward-how" id="reward-how"></div>
+      <div class="reward-ready" id="reward-ready-box" style="display:none">
+        🎉 Your reward is ready! Show this screen to the cashier to redeem it.
+      </div>
+    </div>
+
+    <div class="section-label">Visit history</div>
+    <div class="history-list" id="history-list"><div class="empty-hist">No visits recorded yet</div></div>
+  </div>
+</div>
+
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y",
+  authDomain:"stashlo.firebaseapp.com",
+  projectId:"stashlo",
+  storageBucket:"stashlo.firebasestorage.app",
+  messagingSenderId:"924928321170",
+  appId:"1:924928321170:web:e711943ddbe64567eaa84b"
+});
+const db=firebase.firestore();
+const params=new URLSearchParams(window.location.search);
+const merchantId=params.get('m');
+const prePhone=params.get('p');
+let merchantData=null, rules={};
+
+function show(id){
+  ['lookup-screen','register-screen','loading-screen','err-screen','card-screen'].forEach(s=>{
+    const el=document.getElementById(s);
+    if(el) el.style.display=s===id?(s==='register-screen'?'flex':s==='card-screen'||s==='loading-screen'?'block':'flex'):s==='card-screen'?'none':s==='loading-screen'?'none':'none';
+  });
+  if(id==='card-screen') document.getElementById('card-screen').style.display='block';
+  if(id==='loading-screen') document.getElementById('loading-screen').style.display='block';
+}
+
+async function init(){
+  if(!merchantId){show('err-screen');return;}
+  try{
+    const doc=await db.collection('merchants').doc(merchantId).get();
+    if(!doc.exists){show('err-screen');return;}
+    merchantData=doc.data();
+    rules=merchantData.rules||{pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'1'};
+    document.getElementById('lookup-shop-name').textContent=merchantData.name||'Loyalty Programme';
+    document.getElementById('reg-shop-name').textContent=merchantData.name||'Loyalty Programme';
+    if(prePhone){
+      document.getElementById('lookup-phone').value=prePhone;
+      lookupCard(prePhone);
+    } else {
+      show('lookup-screen');
+    }
+  }catch(e){show('err-screen');}
+}
+
+async function lookupCard(prePhone){
+  const phone=(prePhone||document.getElementById('lookup-phone').value).replace(/\s/g,'');
+  if(!phone||phone.length<10){
+    document.getElementById('lookup-err').style.display='block';
+    document.getElementById('lookup-err').textContent='Enter a valid phone number';
+    return;
+  }
+  show('loading-screen');
+  const snap=await db.collection('merchants').doc(merchantId).collection('customers').doc(phone).get();
+  if(!snap.exists){
+    show('lookup-screen');
+    document.getElementById('lookup-err').style.display='block';
+    document.getElementById('lookup-err').textContent='Phone not found. Join the programme below.';
+    return;
+  }
+  renderCard(snap.data(), phone);
+}
+
+async function registerCustomer(){
+  const name=document.getElementById('reg-name').value.trim();
+  const phone=document.getElementById('reg-phone').value.replace(/\s/g,'');
+  const err=document.getElementById('reg-err');
+  if(!name){err.style.display='block';err.textContent='Enter your name';return;}
+  if(!phone||phone.length<10){err.style.display='block';err.textContent='Enter a valid phone number';return;}
+  show('loading-screen');
+  await db.collection('merchants').doc(merchantId).collection('customers').doc(phone).set({
+    phone,name,points:0,visitCount:0,totalSpend:0,joinedAt:Date.now(),lastVisit:null,rewardsRedeemed:0
+  },{merge:true});
+  const snap=await db.collection('merchants').doc(merchantId).collection('customers').doc(phone).get();
+  renderCard(snap.data(),phone);
+}
+
+async function renderCard(data, phone){
+  document.getElementById('card-shop-name').textContent=merchantData.name||'Loyalty Programme';
+  document.getElementById('card-customer-name').textContent=data.name||'';
+  const pts=data.points||0;
+  document.getElementById('card-points-big').textContent=pts;
+  const thresh=rules.threshold||100;
+  const pct=Math.min(100,Math.round((pts/thresh)*100));
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-label-left').textContent=pts+' pts';
+  document.getElementById('prog-label-right').textContent='Goal: '+thresh+' pts';
+  document.getElementById('stat-visits').textContent=data.visitCount||0;
+  document.getElementById('stat-rewards').textContent=data.rewardsRedeemed||0;
+
+  const rt=rules.rewardType||'pound';
+  const rv=rules.rewardValue||'1';
+  const rewardLabel=rt==='pound'?'£'+rv+' off your bill':rt==='percent'?rv+'% discount':'Free '+rv;
+  const ppp=rules.pointsPerPound||1;
+  document.getElementById('reward-title').textContent='Get '+rewardLabel;
+  document.getElementById('reward-sub').textContent='Earn '+ppp+' point'+(ppp>1?'s':'')+' for every £1 you spend.';
+  document.getElementById('reward-how').innerHTML='<div class="reward-how-text">You need <strong>'+thresh+' points</strong> to unlock your reward: <strong>'+rewardLabel+'</strong>.<br>You have <strong>'+pts+' points</strong> — need '+(pts>=thresh?'0':thresh-pts)+' more!</div>';
+
+  if(pts>=thresh){
+    document.getElementById('reward-ready-pill').style.display='flex';
+    document.getElementById('reward-ready-text').textContent='Reward ready: '+rewardLabel;
+    document.getElementById('reward-ready-box').style.display='block';
+  }
+
+  const txSnap=await db.collection('merchants').doc(merchantId).collection('transactions').where('phone','==',phone).orderBy('timestamp','desc').limit(20).get();
+  const hist=document.getElementById('history-list');
+  if(txSnap.empty){hist.innerHTML='<div class="empty-hist">No visits yet — visit the shop to start earning!</div>';}
+  else{
+    hist.innerHTML=txSnap.docs.map(d=>{
+      const t=d.data();
+      const isRedeem=t.type==='redeem';
+      const ptsText=isRedeem?'-'+t.pointsRedeemed+' pts (reward redeemed!)':'+'+t.pointsAdded+' pts';
+      return`<div class="history-item"><div><div class="hi-label">${isRedeem?'Reward redeemed':'Visit'}</div><div class="hi-sub">${timeAgo(t.timestamp)}${t.amount?' · £'+t.amount.toFixed(2)+' spent':''}</div></div><div class="hi-pts${isRedeem?' neg':''}">${ptsText}</div></div>`;
+    }).join('');
+  }
+  show('card-screen');
+}
+
+function showRegForm(){show('register-screen');}
+function showLookup(){show('lookup-screen');}
+
+function timeAgo(ts){
+  const d=Date.now()-ts,m=Math.floor(d/60000),h=Math.floor(d/3600000),dy=Math.floor(d/86400000);
+  if(m<1)return'Just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';if(dy===1)return'Yesterday';return dy+'d ago';
+}
+
+init();
+</script>
+</body>
+</html>
