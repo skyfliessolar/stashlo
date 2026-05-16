@@ -1,437 +1,580 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+// Firebase REST API - no CDN needed
+var _KEY='AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y';
+var _PID='stashlo';
+var _FS='https://firestore.googleapis.com/v1/projects/'+_PID+'/databases/(default)/documents/';
+var _AUTH_URL='https://identitytoolkit.googleapis.com/v1/accounts:';
+var _TOKEN=null;
+
+function _toFS(obj){var o={};Object.keys(obj).forEach(function(k){var v=obj[k];if(v===null||v===undefined)o[k]={nullValue:null};else if(typeof v==='boolean')o[k]={booleanValue:v};else if(typeof v==='number')o[k]=Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};else if(typeof v==='object')o[k]={mapValue:{fields:_toFS(v)}};else o[k]={stringValue:String(v)};});return o;}
+function _fromFS(doc){if(!doc||!doc.fields)return null;var o={};Object.keys(doc.fields).forEach(function(k){var v=doc.fields[k];if('stringValue'in v)o[k]=v.stringValue;else if('integerValue'in v)o[k]=parseInt(v.integerValue);else if('doubleValue'in v)o[k]=v.doubleValue;else if('booleanValue'in v)o[k]=v.booleanValue;else if('mapValue'in v)o[k]=_fromFS(v.mapValue);else o[k]=null;});if(doc.name)o._id=doc.name.split('/').pop();return o;}
+function _h(){var h={'Content-Type':'application/json'};if(_TOKEN)h['Authorization']='Bearer '+_TOKEN;return h;}
+function _get(p){return fetch(_FS+p,{headers:_h()}).then(function(r){return r.json();});}
+function _list(p,n){return fetch(_FS+p+'?pageSize='+(n||50),{headers:_h()}).then(function(r){return r.json();});}
+function _set(p,f){return fetch(_FS+p,{method:'PATCH',headers:_h(),body:JSON.stringify({fields:_toFS(f)})}).then(function(r){return r.json();});}
+function _add(c,f){return fetch(_FS+c,{method:'POST',headers:_h(),body:JSON.stringify({fields:_toFS(f)})}).then(function(r){return r.json();});}
+function _upd(p,f){var mask=Object.keys(f).map(function(k){return'updateMask.fieldPaths='+k;}).join('&');return fetch(_FS+p+'?'+mask,{method:'PATCH',headers:_h(),body:JSON.stringify({fields:_toFS(f)})}).then(function(r){return r.json();});}
+function _del(p){return fetch(_FS+p,{method:'DELETE',headers:_h()});}
+function _incr(p,field,by){return _get(p).then(function(d){var v=(_fromFS(d)||{})[field]||0;var upd={};upd[field]=v+(by||1);return _upd(p,upd);});}
+function _signIn(e,pw){return fetch(_AUTH_URL+'signInWithPassword?key='+_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:pw,returnSecureToken:true})}).then(function(r){return r.json();});}
+function _signUp(e,pw){return fetch(_AUTH_URL+'signUp?key='+_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:pw,returnSecureToken:true})}).then(function(r){return r.json();});}
+
+// Map firebase.* calls to REST equivalents
+var firebase={apps:[],app:function(){return firebase;},initializeApp:function(cfg){firebase.apps.push(cfg);return firebase;},
+  auth:function(){return{
+    signInWithEmailAndPassword:function(e,p){return _signIn(e,p).then(function(d){if(d.error)throw{code:'auth/'+d.error.message.toLowerCase().replace(/ /g,'_'),message:d.error.message};_TOKEN=d.idToken;firebase._uid=d.localId;firebase._email=d.email;var cb=firebase._authCb;if(cb)cb({uid:d.localId,email:d.email});return{user:{uid:d.localId,email:d.email}};});},
+    createUserWithEmailAndPassword:function(e,p){return _signUp(e,p).then(function(d){if(d.error)throw{code:'auth/'+d.error.message.toLowerCase().replace(/ /g,'_'),message:d.error.message};_TOKEN=d.idToken;firebase._uid=d.localId;firebase._email=d.email;var cb=firebase._authCb;if(cb)cb({uid:d.localId,email:d.email});return{user:{uid:d.localId,email:d.email,updateProfile:function(){return Promise.resolve();}}};});},
+    onAuthStateChanged:function(cb){firebase._authCb=cb;var s=null;try{s=JSON.parse(localStorage.getItem('sl_m_sess')||'null');}catch(e){}if(s&&s.exp>Date.now()){_TOKEN=s.token;firebase._uid=s.uid;firebase._email=s.email;setTimeout(function(){cb({uid:s.uid,email:s.email});},0);}else{setTimeout(function(){cb(null);},0);}},
+    signOut:function(){_TOKEN=null;firebase._uid=null;localStorage.removeItem('sl_m_sess');var cb=firebase._authCb;if(cb)cb(null);return Promise.resolve();}
+  };},
+  firestore:function(){
+    function col(path){return{doc:function(id){var fp=path+'/'+id;return{get:function(){return _get(fp).then(function(d){return{exists:!!d.fields,data:function(){return _fromFS(d)||{};},id:id,ref:{id:id}};});},set:function(data,opts){return _set(fp,data);},update:function(data){return _upd(fp,data);},delete:function(){return _del(fp);},collection:function(sub){return col(fp+'/'+sub);}};};};}; // simplified
+    return{collection:function(name){return col(name);}};
+  }
+};
+firebase.firestore.FieldValue={increment:function(n){return {__increment:n};}};
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Stashlo Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
-:root{--bg:#f4f4f6;--surface:#fff;--dark:#0a0a14;--accent:#6C5CE7;--accent2:#ece9ff;--text:#1a1a2e;--muted:#706f87;--success:#1b6b46;--danger:#c62828;--font:'Plus Jakarta Sans',system-ui,sans-serif;--r:12px}
-*{box-sizing:border-box;margin:0;padding:0;font-family:var(--font)}
-body{background:var(--bg);color:var(--text)}
-
+:root{--bg:#f4f4f6;--sf:#fff;--dk:#0a0a14;--ac:#6C5CE7;--ac2:#ece9ff;--gn:#1b6b46;--gn2:#e6f9f1;--or:#d97706;--or2:#fef3c7;--rd:#c62828;--rd2:#ffebee;--tx:#1a1a2e;--mu:#706f87;--fn:'Plus Jakarta Sans',system-ui,sans-serif;--r:12px;--sh:0 2px 12px rgba(0,0,0,.06)}
+*{box-sizing:border-box;margin:0;padding:0;font-family:var(--fn)}
+body{background:var(--bg);color:var(--tx);min-height:100vh}
+button{cursor:pointer;border:none;outline:none;font-family:var(--fn)}
+input,select,textarea{outline:none;font-family:var(--fn)}
 /* AUTH */
-#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--dark);padding:20px}
-.auth-box{background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:400px}
-.auth-brand{display:flex;align-items:center;gap:10px;margin-bottom:32px}
-.brand-icon{width:44px;height:44px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff}
-.brand-text{font-size:20px;font-weight:800;color:var(--text)}
-.brand-tag{font-size:11px;font-weight:600;background:var(--accent2);color:var(--accent);padding:2px 8px;border-radius:20px;margin-left:6px}
-.auth-title{font-size:24px;font-weight:800;margin-bottom:6px}
-.auth-sub{font-size:14px;color:var(--muted);margin-bottom:28px}
-.field label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
-.field input{width:100%;padding:12px 14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:15px;outline:none;margin-bottom:14px}
-.field input:focus{border-color:var(--accent)}
-.btn-login{width:100%;padding:14px;background:var(--dark);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer}
-.auth-err{color:#e53935;font-size:13px;margin-top:10px;text-align:center;display:none}
-
+#sa{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--dk);padding:20px}
+.ab{background:#fff;border-radius:20px;padding:40px 32px;width:100%;max-width:400px}
+.abr{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+.ai{width:44px;height:44px;background:var(--ac);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff}
+.an{font-size:20px;font-weight:800}.atag{font-size:11px;font-weight:600;background:var(--ac2);color:var(--ac);padding:2px 8px;border-radius:20px;margin-left:4px}
+.ati{font-size:22px;font-weight:800;margin-bottom:6px}.asu{font-size:14px;color:var(--mu);margin-bottom:24px;line-height:1.6}
+.fi{margin-bottom:12px}.fi label{display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.fi input{width:100%;padding:12px 14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:15px;transition:border-color .15s}
+.fi input:focus{border-color:var(--ac)}
+.bl{width:100%;padding:14px;background:var(--dk);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700}
+.ae{color:var(--rd);font-size:13px;margin-top:8px;text-align:center;display:none}
+/* APP */
+#app{display:none;min-height:100vh;flex-direction:column}
+/* TOPBAR */
+.tp{background:var(--dk);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:100}
+.tbl{display:flex;align-items:center;gap:8px}.tbn{font-size:17px;font-weight:800;color:#fff}
+.tbtag{font-size:11px;font-weight:600;background:rgba(108,92,231,.35);color:#a29bfe;padding:2px 8px;border-radius:20px}
+.tbr{display:flex;align-items:center;gap:10px}.tbu{font-size:12px;color:rgba(255,255,255,.4)}
+.tbs{font-size:12px;color:rgba(255,255,255,.4);cursor:pointer;padding:5px 10px;border-radius:6px}
 /* LAYOUT */
-#admin-app{display:none;min-height:100vh;flex-direction:column}
-.topbar{background:var(--dark);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0}
-.tb-brand{display:flex;align-items:center;gap:8px}
-.tb-logo{font-size:18px;font-weight:800;color:#fff}
-.tb-tag{font-size:11px;font-weight:600;background:rgba(108,92,231,.4);color:#a29bfe;padding:2px 8px;border-radius:20px}
-.tb-right{display:flex;align-items:center;gap:12px}
-.tb-user{font-size:13px;color:rgba(255,255,255,.45)}
-.tb-signout{font-size:12px;color:rgba(255,255,255,.45);cursor:pointer;padding:5px 10px;border-radius:6px}
-.tb-signout:hover{color:#fff;background:rgba(255,255,255,.1)}
-
-.admin-body{display:flex;flex:1;overflow:hidden}
-.sidebar{width:220px;background:var(--surface);border-right:1px solid #ebebef;padding:20px 0;flex-shrink:0;overflow-y:auto}
-.sb-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;padding:0 20px;margin-bottom:8px;margin-top:16px}
-.sb-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:14px;color:var(--muted);cursor:pointer;transition:all .15s}
-.sb-item:hover{background:#f9f9fb;color:var(--text)}
-.sb-item.on{background:var(--accent2);color:var(--accent);font-weight:600}
-.sb-icon{font-size:16px;width:20px;text-align:center}
-
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;background:var(--sf);border-right:1px solid #ebebef;padding:20px 0;flex-shrink:0;overflow-y:auto;height:calc(100vh - 56px);position:sticky;top:56px}
+.sbl{font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.6px;padding:0 20px;margin:16px 0 8px}
+.sbi{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:14px;color:var(--mu);cursor:pointer;transition:all .15s}
+.sbi:hover{background:#f9f9fb}.sbi.on{background:var(--ac2);color:var(--ac);font-weight:600}
 .main{flex:1;overflow-y:auto;padding:28px 24px}
-
-/* STATS GRID */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:28px}
-.kpi{background:var(--surface);border-radius:var(--r);padding:20px;box-shadow:0 1px 8px rgba(0,0,0,.05)}
-.kpi-val{font-size:32px;font-weight:800;color:var(--text)}
-.kpi-label{font-size:13px;color:var(--muted);margin-top:4px}
-.kpi-sub{font-size:12px;color:var(--success);margin-top:4px;font-weight:500}
-
+/* KPI */
+.kg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:24px}
+.kc{background:var(--sf);border-radius:var(--r);padding:20px;box-shadow:var(--sh)}
+.kv{font-size:30px;font-weight:800;color:var(--tx)}.kl{font-size:13px;color:var(--mu);margin-top:4px}.ks{font-size:12px;font-weight:600;margin-top:4px}
+/* SECTION */
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.st{font-size:18px;font-weight:700}
+.bsm{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;background:var(--ac);color:#fff;cursor:pointer}
+.bsm.out{background:var(--ac2);color:var(--ac)}
 /* TABLE */
-.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.section-title{font-size:18px;font-weight:700}
-.search-inp{padding:9px 14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:13px;outline:none;min-width:200px}
-.search-inp:focus{border-color:var(--accent)}
-.table-wrap{background:var(--surface);border-radius:var(--r);overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.05);overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:600px}
-th{padding:11px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:#f9f9fb;border-bottom:1px solid #ebebef;white-space:nowrap}
-td{padding:12px 16px;font-size:14px;border-bottom:1px solid #f4f4f6;vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#fafafa}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.badge-green{background:#e6f9f1;color:#1b6b46}
-.badge-blue{background:var(--accent2);color:var(--accent)}
-.badge-orange{background:#fff3cd;color:#664d03}
-.badge-red{background:#fff0f0;color:#c62828}
-.empty{text-align:center;padding:48px;color:var(--muted);font-size:14px}
-.view-btn{padding:5px 12px;background:var(--accent2);color:var(--accent);border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
-
-/* MERCHANT DETAIL MODAL */
-#detail-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
-.modal-box{background:#fff;border-radius:20px;padding:28px;width:100%;max-width:560px;max-height:85vh;overflow-y:auto}
-.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.modal-title{font-size:20px;font-weight:700}
-.modal-close{width:32px;height:32px;border-radius:50%;background:var(--bg);border:none;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
-.detail-tile{background:var(--bg);border-radius:var(--r);padding:14px}
-.detail-val{font-size:20px;font-weight:800}
-.detail-lbl{font-size:12px;color:var(--muted);margin-top:3px}
-.detail-rules{background:var(--accent2);border-radius:var(--r);padding:16px;margin-bottom:16px}
-.detail-rules-title{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px}
-.rule-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid rgba(108,92,231,.1)}
-.rule-row:last-child{border-bottom:none}
-.rule-key{color:var(--muted)}
-.rule-val{font-weight:600;color:var(--text)}
-
-/* REVENUE */
-.revenue-table{background:var(--surface);border-radius:var(--r);padding:20px;box-shadow:0 1px 8px rgba(0,0,0,.05);margin-bottom:20px}
-.rev-title{font-size:16px;font-weight:700;margin-bottom:16px}
-.rev-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f4f4f6;font-size:14px}
-.rev-row:last-child{border-bottom:none}
-.rev-name{font-weight:500}
-.rev-amount{font-weight:700;color:var(--success)}
-.rev-status{font-size:12px}
-
+.tw{background:var(--sf);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);overflow-x:auto;margin-bottom:24px}
+table{width:100%;border-collapse:collapse;min-width:500px}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;background:#f9f9fb;border-bottom:1px solid #ebebef}
+td{padding:12px 14px;font-size:14px;border-bottom:1px solid #f4f4f6}
+tr:last-child td{border:none}
+.bdg{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.bg{background:var(--gn2);color:var(--gn)}.bo{background:var(--or2);color:var(--or)}.bp{background:var(--ac2);color:var(--ac)}.br{background:var(--rd2);color:var(--rd)}
+.emp td{text-align:center;padding:40px;color:var(--mu);font-size:14px}
+/* PRODUCT GRID */
+.prgd{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-bottom:24px}
+.prcd{background:var(--sf);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.prci{width:100%;height:110px;background:linear-gradient(135deg,#ece9ff,#e0f2f1);display:flex;align-items:center;justify-content:center;font-size:44px}
+.prcb{padding:14px}
+.prcn{font-size:14px;font-weight:700;margin-bottom:4px}
+.prcp{font-size:17px;font-weight:800;color:var(--ac);margin-bottom:6px}
+.prct{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.pt{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.ptc{background:var(--ac2);color:var(--ac)}.ptd{background:var(--gn2);color:var(--gn)}.ptx{background:#f4f4f6;color:var(--mu)}
+.prcas{display:flex;gap:6px}
+.pea{flex:1;padding:7px;background:var(--ac2);color:var(--ac);border-radius:6px;font-size:12px;font-weight:600;text-align:center;cursor:pointer}
+.pda{padding:7px 10px;background:var(--rd2);color:var(--rd);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+/* ORDERS */
+.oc{background:var(--sf);border-radius:var(--r);padding:16px;box-shadow:var(--sh);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.oid{font-size:11px;font-weight:700;color:var(--mu);font-family:monospace;margin-bottom:4px}
+.opn{font-size:14px;font-weight:700;margin-bottom:2px}.omt{font-size:12px;color:var(--mu)}
+.ort{font-size:18px;font-weight:800;color:var(--ac)}.obs{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;background:var(--gn2);color:var(--gn);cursor:pointer;margin-top:4px}
+/* MODAL */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.mo.show{display:flex}
+.mb{background:#fff;border-radius:20px;padding:24px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto}
+.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.mt{font-size:18px;font-weight:800}
+.mc{width:32px;height:32px;border-radius:50%;background:#f4f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px}
+.sr{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.sf{flex:1;min-width:130px}.sf label{display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.sf input,.sf select{width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px;background:#fff}
+.sf input:focus,.sf select:focus{border-color:var(--ac)}
+.ck{display:flex;gap:16px;margin-bottom:16px}
+.ck label{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer}
+.ck input[type=checkbox]{width:18px;height:18px}
 /* TOAST */
-#toast{position:fixed;bottom:24px;right:24px;background:var(--dark);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast{position:fixed;bottom:24px;right:24px;background:var(--dk);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s}
 #toast.show{opacity:1}
+.inf{text-align:center;padding:48px;color:var(--mu);font-size:14px}
+@media(max-width:700px){.sidebar{display:none}.main{padding:16px}}
 </style>
 </head>
 <body>
 
-<div id="auth-screen">
-  <div class="auth-box">
-    <div class="auth-brand">
-      <div class="brand-icon">S</div>
-      <div class="brand-text">Stashlo <span class="brand-tag">Admin</span></div>
-    </div>
-    <div class="auth-title">Platform admin</div>
-    <div class="auth-sub">Sign in to manage all merchants and customers</div>
-    <div class="field">
-      <label>Admin email</label>
-      <input type="email" id="admin-email" placeholder="admin@stashlo.com">
-    </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="password" id="admin-pass" placeholder="••••••••">
-    </div>
-    <button class="btn-login" onclick="adminLogin()">Sign in to admin</button>
-    <div class="auth-err" id="admin-err"></div>
+<!-- AUTH -->
+<div id="sa">
+  <div class="ab">
+    <div class="abr"><div class="ai">S</div><div class="an">Stashlo <span class="atag">Admin</span></div></div>
+    <div class="ati">Platform admin</div>
+    <div class="asu">Sign in to manage the entire Stashlo platform</div>
+    <div class="fi"><label>Admin email</label><input type="email" id="ae" placeholder="admin@stashlo.com" autocomplete="email"></div>
+    <div class="fi"><label>Password</label><input type="password" id="ap" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="bl" onclick="doLogin()">Sign in to admin</button>
+    <div class="ae" id="aer"></div>
   </div>
 </div>
 
-<div id="admin-app">
-  <div class="topbar">
-    <div class="tb-brand">
-      <div class="tb-logo">Stashlo</div>
-      <div class="tb-tag">Admin dashboard</div>
-    </div>
-    <div class="tb-right">
-      <div class="tb-user" id="tb-user"></div>
-      <div class="tb-signout" onclick="adminSignout()">Sign out</div>
-    </div>
+<!-- APP -->
+<div id="app">
+  <div class="tp">
+    <div class="tbl"><div class="tbn">Stashlo</div><div class="tbtag">Admin dashboard</div></div>
+    <div class="tbr"><div class="tbu" id="tbu"></div><div class="tbs" onclick="doLogout()">Sign out</div></div>
   </div>
-  <div class="admin-body">
+  <div class="layout">
     <div class="sidebar">
-      <div class="sb-label">Platform</div>
-      <div class="sb-item on" id="sb-overview" onclick="showSection('overview')"><span class="sb-icon">📊</span> Overview</div>
-      <div class="sb-item" id="sb-merchants" onclick="showSection('merchants')"><span class="sb-icon">🏪</span> Merchants</div>
-      <div class="sb-item" id="sb-customers" onclick="showSection('customers')"><span class="sb-icon">👥</span> All customers</div>
-      <div class="sb-item" id="sb-revenue" onclick="showSection('revenue')"><span class="sb-icon">💷</span> Revenue</div>
+      <div class="sbl">Platform</div>
+      <div class="sbi on" onclick="showSec('overview')">📊 Overview</div>
+      <div class="sbi" onclick="showSec('stashlo-products')">⚡ Stashlo Products</div>
+      <div class="sbi" onclick="showSec('stashlo-orders')">📦 Stashlo Orders</div>
+      <div class="sbl">Merchants</div>
+      <div class="sbi" onclick="showSec('merchants')">🏪 All merchants</div>
+      <div class="sbi" onclick="showSec('customers')">👥 All customers</div>
+      <div class="sbl">Finance</div>
+      <div class="sbi" onclick="showSec('revenue')">💷 Revenue</div>
     </div>
     <div class="main">
 
       <!-- OVERVIEW -->
-      <div id="section-overview">
+      <div id="sec-overview">
         <div style="margin-bottom:20px">
-          <div style="font-size:24px;font-weight:800;margin-bottom:4px">Platform overview</div>
-          <div style="font-size:14px;color:var(--muted)" id="last-updated">Loading...</div>
+          <div style="font-size:24px;font-weight:800">Platform overview</div>
+          <div id="lu" style="font-size:13px;color:var(--mu)"></div>
         </div>
-        <div class="kpi-grid">
-          <div class="kpi"><div class="kpi-val" id="kpi-merchants">0</div><div class="kpi-label">Total merchants</div><div class="kpi-sub" id="kpi-merchants-sub"></div></div>
-          <div class="kpi"><div class="kpi-val" id="kpi-customers">0</div><div class="kpi-label">Total customers</div><div class="kpi-sub" id="kpi-customers-sub"></div></div>
-          <div class="kpi"><div class="kpi-val" id="kpi-mrr">£0</div><div class="kpi-label">Monthly revenue (est.)</div><div class="kpi-sub">Based on active merchants</div></div>
-          <div class="kpi"><div class="kpi-val" id="kpi-transactions">0</div><div class="kpi-label">Total transactions</div><div class="kpi-sub" id="kpi-tx-sub"></div></div>
+        <div class="kg">
+          <div class="kc"><div class="kv" id="km">0</div><div class="kl">Merchants</div><div class="ks" id="kms"></div></div>
+          <div class="kc"><div class="kv" id="kc2">0</div><div class="kl">Customers</div></div>
+          <div class="kc"><div class="kv" id="kmrr">£0</div><div class="kl">Monthly revenue</div></div>
+          <div class="kc"><div class="kv" id="kso">0</div><div class="kl">Stashlo orders</div></div>
         </div>
-        <div class="section-title" style="margin-bottom:14px">Recent merchant signups</div>
-        <div class="table-wrap">
-          <table><thead><tr><th>Merchant</th><th>Email</th><th>Customers</th><th>Joined</th><th>Status</th></tr></thead>
-          <tbody id="recent-merchants-body"><tr><td colspan="5" class="empty">Loading...</td></tr></tbody>
-          </table>
+        <div class="sh"><div class="st">Recent merchants</div></div>
+        <div class="tw"><table><thead><tr><th>Shop</th><th>Email</th><th>Customers</th><th>Joined</th><th>Plan</th></tr></thead><tbody id="rmb"><tr class="emp"><td colspan="5">Loading...</td></tr></tbody></table></div>
+      </div>
+
+      <!-- STASHLO PRODUCTS -->
+      <div id="sec-stashlo-products" style="display:none">
+        <div class="sh">
+          <div class="st">⚡ Stashlo Store products</div>
+          <button class="bsm" onclick="openPM()">+ Add product</button>
         </div>
+        <div style="background:linear-gradient(135deg,#1a1040,#0a0a14);border-radius:var(--r);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
+          <div style="font-size:32px">⚡</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:2px">Stashlo Store — admin only</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.5)">Only you can add/edit these products. They appear in ALL customer apps after login. Delivery only.</div>
+          </div>
+        </div>
+        <div class="prgd" id="spg"><div style="grid-column:1/-1" class="inf">Loading products...</div></div>
+      </div>
+
+      <!-- STASHLO ORDERS -->
+      <div id="sec-stashlo-orders" style="display:none">
+        <div class="sh">
+          <div class="st">📦 Stashlo Store orders</div>
+          <button class="bsm out" onclick="loadSOrd()">Refresh</button>
+        </div>
+        <div id="so-list"><div class="inf">Loading orders...</div></div>
       </div>
 
       <!-- MERCHANTS -->
-      <div id="section-merchants" style="display:none">
-        <div class="section-hdr">
-          <div class="section-title">All merchants</div>
-          <input class="search-inp" placeholder="Search merchants..." oninput="filterMerchants(this.value)">
+      <div id="sec-merchants" style="display:none">
+        <div class="sh">
+          <div class="st">All merchants</div>
+          <input type="text" placeholder="Search..." oninput="fMerch(this.value)" style="padding:8px 12px;border:1.5px solid #e5e5ea;border-radius:8px;font-size:13px;outline:none;min-width:180px">
         </div>
-        <div class="table-wrap">
-          <table><thead><tr><th>Shop name</th><th>Email</th><th>Customers</th><th>Plan</th><th>Joined</th><th>Action</th></tr></thead>
-          <tbody id="merchants-body"><tr><td colspan="6" class="empty">Loading merchants...</td></tr></tbody>
-          </table>
-        </div>
+        <div class="tw"><table><thead><tr><th>Shop name</th><th>Email</th><th>Shop ID</th><th>Customers</th><th>Plan</th><th>Joined</th><th>Action</th></tr></thead><tbody id="mb"><tr class="emp"><td colspan="7">Loading...</td></tr></tbody></table></div>
       </div>
 
       <!-- CUSTOMERS -->
-      <div id="section-customers" style="display:none">
-        <div class="section-hdr">
-          <div class="section-title">All customers</div>
-          <input class="search-inp" placeholder="Search by name or phone..." oninput="filterAllCustomers(this.value)">
+      <div id="sec-customers" style="display:none">
+        <div class="sh">
+          <div class="st">All customers</div>
+          <input type="text" placeholder="Search name or phone..." oninput="fCust(this.value)" style="padding:8px 12px;border:1.5px solid #e5e5ea;border-radius:8px;font-size:13px;outline:none;min-width:180px">
         </div>
-        <div class="table-wrap">
-          <table><thead><tr><th>Name</th><th>Phone</th><th>Shop</th><th>Points</th><th>Visits</th><th>Joined</th></tr></thead>
-          <tbody id="all-customers-body"><tr><td colspan="6" class="empty">Loading customers...</td></tr></tbody>
-          </table>
-        </div>
+        <div class="tw"><table><thead><tr><th>Name</th><th>Phone</th><th>Shop</th><th>Points</th><th>Visits</th><th>Joined</th></tr></thead><tbody id="cb"><tr class="emp"><td colspan="6">Loading...</td></tr></tbody></table></div>
       </div>
 
       <!-- REVENUE -->
-      <div id="section-revenue" style="display:none">
-        <div style="margin-bottom:20px">
-          <div style="font-size:24px;font-weight:800;margin-bottom:4px">Revenue tracker</div>
-          <div style="font-size:14px;color:var(--muted)">Monthly subscription income from all merchants</div>
+      <div id="sec-revenue" style="display:none">
+        <div style="margin-bottom:20px"><div style="font-size:24px;font-weight:800">Revenue tracker</div></div>
+        <div class="kg">
+          <div class="kc"><div class="kv" id="rmrr2">£0</div><div class="kl">Monthly recurring revenue</div></div>
+          <div class="kc"><div class="kv" id="rarr">£0</div><div class="kl">Annual run rate</div></div>
+          <div class="kc"><div class="kv" id="ract">0</div><div class="kl">Paying merchants</div></div>
+          <div class="kc"><div class="kv" id="rtri">0</div><div class="kl">Trial merchants</div></div>
         </div>
-        <div class="kpi-grid" style="margin-bottom:28px">
-          <div class="kpi"><div class="kpi-val" id="rev-mrr">£0</div><div class="kpi-label">Monthly recurring revenue</div></div>
-          <div class="kpi"><div class="kpi-val" id="rev-arr">£0</div><div class="kpi-label">Annual run rate</div></div>
-          <div class="kpi"><div class="kpi-val" id="rev-active">0</div><div class="kpi-label">Paying merchants</div></div>
-          <div class="kpi"><div class="kpi-val" id="rev-trial">0</div><div class="kpi-label">Trial merchants</div></div>
-        </div>
-        <div class="revenue-table">
-          <div class="rev-title">Merchant subscriptions</div>
-          <div id="rev-list"><div style="color:var(--muted);font-size:14px">Loading...</div></div>
+        <div style="background:var(--sf);border-radius:var(--r);padding:20px;box-shadow:var(--sh)">
+          <div style="font-size:15px;font-weight:700;margin-bottom:14px">Merchant subscriptions</div>
+          <div id="rl">Loading...</div>
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- PRODUCT MODAL -->
+<div class="mo" id="pm">
+  <div class="mb">
+    <div class="mh"><div class="mt" id="pmt">Add Stashlo product</div><div class="mc" onclick="closePM()">✕</div></div>
+    <div style="background:var(--ac2);border-radius:var(--r);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--ac);font-weight:600">
+      ⚡ This product will appear in ALL customer apps after they log in.
+    </div>
+    <div class="sr">
+      <div class="sf"><label>Product name</label><input type="text" id="pmn" placeholder="e.g. 25W Fast Charger"></div>
+      <div class="sf"><label>Emoji icon</label><input type="text" id="pme" placeholder="⚡" maxlength="2"></div>
+    </div>
+    <div class="sr">
+      <div class="sf"><label>Price (£)</label><input type="number" id="pmp" placeholder="0.00" step="0.01" min="0"></div>
+      <div class="sf"><label>Category</label>
+        <select id="pmc">
+          <option value="electronics">📱 Electronics</option>
+          <option value="accessories">🔌 Accessories</option>
+          <option value="other">📦 Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="sf" style="margin-bottom:12px"><label>Description</label><input type="text" id="pmd" placeholder="Short product description"></div>
+    <div class="sr" style="margin-bottom:6px">
+      <div class="sf"><label>Stock (0 = unlimited)</label><input type="number" id="pmst" value="0" min="0"></div>
+      <div class="sf"><label>Delivery days</label><input type="text" id="pmdd" value="1-3 days" placeholder="e.g. 1-3 days"></div>
+    </div>
+    <div class="ck">
+      <label><input type="checkbox" id="pmco"> Click &amp; Collect</label>
+      <label><input type="checkbox" id="pmde" checked> Home Delivery</label>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="saveProd()" style="flex:1;padding:14px;background:var(--dk);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700" id="pmb">Add product</button>
     </div>
   </div>
 </div>
 
 <!-- MERCHANT DETAIL MODAL -->
-<div id="detail-modal">
-  <div class="modal-box">
-    <div class="modal-hdr">
-      <div class="modal-title" id="modal-merchant-name"></div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="detail-grid" id="modal-stats"></div>
-    <div class="detail-rules" id="modal-rules"></div>
-    <div style="font-size:14px;font-weight:700;margin-bottom:10px">Customers</div>
-    <div class="table-wrap" style="max-height:300px;overflow-y:auto">
-      <table><thead><tr><th>Name</th><th>Phone</th><th>Points</th><th>Visits</th></tr></thead>
-      <tbody id="modal-customers"></tbody>
-      </table>
-    </div>
+<div class="mo" id="mdm">
+  <div class="mb">
+    <div class="mh"><div class="mt" id="mdmt"></div><div class="mc" onclick="closeMDM()">✕</div></div>
+    <div id="mdc"></div>
   </div>
 </div>
 
 <div id="toast"></div>
 
 <script>
-firebase.initializeApp({
-  apiKey:"AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y",
-  authDomain:"stashlo.firebaseapp.com",
-  projectId:"stashlo",
-  storageBucket:"stashlo.firebasestorage.app",
-  messagingSenderId:"924928321170",
-  appId:"1:924928321170:web:e711943ddbe64567eaa84b"
-});
-const auth=firebase.auth(), db=firebase.firestore();
-let allMerchants=[], allCustomersFlat=[], PLAN_PRICE=29.99;
+var AU,DB;
+var MERCH=[],CUSTS=[],SPRODS=[],editPId=null;
+var PRICE=29.99;
 
-// AUTH
-async function adminLogin(){
-  const e=document.getElementById('admin-email').value.trim();
-  const p=document.getElementById('admin-pass').value;
-  const err=document.getElementById('admin-err');
-  err.style.display='none';
-  try{await auth.signInWithEmailAndPassword(e,p);}
-  catch(ex){err.style.display='block';err.textContent='Invalid credentials';}
-}
-async function adminSignout(){await auth.signOut();}
-
-auth.onAuthStateChanged(user=>{
-  if(user){
-    document.getElementById('auth-screen').style.display='none';
-    document.getElementById('admin-app').style.display='flex';
-    document.getElementById('tb-user').textContent=user.email;
-    loadAll();
-  } else {
-    document.getElementById('auth-screen').style.display='flex';
-    document.getElementById('admin-app').style.display='none';
-  }
-});
-
-// LOAD DATA
-async function loadAll(){
-  document.getElementById('last-updated').textContent='Last updated: '+new Date().toLocaleTimeString('en-GB');
-  const merchantsSnap=await db.collection('merchants').orderBy('createdAt','desc').get();
-  allMerchants=[];
-  allCustomersFlat=[];
-  let totalCustomers=0, totalTx=0;
-
-  for(const doc of merchantsSnap.docs){
-    const m={id:doc.id,...doc.data(),customerCount:0,txCount:0};
-    const custSnap=await db.collection('merchants').doc(doc.id).collection('customers').get();
-    m.customerCount=custSnap.size;
-    totalCustomers+=custSnap.size;
-    custSnap.docs.forEach(cd=>{
-      allCustomersFlat.push({...cd.data(),id:cd.id,merchantName:m.name,merchantId:m.id});
+function initFB(){
+  try{
+    if(typeof firebase==='undefined'){setTimeout(initFB,200);return;}
+    if(firebase.apps.length===0){
+      firebase.initializeApp({apiKey:"AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y",authDomain:"stashlo.firebaseapp.com",projectId:"stashlo",storageBucket:"stashlo.firebasestorage.app",messagingSenderId:"924928321170",appId:"1:924928321190:web:e711943ddbe64567eaa84b"});
+    }
+    AU=firebase.auth();DB=firebase.firestore();
+    AU.onAuthStateChanged(function(u){
+      if(u){
+        document.getElementById('sa').style.display='none';
+        document.getElementById('app').style.display='flex';
+        document.getElementById('tbu').textContent=u.email;
+        loadAll();
+      }else{
+        document.getElementById('sa').style.display='flex';
+        document.getElementById('app').style.display='none';
+      }
     });
-    const txSnap=await db.collection('merchants').doc(doc.id).collection('transactions').get();
-    m.txCount=txSnap.size;
-    totalTx+=txSnap.size;
-    allMerchants.push(m);
-  }
-
-  // KPIs
-  document.getElementById('kpi-merchants').textContent=allMerchants.length;
-  document.getElementById('kpi-customers').textContent=totalCustomers;
-  document.getElementById('kpi-transactions').textContent=totalTx;
-  const activeMerchants=allMerchants.filter(m=>m.subscription==='paid').length;
-  const trialMerchants=allMerchants.filter(m=>m.subscription==='trial'||!m.subscription).length;
-  const mrr=activeMerchants*PLAN_PRICE;
-  document.getElementById('kpi-mrr').textContent='£'+mrr.toFixed(0);
-  document.getElementById('kpi-merchants-sub').textContent=activeMerchants+' paying · '+trialMerchants+' trial';
-  document.getElementById('kpi-tx-sub').textContent='Across all merchants';
-
-  renderRecentMerchants();
-  renderMerchantsTable(allMerchants);
-  renderAllCustomers(allCustomersFlat);
-  renderRevenue(activeMerchants, trialMerchants, mrr);
+  }catch(e){setTimeout(initFB,500);}
 }
 
-function renderRecentMerchants(){
-  const body=document.getElementById('recent-merchants-body');
-  const list=allMerchants.slice(0,10);
-  if(!list.length){body.innerHTML='<tr><td colspan="5" class="empty">No merchants yet</td></tr>';return;}
-  body.innerHTML=list.map(m=>`<tr>
-    <td><strong>${m.name||'Unnamed'}</strong></td>
-    <td style="color:var(--muted)">${m.email||'—'}</td>
-    <td>${m.customerCount}</td>
-    <td>${timeAgo(m.createdAt)}</td>
-    <td><span class="badge ${m.subscription==='paid'?'badge-green':m.subscription==='trial'?'badge-orange':'badge-orange'}">${m.subscription||'trial'}</span></td>
-  </tr>`).join('');
-}
-
-function renderMerchantsTable(list){
-  const body=document.getElementById('merchants-body');
-  if(!list.length){body.innerHTML='<tr><td colspan="6" class="empty">No merchants registered yet</td></tr>';return;}
-  body.innerHTML=list.map(m=>`<tr>
-    <td><strong>${m.name||'Unnamed'}</strong></td>
-    <td style="color:var(--muted);font-size:13px">${m.email||'—'}</td>
-    <td>${m.customerCount}</td>
-    <td><span class="badge ${m.subscription==='paid'?'badge-green':'badge-orange'}">${m.subscription||'trial'}</span></td>
-    <td style="color:var(--muted);font-size:13px">${timeAgo(m.createdAt)}</td>
-    <td><button class="view-btn" onclick="viewMerchant('${m.id}')">View</button></td>
-  </tr>`).join('');
-}
-
-function filterMerchants(q){
-  const filtered=q.trim()?allMerchants.filter(m=>(m.name||'').toLowerCase().includes(q.toLowerCase())||(m.email||'').includes(q)):allMerchants;
-  renderMerchantsTable(filtered);
-}
-
-function renderAllCustomers(list){
-  const body=document.getElementById('all-customers-body');
-  if(!list.length){body.innerHTML='<tr><td colspan="6" class="empty">No customers yet</td></tr>';return;}
-  body.innerHTML=list.slice(0,200).map(c=>`<tr>
-    <td><strong>${c.name||'Customer'}</strong></td>
-    <td style="font-family:monospace;font-size:13px">${c.phone||c.id}</td>
-    <td><span class="badge badge-blue">${c.merchantName||'Unknown'}</span></td>
-    <td>${c.points||0} pts</td>
-    <td>${c.visitCount||0}</td>
-    <td style="color:var(--muted);font-size:13px">${c.joinedAt?timeAgo(c.joinedAt):'—'}</td>
-  </tr>`).join('');
-}
-
-function filterAllCustomers(q){
-  const filtered=q.trim()?allCustomersFlat.filter(c=>(c.name||'').toLowerCase().includes(q.toLowerCase())||(c.phone||'').includes(q)):allCustomersFlat;
-  renderAllCustomers(filtered);
-}
-
-function renderRevenue(active, trial, mrr){
-  document.getElementById('rev-mrr').textContent='£'+mrr.toFixed(2);
-  document.getElementById('rev-arr').textContent='£'+(mrr*12).toFixed(0);
-  document.getElementById('rev-active').textContent=active;
-  document.getElementById('rev-trial').textContent=trial;
-  const list=document.getElementById('rev-list');
-  if(!allMerchants.length){list.innerHTML='<div style="color:var(--muted);font-size:14px">No merchants yet</div>';return;}
-  list.innerHTML=allMerchants.map(m=>`
-    <div class="rev-row">
-      <div><div class="rev-name">${m.name||'Unnamed shop'}</div><div style="font-size:12px;color:var(--muted)">${m.customerCount} customers · joined ${timeAgo(m.createdAt)}</div></div>
-      <div style="text-align:right">
-        <div class="rev-amount">${m.subscription==='paid'?'£'+PLAN_PRICE+'/mo':'—'}</div>
-        <span class="badge ${m.subscription==='paid'?'badge-green':'badge-orange'} rev-status">${m.subscription||'trial'}</span>
-        ${m.subscription!=='paid'?`<button onclick="upgradeMerchant('${m.id}')" style="margin-left:8px;padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">Mark paid</button>`:''}
-      </div>
-    </div>`).join('');
-}
-
-async function upgradeMerchant(id){
-  await db.collection('merchants').doc(id).update({subscription:'paid'});
-  toast('Merchant marked as paid');
-  loadAll();
-}
-
-async function viewMerchant(id){
-  const m=allMerchants.find(x=>x.id===id);
-  if(!m)return;
-  document.getElementById('modal-merchant-name').textContent=m.name||'Merchant';
-  const r=m.rules||{};
-  document.getElementById('modal-stats').innerHTML=`
-    <div class="detail-tile"><div class="detail-val">${m.customerCount}</div><div class="detail-lbl">Customers</div></div>
-    <div class="detail-tile"><div class="detail-val">${m.txCount}</div><div class="detail-lbl">Transactions</div></div>
-    <div class="detail-tile"><div class="detail-val">${m.subscription||'trial'}</div><div class="detail-lbl">Plan</div></div>
-    <div class="detail-tile"><div class="detail-val">${timeAgo(m.createdAt)}</div><div class="detail-lbl">Joined</div></div>`;
-  document.getElementById('modal-rules').innerHTML=`
-    <div class="detail-rules-title">Loyalty rules</div>
-    <div class="rule-row"><span class="rule-key">Points per £1</span><span class="rule-val">${r.pointsPerPound||1}</span></div>
-    <div class="rule-row"><span class="rule-key">Threshold</span><span class="rule-val">${r.threshold||100} pts</span></div>
-    <div class="rule-row"><span class="rule-key">Reward</span><span class="rule-val">${r.rewardType==='pound'?'£'+r.rewardValue+' off':r.rewardType==='percent'?r.rewardValue+'% off':'Free '+r.rewardValue}</span></div>
-    <div class="rule-row"><span class="rule-key">Min spend</span><span class="rule-val">£${r.minSpend||0}</span></div>`;
-  const custs=allCustomersFlat.filter(c=>c.merchantId===id);
-  document.getElementById('modal-customers').innerHTML=custs.length?custs.map(c=>`<tr>
-    <td>${c.name||'Customer'}</td>
-    <td style="font-family:monospace;font-size:12px">${c.phone||c.id}</td>
-    <td>${c.points||0} pts</td>
-    <td>${c.visitCount||0}</td>
-  </tr>`).join(''):'<tr><td colspan="4" class="empty">No customers yet</td></tr>';
-  document.getElementById('detail-modal').style.display='flex';
-}
-function closeModal(){document.getElementById('detail-modal').style.display='none';}
-
-// NAV
-function showSection(s){
-  ['overview','merchants','customers','revenue'].forEach(x=>{
-    document.getElementById('section-'+x).style.display=x===s?'block':'none';
-    document.getElementById('sb-'+x).classList.toggle('on',x===s);
+function doLogin(){
+  var e=document.getElementById('ae').value.trim();
+  var p=document.getElementById('ap').value;
+  var er=document.getElementById('aer');
+  er.style.display='none';
+  if(!e||!p){er.textContent='Enter email and password';er.style.display='block';return;}
+  AU.signInWithEmailAndPassword(e,p).catch(function(ex){
+    var m={'auth/invalid-credential':'Wrong email or password','auth/user-not-found':'No account found','auth/wrong-password':'Wrong password','auth/too-many-requests':'Too many attempts'};
+    er.textContent=m[ex.code]||'Sign in failed';er.style.display='block';
   });
 }
+function doLogout(){AU.signOut();}
 
-function timeAgo(ts){
-  if(!ts)return'—';
-  const d=Date.now()-ts,m=Math.floor(d/60000),h=Math.floor(d/3600000),dy=Math.floor(d/86400000);
-  if(m<1)return'Just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';if(dy===1)return'Yesterday';return dy+'d ago';
+async function loadAll(){
+  document.getElementById('lu').textContent='Last updated: '+new Date().toLocaleTimeString('en-GB');
+  // Load merchants
+  var snap=await DB.collection('merchants').orderBy('createdAt','desc').get();
+  MERCH=[];CUSTS=[];
+  var tc=0,tt=0;
+  for(var doc of snap.docs){
+    var m=Object.assign({id:doc.id,custCount:0,txCount:0},doc.data());
+    var cs=await DB.collection('merchants').doc(doc.id).collection('customers').get();
+    m.custCount=cs.size;tc+=cs.size;
+    cs.docs.forEach(function(cd){CUSTS.push(Object.assign({id:cd.id,merchantName:m.name,merchantId:m.id},cd.data()));});
+    var tx=await DB.collection('merchants').doc(doc.id).collection('transactions').get();
+    m.txCount=tx.size;tt+=tx.size;
+    MERCH.push(m);
+  }
+  var pay=MERCH.filter(function(m){return m.subscription==='paid';}).length;
+  var tri=MERCH.filter(function(m){return m.subscription!=='paid';}).length;
+  var mrr=pay*PRICE;
+  document.getElementById('km').textContent=MERCH.length;
+  document.getElementById('kms').textContent=pay+' paying · '+tri+' trial';
+  document.getElementById('kc2').textContent=tc;
+  document.getElementById('kmrr').textContent='£'+mrr.toFixed(0);
+  renderRMerch();renderMerchTable(MERCH);renderCustTable(CUSTS);renderRevenue(pay,tri,mrr);
+  // Stashlo orders count
+  DB.collection('stashlo_orders').get().then(function(sn){document.getElementById('kso').textContent=sn.size;});
+  // Load stashlo products
+  loadSProducts();
 }
 
-let toastTimer;
-function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+function renderRMerch(){
+  var b=document.getElementById('rmb');
+  var l=MERCH.slice(0,8);
+  if(!l.length){b.innerHTML='<tr class="emp"><td colspan="5">No merchants yet</td></tr>';return;}
+  b.innerHTML=l.map(function(m){
+    return '<tr><td><strong>'+esc(m.name||'Unnamed')+'</strong></td><td>'+esc(m.email||'-')+'</td><td>'+m.custCount+'</td><td>'+tAgo(m.createdAt)+'</td><td><span class="bdg '+(m.subscription==='paid'?'bg':'bo')+'">'+(m.subscription||'trial')+'</span></td></tr>';
+  }).join('');
 }
+function renderMerchTable(l){
+  var b=document.getElementById('mb');
+  if(!l.length){b.innerHTML='<tr class="emp"><td colspan="7">No merchants yet</td></tr>';return;}
+  b.innerHTML=l.map(function(m){
+    return '<tr><td><strong>'+esc(m.name||'Unnamed')+'</strong></td><td>'+esc(m.email||'-')+'</td><td style="font-family:monospace">'+esc(m.shopId||'-')+'</td><td>'+m.custCount+'</td>' +
+      '<td><span class="bdg '+(m.subscription==='paid'?'bg':'bo')+'">'+(m.subscription||'trial')+'</span></td>' +
+      '<td>'+tAgo(m.createdAt)+'</td>' +
+      '<td><button onclick="viewMerch(\''+m.id+'\')" style="padding:5px 12px;background:var(--ac2);color:var(--ac);border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">View</button>' +
+      (m.subscription!=='paid'?'<button onclick="upgM(\''+m.id+'\')" style="padding:5px 10px;background:var(--gn2);color:var(--gn);border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;margin-left:4px">Mark paid</button>':'')+'</td></tr>';
+  }).join('');
+}
+function fMerch(q){renderMerchTable(q.trim()?MERCH.filter(function(m){return(m.name||'').toLowerCase().includes(q.toLowerCase())||(m.email||'').includes(q);}):MERCH);}
+function renderCustTable(l){
+  var b=document.getElementById('cb');
+  if(!l.length){b.innerHTML='<tr class="emp"><td colspan="6">No customers yet</td></tr>';return;}
+  b.innerHTML=l.slice(0,200).map(function(c){
+    return '<tr><td><strong>'+esc(c.name||'Customer')+'</strong></td><td>'+esc(c.phone||c.id)+'</td>' +
+      '<td><span class="bdg bp">'+esc(c.merchantName||'Unknown')+'</span></td>' +
+      '<td>'+( c.points||0)+' pts</td><td>'+(c.visitCount||0)+'</td><td>'+tAgo(c.joinedAt)+'</td></tr>';
+  }).join('');
+}
+function fCust(q){renderCustTable(q.trim()?CUSTS.filter(function(c){return(c.name||'').toLowerCase().includes(q.toLowerCase())||(c.phone||'').includes(q);}):CUSTS);}
+function renderRevenue(pay,tri,mrr){
+  document.getElementById('rmrr2').textContent='£'+mrr.toFixed(2);
+  document.getElementById('rarr').textContent='£'+(mrr*12).toFixed(0);
+  document.getElementById('ract').textContent=pay;
+  document.getElementById('rtri').textContent=tri;
+  var rl=document.getElementById('rl');
+  if(!MERCH.length){rl.innerHTML='<div class="inf">No merchants yet</div>';return;}
+  rl.innerHTML=MERCH.map(function(m){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f4f4f6">' +
+      '<div style="font-size:14px;font-weight:600">'+esc(m.name||'Unnamed')+'</div>' +
+      '<div style="display:flex;align-items:center;gap:8px">' +
+        '<span class="bdg '+(m.subscription==='paid'?'bg':'bo')+'">'+(m.subscription||'trial')+'</span>' +
+        (m.subscription!=='paid'?'<button onclick="upgM(\''+m.id+'\')" style="padding:4px 10px;background:var(--ac);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">Mark paid</button>':'<span style="font-size:13px;font-weight:700;color:var(--gn)">£'+PRICE.toFixed(2)+'/mo</span>')+
+      '</div></div>';
+  }).join('');
+}
+async function upgM(id){
+  await DB.collection('merchants').doc(id).update({subscription:'paid'});
+  toast('Merchant marked as paid!');loadAll();
+}
+
+// MERCHANT DETAIL
+async function viewMerch(id){
+  var m=MERCH.find(function(x){return x.id===id;});if(!m)return;
+  document.getElementById('mdmt').textContent=m.name||'Merchant';
+  var custs=CUSTS.filter(function(c){return c.merchantId===id;});
+  var r=m.rules||{};
+  document.getElementById('mdc').innerHTML=
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">' +
+      '<div style="background:#f9f9fb;border-radius:12px;padding:14px"><div style="font-size:22px;font-weight:800">'+m.custCount+'</div><div style="font-size:12px;color:var(--mu)">Customers</div></div>' +
+      '<div style="background:#f9f9fb;border-radius:12px;padding:14px"><div style="font-size:22px;font-weight:800">'+(m.subscription||'trial')+'</div><div style="font-size:12px;color:var(--mu)">Plan</div></div>' +
+    '</div>' +
+    '<div style="background:var(--ac2);border-radius:12px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--ac);font-weight:600">' +
+      '📍 Shop ID: '+(m.shopId||'-')+' &nbsp;·&nbsp; Points/£: '+(r.pointsPerPound||1)+' &nbsp;·&nbsp; Threshold: '+(r.threshold||100)+' pts &nbsp;·&nbsp; Reward: '+(r.rewardType||'-')+' '+(r.rewardValue||'-') +
+    '</div>' +
+    '<div style="font-size:14px;font-weight:700;margin-bottom:10px">Customers ('+custs.length+')</div>' +
+    '<div style="max-height:260px;overflow-y:auto">' +
+      (custs.length?custs.map(function(c){
+        return '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f4f4f6;font-size:13px">' +
+          '<div><strong>'+esc(c.name||'Customer')+'</strong> · '+esc(c.phone||c.id)+'</div>' +
+          '<div style="font-weight:700;color:var(--ac)">'+(c.points||0)+' pts</div></div>';
+      }).join(''):'<div style="text-align:center;padding:20px;color:var(--mu)">No customers yet</div>') +
+    '</div>';
+  document.getElementById('mdm').classList.add('show');
+}
+function closeMDM(){document.getElementById('mdm').classList.remove('show');}
+
+// STASHLO PRODUCTS
+async function loadSProducts(){
+  var sn=await DB.collection('stashlo_products').orderBy('createdAt','desc').get().catch(function(){return{docs:[]};});
+  SPRODS=sn.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+  renderSProds();
+}
+function renderSProds(){
+  var el=document.getElementById('spg');
+  if(!SPRODS.length){el.innerHTML='<div style="grid-column:1/-1" class="inf">No products yet — add your first Stashlo product above</div>';return;}
+  el.innerHTML=SPRODS.map(function(p){
+    var tags='';
+    if(p.collect)tags+='<span class="pt ptc">Collect</span>';
+    if(p.delivery!==false)tags+='<span class="pt ptd">Delivery</span>';
+    if(p.active===false)tags+='<span class="pt ptx">Hidden</span>';
+    return '<div class="prcd">' +
+      '<div class="prci">'+(p.emoji||'⚡')+'</div>' +
+      '<div class="prcb">' +
+        '<div class="prcn">'+esc(p.name)+'</div>' +
+        '<div class="prcp">£'+Number(p.price).toFixed(2)+'</div>' +
+        '<div class="prct">'+tags+'</div>' +
+        '<div style="font-size:12px;color:var(--mu);margin-bottom:10px">'+esc(p.description||'')+'</div>' +
+        '<div class="prcas">' +
+          '<div class="pea" onclick="editProd(\''+p.id+'\')">Edit</div>' +
+          '<div class="pda" onclick="toggleProd(\''+p.id+'\','+( p.active!==false)+')">'+(p.active===false?'Show':'Hide')+'</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openPM(id){
+  editPId=id||null;
+  if(id){
+    var p=SPRODS.find(function(x){return x.id===id;});
+    document.getElementById('pmt').textContent='Edit Stashlo product';
+    document.getElementById('pmb').textContent='Save changes';
+    document.getElementById('pmn').value=p.name||'';
+    document.getElementById('pme').value=p.emoji||'';
+    document.getElementById('pmp').value=p.price||'';
+    document.getElementById('pmc').value=p.category||'electronics';
+    document.getElementById('pmd').value=p.description||'';
+    document.getElementById('pmst').value=p.stock||0;
+    document.getElementById('pmdd').value=p.deliveryDays||'1-3 days';
+    document.getElementById('pmco').checked=p.collect||false;
+    document.getElementById('pmde').checked=p.delivery!==false;
+  }else{
+    document.getElementById('pmt').textContent='Add Stashlo product';
+    document.getElementById('pmb').textContent='Add product';
+    ['pmn','pme','pmd'].forEach(function(i){document.getElementById(i).value='';});
+    document.getElementById('pmp').value='';
+    document.getElementById('pmc').value='electronics';
+    document.getElementById('pmst').value='0';
+    document.getElementById('pmdd').value='1-3 days';
+    document.getElementById('pmco').checked=false;
+    document.getElementById('pmde').checked=true;
+  }
+  document.getElementById('pm').classList.add('show');
+}
+function editProd(id){openPM(id);}
+function closePM(){document.getElementById('pm').classList.remove('show');}
+
+async function saveProd(){
+  var name=document.getElementById('pmn').value.trim();
+  var price=parseFloat(document.getElementById('pmp').value);
+  if(!name){toast('Enter product name');return;}
+  if(!price||price<=0){toast('Enter valid price');return;}
+  var p={
+    name:name,emoji:document.getElementById('pme').value||'⚡',price:price,
+    category:document.getElementById('pmc').value,description:document.getElementById('pmd').value.trim(),
+    stock:parseInt(document.getElementById('pmst').value)||0,
+    deliveryDays:document.getElementById('pmdd').value||'1-3 days',
+    collect:document.getElementById('pmco').checked,
+    delivery:document.getElementById('pmde').checked,
+    active:true,shopId:'stashlo',shopName:'Stashlo Store',updatedAt:Date.now()
+  };
+  try{
+    if(editPId){
+      await DB.collection('stashlo_products').doc(editPId).update(p);toast('Product updated!');
+    }else{
+      p.createdAt=Date.now();
+      await DB.collection('stashlo_products').add(p);toast('Product added! It now appears in all customer apps.');
+    }
+    closePM();await loadSProducts();
+  }catch(e){toast('Error: '+e.message);}
+}
+
+async function toggleProd(id,cur){
+  await DB.collection('stashlo_products').doc(id).update({active:!cur});
+  toast(cur?'Product hidden from app':'Product now visible in app');
+  loadSProducts();
+}
+
+// STASHLO ORDERS
+async function loadSOrd(){
+  var sn=await DB.collection('stashlo_orders').orderBy('createdAt','desc').limit(50).get().catch(function(){return{docs:[]};});
+  var el=document.getElementById('so-list');
+  if(sn.empty){el.innerHTML='<div class="inf">No Stashlo Store orders yet</div>';return;}
+  el.innerHTML=sn.docs.map(function(d){
+    var o=d.data();
+    var sc=o.status==='delivered'?'bg':o.status==='dispatched'?'bp':'bo';
+    var sl=o.status==='delivered'?'Delivered':o.status==='dispatched'?'Dispatched':'Pending';
+    return '<div class="oc">' +
+      '<div><div class="oid">'+(o.orderId||d.id.slice(0,8).toUpperCase())+'</div>' +
+        '<div class="opn">'+(o.emoji||'⚡')+' '+esc(o.productName)+' × '+(o.qty||1)+'</div>' +
+        '<div class="omt">🚚 '+esc(o.address||'Address not provided')+' · '+tAgo(o.createdAt)+'</div>' +
+      '</div>' +
+      '<div style="text-align:right">' +
+        '<div class="ort">£'+Number(o.total).toFixed(2)+'</div>' +
+        '<div><span class="bdg '+sc+'">'+sl+'</span></div>' +
+        (o.status==='pending'?'<button class="obs" onclick="markDisp(\''+d.id+'\')">Mark dispatched</button>':'') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+async function markDisp(id){
+  await DB.collection('stashlo_orders').doc(id).update({status:'dispatched'});
+  toast('Marked as dispatched!');loadSOrd();
+}
+
+function showSec(s){
+  ['overview','stashlo-products','stashlo-orders','merchants','customers','revenue'].forEach(function(x){
+    document.getElementById('sec-'+x).style.display=x===s?'block':'none';
+  });
+  document.querySelectorAll('.sbi').forEach(function(b,i){
+    b.classList.toggle('on',['overview','stashlo-products','stashlo-orders','merchants','customers','revenue'][i]===s);
+  });
+  if(s==='stashlo-orders')loadSOrd();
+}
+
+function tAgo(ts){
+  if(!ts)return'-';
+  var d=Date.now()-ts,m=Math.floor(d/60000),h=Math.floor(d/3600000),dy=Math.floor(d/86400000);
+  if(m<1)return'Just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';return dy+'d ago';
+}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+var TT;
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(TT);TT=setTimeout(function(){t.classList.remove('show');},3000);}
+
+window.addEventListener('load',function(){initFB();});
 </script>
 </body>
 </html>
