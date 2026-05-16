@@ -1,180 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>
-// Firebase REST API - no CDN needed
-var _KEY='AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y';
-var _PID='stashlo';
-var _FS='https://firestore.googleapis.com/v1/projects/'+_PID+'/databases/(default)/documents/';
-var _AUTH_URL='https://identitytoolkit.googleapis.com/v1/accounts:';
-var _TOKEN=null;
-
-function _toFS(obj){var o={};Object.keys(obj).forEach(function(k){var v=obj[k];if(v===null||v===undefined)o[k]={nullValue:null};else if(typeof v==='boolean')o[k]={booleanValue:v};else if(typeof v==='number')o[k]=Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};else if(typeof v==='object')o[k]={mapValue:{fields:_toFS(v)}};else o[k]={stringValue:String(v)};});return o;}
-function _fromFS(doc){if(!doc||!doc.fields)return null;var o={};Object.keys(doc.fields).forEach(function(k){var v=doc.fields[k];if('stringValue'in v)o[k]=v.stringValue;else if('integerValue'in v)o[k]=parseInt(v.integerValue);else if('doubleValue'in v)o[k]=v.doubleValue;else if('booleanValue'in v)o[k]=v.booleanValue;else if('mapValue'in v)o[k]=_fromFS(v.mapValue);else o[k]=null;});if(doc.name)o._id=doc.name.split('/').pop();return o;}
-function _h(){var h={'Content-Type':'application/json'};if(_TOKEN)h['Authorization']='Bearer '+_TOKEN;return h;}
-function _get(p){return fetch(_FS+p,{headers:_h()}).then(function(r){return r.json();});}
-function _list(p,n){return fetch(_FS+p+'?pageSize='+(n||50),{headers:_h()}).then(function(r){return r.json();});}
-function _set(p,f){return fetch(_FS+p,{method:'PATCH',headers:_h(),body:JSON.stringify({fields:_toFS(f)})}).then(function(r){return r.json();});}
-function _add(c,f){return fetch(_FS+c,{method:'POST',headers:_h(),body:JSON.stringify({fields:_toFS(f)})}).then(function(r){return r.json();});}
-function _upd(p,f){var mask=Object.keys(f).map(function(k){return'updateMask.fieldPaths='+k;}).join('&');return fetch(_FS+p+'?'+mask,{method:'PATCH',headers:_h(),body:JSON.stringify({fields:_toFS(f)})}).then(function(r){return r.json();});}
-function _del(p){return fetch(_FS+p,{method:'DELETE',headers:_h()});}
-function _incr(p,field,by){return _get(p).then(function(d){var v=(_fromFS(d)||{})[field]||0;var upd={};upd[field]=v+(by||1);return _upd(p,upd);});}
-function _signIn(e,pw){return fetch(_AUTH_URL+'signInWithPassword?key='+_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:pw,returnSecureToken:true})}).then(function(r){return r.json();});}
-function _signUp(e,pw){return fetch(_AUTH_URL+'signUp?key='+_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:pw,returnSecureToken:true})}).then(function(r){return r.json();});}
-
-// Map firebase.* calls to REST equivalents
-var firebase={apps:[],app:function(){return firebase;},initializeApp:function(cfg){firebase.apps.push(cfg);return firebase;},
-  auth:function(){return{
-    signInWithEmailAndPassword:function(e,p){return _signIn(e,p).then(function(d){if(d.error)throw{code:'auth/'+d.error.message.toLowerCase().replace(/ /g,'_'),message:d.error.message};_TOKEN=d.idToken;firebase._uid=d.localId;firebase._email=d.email;var cb=firebase._authCb;if(cb)cb({uid:d.localId,email:d.email});return{user:{uid:d.localId,email:d.email}};});},
-    createUserWithEmailAndPassword:function(e,p){return _signUp(e,p).then(function(d){if(d.error)throw{code:'auth/'+d.error.message.toLowerCase().replace(/ /g,'_'),message:d.error.message};_TOKEN=d.idToken;firebase._uid=d.localId;firebase._email=d.email;var cb=firebase._authCb;if(cb)cb({uid:d.localId,email:d.email});return{user:{uid:d.localId,email:d.email,updateProfile:function(){return Promise.resolve();}}};});},
-    onAuthStateChanged:function(cb){firebase._authCb=cb;var s=null;try{s=JSON.parse(localStorage.getItem('sl_m_sess')||'null');}catch(e){}if(s&&s.exp>Date.now()){_TOKEN=s.token;firebase._uid=s.uid;firebase._email=s.email;setTimeout(function(){cb({uid:s.uid,email:s.email});},0);}else{setTimeout(function(){cb(null);},0);}},
-    signOut:function(){_TOKEN=null;firebase._uid=null;localStorage.removeItem('sl_m_sess');var cb=firebase._authCb;if(cb)cb(null);return Promise.resolve();}
-  };},
-  firestore:function(){
-    function col(path){return{doc:function(id){var fp=path+'/'+id;return{get:function(){return _get(fp).then(function(d){return{exists:!!d.fields,data:function(){return _fromFS(d)||{};},id:id,ref:{id:id}};});},set:function(data,opts){return _set(fp,data);},update:function(data){return _upd(fp,data);},delete:function(){return _del(fp);},collection:function(sub){return col(fp+'/'+sub);}};};};}; // simplified
-    return{collection:function(name){return col(name);}};
-  }
-};
-firebase.firestore.FieldValue={increment:function(n){return {__increment:n};}};
-</script>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a0a14">
 <title>Stashlo Merchant</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f4f4f6;--surface:#fff;--dark:#0a0a14;--accent:#6C5CE7;--accent2:#ece9ff;--green:#1b6b46;--green2:#e6f9f1;--orange:#F57C00;--orange2:#fff3e0;--red:#c62828;--red2:#ffebee;--text:#1a1a2e;--muted:#706f87;--font:'Plus Jakarta Sans',system-ui,sans-serif;--r:12px;--shadow:0 2px 12px rgba(0,0,0,.06)}
-*{box-sizing:border-box;margin:0;padding:0;font-family:var(--font)}
-body{background:var(--bg);color:var(--text);min-height:100vh}
-button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
-input,select,textarea{outline:none;font-family:var(--font)}
+:root{--bg:#f4f4f6;--wh:#fff;--dk:#0a0a14;--pu:#6C5CE7;--pu2:#ece9ff;--gn:#1b6b46;--gn2:#e6f9f1;--rd:#c62828;--rd2:#ffebee;--or:#d97706;--or2:#fef3c7;--tx:#1a1a2e;--mu:#706f87;--fn:system-ui,-apple-system,'Segoe UI',sans-serif;--r:12px;--sh:0 2px 12px rgba(0,0,0,.06)}
+*{box-sizing:border-box;margin:0;padding:0;font-family:var(--fn)}
+body{background:var(--bg);color:var(--tx);min-height:100vh}
+button{cursor:pointer;border:none;outline:none;font-family:var(--fn)}
+input,select,textarea{outline:none;font-family:var(--fn);-webkit-appearance:none}
 
 /* AUTH */
-#s-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--dark);padding:20px}
-.auth-box{background:#fff;border-radius:20px;padding:40px 32px;width:100%;max-width:400px}
-.auth-brand{display:flex;align-items:center;gap:10px;margin-bottom:32px}
-.auth-logo{width:44px;height:44px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff}
-.brand-name{font-size:20px;font-weight:800}
-.brand-tag{font-size:11px;font-weight:600;background:var(--accent2);color:var(--accent);padding:2px 8px;border-radius:20px;margin-left:4px}
-.auth-title{font-size:22px;font-weight:800;margin-bottom:6px}
-.auth-sub{font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.6}
-.auth-tabs{display:flex;background:#f4f4f6;border-radius:10px;padding:4px;margin-bottom:20px}
-.auth-tab{flex:1;padding:8px;text-align:center;font-size:13px;font-weight:600;border-radius:7px;transition:all .2s;color:var(--muted);cursor:pointer}
-.auth-tab.on{background:#fff;color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.08)}
-.field{margin-bottom:12px}
-.field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
-.field input{width:100%;padding:12px 14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:15px;transition:border-color .15s}
-.field input:focus{border-color:var(--accent)}
-.btn-login{width:100%;padding:14px;background:var(--dark);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700}
-.auth-err{color:var(--red);font-size:13px;margin-top:8px;text-align:center;display:none}
+#s-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--dk);padding:20px}
+.auth-box{background:#fff;border-radius:20px;padding:36px 28px;width:100%;max-width:400px}
+.auth-brand{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.auth-brand-icon{width:42px;height:42px;background:var(--pu);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;color:#fff}
+.auth-brand-name{font-size:19px;font-weight:800}
+.auth-brand-tag{font-size:11px;font-weight:600;background:var(--pu2);color:var(--pu);padding:2px 8px;border-radius:20px;margin-left:4px}
+.auth-tabs{display:flex;background:#f4f4f6;border-radius:10px;padding:4px;margin-bottom:20px;gap:4px}
+.auth-tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:600;color:var(--mu);border-radius:8px;cursor:pointer;transition:all .2s}
+.auth-tab.on{background:#fff;color:var(--pu);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.form-title{font-size:21px;font-weight:800;margin-bottom:5px}
+.form-sub{font-size:13px;color:var(--mu);margin-bottom:20px;line-height:1.6}
+.field{margin-bottom:11px}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.field input,.field select{width:100%;padding:12px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:15px;transition:border-color .15s;background:#fff}
+.field input:focus,.field select:focus{border-color:var(--pu)}
+.btn-main{width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700;transition:opacity .15s}
+.btn-main:disabled{opacity:.6}
+.err-box{background:var(--rd2);color:var(--rd);font-size:13px;padding:10px 12px;border-radius:10px;margin-top:10px;display:none;line-height:1.5}
 
 /* APP */
 #s-app{display:none;min-height:100vh;flex-direction:column}
 
 /* TOPBAR */
-.topbar{background:var(--dark);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:100}
+.topbar{background:var(--dk);height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:100}
 .tb-brand{display:flex;align-items:center;gap:8px}
 .tb-logo{font-size:17px;font-weight:800;color:#fff}
 .tb-tag{font-size:11px;font-weight:600;background:rgba(108,92,231,.35);color:#a29bfe;padding:2px 8px;border-radius:20px}
 .tb-right{display:flex;align-items:center;gap:10px}
 .tb-user{font-size:12px;color:rgba(255,255,255,.4)}
-.tb-signout{font-size:12px;color:rgba(255,255,255,.4);cursor:pointer;padding:5px 10px;border-radius:6px}
-.tb-signout:hover{background:rgba(255,255,255,.08)}
+.tb-out{font-size:12px;color:rgba(255,255,255,.4);cursor:pointer;padding:5px 10px;border-radius:6px}
 
-/* TABS */
-.tab-bar{background:#fff;border-bottom:1px solid #ebebef;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:56px;z-index:99}
+/* TAB BAR */
+.tab-bar{background:#fff;border-bottom:1px solid #ebebef;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:54px;z-index:99}
 .tab-bar::-webkit-scrollbar{display:none}
-.tab-btn{padding:14px 20px;font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;border-bottom:2px solid transparent;transition:all .15s;cursor:pointer}
-.tab-btn.on{color:var(--accent);border-color:var(--accent)}
+.tab-btn{padding:13px 18px;font-size:13px;font-weight:600;color:var(--mu);white-space:nowrap;border-bottom:2px solid transparent;cursor:pointer;transition:all .15s}
+.tab-btn.on{color:var(--pu);border-color:var(--pu)}
 
 /* MAIN */
-.main{padding:20px;max-width:900px;margin:0 auto;width:100%}
+.main{padding:20px;max-width:860px;margin:0 auto;width:100%}
 
-/* KPI CARDS */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
-.kpi{background:var(--surface);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
-.kpi-val{font-size:28px;font-weight:800;color:var(--text)}
-.kpi-lbl{font-size:13px;color:var(--muted);margin-top:4px}
-.kpi-sub{font-size:12px;font-weight:600;margin-top:4px}
+/* KPI */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
+.kpi{background:var(--wh);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+.kpi-v{font-size:28px;font-weight:800}
+.kpi-l{font-size:13px;color:var(--mu);margin-top:4px}
 
 /* SECTION */
-.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.section-title{font-size:17px;font-weight:700}
-.btn-sm{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;background:var(--accent);color:#fff}
-.btn-sm.outline{background:var(--accent2);color:var(--accent)}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
+.sec-t{font-size:17px;font-weight:700}
+.btn-sm{padding:8px 15px;border-radius:8px;font-size:13px;font-weight:600;background:var(--pu);color:#fff;cursor:pointer}
+.btn-sm.out{background:var(--pu2);color:var(--pu)}
 
 /* TABLE */
-.table-wrap{background:var(--surface);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);overflow-x:auto;margin-bottom:24px}
-table{width:100%;border-collapse:collapse;min-width:500px}
-th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;background:#f9f9fb;border-bottom:1px solid #ebebef}
-td{padding:12px 14px;font-size:14px;border-bottom:1px solid #f4f4f6}
+.tw{background:var(--wh);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);overflow-x:auto;margin-bottom:20px}
+table{width:100%;border-collapse:collapse;min-width:440px}
+th{padding:10px 13px;text-align:left;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;background:#f9f9fb;border-bottom:1px solid #ebebef}
+td{padding:12px 13px;font-size:14px;border-bottom:1px solid #f4f4f6}
 tr:last-child td{border:none}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.badge-green{background:var(--green2);color:var(--green)}
-.badge-orange{background:var(--orange2);color:var(--orange)}
-.badge-red{background:var(--red2);color:var(--red)}
-.badge-purple{background:var(--accent2);color:var(--accent)}
-.empty-row td{text-align:center;padding:40px;color:var(--muted);font-size:14px}
-
-/* PRODUCT GRID */
-.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:24px}
-.product-card{background:var(--surface);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
-.pc-img{width:100%;height:100px;background:linear-gradient(135deg,#ece9ff,#e0f2f1);display:flex;align-items:center;justify-content:center;font-size:40px}
-.pc-body{padding:12px}
-.pc-name{font-size:14px;font-weight:700;margin-bottom:4px}
-.pc-price{font-size:16px;font-weight:800;color:var(--accent);margin-bottom:6px}
-.pc-actions{display:flex;gap:6px}
-.pc-edit{flex:1;padding:6px;background:var(--accent2);color:var(--accent);border-radius:6px;font-size:12px;font-weight:600;text-align:center;cursor:pointer}
-.pc-del{padding:6px 8px;background:#ffebee;color:var(--red);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.bdg{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.bg{background:var(--gn2);color:var(--gn)}.bo{background:var(--or2);color:var(--or)}.bp{background:var(--pu2);color:var(--pu)}.br{background:var(--rd2);color:var(--rd)}
+.empty-row td{text-align:center;padding:36px;color:var(--mu);font-size:14px}
 
 /* TILL */
-.till-card{background:var(--surface);border-radius:16px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
-.till-title{font-size:16px;font-weight:700;margin-bottom:16px}
-.till-input{width:100%;padding:14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:16px;margin-bottom:12px;transition:border-color .15s}
-.till-input:focus{border-color:var(--accent)}
+.till-card{background:var(--wh);border-radius:16px;padding:20px;box-shadow:var(--sh);margin-bottom:14px}
+.till-t{font-size:16px;font-weight:700;margin-bottom:14px}
+.till-inp{width:100%;padding:13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:16px;margin-bottom:11px;transition:border-color .15s;background:#fff}
+.till-inp:focus{border-color:var(--pu)}
 .till-row{display:flex;gap:10px}
-.till-btn{flex:1;padding:14px;border-radius:var(--r);font-size:15px;font-weight:700}
-.till-btn.primary{background:var(--dark);color:#fff}
-.till-btn.secondary{background:var(--accent2);color:var(--accent)}
-.till-result{background:#f9f9fb;border-radius:12px;padding:16px;margin-top:12px;display:none}
-.tr-name{font-size:18px;font-weight:700;margin-bottom:4px}
-.tr-pts{font-size:28px;font-weight:800;color:var(--accent)}
-.tr-sub{font-size:13px;color:var(--muted)}
+.till-btn{flex:1;padding:13px;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer}
+.till-btn.primary{background:var(--dk);color:#fff}
+.till-btn.sec{background:var(--pu2);color:var(--pu)}
+.till-res{background:#f9f9fb;border-radius:12px;padding:14px;margin-top:11px;display:none}
+.tr-name{font-size:17px;font-weight:700;margin-bottom:3px}
+.tr-pts{font-size:26px;font-weight:800;color:var(--pu)}
+.tr-sub{font-size:13px;color:var(--mu)}
+.shop-id-box{background:var(--dk);border-radius:var(--r);padding:16px;margin-bottom:11px;display:flex;justify-content:space-between;align-items:center}
+.si-lbl{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:4px}
+.si-val{font-size:24px;font-weight:800;color:#fff;font-family:monospace;letter-spacing:2px}
+.copy-btn{padding:8px 14px;background:var(--pu);color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
 
-/* ORDERS SECTION */
-.order-card{background:var(--surface);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
-.oc-info{}
-.oc-id{font-size:11px;font-weight:700;color:var(--muted);font-family:monospace;margin-bottom:4px}
-.oc-product{font-size:14px;font-weight:700;margin-bottom:2px}
-.oc-meta{font-size:12px;color:var(--muted)}
-.oc-right{text-align:right}
-.oc-total{font-size:18px;font-weight:800;color:var(--accent)}
-.oc-type{font-size:12px;color:var(--muted)}
-.btn-status{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;background:var(--green2);color:var(--green);cursor:pointer;margin-top:6px}
+/* PRODUCTS */
+.prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:13px;margin-bottom:20px}
+.prod-card{background:var(--wh);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.prod-img{width:100%;height:100px;background:linear-gradient(135deg,#ece9ff,#e0f2f1);display:flex;align-items:center;justify-content:center;font-size:40px}
+.prod-body{padding:12px}
+.prod-name{font-size:14px;font-weight:700;margin-bottom:4px}
+.prod-price{font-size:16px;font-weight:800;color:var(--pu);margin-bottom:7px}
+.prod-acts{display:flex;gap:6px}
+.prod-edit{flex:1;padding:6px;background:var(--pu2);color:var(--pu);border-radius:6px;font-size:12px;font-weight:600;text-align:center;cursor:pointer}
+.prod-hide{padding:6px 9px;background:var(--rd2);color:var(--rd);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+
+/* ORDERS */
+.ocard{background:var(--wh);border-radius:var(--r);padding:14px;box-shadow:var(--sh);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.oc-id{font-size:11px;font-weight:700;color:var(--mu);font-family:monospace;margin-bottom:3px}
+.oc-pn{font-size:14px;font-weight:700;margin-bottom:2px}
+.oc-mt{font-size:12px;color:var(--mu)}
+.oc-tot{font-size:17px;font-weight:800;color:var(--pu)}
+.btn-ready{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;background:var(--gn2);color:var(--gn);cursor:pointer;margin-top:4px}
 
 /* SETTINGS */
-.settings-card{background:var(--surface);border-radius:var(--r);padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
-.settings-title{font-size:15px;font-weight:700;margin-bottom:14px}
-.settings-row{display:flex;gap:12px;flex-wrap:wrap}
-.settings-field{flex:1;min-width:140px}
-.settings-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
-.settings-field input,.settings-field select{width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px}
-.settings-field input:focus,.settings-field select:focus{border-color:var(--accent)}
-.shop-id-box{background:var(--dark);border-radius:var(--r);padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
-.shop-id-label{font-size:12px;color:rgba(255,255,255,.4)}
-.shop-id-val{font-size:24px;font-weight:800;color:#fff;font-family:monospace;letter-spacing:2px}
+.settings-card{background:var(--wh);border-radius:var(--r);padding:18px;box-shadow:var(--sh);margin-bottom:14px}
+.settings-t{font-size:15px;font-weight:700;margin-bottom:13px}
+.srow{display:flex;gap:12px;flex-wrap:wrap}
+.sf{flex:1;min-width:130px}
+.sf label{display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.sf input,.sf select{width:100%;padding:10px 12px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px;background:#fff}
+.sf input:focus,.sf select:focus{border-color:var(--pu)}
 
 /* MODAL */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
 .modal.show{display:flex}
-.modal-box{background:#fff;border-radius:20px;padding:24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto}
-.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.modal-title{font-size:18px;font-weight:800}
-.modal-close{width:32px;height:32px;border-radius:50%;background:#f4f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px}
+.modal-box{background:#fff;border-radius:20px;padding:22px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-t{font-size:18px;font-weight:800}
+.modal-x{width:30px;height:30px;border-radius:50%;background:#f4f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px}
+.ck{display:flex;gap:14px;margin-bottom:14px}
+.ck label{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer}
+.ck input[type=checkbox]{width:17px;height:17px}
 
 /* TOAST */
-#toast{position:fixed;bottom:24px;right:24px;background:var(--dark);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s}
-#toast.show{opacity:1}
+#toast{position:fixed;bottom:20px;right:20px;background:var(--dk);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s}
+#toast.on{opacity:1}
+.empty{text-align:center;padding:40px;color:var(--mu);font-size:14px}
 </style>
 </head>
 <body>
@@ -183,29 +144,29 @@ tr:last-child td{border:none}
 <div id="s-auth">
   <div class="auth-box">
     <div class="auth-brand">
-      <div class="auth-logo">S</div>
-      <div class="brand-name">Stashlo <span class="brand-tag">Merchant</span></div>
+      <div class="auth-brand-icon">S</div>
+      <div class="auth-brand-name">Stashlo <span class="auth-brand-tag">Merchant</span></div>
     </div>
     <div class="auth-tabs">
-      <div class="auth-tab on" id="m-tab-in" onclick="mSwitchTab('in')">Sign in</div>
-      <div class="auth-tab" id="m-tab-up" onclick="mSwitchTab('up')">Register shop</div>
+      <div class="auth-tab on" id="tab-in" onclick="swTab('in')">Sign in</div>
+      <div class="auth-tab" id="tab-up" onclick="swTab('up')">Register shop</div>
     </div>
-    <div id="m-signin">
-      <div class="auth-title">Merchant login</div>
-      <div class="auth-sub">Sign in to manage your shop loyalty programme</div>
-      <div class="field"><label>Email</label><input type="email" id="m-email" placeholder="shop@email.com"></div>
-      <div class="field"><label>Password</label><input type="password" id="m-pass" placeholder="••••••••"></div>
-      <button class="btn-login" onclick="mSignIn()">Sign in</button>
-      <div class="auth-err" id="m-err"></div>
+    <div id="form-in">
+      <div class="form-title">Merchant login</div>
+      <div class="form-sub">Sign in to manage your loyalty programme</div>
+      <div class="field"><label>Email</label><input type="email" id="in-e" placeholder="shop@email.com" autocomplete="email" inputmode="email"></div>
+      <div class="field"><label>Password</label><input type="password" id="in-p" placeholder="••••••••" autocomplete="current-password"></div>
+      <button class="btn-main" id="btn-in" onclick="doSignIn()">Sign in</button>
+      <div class="err-box" id="in-err"></div>
     </div>
-    <div id="m-signup" style="display:none">
-      <div class="auth-title">Register your shop</div>
-      <div class="auth-sub">Set up your Stashlo loyalty programme</div>
-      <div class="field"><label>Shop name</label><input type="text" id="m-shop-name" placeholder="Your shop name"></div>
-      <div class="field"><label>Email</label><input type="email" id="m-reg-email" placeholder="shop@email.com"></div>
-      <div class="field"><label>Password</label><input type="password" id="m-reg-pass" placeholder="Min 6 characters"></div>
-      <button class="btn-login" onclick="mSignUp()">Register shop</button>
-      <div class="auth-err" id="m-reg-err"></div>
+    <div id="form-up" style="display:none">
+      <div class="form-title">Register your shop</div>
+      <div class="form-sub">Set up your Stashlo loyalty programme</div>
+      <div class="field"><label>Shop name</label><input type="text" id="up-shop" placeholder="Your shop name" autocomplete="organization"></div>
+      <div class="field"><label>Email</label><input type="email" id="up-e" placeholder="shop@email.com" autocomplete="email" inputmode="email"></div>
+      <div class="field"><label>Password (6+ chars)</label><input type="password" id="up-p" placeholder="Choose a password" autocomplete="new-password"></div>
+      <button class="btn-main" id="btn-up" onclick="doSignUp()">Register shop</button>
+      <div class="err-box" id="up-err"></div>
     </div>
   </div>
 </div>
@@ -213,617 +174,467 @@ tr:last-child td{border:none}
 <!-- APP -->
 <div id="s-app">
   <div class="topbar">
-    <div class="tb-brand">
-      <div class="tb-logo">Stashlo</div>
-      <div class="tb-tag">Merchant</div>
-    </div>
-    <div class="tb-right">
-      <div class="tb-user" id="tb-shop-name"></div>
-      <div class="tb-signout" onclick="mSignOut()">Sign out</div>
-    </div>
+    <div class="tb-brand"><div class="tb-logo">Stashlo</div><div class="tb-tag">Merchant</div></div>
+    <div class="tb-right"><div class="tb-user" id="tb-user"></div><div class="tb-out" onclick="doSignOut()">Sign out</div></div>
   </div>
-
   <div class="tab-bar">
     <div class="tab-btn on" onclick="showTab('till')">🏪 Till</div>
     <div class="tab-btn" onclick="showTab('products')">📦 Products</div>
     <div class="tab-btn" onclick="showTab('orders')">🛍️ Orders</div>
     <div class="tab-btn" onclick="showTab('customers')">👥 Customers</div>
     <div class="tab-btn" onclick="showTab('receipts')">🧾 Receipts</div>
-    <div class="tab-btn" onclick="showTab('overview')">📊 Overview</div>
     <div class="tab-btn" onclick="showTab('settings')">⚙️ Settings</div>
   </div>
-
   <div class="main">
 
     <!-- TILL -->
     <div id="tab-till">
       <div class="till-card">
-        <div class="till-title">Add points at till</div>
-        <input class="till-input" type="tel" id="till-phone" placeholder="Customer phone number" oninput="lookupCustomer(this.value)">
-        <input class="till-input" type="number" id="till-spend" placeholder="Amount spent (£)" step="0.01" min="0">
+        <div class="till-t">Your Shop ID — share with customers</div>
+        <div class="shop-id-box">
+          <div><div class="si-lbl">Customers search this in the Stashlo app</div><div class="si-val" id="shop-id-val">SL-XXXX</div></div>
+          <div class="copy-btn" onclick="copyShopId()">Copy</div>
+        </div>
+        <div style="font-size:13px;color:var(--mu)">Or share your card link: <span id="card-link" style="color:var(--pu);word-break:break-all"></span></div>
+      </div>
+      <div class="till-card">
+        <div class="till-t">Add points at till</div>
+        <input class="till-inp" type="tel" id="till-phone" placeholder="Customer phone number" oninput="lookupCust(this.value)" inputmode="tel">
+        <input class="till-inp" type="number" id="till-spend" placeholder="Amount spent (£)" step="0.01" min="0">
         <div class="till-row">
           <button class="till-btn primary" onclick="addPoints()">Add points</button>
-          <button class="till-btn secondary" onclick="redeemReward()">Redeem reward</button>
+          <button class="till-btn sec" onclick="redeemReward()">Redeem reward</button>
         </div>
-        <div class="till-result" id="till-result">
+        <div class="till-res" id="till-res">
           <div class="tr-name" id="tr-name">Customer</div>
           <div class="tr-pts" id="tr-pts">0 pts</div>
           <div class="tr-sub" id="tr-sub"></div>
         </div>
       </div>
-      <div class="till-card">
-        <div class="till-title">Your Shop ID</div>
-        <div class="shop-id-box">
-          <div>
-            <div class="shop-id-label">Share with customers to add your card</div>
-            <div class="shop-id-val" id="till-shop-id">SL-XXXX</div>
-          </div>
-          <button onclick="copyShopId()" style="padding:8px 14px;background:var(--accent);color:#fff;border-radius:8px;font-size:13px;font-weight:600">Copy</button>
-        </div>
-        <div style="font-size:13px;color:var(--muted)">Customers can also find your shop by name in the Stashlo app</div>
-      </div>
     </div>
 
     <!-- PRODUCTS -->
     <div id="tab-products" style="display:none">
-      <div class="section-hdr">
-        <div class="section-title">Your products</div>
-        <button class="btn-sm" onclick="openProductModal()">+ Add product</button>
+      <div class="sec-hdr"><div class="sec-t">Your products</div><button class="btn-sm" onclick="openProdModal()">+ Add product</button></div>
+      <div style="background:var(--pu2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--pu);font-weight:600">
+        💡 Products you add here appear in the Stashlo customer app for Click &amp; Collect and delivery orders.
       </div>
-      <div style="background:var(--accent2);border-radius:var(--r);padding:14px 16px;margin-bottom:16px;font-size:13px;color:var(--accent);font-weight:600">
-        💡 Products you add here appear in the Stashlo customer app for Click & Collect and delivery orders.
-      </div>
-      <div class="product-grid" id="products-grid">
-        <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">No products yet — add your first product above</div>
-      </div>
+      <div class="prod-grid" id="prod-grid"><div class="empty">No products yet — add your first above</div></div>
     </div>
 
     <!-- ORDERS -->
     <div id="tab-orders" style="display:none">
-      <div class="section-hdr">
-        <div class="section-title">Customer orders</div>
-        <button class="btn-sm outline" onclick="loadMerchantOrders()">Refresh</button>
-      </div>
-      <div id="orders-list">
-        <div style="text-align:center;padding:40px;color:var(--muted)">Loading orders...</div>
-      </div>
+      <div class="sec-hdr"><div class="sec-t">Customer orders</div><button class="btn-sm out" onclick="loadOrders()">Refresh</button></div>
+      <div id="orders-list"><div class="empty">Loading orders...</div></div>
     </div>
 
     <!-- CUSTOMERS -->
     <div id="tab-customers" style="display:none">
-      <div class="section-hdr">
-        <div class="section-title">Your customers</div>
-        <input type="text" placeholder="Search..." oninput="filterCustomers(this.value)" style="padding:8px 12px;border:1.5px solid #e5e5ea;border-radius:8px;font-size:13px;outline:none;min-width:160px">
+      <div class="sec-hdr">
+        <div class="sec-t">Your customers</div>
+        <input type="text" placeholder="Search..." oninput="filterCusts(this.value)" style="padding:8px 12px;border:1.5px solid #e5e5ea;border-radius:8px;font-size:13px;min-width:160px;background:#fff">
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Name</th><th>Phone</th><th>Points</th><th>Visits</th><th>Joined</th></tr></thead>
-          <tbody id="customers-body"><tr class="empty-row"><td colspan="5">Loading...</td></tr></tbody>
-        </table>
-      </div>
+      <div class="tw"><table><thead><tr><th>Name</th><th>Phone</th><th>Points</th><th>Visits</th><th>Joined</th></tr></thead>
+        <tbody id="custs-body"><tr class="empty-row"><td colspan="5">Loading...</td></tr></tbody>
+      </table></div>
     </div>
 
     <!-- RECEIPTS -->
     <div id="tab-receipts" style="display:none">
-      <div class="section-hdr">
-        <div class="section-title">Receipt queue</div>
-        <button class="btn-sm outline" onclick="loadReceipts()">Refresh</button>
-      </div>
-      <div id="receipts-list">
-        <div style="text-align:center;padding:40px;color:var(--muted)">No pending receipts</div>
-      </div>
-    </div>
-
-    <!-- OVERVIEW -->
-    <div id="tab-overview" style="display:none">
-      <div style="margin-bottom:20px">
-        <div style="font-size:22px;font-weight:800">Shop overview</div>
-        <div id="last-updated" style="font-size:13px;color:var(--muted)"></div>
-      </div>
-      <div class="kpi-grid">
-        <div class="kpi"><div class="kpi-val" id="ov-customers">0</div><div class="kpi-lbl">Total customers</div></div>
-        <div class="kpi"><div class="kpi-val" id="ov-transactions">0</div><div class="kpi-lbl">Transactions</div></div>
-        <div class="kpi"><div class="kpi-val" id="ov-orders">0</div><div class="kpi-lbl">Online orders</div></div>
-        <div class="kpi"><div class="kpi-val" id="ov-revenue">£0</div><div class="kpi-lbl">Online revenue</div></div>
-      </div>
+      <div class="sec-hdr"><div class="sec-t">Receipt queue</div><button class="btn-sm out" onclick="loadReceipts()">Refresh</button></div>
+      <div id="receipts-list"><div class="empty">No pending receipts</div></div>
     </div>
 
     <!-- SETTINGS -->
     <div id="tab-settings" style="display:none">
       <div class="settings-card">
-        <div class="settings-title">Points rules</div>
-        <div class="settings-row">
-          <div class="settings-field"><label>Points per £1</label><input type="number" id="s-ppp" value="1" min="1"></div>
-          <div class="settings-field"><label>Min spend (£)</label><input type="number" id="s-min" value="2" min="0" step="0.5"></div>
-          <div class="settings-field"><label>Reward threshold (pts)</label><input type="number" id="s-thresh" value="100" min="10"></div>
+        <div class="settings-t">Points rules</div>
+        <div class="srow">
+          <div class="sf"><label>Points per £1</label><input type="number" id="s-ppp" value="1" min="1"></div>
+          <div class="sf"><label>Min spend (£)</label><input type="number" id="s-min" value="2" step="0.5"></div>
+          <div class="sf"><label>Reward at (pts)</label><input type="number" id="s-thresh" value="100" min="10"></div>
         </div>
       </div>
       <div class="settings-card">
-        <div class="settings-title">Reward type</div>
-        <div class="settings-row">
-          <div class="settings-field"><label>Reward type</label>
-            <select id="s-reward-type">
-              <option value="pound">£ off bill</option>
-              <option value="percent">% discount</option>
-              <option value="free">Free item</option>
-            </select>
-          </div>
-          <div class="settings-field"><label>Reward value</label><input type="text" id="s-reward-val" value="5" placeholder="e.g. 5 or Coffee"></div>
+        <div class="settings-t">Reward type</div>
+        <div class="srow">
+          <div class="sf"><label>Reward type</label><select id="s-rtype"><option value="pound">£ off bill</option><option value="percent">% discount</option><option value="free">Free item</option></select></div>
+          <div class="sf"><label>Value</label><input type="text" id="s-rval" value="5" placeholder="e.g. 5 or Coffee"></div>
         </div>
       </div>
       <div class="settings-card">
-        <div class="settings-title">Shop details</div>
-        <div class="settings-row">
-          <div class="settings-field" style="flex:2"><label>Shop name</label><input type="text" id="s-shop-name" placeholder="Your shop name"></div>
-          <div class="settings-field"><label>Phone</label><input type="tel" id="s-shop-phone" placeholder="0800 000 000"></div>
+        <div class="settings-t">Shop details</div>
+        <div class="srow">
+          <div class="sf" style="flex:2"><label>Shop name</label><input type="text" id="s-name" placeholder="Your shop name"></div>
+          <div class="sf"><label>Phone</label><input type="tel" id="s-phone" placeholder="0800 000 000"></div>
         </div>
-        <div class="settings-field" style="margin-top:10px"><label>Address</label><input type="text" id="s-shop-address" placeholder="Full shop address"></div>
+        <div class="sf" style="margin-top:10px"><label>Address</label><input type="text" id="s-addr" placeholder="Full shop address"></div>
       </div>
-      <button onclick="saveSettings()" style="width:100%;padding:14px;background:var(--dark);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700;margin-bottom:12px">Save settings</button>
+      <button onclick="saveSettings()" style="width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">Save settings</button>
     </div>
   </div>
 </div>
 
 <!-- PRODUCT MODAL -->
-<div class="modal" id="product-modal">
+<div class="modal" id="prod-modal">
   <div class="modal-box">
-    <div class="modal-hdr">
-      <div class="modal-title" id="pm-title">Add product</div>
-      <div class="modal-close" onclick="closeProductModal()">✕</div>
-    </div>
+    <div class="modal-hdr"><div class="modal-t" id="pm-title">Add product</div><div class="modal-x" onclick="closeProdModal()">✕</div></div>
     <div class="field"><label>Product name</label><input type="text" id="pm-name" placeholder="e.g. Large Coffee"></div>
-    <div class="settings-row">
-      <div class="settings-field"><label>Price (£)</label><input type="number" id="pm-price" placeholder="0.00" step="0.01" min="0"></div>
-      <div class="settings-field"><label>Emoji icon</label><input type="text" id="pm-emoji" placeholder="☕" maxlength="2"></div>
+    <div class="srow">
+      <div class="sf"><label>Price (£)</label><input type="number" id="pm-price" placeholder="0.00" step="0.01" min="0"></div>
+      <div class="sf"><label>Emoji icon</label><input type="text" id="pm-emoji" placeholder="☕" maxlength="2"></div>
     </div>
-    <div class="field"><label>Category</label>
-      <select id="pm-category" style="width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px">
-        <option value="food">🍕 Food & Drink</option>
-        <option value="electronics">📱 Electronics</option>
-        <option value="fashion">👗 Fashion</option>
-        <option value="health">💊 Health & Beauty</option>
-        <option value="other">📦 Other</option>
-      </select>
+    <div class="field"><label>Category</label><select id="pm-cat"><option value="food">🍕 Food &amp; Drink</option><option value="electronics">📱 Electronics</option><option value="fashion">👗 Fashion</option><option value="health">💊 Health</option><option value="other">📦 Other</option></select></div>
+    <div class="field"><label>Description</label><input type="text" id="pm-desc" placeholder="Short description"></div>
+    <div class="ck">
+      <label><input type="checkbox" id="pm-collect" checked> Click &amp; Collect</label>
+      <label><input type="checkbox" id="pm-delivery"> Home Delivery</label>
     </div>
-    <div class="field"><label>Description</label><input type="text" id="pm-desc" placeholder="Short product description"></div>
-    <div style="display:flex;gap:12px;margin-bottom:16px">
-      <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer">
-        <input type="checkbox" id="pm-collect" checked style="width:18px;height:18px"> Click & Collect
-      </label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer">
-        <input type="checkbox" id="pm-delivery" style="width:18px;height:18px"> Home Delivery
-      </label>
-    </div>
-    <div style="display:flex;gap:10px">
-      <button onclick="saveProduct()" style="flex:1;padding:14px;background:var(--dark);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700" id="pm-save-btn">Add product</button>
-    </div>
+    <button onclick="saveProd()" style="width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer" id="pm-btn">Add product</button>
   </div>
 </div>
 
 <div id="toast"></div>
 
 <script>
-let app, auth, db, merchantId, merchantData, rules = {}, allCustomers = [], editingProductId = null;
+// ================================================================
+// STASHLO MERCHANT — Pure REST API, no Firebase SDK
+// ================================================================
+var KEY = 'AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y';
+var PID = 'stashlo';
+var FS = 'https://firestore.googleapis.com/v1/projects/'+PID+'/databases/(default)/documents/';
+var AUTH_URL = 'https://identitytoolkit.googleapis.com/v1/accounts:';
 
-function initFirebase() {
-  try {
-    app = firebase.apps.length ? firebase.app() : firebase.initializeApp({
-      apiKey:"AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y",
-      authDomain:"stashlo.firebaseapp.com",
-      projectId:"stashlo",
-      storageBucket:"stashlo.firebasestorage.app",
-      messagingSenderId:"924928321170",
-      appId:"1:924928321170:web:e711943ddbe64567eaa84b"
-    });
-    auth = firebase.auth();
-    db = firebase.firestore();
-    auth.onAuthStateChanged(async user => {
-      if (user) {
-        merchantId = user.uid;
-        document.getElementById('s-auth').style.display = 'none';
-        document.getElementById('s-app').style.display = 'block';
-        await loadMerchant();
-        loadCustomers();
-        loadReceipts();
-        loadMerchantOrders();
-        loadProducts();
-      } else {
-        document.getElementById('s-auth').style.display = 'flex';
-        document.getElementById('s-app').style.display = 'none';
+var TOKEN = null, UID = null, MID = null;
+var merchantData = {}, rules = {};
+var allCusts = [], allProds = [], allOrds = [];
+var editProdId = null;
+
+// ---- REST ----
+function h(){ var hd={'Content-Type':'application/json'}; if(TOKEN) hd['Authorization']='Bearer '+TOKEN; return hd; }
+
+function toFS(obj){
+  var o={};
+  Object.keys(obj).forEach(function(k){
+    var v=obj[k];
+    if(v===null||v===undefined) o[k]={nullValue:null};
+    else if(typeof v==='boolean') o[k]={booleanValue:v};
+    else if(typeof v==='number') o[k]=Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};
+    else if(typeof v==='object'&&!Array.isArray(v)) o[k]={mapValue:{fields:toFS(v)}};
+    else o[k]={stringValue:String(v)};
+  });
+  return o;
+}
+function fromFS(doc){
+  if(!doc||!doc.fields) return null;
+  var o={};
+  Object.keys(doc.fields).forEach(function(k){
+    var v=doc.fields[k];
+    if('stringValue' in v) o[k]=v.stringValue;
+    else if('integerValue' in v) o[k]=parseInt(v.integerValue);
+    else if('doubleValue' in v) o[k]=v.doubleValue;
+    else if('booleanValue' in v) o[k]=v.booleanValue;
+    else if('mapValue' in v){ var sub=fromFS(v.mapValue); o[k]=sub||{}; }
+    else o[k]=null;
+  });
+  if(doc.name) o._id=doc.name.split('/').pop();
+  return o;
+}
+function fsGet(p){ return fetch(FS+p,{headers:h()}).then(function(r){return r.json();}); }
+function fsList(p,n){ return fetch(FS+p+'?pageSize='+(n||50),{headers:h()}).then(function(r){return r.json();}); }
+function fsSet(p,f){ return fetch(FS+p,{method:'PATCH',headers:h(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();}); }
+function fsUpd(p,f){ var mask=Object.keys(f).map(function(k){return'updateMask.fieldPaths='+k;}).join('&'); return fetch(FS+p+'?'+mask,{method:'PATCH',headers:h(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();}); }
+function fsAdd(c,f){ return fetch(FS+c,{method:'POST',headers:h(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();}); }
+function fsDel(p){ return fetch(FS+p,{method:'DELETE',headers:h()}); }
+
+// ---- Session ----
+function saveSession(token,uid,email,exp){
+  TOKEN=token; UID=uid; MID=uid;
+  localStorage.setItem('sl_merch',JSON.stringify({token:token,uid:uid,email:email,exp:Date.now()+parseInt(exp)*1000}));
+}
+function clearSession(){ TOKEN=null;UID=null;MID=null; localStorage.removeItem('sl_merch'); }
+function checkSession(){
+  try{
+    var s=JSON.parse(localStorage.getItem('sl_merch')||'null');
+    if(s&&s.exp>Date.now()){ TOKEN=s.token; UID=s.uid; MID=s.uid; document.getElementById('tb-user').textContent=s.email; return true; }
+  }catch(e){}
+  return false;
+}
+
+// ---- Auth ----
+window.swTab=function(t){
+  $('tab-in').classList.toggle('on',t==='in'); $('tab-up').classList.toggle('on',t==='up');
+  $('form-in').style.display=t==='in'?'block':'none'; $('form-up').style.display=t==='up'?'block':'none';
+};
+window.doSignIn=function(){
+  var e=$('in-e').value.trim(), p=$('in-p').value;
+  var err=$('in-err'); err.style.display='none';
+  if(!e||!p){showErr(err,'Please enter email and password');return;}
+  $('btn-in').disabled=true; $('btn-in').textContent='Signing in...';
+  fetch(AUTH_URL+'signInWithPassword?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p,returnSecureToken:true})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      $('btn-in').disabled=false; $('btn-in').textContent='Sign in';
+      if(d.error){
+        var m={EMAIL_NOT_FOUND:'No account found — register your shop',INVALID_PASSWORD:'Wrong password',INVALID_EMAIL:'Invalid email',INVALID_LOGIN_CREDENTIALS:'Wrong email or password',TOO_MANY_ATTEMPTS_TRY_LATER:'Too many attempts — wait a moment'};
+        showErr(err,m[d.error.message]||'Sign in failed: '+d.error.message); return;
       }
-    });
-  } catch(e) { setTimeout(initFirebase, 500); }
-}
+      saveSession(d.idToken,d.localId,d.email,d.expiresIn);
+      document.getElementById('tb-user').textContent=d.email;
+      hide('s-auth'); show('s-app','flex'); loadMerchant();
+    }).catch(function(){ $('btn-in').disabled=false; $('btn-in').textContent='Sign in'; showErr(err,'Connection error'); });
+};
+window.doSignUp=function(){
+  var shopName=$('up-shop').value.trim(), e=$('up-e').value.trim(), p=$('up-p').value;
+  var err=$('up-err'); err.style.display='none';
+  if(!shopName){showErr(err,'Enter your shop name');return;}
+  if(!e){showErr(err,'Enter your email');return;}
+  if(!p||p.length<6){showErr(err,'Password must be at least 6 characters');return;}
+  $('btn-up').disabled=true; $('btn-up').textContent='Registering...';
+  fetch(AUTH_URL+'signUp?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p,returnSecureToken:true})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      $('btn-up').disabled=false; $('btn-up').textContent='Register shop';
+      if(d.error){
+        var m={EMAIL_EXISTS:'Email already registered — sign in instead',INVALID_EMAIL:'Invalid email',WEAK_PASSWORD:'Password too weak'};
+        showErr(err,m[d.error.message]||'Registration failed: '+d.error.message); return;
+      }
+      saveSession(d.idToken,d.localId,e,d.expiresIn);
+      document.getElementById('tb-user').textContent=e;
+      var shopId='SL-'+d.localId.slice(0,4).toUpperCase();
+      fsSet('merchants/'+d.localId,{name:shopName,email:e,shopId:shopId,subscription:'trial',createdAt:Date.now(),rules:{pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'5'}})
+        .then(function(){ hide('s-auth'); show('s-app','flex'); loadMerchant(); });
+    }).catch(function(){ $('btn-up').disabled=false; $('btn-up').textContent='Register shop'; showErr(err,'Connection error'); });
+};
+window.doSignOut=function(){ clearSession(); hide('s-app'); show('s-auth','flex'); };
 
-// AUTH
-function mSwitchTab(tab) {
-  document.getElementById('m-tab-in').classList.toggle('on',tab==='in');
-  document.getElementById('m-tab-up').classList.toggle('on',tab==='up');
-  document.getElementById('m-signin').style.display = tab==='in'?'block':'none';
-  document.getElementById('m-signup').style.display = tab==='up'?'block':'none';
-}
-
-async function mSignIn() {
-  const email = document.getElementById('m-email').value.trim();
-  const pass = document.getElementById('m-pass').value;
-  const err = document.getElementById('m-err');
-  err.style.display = 'none';
-  if (!email||!pass) { showErr(err,'Please fill in all fields'); return; }
-  try {
-    await auth.signInWithEmailAndPassword(email, pass);
-  } catch(e) {
-    const msgs = {'auth/invalid-credential':'Wrong email or password','auth/user-not-found':'No account found — register your shop','auth/wrong-password':'Wrong password','auth/too-many-requests':'Too many attempts — try later'};
-    showErr(err, msgs[e.code] || 'Sign in failed. Check your email and password.');
-  }
-}
-
-async function mSignUp() {
-  const name = document.getElementById('m-shop-name').value.trim();
-  const email = document.getElementById('m-reg-email').value.trim();
-  const pass = document.getElementById('m-reg-pass').value;
-  const err = document.getElementById('m-reg-err');
-  err.style.display = 'none';
-  if (!name||!email||!pass) { showErr(err,'Please fill in all fields'); return; }
-  if (pass.length < 6) { showErr(err,'Password must be at least 6 characters'); return; }
-  try {
-    const cred = await auth.createUserWithEmailAndPassword(email, pass);
-    const shopId = 'SL-' + cred.user.uid.slice(0,4).toUpperCase();
-    await db.collection('merchants').doc(cred.user.uid).set({
-      name, email, shopId, subscription:'trial', createdAt:Date.now(),
-      rules:{pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'5'}
-    });
-  } catch(e) {
-    const msgs = {'auth/email-already-in-use':'Email already registered — sign in instead'};
-    showErr(err, msgs[e.code] || 'Registration failed: '+e.message);
-  }
-}
-
-async function mSignOut() { await auth.signOut(); toast('Signed out'); }
-
-// MERCHANT DATA
-async function loadMerchant() {
-  const doc = await db.collection('merchants').doc(merchantId).get();
-  if (!doc.exists) {
-    // Create merchant doc
-    const shopId = 'SL-' + merchantId.slice(0,4).toUpperCase();
-    await db.collection('merchants').doc(merchantId).set({
-      name: auth.currentUser.email.split('@')[0], email: auth.currentUser.email,
-      shopId, subscription:'trial', createdAt:Date.now(),
-      rules:{pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'5'}
-    });
-    return loadMerchant();
-  }
-  merchantData = doc.data();
-  rules = merchantData.rules || {};
-  document.getElementById('tb-shop-name').textContent = merchantData.name || '';
-  document.getElementById('till-shop-id').textContent = merchantData.shopId || 'SL-????';
-  // Fill settings
-  ['s-ppp','s-min','s-thresh'].forEach(id => {
-    const key = id==='s-ppp'?'pointsPerPound':id==='s-min'?'minSpend':'threshold';
-    if (rules[key]) document.getElementById(id).value = rules[key];
-  });
-  if (rules.rewardType) document.getElementById('s-reward-type').value = rules.rewardType;
-  if (rules.rewardValue) document.getElementById('s-reward-val').value = rules.rewardValue;
-  if (merchantData.name) document.getElementById('s-shop-name').value = merchantData.name;
-  if (merchantData.phone) document.getElementById('s-shop-phone').value = merchantData.phone;
-  if (merchantData.address) document.getElementById('s-shop-address').value = merchantData.address;
-  document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString('en-GB');
-}
-
-// TILL
-async function lookupCustomer(phone) {
-  phone = phone.replace(/\s/g,'');
-  if (phone.length < 10) { document.getElementById('till-result').style.display='none'; return; }
-  try {
-    const snap = await db.collection('merchants').doc(merchantId).collection('customers').doc(phone).get();
-    const el = document.getElementById('till-result');
-    el.style.display = 'block';
-    if (snap.exists) {
-      const c = snap.data();
-      document.getElementById('tr-name').textContent = c.name || 'Customer';
-      document.getElementById('tr-pts').textContent = (c.points||0) + ' pts';
-      document.getElementById('tr-sub').textContent = 'Visits: ' + (c.visitCount||0);
-    } else {
-      document.getElementById('tr-name').textContent = 'New customer';
-      document.getElementById('tr-pts').textContent = '0 pts';
-      document.getElementById('tr-sub').textContent = 'Will be auto-registered';
+// ---- Load merchant ----
+function loadMerchant(){
+  fsGet('merchants/'+MID).then(function(d){
+    var m=fromFS(d)||{};
+    merchantData=m;
+    // Parse rules from mapValue
+    if(d.fields&&d.fields.rules&&d.fields.rules.mapValue){
+      var rf=d.fields.rules.mapValue.fields||{};
+      rules={
+        pointsPerPound:parseInt(rf.pointsPerPound?(rf.pointsPerPound.integerValue||rf.pointsPerPound.doubleValue||1):1),
+        minSpend:parseFloat(rf.minSpend?(rf.minSpend.doubleValue||rf.minSpend.integerValue||2):2),
+        threshold:parseInt(rf.threshold?(rf.threshold.integerValue||100):100),
+        rewardType:(rf.rewardType&&rf.rewardType.stringValue)||'pound',
+        rewardValue:(rf.rewardValue&&rf.rewardValue.stringValue)||'5'
+      };
     }
-  } catch(e) {}
+    var sid=m.shopId||('SL-'+MID.slice(0,4).toUpperCase());
+    $('shop-id-val').textContent=sid;
+    $('card-link').textContent='skyfliessolar.github.io/stashlo/customer.html?m='+MID;
+    // Fill settings
+    if(m.name) $('s-name').value=m.name;
+    if(m.phone) $('s-phone').value=m.phone;
+    if(m.address) $('s-addr').value=m.address;
+    if(rules.pointsPerPound) $('s-ppp').value=rules.pointsPerPound;
+    if(rules.minSpend) $('s-min').value=rules.minSpend;
+    if(rules.threshold) $('s-thresh').value=rules.threshold;
+    if(rules.rewardType) $('s-rtype').value=rules.rewardType;
+    if(rules.rewardValue) $('s-rval').value=rules.rewardValue;
+    loadCusts(); loadProds(); loadOrders(); loadReceipts();
+  }).catch(function(e){console.error(e);});
 }
 
-async function addPoints() {
-  const phone = document.getElementById('till-phone').value.replace(/\s/g,'');
-  const spend = parseFloat(document.getElementById('till-spend').value);
-  if (!phone||phone.length<10) { toast('Enter customer phone'); return; }
-  if (!spend||spend<=0) { toast('Enter spend amount'); return; }
-  const minSpend = rules.minSpend || 0;
-  if (spend < minSpend) { toast('Min spend is £'+minSpend.toFixed(2)); return; }
-  const pts = Math.floor(spend * (rules.pointsPerPound||1));
-  try {
-    const ref = db.collection('merchants').doc(merchantId).collection('customers').doc(phone);
-    const snap = await ref.get();
-    if (snap.exists) {
-      await ref.update({points:firebase.firestore.FieldValue.increment(pts),visitCount:firebase.firestore.FieldValue.increment(1),totalSpend:firebase.firestore.FieldValue.increment(spend),lastVisit:Date.now()});
+// ---- TILL ----
+window.lookupCust=function(phone){
+  phone=phone.replace(/\s/g,'');
+  if(phone.length<10){hide('till-res');return;}
+  fsGet('merchants/'+MID+'/customers/'+phone).then(function(d){
+    var c=fromFS(d);
+    var el=$('till-res'); el.style.display='block';
+    if(c){
+      $('tr-name').textContent=c.name||'Customer';
+      $('tr-pts').textContent=(c.points||0)+' pts';
+      $('tr-sub').textContent='Visits: '+(c.visitCount||0);
     } else {
-      await ref.set({phone,name:'Customer',points:pts,visitCount:1,totalSpend:spend,joinedAt:Date.now(),lastVisit:Date.now(),rewardsRedeemed:0});
+      $('tr-name').textContent='New customer';
+      $('tr-pts').textContent='0 pts';
+      $('tr-sub').textContent='Will be auto-registered';
     }
-    await db.collection('merchants').doc(merchantId).collection('transactions').add({
-      phone,amount:spend,pointsAdded:pts,timestamp:Date.now(),type:'purchase'
-    });
-    const newPts = (snap.exists?snap.data().points:0) + pts;
-    document.getElementById('tr-pts').textContent = newPts + ' pts (+'+pts+')';
-    document.getElementById('tr-sub').textContent = '✅ Points added!';
-    document.getElementById('till-spend').value = '';
+  }).catch(function(){});
+};
+window.addPoints=function(){
+  var phone=$('till-phone').value.replace(/\s/g,'');
+  var spend=parseFloat($('till-spend').value);
+  if(!phone||phone.length<10){toast('Enter customer phone number');return;}
+  if(!spend||spend<0){toast('Enter spend amount');return;}
+  if(spend<(rules.minSpend||0)){toast('Min spend is £'+(rules.minSpend||0).toFixed(2));return;}
+  var pts=Math.floor(spend*(rules.pointsPerPound||1));
+  var custPath='merchants/'+MID+'/customers/'+phone;
+  fsGet(custPath).then(function(d){
+    var c=fromFS(d)||{points:0,visitCount:0,totalSpend:0};
+    var newPts=(c.points||0)+pts;
+    fsSet(custPath,{phone:phone,name:c.name||'Customer',points:newPts,visitCount:(c.visitCount||0)+1,totalSpend:(c.totalSpend||0)+spend,joinedAt:c.joinedAt||Date.now(),lastVisit:Date.now(),rewardsRedeemed:c.rewardsRedeemed||0});
+    fsAdd('merchants/'+MID+'/transactions',{phone:phone,amount:spend,pointsAdded:pts,timestamp:Date.now(),type:'purchase'});
+    $('tr-pts').textContent=newPts+' pts (+'+pts+')';
+    $('tr-sub').textContent='✅ Points added!';
+    $('till-spend').value='';
     toast('+'+pts+' points added!');
-    loadOverview();
-  } catch(e) { toast('Error: '+e.message); }
-}
-
-async function redeemReward() {
-  const phone = document.getElementById('till-phone').value.replace(/\s/g,'');
-  if (!phone||phone.length<10) { toast('Enter customer phone'); return; }
-  try {
-    const ref = db.collection('merchants').doc(merchantId).collection('customers').doc(phone);
-    const snap = await ref.get();
-    if (!snap.exists) { toast('Customer not found'); return; }
-    const c = snap.data();
-    const thresh = rules.threshold || 100;
-    if ((c.points||0) < thresh) { toast('Not enough points ('+c.points+'/'+thresh+')'); return; }
-    await ref.update({points:firebase.firestore.FieldValue.increment(-thresh),rewardsRedeemed:firebase.firestore.FieldValue.increment(1)});
-    await db.collection('merchants').doc(merchantId).collection('transactions').add({
-      phone,pointsRedeemed:thresh,timestamp:Date.now(),type:'redeem'
-    });
-    const rType = rules.rewardType||'pound', rVal = rules.rewardValue||'5';
-    const rewardLabel = rType==='pound'?'£'+rVal+' off':rType==='percent'?rVal+'% off':'Free '+rVal;
-    document.getElementById('tr-pts').textContent = ((c.points||0)-thresh) + ' pts';
-    document.getElementById('tr-sub').textContent = '🎁 Reward redeemed: '+rewardLabel;
+    loadCusts();
+  }).catch(function(){toast('Error adding points');});
+};
+window.redeemReward=function(){
+  var phone=$('till-phone').value.replace(/\s/g,'');
+  if(!phone||phone.length<10){toast('Enter customer phone number');return;}
+  var custPath='merchants/'+MID+'/customers/'+phone;
+  fsGet(custPath).then(function(d){
+    var c=fromFS(d);
+    if(!c){toast('Customer not found');return;}
+    var thresh=rules.threshold||100;
+    if((c.points||0)<thresh){toast('Not enough points ('+c.points+'/'+thresh+')');return;}
+    var newPts=(c.points||0)-thresh;
+    fsSet(custPath,Object.assign({},c,{points:newPts,rewardsRedeemed:(c.rewardsRedeemed||0)+1}));
+    fsAdd('merchants/'+MID+'/transactions',{phone:phone,pointsRedeemed:thresh,timestamp:Date.now(),type:'redeem'});
+    var rt=rules.rewardType,rv=rules.rewardValue;
+    var rl=rt==='pound'?'£'+rv+' off':rt==='percent'?rv+'% off':'Free '+rv;
+    $('tr-pts').textContent=newPts+' pts';
+    $('tr-sub').textContent='🎁 Reward redeemed: '+rl;
     toast('🎁 Reward redeemed!');
-  } catch(e) { toast('Error: '+e.message); }
+    loadCusts();
+  }).catch(function(){toast('Error redeeming');});
+};
+window.copyShopId=function(){ navigator.clipboard.writeText($('shop-id-val').textContent).catch(function(){}); toast('Shop ID copied!'); };
+
+// ---- PRODUCTS ----
+function loadProds(){
+  fsList('merchants/'+MID+'/products',30).then(function(d){
+    allProds=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop()},fromFS(doc));});
+    renderProds();
+  }).catch(function(){});
 }
-
-function copyShopId() {
-  navigator.clipboard.writeText(document.getElementById('till-shop-id').textContent);
-  toast('Shop ID copied!');
+function renderProds(){
+  var el=$('prod-grid');
+  if(!allProds.length){el.innerHTML='<div class="empty">No products yet — add your first above</div>';return;}
+  el.innerHTML=allProds.map(function(p){
+    var tags='';
+    if(p.collect!==false) tags+='<span class="bdg bp">Collect</span> ';
+    if(p.delivery) tags+='<span class="bdg bg">Delivery</span> ';
+    if(p.active===false) tags+='<span class="bdg bo">Hidden</span>';
+    return '<div class="prod-card">' +
+      '<div class="prod-img">'+(p.emoji||'🛍️')+'</div>' +
+      '<div class="prod-body"><div class="prod-name">'+esc(p.name)+'</div>' +
+      '<div style="margin-bottom:4px">'+tags+'</div>' +
+      '<div class="prod-price">£'+Number(p.price).toFixed(2)+'</div>' +
+      '<div class="prod-acts"><div class="prod-edit" onclick="editProd(\''+p.id+'\')">Edit</div>' +
+      '<div class="prod-hide" onclick="toggleProd(\''+p.id+'\','+( p.active!==false)+')">'+( p.active===false?'Show':'Hide')+'</div></div></div></div>';
+  }).join('');
 }
+window.openProdModal=function(){ editProdId=null; $('pm-title').textContent='Add product'; $('pm-btn').textContent='Add product'; ['pm-name','pm-price','pm-emoji','pm-desc'].forEach(function(i){$(i).value=''}); $('pm-collect').checked=true; $('pm-delivery').checked=false; $('prod-modal').classList.add('show'); };
+window.closeProdModal=function(){ $('prod-modal').classList.remove('show'); };
+window.editProd=function(id){ var p=allProds.find(function(x){return x.id===id;}); if(!p)return; editProdId=id; $('pm-title').textContent='Edit product'; $('pm-btn').textContent='Save changes'; $('pm-name').value=p.name||''; $('pm-price').value=p.price||''; $('pm-emoji').value=p.emoji||''; $('pm-cat').value=p.category||'other'; $('pm-desc').value=p.description||''; $('pm-collect').checked=p.collect!==false; $('pm-delivery').checked=p.delivery||false; $('prod-modal').classList.add('show'); };
+window.toggleProd=function(id,cur){ fsUpd('merchants/'+MID+'/products/'+id,{active:!cur}).then(function(){loadProds();toast(cur?'Product hidden':'Product visible');}); };
+window.saveProd=function(){
+  var name=$('pm-name').value.trim(), price=parseFloat($('pm-price').value);
+  if(!name){toast('Enter product name');return;} if(!price||price<=0){toast('Enter valid price');return;}
+  var data={name:name,price:price,emoji:$('pm-emoji').value||'🛍️',category:$('pm-cat').value,description:$('pm-desc').value.trim(),collect:$('pm-collect').checked,delivery:$('pm-delivery').checked,active:true,merchantId:MID,shopName:merchantData.name||'Shop',createdAt:Date.now()};
+  var p=editProdId?fsUpd('merchants/'+MID+'/products/'+editProdId,data):fsAdd('merchants/'+MID+'/products',data);
+  p.then(function(){closeProdModal();loadProds();toast(editProdId?'Product updated!':'Product added!');}).catch(function(){toast('Error saving product');});
+};
 
-// PRODUCTS
-let allProducts = [];
-async function loadProducts() {
-  const snap = await db.collection('merchants').doc(merchantId).collection('products').orderBy('createdAt','desc').get();
-  allProducts = snap.docs.map(d=>({id:d.id,...d.data()}));
-  renderProducts();
-}
-
-function renderProducts() {
-  const el = document.getElementById('products-grid');
-  if (!allProducts.length) { el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">No products yet — add your first product above</div>'; return; }
-  el.innerHTML = allProducts.map(p => `<div class="product-card">
-    <div class="pc-img">${p.emoji||'🛍️'}</div>
-    <div class="pc-body">
-      <div class="pc-name">${p.name}</div>
-      <div class="pc-price">£${Number(p.price).toFixed(2)}</div>
-      <div style="display:flex;gap:4px;margin-bottom:8px">
-        ${p.collect!==false?'<span class="badge badge-purple">Collect</span>':''}
-        ${p.delivery?'<span class="badge badge-green">Delivery</span>':''}
-        ${p.active===false?'<span class="badge badge-orange">Hidden</span>':''}
-      </div>
-      <div class="pc-actions">
-        <div class="pc-edit" onclick="editProduct('${p.id}')">Edit</div>
-        <div class="pc-del" onclick="toggleProduct('${p.id}',${p.active!==false})">${p.active===false?'Show':'Hide'}</div>
-      </div>
-    </div>
-  </div>`).join('');
-}
-
-function openProductModal(id) {
-  editingProductId = id || null;
-  if (id) {
-    const p = allProducts.find(x=>x.id===id);
-    document.getElementById('pm-title').textContent = 'Edit product';
-    document.getElementById('pm-save-btn').textContent = 'Save changes';
-    document.getElementById('pm-name').value = p.name;
-    document.getElementById('pm-price').value = p.price;
-    document.getElementById('pm-emoji').value = p.emoji||'';
-    document.getElementById('pm-category').value = p.category||'other';
-    document.getElementById('pm-desc').value = p.description||'';
-    document.getElementById('pm-collect').checked = p.collect!==false;
-    document.getElementById('pm-delivery').checked = p.delivery||false;
-  } else {
-    document.getElementById('pm-title').textContent = 'Add product';
-    document.getElementById('pm-save-btn').textContent = 'Add product';
-    ['pm-name','pm-price','pm-emoji','pm-desc'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('pm-collect').checked = true;
-    document.getElementById('pm-delivery').checked = false;
-  }
-  document.getElementById('product-modal').classList.add('show');
-}
-
-function editProduct(id) { openProductModal(id); }
-function closeProductModal() { document.getElementById('product-modal').classList.remove('show'); }
-
-async function saveProduct() {
-  const name = document.getElementById('pm-name').value.trim();
-  const price = parseFloat(document.getElementById('pm-price').value);
-  if (!name) { toast('Enter product name'); return; }
-  if (!price || price <= 0) { toast('Enter valid price'); return; }
-  const product = {
-    name, price, emoji:document.getElementById('pm-emoji').value||'🛍️',
-    category:document.getElementById('pm-category').value,
-    description:document.getElementById('pm-desc').value.trim(),
-    collect:document.getElementById('pm-collect').checked,
-    delivery:document.getElementById('pm-delivery').checked,
-    active:true, merchantId, shopName:merchantData?.name||'Shop', createdAt:Date.now()
-  };
-  try {
-    if (editingProductId) {
-      await db.collection('merchants').doc(merchantId).collection('products').doc(editingProductId).update(product);
-      toast('Product updated!');
-    } else {
-      await db.collection('merchants').doc(merchantId).collection('products').add(product);
-      toast('Product added!');
-    }
-    closeProductModal();
-    await loadProducts();
-  } catch(e) { toast('Error: '+e.message); }
-}
-
-async function toggleProduct(id, currentActive) {
-  await db.collection('merchants').doc(merchantId).collection('products').doc(id).update({active:!currentActive});
-  await loadProducts();
-  toast(currentActive ? 'Product hidden' : 'Product shown');
-}
-
-// ORDERS
-async function loadMerchantOrders() {
-  try {
-    const snap = await db.collection('merchants').doc(merchantId).collection('orders').orderBy('createdAt','desc').limit(30).get();
-    const orders = snap.docs.map(d=>({id:d.id,...d.data()}));
-    const el = document.getElementById('orders-list');
-    if (!orders.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No orders yet</div>'; return; }
-    el.innerHTML = orders.map(o => `<div class="order-card">
-      <div class="oc-info">
-        <div class="oc-id">${o.orderId||o.id.slice(0,8).toUpperCase()}</div>
-        <div class="oc-product">${o.emoji||'🛍️'} ${o.productName} × ${o.qty||1}</div>
-        <div class="oc-meta">${o.type==='collect'?'🏪 Click & Collect':'🚚 Home Delivery'} · ${timeAgo(o.createdAt)}${o.address?' · '+o.address:''}</div>
-      </div>
-      <div class="oc-right">
-        <div class="oc-total">£${Number(o.total).toFixed(2)}</div>
-        <div><span class="badge ${o.status==='delivered'||o.status==='collected'?'badge-green':o.status==='ready'?'badge-purple':'badge-orange'}">${o.status||'pending'}</span></div>
-        ${o.status==='pending'?`<div class="btn-status" onclick="markOrderReady('${o.id}')">Mark ready</div>`:''}
-      </div>
-    </div>`).join('');
-    document.getElementById('ov-orders').textContent = orders.length;
-    const revenue = orders.reduce((a,o)=>a+(o.total||0),0);
-    document.getElementById('ov-revenue').textContent = '£'+revenue.toFixed(0);
-  } catch(e) { console.error(e); }
-}
-
-async function markOrderReady(id) {
-  await db.collection('merchants').doc(merchantId).collection('orders').doc(id).update({status:'ready'});
-  toast('Order marked as ready!');
-  loadMerchantOrders();
-}
-
-// CUSTOMERS
-async function loadCustomers() {
-  const snap = await db.collection('merchants').doc(merchantId).collection('customers').orderBy('points','desc').limit(100).get();
-  allCustomers = snap.docs.map(d=>({id:d.id,...d.data()}));
-  renderCustomers(allCustomers);
-  document.getElementById('ov-customers').textContent = allCustomers.length;
-}
-
-function renderCustomers(list) {
-  const b = document.getElementById('customers-body');
-  if (!list.length) { b.innerHTML = '<tr class="empty-row"><td colspan="5">No customers yet</td></tr>'; return; }
-  b.innerHTML = list.map(c=>`<tr>
-    <td><strong>${c.name||'Customer'}</strong></td>
-    <td>${c.phone||c.id}</td>
-    <td><span class="badge badge-purple">${c.points||0} pts</span></td>
-    <td>${c.visitCount||0}</td>
-    <td>${c.joinedAt?timeAgo(c.joinedAt):'-'}</td>
-  </tr>`).join('');
-}
-
-function filterCustomers(q) {
-  renderCustomers(q.trim()?allCustomers.filter(c=>(c.name||'').toLowerCase().includes(q.toLowerCase())||(c.phone||'').includes(q)):allCustomers);
-}
-
-// RECEIPTS
-async function loadReceipts() {
-  try {
-    const snap = await db.collection('merchants').doc(merchantId).collection('receiptQueue').orderBy('timestamp','desc').limit(20).get();
-    const el = document.getElementById('receipts-list');
-    if (snap.empty) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No pending receipts</div>'; return; }
-    el.innerHTML = snap.docs.map(d=>{
-      const r = d.data();
-      return `<div style="background:#fff;border-radius:var(--r);padding:16px;margin-bottom:10px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-size:14px;font-weight:700">${r.phone} — £${r.amount||0}</div>
-          <div style="font-size:12px;color:var(--muted)">${timeAgo(r.timestamp)} · ${r.category||'unknown'}</div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button onclick="approveReceipt('${d.id}','${r.phone}',${r.amount||0})" style="padding:7px 14px;background:var(--green2);color:var(--green);border-radius:8px;font-size:13px;font-weight:700">Approve</button>
-          <button onclick="denyReceipt('${d.id}')" style="padding:7px 14px;background:var(--red2);color:var(--red);border-radius:8px;font-size:13px;font-weight:700">Deny</button>
-        </div>
-      </div>`;
+// ---- ORDERS ----
+function loadOrders(){
+  fsList('merchants/'+MID+'/orders',30).then(function(d){
+    allOrds=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop()},fromFS(doc));}).sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);});
+    var el=$('orders-list');
+    if(!allOrds.length){el.innerHTML='<div class="empty">No orders yet</div>';return;}
+    el.innerHTML=allOrds.map(function(o){
+      var sc=(o.status==='delivered'||o.status==='collected')?'bg':o.status==='ready'?'bp':'bo';
+      var sl=o.status==='collected'?'Collected':o.status==='delivered'?'Delivered':o.status==='ready'?'Ready':'Pending';
+      return '<div class="ocard"><div><div class="oc-id">'+(o.orderId||o.id.slice(0,8).toUpperCase())+'</div>' +
+        '<div class="oc-pn">'+(o.emoji||'🛍️')+' '+esc(o.productName)+' × '+(o.qty||1)+'</div>' +
+        '<div class="oc-mt">'+(o.type==='collect'?'🏪 Click & Collect':'🚚 Delivery')+(o.address?' · '+esc(o.address):'')+'</div></div>' +
+        '<div style="text-align:right"><div class="oc-tot">£'+Number(o.total).toFixed(2)+'</div>' +
+        '<div><span class="bdg '+sc+'">'+sl+'</span></div>' +
+        (o.status==='pending'?'<div class="btn-ready" onclick="markReady(\''+o.id+'\')">Mark ready</div>':'')+
+        '</div></div>';
     }).join('');
-  } catch(e) {}
+  }).catch(function(){});
 }
+window.markReady=function(id){ fsUpd('merchants/'+MID+'/orders/'+id,{status:'ready'}).then(function(){loadOrders();toast('Order marked as ready!');}).catch(function(){}); };
 
-async function approveReceipt(id, phone, amount) {
-  const pts = Math.floor(amount * (rules.pointsPerPound||1));
-  const ref = db.collection('merchants').doc(merchantId).collection('customers').doc(phone);
-  await ref.update({points:firebase.firestore.FieldValue.increment(pts),visitCount:firebase.firestore.FieldValue.increment(1)});
-  await db.collection('merchants').doc(merchantId).collection('receiptQueue').doc(id).delete();
-  toast('+'+pts+' points approved!');
-  loadReceipts();
+// ---- CUSTOMERS ----
+function loadCusts(){
+  fsList('merchants/'+MID+'/customers',100).then(function(d){
+    allCusts=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop()},fromFS(doc));}).sort(function(a,b){return (b.points||0)-(a.points||0);});
+    renderCusts(allCusts);
+  }).catch(function(){});
 }
+function renderCusts(list){
+  var b=$('custs-body');
+  if(!list.length){b.innerHTML='<tr class="empty-row"><td colspan="5">No customers yet</td></tr>';return;}
+  b.innerHTML=list.map(function(c){
+    return '<tr><td><strong>'+esc(c.name||'Customer')+'</strong></td><td>'+esc(c.phone||c.id)+'</td>' +
+      '<td><span class="bdg bp">'+(c.points||0)+' pts</span></td><td>'+(c.visitCount||0)+'</td>' +
+      '<td>'+(c.joinedAt?tAgo(c.joinedAt):'-')+'</td></tr>';
+  }).join('');
+}
+window.filterCusts=function(q){ renderCusts(q.trim()?allCusts.filter(function(c){return (c.name||'').toLowerCase().includes(q.toLowerCase())||(c.phone||'').includes(q);}):allCusts); };
 
-async function denyReceipt(id) {
-  await db.collection('merchants').doc(merchantId).collection('receiptQueue').doc(id).delete();
-  toast('Receipt denied'); loadReceipts();
+// ---- RECEIPTS ----
+function loadReceipts(){
+  fsList('merchants/'+MID+'/receiptQueue',20).then(function(d){
+    var docs=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop()},fromFS(doc));});
+    var el=$('receipts-list');
+    if(!docs.length){el.innerHTML='<div class="empty">No pending receipts</div>';return;}
+    el.innerHTML=docs.map(function(r){
+      return '<div style="background:#fff;border-radius:var(--r);padding:14px;margin-bottom:10px;box-shadow:var(--sh);display:flex;justify-content:space-between;align-items:center">' +
+        '<div><div style="font-size:14px;font-weight:700">'+esc(r.phone)+' — £'+(r.amount||0)+'</div>' +
+        '<div style="font-size:12px;color:var(--mu)">'+tAgo(r.timestamp)+' · '+(r.category||'unknown')+'</div></div>' +
+        '<div style="display:flex;gap:8px">' +
+        '<button onclick="approveReceipt(\''+r.id+'\',\''+esc(r.phone)+'\','+(r.amount||0)+')" style="padding:7px 13px;background:var(--gn2);color:var(--gn);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Approve</button>' +
+        '<button onclick="denyReceipt(\''+r.id+'\')" style="padding:7px 13px;background:var(--rd2);color:var(--rd);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Deny</button>' +
+        '</div></div>';
+    }).join('');
+  }).catch(function(){});
 }
+window.approveReceipt=function(id,phone,amount){
+  var pts=Math.floor(amount*(rules.pointsPerPound||1));
+  var custPath='merchants/'+MID+'/customers/'+phone;
+  fsGet(custPath).then(function(d){
+    var c=fromFS(d)||{points:0,visitCount:0};
+    fsSet(custPath,Object.assign({},c,{points:(c.points||0)+pts,visitCount:(c.visitCount||0)+1}));
+    fsDel('merchants/'+MID+'/receiptQueue/'+id);
+    toast('+'+pts+' points approved!'); loadReceipts(); loadCusts();
+  }).catch(function(){toast('Error approving');});
+};
+window.denyReceipt=function(id){ fsDel('merchants/'+MID+'/receiptQueue/'+id).then(function(){toast('Receipt denied');loadReceipts();}); };
 
-// OVERVIEW
-async function loadOverview() {
-  try {
-    const txSnap = await db.collection('merchants').doc(merchantId).collection('transactions').get();
-    document.getElementById('ov-transactions').textContent = txSnap.size;
-  } catch(e) {}
-}
+// ---- SETTINGS ----
+window.saveSettings=function(){
+  var r={pointsPerPound:parseInt($('s-ppp').value)||1,minSpend:parseFloat($('s-min').value)||0,threshold:parseInt($('s-thresh').value)||100,rewardType:$('s-rtype').value,rewardValue:$('s-rval').value};
+  rules=r;
+  fsSet('merchants/'+MID,{rules:r,name:$('s-name').value.trim()||merchantData.name||'',phone:$('s-phone').value.trim(),address:$('s-addr').value.trim(),shopId:merchantData.shopId||('SL-'+MID.slice(0,4).toUpperCase()),subscription:merchantData.subscription||'trial',createdAt:merchantData.createdAt||Date.now(),email:merchantData.email||''})
+    .then(function(){toast('Settings saved!');loadMerchant();}).catch(function(){toast('Error saving');});
+};
 
-// SETTINGS
-async function saveSettings() {
-  const r = {
-    pointsPerPound:parseInt(document.getElementById('s-ppp').value)||1,
-    minSpend:parseFloat(document.getElementById('s-min').value)||0,
-    threshold:parseInt(document.getElementById('s-thresh').value)||100,
-    rewardType:document.getElementById('s-reward-type').value,
-    rewardValue:document.getElementById('s-reward-val').value
-  };
-  const data = {
-    rules:r,
-    name:document.getElementById('s-shop-name').value.trim()||merchantData?.name,
-    phone:document.getElementById('s-shop-phone').value.trim(),
-    address:document.getElementById('s-shop-address').value.trim(),
-    updatedAt:Date.now()
-  };
-  await db.collection('merchants').doc(merchantId).update(data);
-  rules = r;
-  merchantData = {...merchantData,...data};
-  toast('Settings saved!');
-}
+// ---- TABS ----
+var TABS=['till','products','orders','customers','receipts','settings'];
+window.showTab=function(t){
+  TABS.forEach(function(x){var el=$('tab-'+x);if(el)el.style.display=x===t?'block':'none';});
+  document.querySelectorAll('.tab-btn').forEach(function(b,i){b.classList.toggle('on',TABS[i]===t);});
+  if(t==='orders') loadOrders();
+  if(t==='customers') loadCusts();
+  if(t==='receipts') loadReceipts();
+  if(t==='products') loadProds();
+};
 
-// NAV
-function showTab(tab) {
-  ['till','products','orders','customers','receipts','overview','settings'].forEach(t=>{
-    document.getElementById('tab-'+t).style.display = t===tab?'block':'none';
-  });
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
-    b.classList.toggle('on',['till','products','orders','customers','receipts','overview','settings'][i]===tab);
-  });
-  if (tab==='overview') loadOverview();
-  if (tab==='orders') loadMerchantOrders();
-  if (tab==='customers') loadCustomers();
-  if (tab==='receipts') loadReceipts();
-}
-
-// UTILS
-function timeAgo(ts) {
-  if (!ts) return '';
-  const d=Date.now()-ts,m=Math.floor(d/60000),h=Math.floor(d/3600000),dy=Math.floor(d/86400000);
-  if (m<1)return'Just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';return dy+'d ago';
-}
-
-let toastTimer;
-function toast(msg) {
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
-}
+// ---- UTILS ----
+function $(id){return document.getElementById(id);}
+function show(id,d){var e=$(id);if(e)e.style.display=d||'block';}
+function hide(id){var e=$(id);if(e)e.style.display='none';}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function showErr(el,msg){el.textContent=msg;el.style.display='block';}
+function tAgo(ts){if(!ts)return'';var d=Date.now()-ts,m=Math.floor(d/60000),h2=Math.floor(d/3600000),dy=Math.floor(d/86400000);if(m<1)return'Just now';if(m<60)return m+'m ago';if(h2<24)return h2+'h ago';return dy+'d ago';}
+var TT;
+function toast(msg){var t=$(  'toast');t.textContent=msg;t.classList.add('on');clearTimeout(TT);TT=setTimeout(function(){t.classList.remove('on');},2800);}
 
-window.addEventListener('load', initFirebase);
+// ---- BOOT ----
+if(checkSession()){ hide('s-auth'); show('s-app','flex'); loadMerchant(); }
 </script>
 </body>
 </html>
