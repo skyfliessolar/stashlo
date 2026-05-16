@@ -1,793 +1,829 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+// Firebase REST API - no CDN needed
+var _KEY='AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y';
+var _PID='stashlo';
+var _FS='https://firestore.googleapis.com/v1/projects/'+_PID+'/databases/(default)/documents/';
+var _AUTH_URL='https://identitytoolkit.googleapis.com/v1/accounts:';
+var _TOKEN=null;
+
+function _toFS(obj){var o={};Object.keys(obj).forEach(function(k){var v=obj[k];if(v===null||v===undefined)o[k]={nullValue:null};else if(typeof v==='boolean')o[k]={booleanValue:v};else if(typeof v==='number')o[k]=Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};else if(typeof v==='object')o[k]={mapValue:{fields:_toFS(v)}};else o[k]={stringValue:String(v)};});return o;}
+function _fromFS(doc){if(!doc||!doc.fields)return null;var o={};Object.keys(doc.fields).forEach(function(k){var v=doc.fields[k];if('stringValue'in v)o[k]=v.stringValue;else if('integerValue'in v)o[k]=parseInt(v.integerValue);else if('doubleValue'in v)o[k]=v.doubleValue;else if('booleanValue'in v)o[k]=v.booleanValue;else if('mapValue'in v)o[k]=_fromFS(v.mapValue);else o[k]=null;});if(doc.name)o._id=doc.name.split('/').pop();return o;}
+function _h(){var h={'Content-Type':'application/json'};if(_TOKEN)h['Authorization']='Bearer '+_TOKEN;return h;}
+function _get(p){return fetch(_FS+p,{headers:_h()}).then(function(r){return r.json();});}
+function _list(p,n){return fetch(_FS+p+'?pageSize='+(n||50),{headers:_h()}).then(function(r){return r.json();});}
+function _set(p,f){return fetch(_FS+p,{method:'PATCH',headers:_h(),body:JSON.stringify({fields:_toFS(f)})}).then(function(r){return r.json();});}
+function _add(c,f){return fetch(_FS+c,{method:'POST',headers:_h(),body:JSON.stringify({fields:_toFS(f)})}).then(function(r){return r.json();});}
+function _upd(p,f){var mask=Object.keys(f).map(function(k){return'updateMask.fieldPaths='+k;}).join('&');return fetch(_FS+p+'?'+mask,{method:'PATCH',headers:_h(),body:JSON.stringify({fields:_toFS(f)})}).then(function(r){return r.json();});}
+function _del(p){return fetch(_FS+p,{method:'DELETE',headers:_h()});}
+function _incr(p,field,by){return _get(p).then(function(d){var v=(_fromFS(d)||{})[field]||0;var upd={};upd[field]=v+(by||1);return _upd(p,upd);});}
+function _signIn(e,pw){return fetch(_AUTH_URL+'signInWithPassword?key='+_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:pw,returnSecureToken:true})}).then(function(r){return r.json();});}
+function _signUp(e,pw){return fetch(_AUTH_URL+'signUp?key='+_KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:pw,returnSecureToken:true})}).then(function(r){return r.json();});}
+
+// Map firebase.* calls to REST equivalents
+var firebase={apps:[],app:function(){return firebase;},initializeApp:function(cfg){firebase.apps.push(cfg);return firebase;},
+  auth:function(){return{
+    signInWithEmailAndPassword:function(e,p){return _signIn(e,p).then(function(d){if(d.error)throw{code:'auth/'+d.error.message.toLowerCase().replace(/ /g,'_'),message:d.error.message};_TOKEN=d.idToken;firebase._uid=d.localId;firebase._email=d.email;var cb=firebase._authCb;if(cb)cb({uid:d.localId,email:d.email});return{user:{uid:d.localId,email:d.email}};});},
+    createUserWithEmailAndPassword:function(e,p){return _signUp(e,p).then(function(d){if(d.error)throw{code:'auth/'+d.error.message.toLowerCase().replace(/ /g,'_'),message:d.error.message};_TOKEN=d.idToken;firebase._uid=d.localId;firebase._email=d.email;var cb=firebase._authCb;if(cb)cb({uid:d.localId,email:d.email});return{user:{uid:d.localId,email:d.email,updateProfile:function(){return Promise.resolve();}}};});},
+    onAuthStateChanged:function(cb){firebase._authCb=cb;var s=null;try{s=JSON.parse(localStorage.getItem('sl_m_sess')||'null');}catch(e){}if(s&&s.exp>Date.now()){_TOKEN=s.token;firebase._uid=s.uid;firebase._email=s.email;setTimeout(function(){cb({uid:s.uid,email:s.email});},0);}else{setTimeout(function(){cb(null);},0);}},
+    signOut:function(){_TOKEN=null;firebase._uid=null;localStorage.removeItem('sl_m_sess');var cb=firebase._authCb;if(cb)cb(null);return Promise.resolve();}
+  };},
+  firestore:function(){
+    function col(path){return{doc:function(id){var fp=path+'/'+id;return{get:function(){return _get(fp).then(function(d){return{exists:!!d.fields,data:function(){return _fromFS(d)||{};},id:id,ref:{id:id}};});},set:function(data,opts){return _set(fp,data);},update:function(data){return _upd(fp,data);},delete:function(){return _del(fp);},collection:function(sub){return col(fp+'/'+sub);}};};};}; // simplified
+    return{collection:function(name){return col(name);}};
+  }
+};
+firebase.firestore.FieldValue={increment:function(n){return {__increment:n};}};
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Stashlo Merchant</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
-:root{--bg:#f4f4f6;--surface:#fff;--dark:#0a0a14;--accent:#00897B;--accent2:#e0f2f1;--text:#1a1a2e;--muted:#706f87;--danger:#e53935;--success:#1b6b46;--font:'Plus Jakarta Sans',system-ui,sans-serif;--r:12px}
+:root{--bg:#f4f4f6;--surface:#fff;--dark:#0a0a14;--accent:#6C5CE7;--accent2:#ece9ff;--green:#1b6b46;--green2:#e6f9f1;--orange:#F57C00;--orange2:#fff3e0;--red:#c62828;--red2:#ffebee;--text:#1a1a2e;--muted:#706f87;--font:'Plus Jakarta Sans',system-ui,sans-serif;--r:12px;--shadow:0 2px 12px rgba(0,0,0,.06)}
 *{box-sizing:border-box;margin:0;padding:0;font-family:var(--font)}
 body{background:var(--bg);color:var(--text);min-height:100vh}
-.hide{display:none!important}
+button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
+input,select,textarea{outline:none;font-family:var(--font)}
 
 /* AUTH */
-#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--dark)}
-.auth-box{background:var(--surface);border-radius:20px;padding:36px 32px;width:100%;max-width:400px}
-.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
-.auth-logo-icon{width:44px;height:44px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center}
-.auth-logo-icon svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.auth-logo-text{font-size:22px;font-weight:800;color:var(--text)}
-.auth-title{font-size:24px;font-weight:700;margin-bottom:6px}
-.auth-sub{font-size:14px;color:var(--muted);margin-bottom:24px}
-.field{margin-bottom:16px}
-.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
-.field input{width:100%;padding:12px 14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:15px;outline:none;transition:border-color .15s}
+#s-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--dark);padding:20px}
+.auth-box{background:#fff;border-radius:20px;padding:40px 32px;width:100%;max-width:400px}
+.auth-brand{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+.auth-logo{width:44px;height:44px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff}
+.brand-name{font-size:20px;font-weight:800}
+.brand-tag{font-size:11px;font-weight:600;background:var(--accent2);color:var(--accent);padding:2px 8px;border-radius:20px;margin-left:4px}
+.auth-title{font-size:22px;font-weight:800;margin-bottom:6px}
+.auth-sub{font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.6}
+.auth-tabs{display:flex;background:#f4f4f6;border-radius:10px;padding:4px;margin-bottom:20px}
+.auth-tab{flex:1;padding:8px;text-align:center;font-size:13px;font-weight:600;border-radius:7px;transition:all .2s;color:var(--muted);cursor:pointer}
+.auth-tab.on{background:#fff;color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.field input{width:100%;padding:12px 14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:15px;transition:border-color .15s}
 .field input:focus{border-color:var(--accent)}
-.btn{width:100%;padding:14px;border:none;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s}
-.btn:active{opacity:.85}
-.btn-dark{background:var(--dark);color:#fff}
-.btn-accent{background:var(--accent);color:#fff}
-.btn-ghost{background:transparent;border:1.5px solid #e5e5ea;color:var(--text)}
-.auth-err{font-size:13px;color:var(--danger);margin-top:12px;text-align:center}
+.btn-login{width:100%;padding:14px;background:var(--dark);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700}
+.auth-err{color:var(--red);font-size:13px;margin-top:8px;text-align:center;display:none}
 
-/* APP LAYOUT */
-#app{display:none;min-height:100vh;flex-direction:column}
-.topbar{background:var(--dark);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.topbar-left{display:flex;align-items:center;gap:10px}
-.topbar-logo{font-size:18px;font-weight:800;color:#fff}
-.topbar-merchant{font-size:13px;color:rgba(255,255,255,.5)}
-.topbar-right{display:flex;align-items:center;gap:12px}
-.status-dot{width:8px;height:8px;border-radius:50%;background:#00e676}
-.signout-btn{font-size:12px;color:rgba(255,255,255,.5);cursor:pointer;padding:4px 8px;border-radius:6px}
-.signout-btn:hover{color:#fff;background:rgba(255,255,255,.1)}
+/* APP */
+#s-app{display:none;min-height:100vh;flex-direction:column}
+
+/* TOPBAR */
+.topbar{background:var(--dark);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:100}
+.tb-brand{display:flex;align-items:center;gap:8px}
+.tb-logo{font-size:17px;font-weight:800;color:#fff}
+.tb-tag{font-size:11px;font-weight:600;background:rgba(108,92,231,.35);color:#a29bfe;padding:2px 8px;border-radius:20px}
+.tb-right{display:flex;align-items:center;gap:10px}
+.tb-user{font-size:12px;color:rgba(255,255,255,.4)}
+.tb-signout{font-size:12px;color:rgba(255,255,255,.4);cursor:pointer;padding:5px 10px;border-radius:6px}
+.tb-signout:hover{background:rgba(255,255,255,.08)}
 
 /* TABS */
-.tabs{background:var(--surface);border-bottom:1px solid #ebebef;display:flex;padding:0 20px;overflow-x:auto}
-.tab{padding:14px 18px;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s}
-.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-bar{background:#fff;border-bottom:1px solid #ebebef;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:56px;z-index:99}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab-btn{padding:14px 20px;font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;border-bottom:2px solid transparent;transition:all .15s;cursor:pointer}
+.tab-btn.on{color:var(--accent);border-color:var(--accent)}
 
-/* CONTENT */
-.content{flex:1;padding:24px 20px;max-width:900px;margin:0 auto;width:100%}
+/* MAIN */
+.main{padding:20px;max-width:900px;margin:0 auto;width:100%}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.kpi{background:var(--surface);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+.kpi-val{font-size:28px;font-weight:800;color:var(--text)}
+.kpi-lbl{font-size:13px;color:var(--muted);margin-top:4px}
+.kpi-sub{font-size:12px;font-weight:600;margin-top:4px}
+
+/* SECTION */
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-size:17px;font-weight:700}
+.btn-sm{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;background:var(--accent);color:#fff}
+.btn-sm.outline{background:var(--accent2);color:var(--accent)}
+
+/* TABLE */
+.table-wrap{background:var(--surface);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);overflow-x:auto;margin-bottom:24px}
+table{width:100%;border-collapse:collapse;min-width:500px}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;background:#f9f9fb;border-bottom:1px solid #ebebef}
+td{padding:12px 14px;font-size:14px;border-bottom:1px solid #f4f4f6}
+tr:last-child td{border:none}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-green{background:var(--green2);color:var(--green)}
+.badge-orange{background:var(--orange2);color:var(--orange)}
+.badge-red{background:var(--red2);color:var(--red)}
+.badge-purple{background:var(--accent2);color:var(--accent)}
+.empty-row td{text-align:center;padding:40px;color:var(--muted);font-size:14px}
+
+/* PRODUCT GRID */
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+.product-card{background:var(--surface);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.pc-img{width:100%;height:100px;background:linear-gradient(135deg,#ece9ff,#e0f2f1);display:flex;align-items:center;justify-content:center;font-size:40px}
+.pc-body{padding:12px}
+.pc-name{font-size:14px;font-weight:700;margin-bottom:4px}
+.pc-price{font-size:16px;font-weight:800;color:var(--accent);margin-bottom:6px}
+.pc-actions{display:flex;gap:6px}
+.pc-edit{flex:1;padding:6px;background:var(--accent2);color:var(--accent);border-radius:6px;font-size:12px;font-weight:600;text-align:center;cursor:pointer}
+.pc-del{padding:6px 8px;background:#ffebee;color:var(--red);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
 
 /* TILL */
-.till-wrap{max-width:480px;margin:0 auto}
-.till-card{background:var(--surface);border-radius:20px;padding:28px;box-shadow:0 2px 16px rgba(0,0,0,.06)}
-.till-title{font-size:20px;font-weight:700;margin-bottom:6px}
-.till-sub{font-size:14px;color:var(--muted);margin-bottom:24px}
-.big-input-wrap{margin-bottom:16px}
-.big-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.big-input{width:100%;padding:16px 18px;font-size:22px;font-weight:700;border:2px solid #e5e5ea;border-radius:var(--r);outline:none;transition:border-color .15s;letter-spacing:1px}
-.big-input:focus{border-color:var(--accent)}
-.calc-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;padding:16px;background:#f9f9fb;border-radius:var(--r)}
-.calc-item{text-align:center}
-.calc-label{font-size:11px;color:var(--muted);margin-bottom:4px}
-.calc-value{font-size:22px;font-weight:800;color:var(--accent)}
-.till-result{background:var(--accent2);border-radius:var(--r);padding:14px 16px;margin-bottom:16px;display:none}
-.till-result-name{font-size:15px;font-weight:600;color:#004D40}
-.till-result-pts{font-size:13px;color:#00695C;margin-top:2px}
-.redeem-banner{background:#fff3cd;border:1.5px solid #ffc107;border-radius:var(--r);padding:14px 16px;margin-bottom:16px;display:none;align-items:center;gap:10px}
-.redeem-banner-text{flex:1;font-size:13px;color:#664d03;font-weight:500}
-.redeem-btn{padding:8px 14px;background:#ffc107;border:none;border-radius:8px;font-size:13px;font-weight:700;color:#664d03;cursor:pointer}
-.notfound-banner{background:#fff0f0;border:1.5px solid #ffcdd2;border-radius:var(--r);padding:14px 16px;margin-bottom:16px;display:none}
-.notfound-text{font-size:13px;color:#c62828;font-weight:500}
-.notfound-sub{font-size:12px;color:#e57373;margin-top:3px}
+.till-card{background:var(--surface);border-radius:16px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+.till-title{font-size:16px;font-weight:700;margin-bottom:16px}
+.till-input{width:100%;padding:14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:16px;margin-bottom:12px;transition:border-color .15s}
+.till-input:focus{border-color:var(--accent)}
+.till-row{display:flex;gap:10px}
+.till-btn{flex:1;padding:14px;border-radius:var(--r);font-size:15px;font-weight:700}
+.till-btn.primary{background:var(--dark);color:#fff}
+.till-btn.secondary{background:var(--accent2);color:var(--accent)}
+.till-result{background:#f9f9fb;border-radius:12px;padding:16px;margin-top:12px;display:none}
+.tr-name{font-size:18px;font-weight:700;margin-bottom:4px}
+.tr-pts{font-size:28px;font-weight:800;color:var(--accent)}
+.tr-sub{font-size:13px;color:var(--muted)}
 
-/* CUSTOMERS TABLE */
-.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.section-title{font-size:18px;font-weight:700}
-.search-inp{padding:9px 14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px;outline:none;width:220px}
-.search-inp:focus{border-color:var(--accent)}
-.table-wrap{background:var(--surface);border-radius:var(--r);overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.05)}
-table{width:100%;border-collapse:collapse}
-th{padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:#f9f9fb;border-bottom:1px solid #ebebef}
-td{padding:12px 16px;font-size:14px;border-bottom:1px solid #f4f4f6}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#fafafa}
-.pts-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;background:var(--accent2);color:#004D40}
-.eligible-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#fff3cd;color:#664d03;margin-left:6px}
-.empty-table{text-align:center;padding:48px;color:var(--muted)}
-
-/* STATS */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
-.stat-card{background:var(--surface);border-radius:var(--r);padding:18px;box-shadow:0 1px 8px rgba(0,0,0,.05)}
-.stat-val{font-size:28px;font-weight:800;color:var(--text)}
-.stat-label{font-size:12px;color:var(--muted);margin-top:4px}
+/* ORDERS SECTION */
+.order-card{background:var(--surface);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.oc-info{}
+.oc-id{font-size:11px;font-weight:700;color:var(--muted);font-family:monospace;margin-bottom:4px}
+.oc-product{font-size:14px;font-weight:700;margin-bottom:2px}
+.oc-meta{font-size:12px;color:var(--muted)}
+.oc-right{text-align:right}
+.oc-total{font-size:18px;font-weight:800;color:var(--accent)}
+.oc-type{font-size:12px;color:var(--muted)}
+.btn-status{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;background:var(--green2);color:var(--green);cursor:pointer;margin-top:6px}
 
 /* SETTINGS */
-.settings-card{background:var(--surface);border-radius:var(--r);padding:24px;box-shadow:0 1px 8px rgba(0,0,0,.05);margin-bottom:16px}
-.settings-title{font-size:16px;font-weight:700;margin-bottom:4px}
-.settings-sub{font-size:13px;color:var(--muted);margin-bottom:20px}
-.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.settings-field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
-.settings-field input,.settings-field select{width:100%;padding:11px 14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:15px;outline:none}
+.settings-card{background:var(--surface);border-radius:var(--r);padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+.settings-title{font-size:15px;font-weight:700;margin-bottom:14px}
+.settings-row{display:flex;gap:12px;flex-wrap:wrap}
+.settings-field{flex:1;min-width:140px}
+.settings-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.settings-field input,.settings-field select{width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px}
 .settings-field input:focus,.settings-field select:focus{border-color:var(--accent)}
-.save-row{margin-top:20px;display:flex;align-items:center;gap:12px}
-.save-btn{padding:11px 24px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer}
-.save-ok{font-size:13px;color:var(--success);display:none}
+.shop-id-box{background:var(--dark);border-radius:var(--r);padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.shop-id-label{font-size:12px;color:rgba(255,255,255,.4)}
+.shop-id-val{font-size:24px;font-weight:800;color:#fff;font-family:monospace;letter-spacing:2px}
+
+/* MODAL */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal.show{display:flex}
+.modal-box{background:#fff;border-radius:20px;padding:24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-title{font-size:18px;font-weight:800}
+.modal-close{width:32px;height:32px;border-radius:50%;background:#f4f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px}
 
 /* TOAST */
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--dark);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-/* SETUP */
-#setup-screen{display:none;min-height:100vh;background:var(--bg);padding:40px 20px}
-.setup-wrap{max-width:560px;margin:0 auto}
-.setup-title{font-size:28px;font-weight:800;margin-bottom:8px}
-.setup-sub{font-size:15px;color:var(--muted);margin-bottom:32px;line-height:1.6}
-.setup-card{background:var(--surface);border-radius:20px;padding:28px;box-shadow:0 2px 16px rgba(0,0,0,.06);margin-bottom:16px}
-.setup-card-title{font-size:16px;font-weight:700;margin-bottom:4px}
-.setup-card-sub{font-size:13px;color:var(--muted);margin-bottom:18px}
-.reward-options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
-.reward-opt{border:2px solid #e5e5ea;border-radius:var(--r);padding:14px;text-align:center;cursor:pointer;transition:border-color .15s}
-.reward-opt.sel{border-color:var(--accent);background:var(--accent2)}
-.reward-opt-icon{font-size:24px;margin-bottom:6px}
-.reward-opt-label{font-size:12px;font-weight:600;color:var(--text)}
+#toast{position:fixed;bottom:24px;right:24px;background:var(--dark);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s}
+#toast.show{opacity:1}
 </style>
 </head>
 <body>
 
 <!-- AUTH -->
-<div id="auth-screen">
+<div id="s-auth">
   <div class="auth-box">
-    <div class="auth-logo">
-      <div class="auth-logo-icon"><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="3"/><path d="M1 10h22"/><path d="M5 15h4"/></svg></div>
-      <div class="auth-logo-text">Stashlo</div>
+    <div class="auth-brand">
+      <div class="auth-logo">S</div>
+      <div class="brand-name">Stashlo <span class="brand-tag">Merchant</span></div>
     </div>
-    <div class="auth-title">Merchant login</div>
-    <div class="auth-sub">Sign in to manage your loyalty programme</div>
-    <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="you@yourshop.com"></div>
-    <div class="field"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••"></div>
-    <button class="btn btn-dark" onclick="doLogin()">Sign in</button>
-    <div style="text-align:center;margin:16px 0;font-size:13px;color:var(--muted)">— or —</div>
-    <button class="btn btn-ghost" onclick="showRegister()">Create merchant account</button>
-    <div class="auth-err hide" id="auth-err"></div>
+    <div class="auth-tabs">
+      <div class="auth-tab on" id="m-tab-in" onclick="mSwitchTab('in')">Sign in</div>
+      <div class="auth-tab" id="m-tab-up" onclick="mSwitchTab('up')">Register shop</div>
+    </div>
+    <div id="m-signin">
+      <div class="auth-title">Merchant login</div>
+      <div class="auth-sub">Sign in to manage your shop loyalty programme</div>
+      <div class="field"><label>Email</label><input type="email" id="m-email" placeholder="shop@email.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="m-pass" placeholder="••••••••"></div>
+      <button class="btn-login" onclick="mSignIn()">Sign in</button>
+      <div class="auth-err" id="m-err"></div>
+    </div>
+    <div id="m-signup" style="display:none">
+      <div class="auth-title">Register your shop</div>
+      <div class="auth-sub">Set up your Stashlo loyalty programme</div>
+      <div class="field"><label>Shop name</label><input type="text" id="m-shop-name" placeholder="Your shop name"></div>
+      <div class="field"><label>Email</label><input type="email" id="m-reg-email" placeholder="shop@email.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="m-reg-pass" placeholder="Min 6 characters"></div>
+      <button class="btn-login" onclick="mSignUp()">Register shop</button>
+      <div class="auth-err" id="m-reg-err"></div>
+    </div>
   </div>
 </div>
 
-<!-- REGISTER -->
-<div id="register-screen" class="hide" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--dark)">
-  <div class="auth-box">
-    <div class="auth-logo">
-      <div class="auth-logo-icon"><svg viewBox="0 0 24 24"><rect x="1" y="5" width="22" height="14" rx="3"/><path d="M1 10h22"/><path d="M5 15h4"/></svg></div>
-      <div class="auth-logo-text">Stashlo</div>
-    </div>
-    <div class="auth-title">Create account</div>
-    <div class="auth-sub">Get your shop loyalty programme in minutes</div>
-    <div class="field"><label>Shop name</label><input type="text" id="reg-shop" placeholder="e.g. Hassan's Off Licence"></div>
-    <div class="field"><label>Email</label><input type="email" id="reg-email" placeholder="you@yourshop.com"></div>
-    <div class="field"><label>Password</label><input type="password" id="reg-pass" placeholder="At least 6 characters"></div>
-    <button class="btn btn-accent" onclick="doRegister()" style="margin-bottom:10px">Create account — free trial</button>
-    <button class="btn btn-ghost" onclick="showLogin()">Already have an account</button>
-    <div class="auth-err hide" id="reg-err"></div>
-  </div>
-</div>
-
-<!-- SETUP WIZARD -->
-<div id="setup-screen">
-  <div class="setup-wrap">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:32px">
-      <div class="auth-logo-icon"><svg viewBox="0 0 24 24" stroke="#fff" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="5" width="22" height="14" rx="3"/><path d="M1 10h22"/><path d="M5 15h4"/></svg></div>
-      <div style="font-size:18px;font-weight:800">Stashlo</div>
-    </div>
-    <div class="setup-title">Set up your loyalty rules</div>
-    <div class="setup-sub">Tell us how your programme works. You can change these anytime in Settings.</div>
-
-    <div class="setup-card">
-      <div class="setup-card-title">Points earning</div>
-      <div class="setup-card-sub">How many points does a customer earn per £1 spent?</div>
-      <div class="settings-grid">
-        <div class="settings-field"><label>Points per £1</label><input type="number" id="sw-ppp" value="1" min="1" max="100"></div>
-        <div class="settings-field"><label>Min spend to earn</label><input type="number" id="sw-min" value="2" min="0" step="0.50" placeholder="£"></div>
-      </div>
-    </div>
-
-    <div class="setup-card">
-      <div class="setup-card-title">Reward threshold</div>
-      <div class="setup-card-sub">How many points does a customer need to get a reward?</div>
-      <div class="settings-field"><label>Points needed for reward</label><input type="number" id="sw-thresh" value="100" min="10"></div>
-    </div>
-
-    <div class="setup-card">
-      <div class="setup-card-title">Reward type</div>
-      <div class="setup-card-sub">What does the customer get when they reach the threshold?</div>
-      <div class="reward-options">
-        <div class="reward-opt sel" id="ro-pound" onclick="selReward('pound')">
-          <div class="reward-opt-icon">💷</div>
-          <div class="reward-opt-label">£ off bill</div>
-        </div>
-        <div class="reward-opt" id="ro-percent" onclick="selReward('percent')">
-          <div class="reward-opt-icon">%</div>
-          <div class="reward-opt-label">% discount</div>
-        </div>
-        <div class="reward-opt" id="ro-product" onclick="selReward('product')">
-          <div class="reward-opt-icon">🎁</div>
-          <div class="reward-opt-label">Free item</div>
-        </div>
-      </div>
-      <div class="settings-field">
-        <label id="reward-val-lbl">Reward value (£)</label>
-        <input type="text" id="sw-rval" value="1" placeholder="e.g. 1">
-      </div>
-    </div>
-
-    <button class="btn btn-accent" onclick="saveSetup()" style="margin-top:8px">Save and open dashboard</button>
-  </div>
-</div>
-
-<!-- MAIN APP -->
-<div id="app">
+<!-- APP -->
+<div id="s-app">
   <div class="topbar">
-    <div class="topbar-left">
-      <div class="topbar-logo">Stashlo</div>
-      <div class="topbar-merchant" id="topbar-name">Loading...</div>
+    <div class="tb-brand">
+      <div class="tb-logo">Stashlo</div>
+      <div class="tb-tag">Merchant</div>
     </div>
-    <div class="topbar-right">
-      <div class="status-dot"></div>
-      <div class="signout-btn" onclick="doSignout()">Sign out</div>
+    <div class="tb-right">
+      <div class="tb-user" id="tb-shop-name"></div>
+      <div class="tb-signout" onclick="mSignOut()">Sign out</div>
     </div>
   </div>
-  <div class="tabs">
-    <div class="tab on" id="tab-till" onclick="showTab('till')">Till</div>
-    <div class="tab" id="tab-customers" onclick="showTab('customers')">Customers</div>
-    <div class="tab" id="tab-stats" onclick="showTab('stats')">Overview</div>
-    <div class="tab" id="tab-receipts" onclick="showTab('receipts')">Receipts <span id="receipt-count" style="background:#e53935;color:#fff;font-size:10px;padding:2px 6px;border-radius:20px;margin-left:4px;display:none">0</span></div>
-    <div class="tab" id="tab-settings" onclick="showTab('settings')">Settings</div>
-  </div>
-  <div class="content">
 
-    <!-- TILL TAB -->
-    <div id="tab-till-content">
-      <div class="till-wrap">
-        <div class="till-card">
-          <div class="till-title">Add points at till</div>
-          <div class="till-sub">Enter customer phone number and the amount they spent</div>
-          <div class="big-input-wrap">
-            <div class="big-label">Customer phone</div>
-            <input class="big-input" type="tel" id="till-phone" placeholder="07700 900000" oninput="lookupCustomer(this.value)" style="font-size:20px">
-          </div>
-          <div id="till-notfound" class="notfound-banner">
-            <div class="notfound-text">New customer — will be registered automatically</div>
-            <div class="notfound-sub">Enter their name below (optional)</div>
-          </div>
-          <div id="till-name-wrap" class="hide">
-            <div class="big-input-wrap">
-              <div class="big-label">Customer name (optional)</div>
-              <input class="big-input" type="text" id="till-name" placeholder="First name" style="font-size:18px">
-            </div>
-          </div>
-          <div id="till-found" class="till-result">
-            <div class="till-result-name" id="till-found-name"></div>
-            <div class="till-result-pts" id="till-found-pts"></div>
-          </div>
-          <div class="big-input-wrap">
-            <div class="big-label">Amount spent (£)</div>
-            <input class="big-input" type="number" id="till-amount" placeholder="0.00" oninput="calcPoints(this.value)" step="0.01" min="0">
-          </div>
-          <div class="calc-row" id="calc-row">
-            <div class="calc-item">
-              <div class="calc-label">Points to add</div>
-              <div class="calc-value" id="pts-to-add">0</div>
-            </div>
-            <div class="calc-item">
-              <div class="calc-label">New balance</div>
-              <div class="calc-value" id="new-balance">—</div>
-            </div>
-          </div>
-          <div class="redeem-banner" id="redeem-banner">
-            <div class="redeem-banner-text" id="redeem-banner-text"></div>
-            <button class="redeem-btn" onclick="redeemReward()">Redeem now</button>
-          </div>
-          <button class="btn btn-accent" onclick="addPoints()" style="font-size:16px;padding:16px">Add points</button>
+  <div class="tab-bar">
+    <div class="tab-btn on" onclick="showTab('till')">🏪 Till</div>
+    <div class="tab-btn" onclick="showTab('products')">📦 Products</div>
+    <div class="tab-btn" onclick="showTab('orders')">🛍️ Orders</div>
+    <div class="tab-btn" onclick="showTab('customers')">👥 Customers</div>
+    <div class="tab-btn" onclick="showTab('receipts')">🧾 Receipts</div>
+    <div class="tab-btn" onclick="showTab('overview')">📊 Overview</div>
+    <div class="tab-btn" onclick="showTab('settings')">⚙️ Settings</div>
+  </div>
+
+  <div class="main">
+
+    <!-- TILL -->
+    <div id="tab-till">
+      <div class="till-card">
+        <div class="till-title">Add points at till</div>
+        <input class="till-input" type="tel" id="till-phone" placeholder="Customer phone number" oninput="lookupCustomer(this.value)">
+        <input class="till-input" type="number" id="till-spend" placeholder="Amount spent (£)" step="0.01" min="0">
+        <div class="till-row">
+          <button class="till-btn primary" onclick="addPoints()">Add points</button>
+          <button class="till-btn secondary" onclick="redeemReward()">Redeem reward</button>
+        </div>
+        <div class="till-result" id="till-result">
+          <div class="tr-name" id="tr-name">Customer</div>
+          <div class="tr-pts" id="tr-pts">0 pts</div>
+          <div class="tr-sub" id="tr-sub"></div>
         </div>
       </div>
+      <div class="till-card">
+        <div class="till-title">Your Shop ID</div>
+        <div class="shop-id-box">
+          <div>
+            <div class="shop-id-label">Share with customers to add your card</div>
+            <div class="shop-id-val" id="till-shop-id">SL-XXXX</div>
+          </div>
+          <button onclick="copyShopId()" style="padding:8px 14px;background:var(--accent);color:#fff;border-radius:8px;font-size:13px;font-weight:600">Copy</button>
+        </div>
+        <div style="font-size:13px;color:var(--muted)">Customers can also find your shop by name in the Stashlo app</div>
+      </div>
     </div>
 
-    <!-- CUSTOMERS TAB -->
-    <div id="tab-customers-content" class="hide">
+    <!-- PRODUCTS -->
+    <div id="tab-products" style="display:none">
       <div class="section-hdr">
-        <div class="section-title">Customers</div>
-        <input class="search-inp" placeholder="Search by name or phone..." oninput="filterCustomers(this.value)" id="cust-search">
+        <div class="section-title">Your products</div>
+        <button class="btn-sm" onclick="openProductModal()">+ Add product</button>
+      </div>
+      <div style="background:var(--accent2);border-radius:var(--r);padding:14px 16px;margin-bottom:16px;font-size:13px;color:var(--accent);font-weight:600">
+        💡 Products you add here appear in the Stashlo customer app for Click & Collect and delivery orders.
+      </div>
+      <div class="product-grid" id="products-grid">
+        <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">No products yet — add your first product above</div>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div id="tab-orders" style="display:none">
+      <div class="section-hdr">
+        <div class="section-title">Customer orders</div>
+        <button class="btn-sm outline" onclick="loadMerchantOrders()">Refresh</button>
+      </div>
+      <div id="orders-list">
+        <div style="text-align:center;padding:40px;color:var(--muted)">Loading orders...</div>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS -->
+    <div id="tab-customers" style="display:none">
+      <div class="section-hdr">
+        <div class="section-title">Your customers</div>
+        <input type="text" placeholder="Search..." oninput="filterCustomers(this.value)" style="padding:8px 12px;border:1.5px solid #e5e5ea;border-radius:8px;font-size:13px;outline:none;min-width:160px">
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Name</th><th>Phone</th><th>Points</th><th>Visits</th><th>Last visit</th><th>Status</th></tr></thead>
-          <tbody id="cust-tbody"><tr><td colspan="6" class="empty-table">Loading customers...</td></tr></tbody>
+          <thead><tr><th>Name</th><th>Phone</th><th>Points</th><th>Visits</th><th>Joined</th></tr></thead>
+          <tbody id="customers-body"><tr class="empty-row"><td colspan="5">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
 
-    <!-- STATS TAB -->
-    <div id="tab-stats-content" class="hide">
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-val" id="st-customers">0</div><div class="stat-label">Total customers</div></div>
-        <div class="stat-card"><div class="stat-val" id="st-visits">0</div><div class="stat-label">Total visits</div></div>
-        <div class="stat-card"><div class="stat-val" id="st-points">0</div><div class="stat-label">Points in circulation</div></div>
-        <div class="stat-card"><div class="stat-val" id="st-rewards">0</div><div class="stat-label">Rewards redeemed</div></div>
-      </div>
-      <div class="section-title" style="margin-bottom:14px">Recent transactions</div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Customer</th><th>Amount spent</th><th>Points added</th><th>Time</th></tr></thead>
-          <tbody id="tx-tbody"><tr><td colspan="4" class="empty-table">No transactions yet</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-
-    <!-- RECEIPTS TAB -->
-    <div id="tab-receipts-content" class="hide">
+    <!-- RECEIPTS -->
+    <div id="tab-receipts" style="display:none">
       <div class="section-hdr">
         <div class="section-title">Receipt queue</div>
-        <div style="font-size:13px;color:var(--muted)" id="receipt-queue-sub">Approve customer receipt scans to add their points</div>
+        <button class="btn-sm outline" onclick="loadReceipts()">Refresh</button>
       </div>
-      <div id="receipt-queue-list">
-        <div class="empty-table" style="padding:48px;text-align:center;color:var(--muted)">No pending receipts</div>
+      <div id="receipts-list">
+        <div style="text-align:center;padding:40px;color:var(--muted)">No pending receipts</div>
       </div>
     </div>
 
-    <!-- SETTINGS TAB -->
-    <div id="tab-settings-content" class="hide">
-      
-        <div class="settings-card" style="margin-top:0">
-          <div class="settings-title">Approved receipt categories</div>
-          <div class="settings-sub">Customers can scan receipts from these categories to earn points</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px" id="cat-checkboxes">
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="cat-grocery" value="grocery" checked> Grocery</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="cat-petrol" value="petrol" checked> Petrol / Diesel</label>
-            <label style="display:flex;align-items:center;gap=6px;font-size:13px;cursor:pointer"><input type="checkbox" id="cat-electronics" value="electronics"> Electronics</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="cat-restaurant" value="restaurant" checked> Restaurant / Cafe</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="cat-pharmacy" value="pharmacy" checked> Pharmacy</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="cat-clothing" value="clothing"> Clothing</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="cat-other" value="other" checked> Other</label>
-          </div>
-          <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
-            <input type="checkbox" id="auto-approve" style="width:16px;height:16px">
-            <label for="auto-approve" style="font-size:13px;cursor:pointer">Auto-approve receipts (add points immediately without manual review)</label>
-          </div>
-          <div class="save-row" style="margin-top:14px">
-            <button class="save-btn" onclick="saveCategorySettings()">Save categories</button>
-          </div>
-        </div>
+    <!-- OVERVIEW -->
+    <div id="tab-overview" style="display:none">
+      <div style="margin-bottom:20px">
+        <div style="font-size:22px;font-weight:800">Shop overview</div>
+        <div id="last-updated" style="font-size:13px;color:var(--muted)"></div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-val" id="ov-customers">0</div><div class="kpi-lbl">Total customers</div></div>
+        <div class="kpi"><div class="kpi-val" id="ov-transactions">0</div><div class="kpi-lbl">Transactions</div></div>
+        <div class="kpi"><div class="kpi-val" id="ov-orders">0</div><div class="kpi-lbl">Online orders</div></div>
+        <div class="kpi"><div class="kpi-val" id="ov-revenue">£0</div><div class="kpi-lbl">Online revenue</div></div>
+      </div>
+    </div>
 
-        <div class="settings-card">
-          <div class="settings-title">Your Shop ID</div>
-          <div class="settings-sub">Share this ID with customers so they can find your shop in the Stashlo app</div>
-          <div style="background:#f4f4f6;padding:12px 16px;border-radius:var(--r);font-size:18px;font-family:monospace;font-weight:700;color:var(--accent);letter-spacing:2px" id="shop-id-display">Loading...</div>
-          <button style="margin-top:10px;padding:9px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer" onclick="copyShopId()">Copy Shop ID</button>
-        </div>
-
-        <div class="settings-card">
+    <!-- SETTINGS -->
+    <div id="tab-settings" style="display:none">
+      <div class="settings-card">
         <div class="settings-title">Points rules</div>
-        <div class="settings-sub">How customers earn and redeem points at your shop</div>
-        <div class="settings-grid">
-          <div class="settings-field"><label>Points per £1 spent</label><input type="number" id="set-ppp" min="1" max="100"></div>
-          <div class="settings-field"><label>Minimum spend to earn</label><input type="number" id="set-min" min="0" step="0.50"></div>
-          <div class="settings-field"><label>Points needed for reward</label><input type="number" id="set-thresh" min="10"></div>
-          <div class="settings-field"><label>Reward type</label>
-            <select id="set-rtype">
-              <option value="pound">£ off bill</option>
-              <option value="percent">% discount</option>
-              <option value="product">Free item</option>
-            </select>
-          </div>
-          <div class="settings-field"><label id="set-rval-lbl">Reward value</label><input type="text" id="set-rval"></div>
-          <div class="settings-field"><label>Points expire after (months)</label><input type="number" id="set-expiry" value="12" min="1"></div>
-        </div>
-        <div class="save-row">
-          <button class="save-btn" onclick="saveSettings()">Save rules</button>
-          <div class="save-ok" id="save-ok">✓ Saved</div>
+        <div class="settings-row">
+          <div class="settings-field"><label>Points per £1</label><input type="number" id="s-ppp" value="1" min="1"></div>
+          <div class="settings-field"><label>Min spend (£)</label><input type="number" id="s-min" value="2" min="0" step="0.5"></div>
+          <div class="settings-field"><label>Reward threshold (pts)</label><input type="number" id="s-thresh" value="100" min="10"></div>
         </div>
       </div>
       <div class="settings-card">
-        <div class="settings-title">Share loyalty card link</div>
-        <div class="settings-sub">Share this link with customers so they can check their points balance on their phone</div>
-        <div style="background:#f4f4f6;padding:12px 16px;border-radius:var(--r);font-size:13px;font-family:monospace;word-break:break-all;color:var(--accent)" id="customer-link">Loading...</div>
-        <button style="margin-top:10px;padding:9px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer" onclick="copyLink()">Copy link</button>
+        <div class="settings-title">Reward type</div>
+        <div class="settings-row">
+          <div class="settings-field"><label>Reward type</label>
+            <select id="s-reward-type">
+              <option value="pound">£ off bill</option>
+              <option value="percent">% discount</option>
+              <option value="free">Free item</option>
+            </select>
+          </div>
+          <div class="settings-field"><label>Reward value</label><input type="text" id="s-reward-val" value="5" placeholder="e.g. 5 or Coffee"></div>
+        </div>
       </div>
+      <div class="settings-card">
+        <div class="settings-title">Shop details</div>
+        <div class="settings-row">
+          <div class="settings-field" style="flex:2"><label>Shop name</label><input type="text" id="s-shop-name" placeholder="Your shop name"></div>
+          <div class="settings-field"><label>Phone</label><input type="tel" id="s-shop-phone" placeholder="0800 000 000"></div>
+        </div>
+        <div class="settings-field" style="margin-top:10px"><label>Address</label><input type="text" id="s-shop-address" placeholder="Full shop address"></div>
+      </div>
+      <button onclick="saveSettings()" style="width:100%;padding:14px;background:var(--dark);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700;margin-bottom:12px">Save settings</button>
     </div>
   </div>
 </div>
+
+<!-- PRODUCT MODAL -->
+<div class="modal" id="product-modal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <div class="modal-title" id="pm-title">Add product</div>
+      <div class="modal-close" onclick="closeProductModal()">✕</div>
+    </div>
+    <div class="field"><label>Product name</label><input type="text" id="pm-name" placeholder="e.g. Large Coffee"></div>
+    <div class="settings-row">
+      <div class="settings-field"><label>Price (£)</label><input type="number" id="pm-price" placeholder="0.00" step="0.01" min="0"></div>
+      <div class="settings-field"><label>Emoji icon</label><input type="text" id="pm-emoji" placeholder="☕" maxlength="2"></div>
+    </div>
+    <div class="field"><label>Category</label>
+      <select id="pm-category" style="width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px">
+        <option value="food">🍕 Food & Drink</option>
+        <option value="electronics">📱 Electronics</option>
+        <option value="fashion">👗 Fashion</option>
+        <option value="health">💊 Health & Beauty</option>
+        <option value="other">📦 Other</option>
+      </select>
+    </div>
+    <div class="field"><label>Description</label><input type="text" id="pm-desc" placeholder="Short product description"></div>
+    <div style="display:flex;gap:12px;margin-bottom:16px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer">
+        <input type="checkbox" id="pm-collect" checked style="width:18px;height:18px"> Click & Collect
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer">
+        <input type="checkbox" id="pm-delivery" style="width:18px;height:18px"> Home Delivery
+      </label>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="saveProduct()" style="flex:1;padding:14px;background:var(--dark);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700" id="pm-save-btn">Add product</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
-firebase.initializeApp({
-  apiKey:"AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y",
-  authDomain:"stashlo.firebaseapp.com",
-  projectId:"stashlo",
-  storageBucket:"stashlo.firebasestorage.app",
-  messagingSenderId:"924928321170",
-  appId:"1:924928321170:web:e711943ddbe64567eaa84b"
-});
-const auth=firebase.auth(), db=firebase.firestore();
-let merchantId=null, rules={pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'1',expiry:12};
-let customers=[], allCustomers=[], transactions=[];
-let currentCustomer=null, rewardType='pound';
+let app, auth, db, merchantId, merchantData, rules = {}, allCustomers = [], editingProductId = null;
+
+function initFirebase() {
+  try {
+    app = firebase.apps.length ? firebase.app() : firebase.initializeApp({
+      apiKey:"AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y",
+      authDomain:"stashlo.firebaseapp.com",
+      projectId:"stashlo",
+      storageBucket:"stashlo.firebasestorage.app",
+      messagingSenderId:"924928321170",
+      appId:"1:924928321170:web:e711943ddbe64567eaa84b"
+    });
+    auth = firebase.auth();
+    db = firebase.firestore();
+    auth.onAuthStateChanged(async user => {
+      if (user) {
+        merchantId = user.uid;
+        document.getElementById('s-auth').style.display = 'none';
+        document.getElementById('s-app').style.display = 'block';
+        await loadMerchant();
+        loadCustomers();
+        loadReceipts();
+        loadMerchantOrders();
+        loadProducts();
+      } else {
+        document.getElementById('s-auth').style.display = 'flex';
+        document.getElementById('s-app').style.display = 'none';
+      }
+    });
+  } catch(e) { setTimeout(initFirebase, 500); }
+}
 
 // AUTH
-function showRegister(){document.getElementById('auth-screen').classList.add('hide');document.getElementById('register-screen').classList.remove('hide');}
-function showLogin(){document.getElementById('register-screen').classList.add('hide');document.getElementById('auth-screen').classList.remove('hide');}
-
-async function doLogin(){
-  const e=document.getElementById('login-email').value.trim();
-  const p=document.getElementById('login-pass').value;
-  const err=document.getElementById('auth-err');
-  err.classList.add('hide');
-  try{await auth.signInWithEmailAndPassword(e,p);}
-  catch(ex){err.textContent='Invalid email or password';err.classList.remove('hide');}
+function mSwitchTab(tab) {
+  document.getElementById('m-tab-in').classList.toggle('on',tab==='in');
+  document.getElementById('m-tab-up').classList.toggle('on',tab==='up');
+  document.getElementById('m-signin').style.display = tab==='in'?'block':'none';
+  document.getElementById('m-signup').style.display = tab==='up'?'block':'none';
 }
 
-async function doRegister(){
-  const shop=document.getElementById('reg-shop').value.trim();
-  const e=document.getElementById('reg-email').value.trim();
-  const p=document.getElementById('reg-pass').value;
-  const err=document.getElementById('reg-err');
-  err.classList.add('hide');
-  if(!shop){err.textContent='Enter your shop name';err.classList.remove('hide');return;}
-  try{
-    const cred=await auth.createUserWithEmailAndPassword(e,p);
-    await db.collection('merchants').doc(cred.user.uid).set({
-      name:shop,email:e,createdAt:Date.now(),active:true,subscription:'trial',
-      rules:{pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'1',expiry:12}
-    });
-  }catch(ex){err.textContent=ex.message;err.classList.remove('hide');}
-}
-
-async function doSignout(){await auth.signOut();}
-
-auth.onAuthStateChanged(async user=>{
-  if(user){
-    merchantId=user.uid;
-    document.getElementById('auth-screen').classList.add('hide');
-    document.getElementById('register-screen').classList.add('hide');
-    const doc=await db.collection('merchants').doc(merchantId).get();
-    if(!doc.exists){document.getElementById('setup-screen').style.display='block';return;}
-    const data=doc.data();
-    rules=data.rules||rules;
-    document.getElementById('topbar-name').textContent=data.name||'My Shop';
-    document.getElementById('setup-screen').style.display='none';
-    document.getElementById('app').style.display='flex';
-    loadCustomers();
-    loadTransactions();
-    updateSettingsForm();
-    loadReceiptQueue();
-    loadCategorySettings();
-    const base=window.location.origin+window.location.pathname.replace('merchant.html','');
-    document.getElementById('customer-link').textContent=base+'customer.html?m='+merchantId;
-  } else {
-    document.getElementById('auth-screen').classList.remove('hide');
-    document.getElementById('app').style.display='none';
-    document.getElementById('setup-screen').style.display='none';
+async function mSignIn() {
+  const email = document.getElementById('m-email').value.trim();
+  const pass = document.getElementById('m-pass').value;
+  const err = document.getElementById('m-err');
+  err.style.display = 'none';
+  if (!email||!pass) { showErr(err,'Please fill in all fields'); return; }
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    const msgs = {'auth/invalid-credential':'Wrong email or password','auth/user-not-found':'No account found — register your shop','auth/wrong-password':'Wrong password','auth/too-many-requests':'Too many attempts — try later'};
+    showErr(err, msgs[e.code] || 'Sign in failed. Check your email and password.');
   }
-});
-
-// SETUP
-function selReward(type){
-  rewardType=type;
-  ['pound','percent','product'].forEach(t=>{
-    document.getElementById('ro-'+t).classList.toggle('sel',t===type);
-  });
-  const lbl=document.getElementById('reward-val-lbl');
-  if(type==='pound') lbl.textContent='Reward value (£)';
-  else if(type==='percent') lbl.textContent='Discount (%)';
-  else lbl.textContent='Free item name';
 }
 
-async function saveSetup(){
-  const r={
-    pointsPerPound:+document.getElementById('sw-ppp').value||1,
-    minSpend:+document.getElementById('sw-min').value||0,
-    threshold:+document.getElementById('sw-thresh').value||100,
-    rewardType,
-    rewardValue:document.getElementById('sw-rval').value||'1',
-    expiry:12
-  };
-  await db.collection('merchants').doc(merchantId).update({rules:r});
-  rules=r;
-  document.getElementById('setup-screen').style.display='none';
-  document.getElementById('app').style.display='flex';
-  updateSettingsForm();
-  toast('Rules saved — welcome to Stashlo!');
+async function mSignUp() {
+  const name = document.getElementById('m-shop-name').value.trim();
+  const email = document.getElementById('m-reg-email').value.trim();
+  const pass = document.getElementById('m-reg-pass').value;
+  const err = document.getElementById('m-reg-err');
+  err.style.display = 'none';
+  if (!name||!email||!pass) { showErr(err,'Please fill in all fields'); return; }
+  if (pass.length < 6) { showErr(err,'Password must be at least 6 characters'); return; }
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    const shopId = 'SL-' + cred.user.uid.slice(0,4).toUpperCase();
+    await db.collection('merchants').doc(cred.user.uid).set({
+      name, email, shopId, subscription:'trial', createdAt:Date.now(),
+      rules:{pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'5'}
+    });
+  } catch(e) {
+    const msgs = {'auth/email-already-in-use':'Email already registered — sign in instead'};
+    showErr(err, msgs[e.code] || 'Registration failed: '+e.message);
+  }
 }
 
-// TABS
-function showTab(t){
-  ['till','customers','stats','receipts','settings'].forEach(x=>{
-    document.getElementById('tab-'+x).classList.toggle('on',x===t);
-    document.getElementById('tab-'+x+'-content').classList.toggle('hide',x!==t);
+async function mSignOut() { await auth.signOut(); toast('Signed out'); }
+
+// MERCHANT DATA
+async function loadMerchant() {
+  const doc = await db.collection('merchants').doc(merchantId).get();
+  if (!doc.exists) {
+    // Create merchant doc
+    const shopId = 'SL-' + merchantId.slice(0,4).toUpperCase();
+    await db.collection('merchants').doc(merchantId).set({
+      name: auth.currentUser.email.split('@')[0], email: auth.currentUser.email,
+      shopId, subscription:'trial', createdAt:Date.now(),
+      rules:{pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'5'}
+    });
+    return loadMerchant();
+  }
+  merchantData = doc.data();
+  rules = merchantData.rules || {};
+  document.getElementById('tb-shop-name').textContent = merchantData.name || '';
+  document.getElementById('till-shop-id').textContent = merchantData.shopId || 'SL-????';
+  // Fill settings
+  ['s-ppp','s-min','s-thresh'].forEach(id => {
+    const key = id==='s-ppp'?'pointsPerPound':id==='s-min'?'minSpend':'threshold';
+    if (rules[key]) document.getElementById(id).value = rules[key];
   });
-  if(t==='stats') updateStats();
+  if (rules.rewardType) document.getElementById('s-reward-type').value = rules.rewardType;
+  if (rules.rewardValue) document.getElementById('s-reward-val').value = rules.rewardValue;
+  if (merchantData.name) document.getElementById('s-shop-name').value = merchantData.name;
+  if (merchantData.phone) document.getElementById('s-shop-phone').value = merchantData.phone;
+  if (merchantData.address) document.getElementById('s-shop-address').value = merchantData.address;
+  document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString('en-GB');
 }
 
 // TILL
-let lookupTimer=null;
-function lookupCustomer(phone){
-  clearTimeout(lookupTimer);
-  const clean=phone.replace(/\s/g,'');
-  document.getElementById('till-found').style.display='none';
-  document.getElementById('till-notfound').style.display='none';
-  document.getElementById('till-name-wrap').classList.add('hide');
-  currentCustomer=null;
-  if(clean.length<10){calcPoints(document.getElementById('till-amount').value);return;}
-  lookupTimer=setTimeout(async()=>{
-    const snap=await db.collection('merchants').doc(merchantId).collection('customers').doc(clean).get();
-    if(snap.exists){
-      currentCustomer={id:clean,...snap.data()};
-      const f=document.getElementById('till-found');
-      f.style.display='block';
-      document.getElementById('till-found-name').textContent=(currentCustomer.name||'Customer')+' — '+clean;
-      document.getElementById('till-found-pts').textContent=currentCustomer.points+' points';
+async function lookupCustomer(phone) {
+  phone = phone.replace(/\s/g,'');
+  if (phone.length < 10) { document.getElementById('till-result').style.display='none'; return; }
+  try {
+    const snap = await db.collection('merchants').doc(merchantId).collection('customers').doc(phone).get();
+    const el = document.getElementById('till-result');
+    el.style.display = 'block';
+    if (snap.exists) {
+      const c = snap.data();
+      document.getElementById('tr-name').textContent = c.name || 'Customer';
+      document.getElementById('tr-pts').textContent = (c.points||0) + ' pts';
+      document.getElementById('tr-sub').textContent = 'Visits: ' + (c.visitCount||0);
     } else {
-      document.getElementById('till-notfound').style.display='block';
-      document.getElementById('till-name-wrap').classList.remove('hide');
+      document.getElementById('tr-name').textContent = 'New customer';
+      document.getElementById('tr-pts').textContent = '0 pts';
+      document.getElementById('tr-sub').textContent = 'Will be auto-registered';
     }
-    calcPoints(document.getElementById('till-amount').value);
-  },400);
+  } catch(e) {}
 }
 
-function calcPoints(amount){
-  const a=parseFloat(amount)||0;
-  const pts=a<rules.minSpend?0:Math.floor(a*rules.pointsPerPound);
-  document.getElementById('pts-to-add').textContent=pts;
-  const cur=currentCustomer?currentCustomer.points:0;
-  const newPts=cur+pts;
-  document.getElementById('new-balance').textContent=currentCustomer?newPts:'—';
-  const banner=document.getElementById('redeem-banner');
-  if(currentCustomer && newPts>=rules.threshold){
-    banner.style.display='flex';
-    const rv=rules.rewardValue;
-    const rt=rules.rewardType;
-    const label=rt==='pound'?'£'+rv+' off':rt==='percent'?rv+'% discount':'Free '+rv;
-    document.getElementById('redeem-banner-text').textContent='This customer can redeem: '+label+' ('+newPts+' points)';
-  } else {
-    banner.style.display='none';
-  }
-}
-
-async function addPoints(){
-  const phone=document.getElementById('till-phone').value.replace(/\s/g,'');
-  const amount=parseFloat(document.getElementById('till-amount').value)||0;
-  if(!phone){toast('Enter customer phone number');return;}
-  if(!amount){toast('Enter amount spent');return;}
-  if(amount<rules.minSpend && rules.minSpend>0){toast('Minimum spend is £'+rules.minSpend);return;}
-  const pts=Math.floor(amount*rules.pointsPerPound);
-  const name=document.getElementById('till-name').value.trim()||(currentCustomer?currentCustomer.name:'');
-  const custRef=db.collection('merchants').doc(merchantId).collection('customers').doc(phone);
-  const snap=await custRef.get();
-  if(snap.exists){
-    await custRef.update({
-      points:firebase.firestore.FieldValue.increment(pts),
-      visitCount:firebase.firestore.FieldValue.increment(1),
-      totalSpend:firebase.firestore.FieldValue.increment(amount),
-      lastVisit:Date.now()
+async function addPoints() {
+  const phone = document.getElementById('till-phone').value.replace(/\s/g,'');
+  const spend = parseFloat(document.getElementById('till-spend').value);
+  if (!phone||phone.length<10) { toast('Enter customer phone'); return; }
+  if (!spend||spend<=0) { toast('Enter spend amount'); return; }
+  const minSpend = rules.minSpend || 0;
+  if (spend < minSpend) { toast('Min spend is £'+minSpend.toFixed(2)); return; }
+  const pts = Math.floor(spend * (rules.pointsPerPound||1));
+  try {
+    const ref = db.collection('merchants').doc(merchantId).collection('customers').doc(phone);
+    const snap = await ref.get();
+    if (snap.exists) {
+      await ref.update({points:firebase.firestore.FieldValue.increment(pts),visitCount:firebase.firestore.FieldValue.increment(1),totalSpend:firebase.firestore.FieldValue.increment(spend),lastVisit:Date.now()});
+    } else {
+      await ref.set({phone,name:'Customer',points:pts,visitCount:1,totalSpend:spend,joinedAt:Date.now(),lastVisit:Date.now(),rewardsRedeemed:0});
+    }
+    await db.collection('merchants').doc(merchantId).collection('transactions').add({
+      phone,amount:spend,pointsAdded:pts,timestamp:Date.now(),type:'purchase'
     });
-  } else {
-    await custRef.set({
-      phone,name:name||'Customer',points:pts,visitCount:1,
-      totalSpend:amount,joinedAt:Date.now(),lastVisit:Date.now(),rewardsRedeemed:0
-    });
-  }
-  // Log transaction
-  await db.collection('merchants').doc(merchantId).collection('transactions').add({
-    phone,customerName:name||'Customer',amount,pointsAdded:pts,timestamp:Date.now(),type:'earn'
-  });
-  toast(pts+' points added for '+phone);
-  document.getElementById('till-phone').value='';
-  document.getElementById('till-amount').value='';
-  document.getElementById('till-name').value='';
-  document.getElementById('till-found').style.display='none';
-  document.getElementById('till-notfound').style.display='none';
-  document.getElementById('till-name-wrap').classList.add('hide');
-  document.getElementById('redeem-banner').style.display='none';
-  document.getElementById('pts-to-add').textContent='0';
-  document.getElementById('new-balance').textContent='—';
-  currentCustomer=null;
-  loadCustomers();
-  loadTransactions();
+    const newPts = (snap.exists?snap.data().points:0) + pts;
+    document.getElementById('tr-pts').textContent = newPts + ' pts (+'+pts+')';
+    document.getElementById('tr-sub').textContent = '✅ Points added!';
+    document.getElementById('till-spend').value = '';
+    toast('+'+pts+' points added!');
+    loadOverview();
+  } catch(e) { toast('Error: '+e.message); }
 }
 
-async function redeemReward(){
-  if(!currentCustomer) return;
-  const phone=currentCustomer.phone||document.getElementById('till-phone').value.replace(/\s/g,'');
-  await db.collection('merchants').doc(merchantId).collection('customers').doc(phone).update({
-    points:firebase.firestore.FieldValue.increment(-rules.threshold),
-    rewardsRedeemed:firebase.firestore.FieldValue.increment(1)
-  });
-  await db.collection('merchants').doc(merchantId).collection('transactions').add({
-    phone,customerName:currentCustomer.name||'Customer',amount:0,
-    pointsRedeemed:rules.threshold,timestamp:Date.now(),type:'redeem'
-  });
-  const rv=rules.rewardValue;
-  const rt=rules.rewardType;
-  const label=rt==='pound'?'£'+rv+' off the bill':rt==='percent'?rv+'% discount applied':'Free '+rv+' given';
-  toast('Reward redeemed: '+label);
-  document.getElementById('redeem-banner').style.display='none';
-  loadCustomers();
+async function redeemReward() {
+  const phone = document.getElementById('till-phone').value.replace(/\s/g,'');
+  if (!phone||phone.length<10) { toast('Enter customer phone'); return; }
+  try {
+    const ref = db.collection('merchants').doc(merchantId).collection('customers').doc(phone);
+    const snap = await ref.get();
+    if (!snap.exists) { toast('Customer not found'); return; }
+    const c = snap.data();
+    const thresh = rules.threshold || 100;
+    if ((c.points||0) < thresh) { toast('Not enough points ('+c.points+'/'+thresh+')'); return; }
+    await ref.update({points:firebase.firestore.FieldValue.increment(-thresh),rewardsRedeemed:firebase.firestore.FieldValue.increment(1)});
+    await db.collection('merchants').doc(merchantId).collection('transactions').add({
+      phone,pointsRedeemed:thresh,timestamp:Date.now(),type:'redeem'
+    });
+    const rType = rules.rewardType||'pound', rVal = rules.rewardValue||'5';
+    const rewardLabel = rType==='pound'?'£'+rVal+' off':rType==='percent'?rVal+'% off':'Free '+rVal;
+    document.getElementById('tr-pts').textContent = ((c.points||0)-thresh) + ' pts';
+    document.getElementById('tr-sub').textContent = '🎁 Reward redeemed: '+rewardLabel;
+    toast('🎁 Reward redeemed!');
+  } catch(e) { toast('Error: '+e.message); }
+}
+
+function copyShopId() {
+  navigator.clipboard.writeText(document.getElementById('till-shop-id').textContent);
+  toast('Shop ID copied!');
+}
+
+// PRODUCTS
+let allProducts = [];
+async function loadProducts() {
+  const snap = await db.collection('merchants').doc(merchantId).collection('products').orderBy('createdAt','desc').get();
+  allProducts = snap.docs.map(d=>({id:d.id,...d.data()}));
+  renderProducts();
+}
+
+function renderProducts() {
+  const el = document.getElementById('products-grid');
+  if (!allProducts.length) { el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">No products yet — add your first product above</div>'; return; }
+  el.innerHTML = allProducts.map(p => `<div class="product-card">
+    <div class="pc-img">${p.emoji||'🛍️'}</div>
+    <div class="pc-body">
+      <div class="pc-name">${p.name}</div>
+      <div class="pc-price">£${Number(p.price).toFixed(2)}</div>
+      <div style="display:flex;gap:4px;margin-bottom:8px">
+        ${p.collect!==false?'<span class="badge badge-purple">Collect</span>':''}
+        ${p.delivery?'<span class="badge badge-green">Delivery</span>':''}
+        ${p.active===false?'<span class="badge badge-orange">Hidden</span>':''}
+      </div>
+      <div class="pc-actions">
+        <div class="pc-edit" onclick="editProduct('${p.id}')">Edit</div>
+        <div class="pc-del" onclick="toggleProduct('${p.id}',${p.active!==false})">${p.active===false?'Show':'Hide'}</div>
+      </div>
+    </div>
+  </div>`).join('');
+}
+
+function openProductModal(id) {
+  editingProductId = id || null;
+  if (id) {
+    const p = allProducts.find(x=>x.id===id);
+    document.getElementById('pm-title').textContent = 'Edit product';
+    document.getElementById('pm-save-btn').textContent = 'Save changes';
+    document.getElementById('pm-name').value = p.name;
+    document.getElementById('pm-price').value = p.price;
+    document.getElementById('pm-emoji').value = p.emoji||'';
+    document.getElementById('pm-category').value = p.category||'other';
+    document.getElementById('pm-desc').value = p.description||'';
+    document.getElementById('pm-collect').checked = p.collect!==false;
+    document.getElementById('pm-delivery').checked = p.delivery||false;
+  } else {
+    document.getElementById('pm-title').textContent = 'Add product';
+    document.getElementById('pm-save-btn').textContent = 'Add product';
+    ['pm-name','pm-price','pm-emoji','pm-desc'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('pm-collect').checked = true;
+    document.getElementById('pm-delivery').checked = false;
+  }
+  document.getElementById('product-modal').classList.add('show');
+}
+
+function editProduct(id) { openProductModal(id); }
+function closeProductModal() { document.getElementById('product-modal').classList.remove('show'); }
+
+async function saveProduct() {
+  const name = document.getElementById('pm-name').value.trim();
+  const price = parseFloat(document.getElementById('pm-price').value);
+  if (!name) { toast('Enter product name'); return; }
+  if (!price || price <= 0) { toast('Enter valid price'); return; }
+  const product = {
+    name, price, emoji:document.getElementById('pm-emoji').value||'🛍️',
+    category:document.getElementById('pm-category').value,
+    description:document.getElementById('pm-desc').value.trim(),
+    collect:document.getElementById('pm-collect').checked,
+    delivery:document.getElementById('pm-delivery').checked,
+    active:true, merchantId, shopName:merchantData?.name||'Shop', createdAt:Date.now()
+  };
+  try {
+    if (editingProductId) {
+      await db.collection('merchants').doc(merchantId).collection('products').doc(editingProductId).update(product);
+      toast('Product updated!');
+    } else {
+      await db.collection('merchants').doc(merchantId).collection('products').add(product);
+      toast('Product added!');
+    }
+    closeProductModal();
+    await loadProducts();
+  } catch(e) { toast('Error: '+e.message); }
+}
+
+async function toggleProduct(id, currentActive) {
+  await db.collection('merchants').doc(merchantId).collection('products').doc(id).update({active:!currentActive});
+  await loadProducts();
+  toast(currentActive ? 'Product hidden' : 'Product shown');
+}
+
+// ORDERS
+async function loadMerchantOrders() {
+  try {
+    const snap = await db.collection('merchants').doc(merchantId).collection('orders').orderBy('createdAt','desc').limit(30).get();
+    const orders = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const el = document.getElementById('orders-list');
+    if (!orders.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No orders yet</div>'; return; }
+    el.innerHTML = orders.map(o => `<div class="order-card">
+      <div class="oc-info">
+        <div class="oc-id">${o.orderId||o.id.slice(0,8).toUpperCase()}</div>
+        <div class="oc-product">${o.emoji||'🛍️'} ${o.productName} × ${o.qty||1}</div>
+        <div class="oc-meta">${o.type==='collect'?'🏪 Click & Collect':'🚚 Home Delivery'} · ${timeAgo(o.createdAt)}${o.address?' · '+o.address:''}</div>
+      </div>
+      <div class="oc-right">
+        <div class="oc-total">£${Number(o.total).toFixed(2)}</div>
+        <div><span class="badge ${o.status==='delivered'||o.status==='collected'?'badge-green':o.status==='ready'?'badge-purple':'badge-orange'}">${o.status||'pending'}</span></div>
+        ${o.status==='pending'?`<div class="btn-status" onclick="markOrderReady('${o.id}')">Mark ready</div>`:''}
+      </div>
+    </div>`).join('');
+    document.getElementById('ov-orders').textContent = orders.length;
+    const revenue = orders.reduce((a,o)=>a+(o.total||0),0);
+    document.getElementById('ov-revenue').textContent = '£'+revenue.toFixed(0);
+  } catch(e) { console.error(e); }
+}
+
+async function markOrderReady(id) {
+  await db.collection('merchants').doc(merchantId).collection('orders').doc(id).update({status:'ready'});
+  toast('Order marked as ready!');
+  loadMerchantOrders();
 }
 
 // CUSTOMERS
-async function loadCustomers(){
-  const snap=await db.collection('merchants').doc(merchantId).collection('customers').orderBy('lastVisit','desc').limit(200).get();
-  allCustomers=snap.docs.map(d=>({id:d.id,...d.data()}));
+async function loadCustomers() {
+  const snap = await db.collection('merchants').doc(merchantId).collection('customers').orderBy('points','desc').limit(100).get();
+  allCustomers = snap.docs.map(d=>({id:d.id,...d.data()}));
   renderCustomers(allCustomers);
+  document.getElementById('ov-customers').textContent = allCustomers.length;
 }
 
-function renderCustomers(list){
-  const body=document.getElementById('cust-tbody');
-  if(!list.length){body.innerHTML='<tr><td colspan="6" class="empty-table">No customers yet — add your first customer at the till</td></tr>';return;}
-  body.innerHTML=list.map(c=>{
-    const eligible=c.points>=rules.threshold;
-    const last=c.lastVisit?timeAgo(c.lastVisit):'Never';
-    return `<tr>
-      <td><strong>${c.name||'Customer'}</strong></td>
-      <td style="font-family:monospace">${c.phone||c.id}</td>
-      <td><span class="pts-badge">${c.points||0} pts</span>${eligible?'<span class="eligible-badge">Reward ready</span>':''}</td>
-      <td>${c.visitCount||1}</td>
-      <td>${last}</td>
-      <td style="font-size:12px;color:var(--muted)">${c.rewardsRedeemed||0} redeemed</td>
-    </tr>`;
-  }).join('');
-}
-
-function filterCustomers(q){
-  const filtered=q.trim()?allCustomers.filter(c=>(c.name||'').toLowerCase().includes(q.toLowerCase())||(c.phone||'').includes(q)):allCustomers;
-  renderCustomers(filtered);
-}
-
-// TRANSACTIONS
-async function loadTransactions(){
-  const snap=await db.collection('merchants').doc(merchantId).collection('transactions').orderBy('timestamp','desc').limit(50).get();
-  transactions=snap.docs.map(d=>d.data());
-  renderTransactions();
-}
-
-function renderTransactions(){
-  const body=document.getElementById('tx-tbody');
-  if(!transactions.length){body.innerHTML='<tr><td colspan="4" class="empty-table">No transactions yet</td></tr>';return;}
-  body.innerHTML=transactions.map(t=>`<tr>
-    <td>${t.customerName||t.phone}</td>
-    <td>${t.amount?'£'+t.amount.toFixed(2):t.type==='redeem'?'Redemption':'—'}</td>
-    <td>${t.pointsAdded?'+'+t.pointsAdded+' pts':t.pointsRedeemed?'-'+t.pointsRedeemed+' pts (redeemed)':'—'}</td>
-    <td style="color:var(--muted);font-size:13px">${timeAgo(t.timestamp)}</td>
+function renderCustomers(list) {
+  const b = document.getElementById('customers-body');
+  if (!list.length) { b.innerHTML = '<tr class="empty-row"><td colspan="5">No customers yet</td></tr>'; return; }
+  b.innerHTML = list.map(c=>`<tr>
+    <td><strong>${c.name||'Customer'}</strong></td>
+    <td>${c.phone||c.id}</td>
+    <td><span class="badge badge-purple">${c.points||0} pts</span></td>
+    <td>${c.visitCount||0}</td>
+    <td>${c.joinedAt?timeAgo(c.joinedAt):'-'}</td>
   </tr>`).join('');
 }
 
-// STATS
-function updateStats(){
-  document.getElementById('st-customers').textContent=allCustomers.length;
-  document.getElementById('st-visits').textContent=allCustomers.reduce((a,c)=>a+(c.visitCount||1),0);
-  document.getElementById('st-points').textContent=allCustomers.reduce((a,c)=>a+(c.points||0),0);
-  document.getElementById('st-rewards').textContent=allCustomers.reduce((a,c)=>a+(c.rewardsRedeemed||0),0);
-  renderTransactions();
+function filterCustomers(q) {
+  renderCustomers(q.trim()?allCustomers.filter(c=>(c.name||'').toLowerCase().includes(q.toLowerCase())||(c.phone||'').includes(q)):allCustomers);
+}
+
+// RECEIPTS
+async function loadReceipts() {
+  try {
+    const snap = await db.collection('merchants').doc(merchantId).collection('receiptQueue').orderBy('timestamp','desc').limit(20).get();
+    const el = document.getElementById('receipts-list');
+    if (snap.empty) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No pending receipts</div>'; return; }
+    el.innerHTML = snap.docs.map(d=>{
+      const r = d.data();
+      return `<div style="background:#fff;border-radius:var(--r);padding:16px;margin-bottom:10px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:14px;font-weight:700">${r.phone} — £${r.amount||0}</div>
+          <div style="font-size:12px;color:var(--muted)">${timeAgo(r.timestamp)} · ${r.category||'unknown'}</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="approveReceipt('${d.id}','${r.phone}',${r.amount||0})" style="padding:7px 14px;background:var(--green2);color:var(--green);border-radius:8px;font-size:13px;font-weight:700">Approve</button>
+          <button onclick="denyReceipt('${d.id}')" style="padding:7px 14px;background:var(--red2);color:var(--red);border-radius:8px;font-size:13px;font-weight:700">Deny</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+async function approveReceipt(id, phone, amount) {
+  const pts = Math.floor(amount * (rules.pointsPerPound||1));
+  const ref = db.collection('merchants').doc(merchantId).collection('customers').doc(phone);
+  await ref.update({points:firebase.firestore.FieldValue.increment(pts),visitCount:firebase.firestore.FieldValue.increment(1)});
+  await db.collection('merchants').doc(merchantId).collection('receiptQueue').doc(id).delete();
+  toast('+'+pts+' points approved!');
+  loadReceipts();
+}
+
+async function denyReceipt(id) {
+  await db.collection('merchants').doc(merchantId).collection('receiptQueue').doc(id).delete();
+  toast('Receipt denied'); loadReceipts();
+}
+
+// OVERVIEW
+async function loadOverview() {
+  try {
+    const txSnap = await db.collection('merchants').doc(merchantId).collection('transactions').get();
+    document.getElementById('ov-transactions').textContent = txSnap.size;
+  } catch(e) {}
 }
 
 // SETTINGS
-function updateSettingsForm(){
-  document.getElementById('set-ppp').value=rules.pointsPerPound||1;
-  document.getElementById('set-min').value=rules.minSpend||0;
-  document.getElementById('set-thresh').value=rules.threshold||100;
-  document.getElementById('set-rtype').value=rules.rewardType||'pound';
-  document.getElementById('set-rval').value=rules.rewardValue||'1';
-  document.getElementById('set-expiry').value=rules.expiry||12;
-}
-
-async function saveSettings(){
-  rules={
-    pointsPerPound:+document.getElementById('set-ppp').value||1,
-    minSpend:+document.getElementById('set-min').value||0,
-    threshold:+document.getElementById('set-thresh').value||100,
-    rewardType:document.getElementById('set-rtype').value,
-    rewardValue:document.getElementById('set-rval').value||'1',
-    expiry:+document.getElementById('set-expiry').value||12
+async function saveSettings() {
+  const r = {
+    pointsPerPound:parseInt(document.getElementById('s-ppp').value)||1,
+    minSpend:parseFloat(document.getElementById('s-min').value)||0,
+    threshold:parseInt(document.getElementById('s-thresh').value)||100,
+    rewardType:document.getElementById('s-reward-type').value,
+    rewardValue:document.getElementById('s-reward-val').value
   };
-  await db.collection('merchants').doc(merchantId).update({rules});
-  const ok=document.getElementById('save-ok');
-  ok.style.display='block';
-  setTimeout(()=>ok.style.display='none',2000);
-  toast('Rules updated');
+  const data = {
+    rules:r,
+    name:document.getElementById('s-shop-name').value.trim()||merchantData?.name,
+    phone:document.getElementById('s-shop-phone').value.trim(),
+    address:document.getElementById('s-shop-address').value.trim(),
+    updatedAt:Date.now()
+  };
+  await db.collection('merchants').doc(merchantId).update(data);
+  rules = r;
+  merchantData = {...merchantData,...data};
+  toast('Settings saved!');
 }
 
-function copyLink(){
-  const link=document.getElementById('customer-link').textContent;
-  navigator.clipboard.writeText(link).then(()=>toast('Link copied!')).catch(()=>toast('Copy manually'));
-}
-
-
-
-// ============ RECEIPT QUEUE ============
-async function loadReceiptQueue(){
-  const snap=await db.collection('merchants').doc(merchantId).collection('receiptQueue').where('status','==','pending').orderBy('submittedAt','desc').get();
-  const list=document.getElementById('receipt-queue-list');
-  const count=snap.size;
-  const countEl=document.getElementById('receipt-count');
-  if(count>0){countEl.style.display='inline';countEl.textContent=count;}else{countEl.style.display='none';}
-  document.getElementById('receipt-queue-sub').textContent=count?count+' pending receipt'+(count===1?'':'s')+' waiting for approval':'No pending receipts';
-  if(!snap.size){list.innerHTML='<div style="padding:48px;text-align:center;color:var(--muted);font-size:14px">No pending receipts — customers will appear here when they scan receipts</div>';return;}
-  list.innerHTML=snap.docs.map(d=>{
-    const r=d.data();
-    return`<div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.05)">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-        <div>
-          <div style="font-size:14px;font-weight:600">${r.cardId}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">${r.store||'Unknown store'} · ${r.date||'Unknown date'} · ${r.category||'other'}</div>
-          <div style="font-size:13px;font-weight:500;margin-top:4px">£${(r.amount||0).toFixed(2)} spent · <span style="color:var(--accent);font-weight:700">+${r.pts} points</span></div>
-        </div>
-        <div style="font-size:11px;color:var(--muted)">${timeAgo(r.submittedAt)}</div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button onclick="approveReceipt('${d.id}','${r.cardId}',${r.pts})" style="flex:1;padding:10px;background:#1f883d;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Approve +${r.pts} pts</button>
-        <button onclick="denyReceipt('${d.id}')" style="padding:10px 16px;background:#fff0f0;color:#c62828;border:1px solid #ffcdd2;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Deny</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function approveReceipt(queueId, cardId, pts){
-  await db.collection('merchants').doc(merchantId).collection('receiptQueue').doc(queueId).update({status:'approved',approvedAt:Date.now()});
-  // Add points to customer
-  const custRef=db.collection('merchants').doc(merchantId).collection('customers').doc(cardId);
-  const snap=await custRef.get();
-  if(snap.exists){
-    await custRef.update({points:firebase.firestore.FieldValue.increment(pts),visitCount:firebase.firestore.FieldValue.increment(1)});
-  }
-  await db.collection('merchants').doc(merchantId).collection('transactions').add({
-    phone:cardId,customerName:'Customer',amount:0,pointsAdded:pts,timestamp:Date.now(),type:'receipt_approved'
+// NAV
+function showTab(tab) {
+  ['till','products','orders','customers','receipts','overview','settings'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display = t===tab?'block':'none';
   });
-  toast(pts+' points approved!');
-  loadReceiptQueue();
-  loadCustomers();
-}
-
-async function denyReceipt(queueId){
-  await db.collection('merchants').doc(merchantId).collection('receiptQueue').doc(queueId).update({status:'denied',deniedAt:Date.now()});
-  toast('Receipt denied');
-  loadReceiptQueue();
-}
-
-// ============ CATEGORIES ============
-async function loadCategorySettings(){
-  const doc=await db.collection('merchants').doc(merchantId).get();
-  const data=doc.data();
-  const cats=data.approvedCategories||['grocery','petrol','restaurant','pharmacy','other'];
-  ['grocery','petrol','electronics','restaurant','pharmacy','clothing','other'].forEach(c=>{
-    const el=document.getElementById('cat-'+c);
-    if(el) el.checked=cats.includes(c);
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    b.classList.toggle('on',['till','products','orders','customers','receipts','overview','settings'][i]===tab);
   });
-  document.getElementById('auto-approve').checked=data.autoApprove||false;
-  // Show shop ID
-  const shopId=data.shopId||('SL-'+merchantId.slice(0,4).toUpperCase());
-  document.getElementById('shop-id-display').textContent=shopId;
-  if(!data.shopId){
-    await db.collection('merchants').doc(merchantId).update({shopId});
-  }
+  if (tab==='overview') loadOverview();
+  if (tab==='orders') loadMerchantOrders();
+  if (tab==='customers') loadCustomers();
+  if (tab==='receipts') loadReceipts();
 }
 
-async function saveCategorySettings(){
-  const cats=['grocery','petrol','electronics','restaurant','pharmacy','clothing','other'].filter(c=>document.getElementById('cat-'+c)?.checked);
-  const autoApprove=document.getElementById('auto-approve').checked;
-  await db.collection('merchants').doc(merchantId).update({approvedCategories:cats,autoApprove});
-  toast('Category settings saved');
-}
-
-function copyShopId(){
-  const id=document.getElementById('shop-id-display').textContent;
-  navigator.clipboard.writeText(id).then(()=>toast('Shop ID copied: '+id)).catch(()=>toast('Copy: '+id));
-}
-
-function timeAgo(ts){
+// UTILS
+function timeAgo(ts) {
+  if (!ts) return '';
   const d=Date.now()-ts,m=Math.floor(d/60000),h=Math.floor(d/3600000),dy=Math.floor(d/86400000);
-  if(m<1)return'Just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';if(dy===1)return'Yesterday';return dy+'d ago';
+  if (m<1)return'Just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';return dy+'d ago';
 }
 
 let toastTimer;
-function toast(msg){
+function toast(msg) {
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
 }
+function showErr(el,msg){el.textContent=msg;el.style.display='block';}
+
+window.addEventListener('load', initFirebase);
 </script>
 </body>
 </html>
