@@ -7,5 +7,458 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stashlo">
-<title>Stashlo</title>
+<title>Stashlo — Smart Loyalty Wallet</title>
 <link rel="manifest" href="manifest.json">
+<style>
+:root{--bg:#f0efff;--dk:#0a0a14;--wh:#fff;--pu:#6C5CE7;--pu2:#ece9ff;--gn:#00897B;--gn2:#e0f2f1;--rd:#c62828;--rd2:#ffebee;--or:#F57C00;--or2:#fff3e0;--tx:#1a1a2e;--mu:#706f87;--fn:system-ui,-apple-system,'Segoe UI',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;font-family:var(--fn);-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+button{cursor:pointer;border:none;outline:none;font-family:var(--fn)}
+input{outline:none;font-family:var(--fn);-webkit-appearance:none}
+/* SPLASH */
+#splash{position:fixed;inset:0;background:var(--dk);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;z-index:9999}
+.sp-logo{font-size:40px;font-weight:800;color:#fff;letter-spacing:-1px}.sp-logo b{color:var(--pu)}
+.dots{display:flex;gap:7px}.dots i{width:8px;height:8px;border-radius:50%;background:var(--pu);animation:dp 1.2s ease infinite;font-style:normal}
+.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
+@keyframes dp{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+/* AUTH */
+#auth{display:none;min-height:100vh;background:var(--dk);align-items:center;justify-content:center;padding:20px}
+.a-box{background:#fff;border-radius:24px;padding:32px 24px;width:100%;max-width:380px}
+.a-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.a-ic{width:42px;height:42px;background:var(--pu);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff}
+.a-nm{font-size:19px;font-weight:800}
+.a-tabs{display:flex;background:#f4f4f6;border-radius:10px;padding:4px;margin-bottom:20px}
+.a-tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:600;color:var(--mu);border-radius:8px;cursor:pointer;transition:all .2s}
+.a-tab.on{background:#fff;color:var(--pu);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.fhd{font-size:20px;font-weight:800;margin-bottom:5px}
+.fsb{font-size:13px;color:var(--mu);margin-bottom:18px;line-height:1.6}
+.fi{margin-bottom:11px}
+.fi label{display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.fi input{width:100%;padding:13px 14px;border:1.5px solid #e5e5ea;border-radius:12px;font-size:15px;transition:border-color .15s;background:#fff}
+.fi input:focus{border-color:var(--pu)}
+.btn-a{width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:12px;font-size:15px;font-weight:700;transition:opacity .15s}
+.btn-a:disabled{opacity:.6}
+.err-b{background:var(--rd2);color:var(--rd);font-size:13px;padding:10px 12px;border-radius:10px;margin-top:10px;display:none;line-height:1.5}
+/* APP */
+#app{display:none;flex-direction:column;min-height:100vh;padding-bottom:72px}
+.topbar{background:var(--dk);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.tb-logo{font-size:17px;font-weight:800;color:#fff}.tb-logo b{color:var(--pu)}
+.tb-btns{display:flex;gap:8px}
+.tb-btn{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.tb-btn svg{width:17px;height:17px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #ebebef;display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom,0px)}
+.nv{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 8px;font-size:10px;font-weight:600;color:var(--mu);cursor:pointer;transition:color .15s}
+.nv.on{color:var(--pu)}.nv svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nd{width:4px;height:4px;border-radius:50%;background:var(--pu);opacity:0}.nv.on .nd{opacity:1}
+.scr{display:none;padding:16px}.scr.on{display:block;animation:fi .18s ease}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+/* HOME */
+.hero{background:var(--dk);border-radius:20px;padding:20px 18px;margin-bottom:16px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:rgba(108,92,231,.12)}
+.hg{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:3px;position:relative;z-index:1}
+.hn{font-size:19px;font-weight:800;color:#fff;margin-bottom:14px;position:relative;z-index:1}
+.hrow{display:flex;gap:10px;position:relative;z-index:1}
+.hst{background:rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;flex:1}
+.hst-v{font-size:19px;font-weight:800;color:#fff}.hst-l{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px}
+.sr{display:flex;align-items:center;justify-content:space-between;margin:18px 0 11px}
+.st{font-size:15px;font-weight:700}.sl{font-size:13px;color:var(--pu);font-weight:600;cursor:pointer}
+.cscroll{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.cscroll::-webkit-scrollbar{display:none}
+.lcard{min-width:180px;border-radius:16px;padding:16px;flex-shrink:0;cursor:pointer;position:relative;overflow:hidden}
+.lcard::before{content:'';position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.04)}
+.lc-sh{font-size:12px;color:rgba(255,255,255,.45);margin-bottom:2px;position:relative;z-index:1}
+.lc-pt{font-size:28px;font-weight:800;color:#fff;letter-spacing:-1px;position:relative;z-index:1}
+.lc-lb{font-size:11px;color:rgba(255,255,255,.4);margin-bottom:9px;position:relative;z-index:1}
+.lc-bar{height:4px;background:rgba(255,255,255,.12);border-radius:100px;overflow:hidden;position:relative;z-index:1}
+.lc-fill{height:100%;background:rgba(255,255,255,.55);border-radius:100px}
+.lce{min-width:180px;background:#fff;border-radius:16px;padding:20px;text-align:center;color:var(--mu);font-size:13px;flex-shrink:0;line-height:1.6}
+/* PRODUCT GRID */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.pcard{background:#fff;border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s}.pcard:active{transform:scale(.97)}
+.pcard-img{width:100%;height:90px;background:linear-gradient(135deg,#ece9ff,#e0f2f1);display:flex;align-items:center;justify-content:center;font-size:36px}
+.pcard-bd{padding:11px}.pcard-nm{font-size:12px;font-weight:700;margin-bottom:2px;line-height:1.3}
+.pcard-sh{font-size:11px;color:var(--mu);margin-bottom:4px}.pcard-pr{font-size:14px;font-weight:800;color:var(--pu)}
+.pcard-tags{display:flex;gap:3px;margin-top:5px}
+.ptag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px}
+.ptag-c{background:var(--pu2);color:var(--pu)}.ptag-d{background:var(--gn2);color:var(--gn)}
+/* CARDS SCREEN */
+.cfl{border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;position:relative;overflow:hidden}
+.cfl::before{content:'';position:absolute;top:-30px;right:-30px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.03)}
+.cfl-top{display:flex;justify-content:space-between;margin-bottom:12px;position:relative;z-index:1}
+.cfl-nm{font-size:14px;font-weight:700;color:#fff}.cfl-bdg{font-size:10px;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)}
+.cfl-pt{font-size:34px;font-weight:800;color:#fff;letter-spacing:-1px;position:relative;z-index:1}
+.cfl-lb{font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px;position:relative;z-index:1}
+.cfl-bar{height:5px;background:rgba(255,255,255,.12);border-radius:100px;overflow:hidden;position:relative;z-index:1}
+.cfl-fill{height:100%;border-radius:100px}
+/* SHOP */
+.shop-top{background:var(--dk);margin:-16px -16px 13px;padding:18px 16px 20px;border-radius:0 0 20px 20px}
+.sh-h{font-size:20px;font-weight:800;color:#fff;margin-bottom:3px}.sh-s{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:13px}
+.sbar{background:rgba(255,255,255,.1);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px}
+.sbar svg{width:17px;height:17px;stroke:rgba(255,255,255,.4);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sbar input{background:none;border:none;color:#fff;font-size:15px;flex:1}.sbar input::placeholder{color:rgba(255,255,255,.3)}
+.dtabs{display:flex;gap:8px;margin-bottom:12px}
+.dt{flex:1;padding:9px 5px;background:#fff;border-radius:12px;text-align:center;font-size:11px;font-weight:600;color:var(--mu);border:1.5px solid transparent;cursor:pointer;transition:all .15s}
+.dt.on{background:var(--pu2);border-color:var(--pu);color:var(--pu)}
+.dt-ic{font-size:16px;margin-bottom:2px}
+.cats{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:12px}
+.cats::-webkit-scrollbar{display:none}
+.cat{flex-shrink:0;background:#fff;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:600;color:var(--mu);border:1.5px solid transparent;cursor:pointer;transition:all .15s}
+.cat.on{background:var(--pu2);border-color:var(--pu);color:var(--pu)}
+/* CARD DETAIL */
+#card-detail{position:fixed;inset:0;background:var(--dk);z-index:150;display:none;flex-direction:column;overflow-y:auto}
+.cdh{padding:22px 18px 24px;flex-shrink:0}
+.cd-back{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;margin-bottom:18px;cursor:pointer}
+.cd-back svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2}
+.cd-shop{font-size:14px;color:rgba(255,255,255,.4);margin-bottom:4px}
+.cd-pts{font-size:60px;font-weight:800;color:#fff;letter-spacing:-3px;line-height:1}
+.cd-lbl{font-size:14px;color:rgba(255,255,255,.4);margin-bottom:16px}
+.cd-pg-row{display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px}
+.cd-bar{height:7px;background:rgba(255,255,255,.1);border-radius:100px;overflow:hidden}
+.cd-fill{height:100%;background:var(--pu);border-radius:100px;transition:width .6s}
+.cd-pill{display:none;align-items:center;gap:8px;background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.2);border-radius:100px;padding:8px 14px;margin-top:14px;font-size:13px;font-weight:600;color:#00e676}
+.cdb{background:#fff;border-radius:24px 24px 0 0;flex:1;padding:20px 16px 30px}
+/* QR */
+.qr-sec{background:#f9f9fb;border-radius:16px;padding:18px;margin-bottom:16px;text-align:center}
+.qr-t{font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.qr-img{width:180px;height:180px;margin:0 auto 10px;background:#fff;border-radius:12px;padding:8px;display:flex;align-items:center;justify-content:center}
+.qr-img img{width:100%;height:100%;object-fit:contain}
+.qr-ph{font-size:18px;font-weight:800;color:var(--tx);font-family:monospace;letter-spacing:2px;margin-bottom:4px}
+.qr-sub{font-size:12px;color:var(--mu)}
+.cd-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.cd-stat{background:#f9f9fb;border-radius:12px;padding:12px;text-align:center}
+.cd-sv{font-size:18px;font-weight:800}.cd-sl{font-size:11px;color:var(--mu);margin-top:2px}
+.mini-sec{margin-bottom:16px}
+.mini-t{font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.prod-mini-row{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.prod-mini-row::-webkit-scrollbar{display:none}
+.pmini{min-width:120px;background:#f9f9fb;border-radius:12px;padding:11px;flex-shrink:0;cursor:pointer}.pmini:active{background:#ece9ff}
+.pm-em{font-size:26px;margin-bottom:5px}.pm-nm{font-size:12px;font-weight:700;margin-bottom:3px}.pm-pr{font-size:13px;font-weight:800;color:var(--pu)}
+.hi{background:#f9f9fb;border-radius:12px;padding:12px 13px;display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.hi-t{font-size:14px;font-weight:600}.hi-s{font-size:12px;color:var(--mu);margin-top:2px}
+.hi-p{font-size:14px;font-weight:700;color:var(--gn)}.hi-p.neg{color:var(--rd)}
+/* ADD SHEET */
+#add-sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end}
+.sheet{background:#fff;border-radius:24px 24px 0 0;padding:24px 18px;width:100%;max-height:90vh;overflow-y:auto}
+.sheet-t{font-size:18px;font-weight:800;margin-bottom:16px}
+.type-g{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.topt{padding:13px;background:#f9f9fb;border-radius:12px;text-align:center;font-size:12px;font-weight:600;border:1.5px solid transparent;cursor:pointer;transition:all .15s}
+.topt em{font-size:22px;display:block;margin-bottom:5px;font-style:normal}
+.topt.on{background:var(--pu2);border-color:var(--pu);color:var(--pu)}
+.sr-item{background:#f9f9fb;border-radius:12px;padding:12px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.sr-item:active{background:#ece9ff}
+.sr-nm{font-size:14px;font-weight:700}.sr-id{font-size:12px;color:var(--mu);margin-top:2px}
+.brands-g{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.brand{background:#f9f9fb;border-radius:12px;padding:12px;text-align:center;cursor:pointer}.brand:active{background:#ece9ff}
+.brand em{font-size:24px;display:block;margin-bottom:4px;font-style:normal}.brand span{font-size:12px;font-weight:600}
+/* ORDER SHEET */
+#order-sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:210;display:none;align-items:flex-end}
+.osheet{background:#fff;border-radius:24px 24px 0 0;padding:24px 18px;width:100%;max-height:88vh;overflow-y:auto}
+.oprev{display:flex;gap:13px;margin-bottom:18px}
+.o-em{width:66px;height:66px;border-radius:14px;background:linear-gradient(135deg,#ece9ff,#e0f2f1);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+.o-nm{font-size:16px;font-weight:800;margin-bottom:3px}.o-sh{font-size:13px;color:var(--mu);margin-bottom:4px}.o-pr{font-size:20px;font-weight:800;color:var(--pu)}
+.ot{font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:9px;margin-top:16px}
+.oopt{display:flex;align-items:center;gap:11px;padding:12px;background:#f9f9fb;border-radius:12px;margin-bottom:7px;cursor:pointer;border:1.5px solid transparent;transition:all .15s}
+.oopt.on{background:var(--pu2);border-color:var(--pu)}
+.orad{width:20px;height:20px;border-radius:50%;border:2px solid #ddd;flex-shrink:0;position:relative;transition:all .15s}
+.oopt.on .orad{border-color:var(--pu);background:var(--pu)}
+.oopt.on .orad::after{content:'';position:absolute;width:7px;height:7px;background:#fff;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%)}
+.o-ol{font-size:14px;font-weight:600}.o-os{font-size:12px;color:var(--mu);margin-top:2px}
+.qty-row{display:flex;align-items:center;justify-content:center;gap:18px;padding:8px}
+.qty-b{width:40px;height:40px;border-radius:12px;background:var(--pu2);color:var(--pu);font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.qty-v{font-size:22px;font-weight:800;min-width:28px;text-align:center}
+.o-tot{display:flex;justify-content:space-between;align-items:center;padding:13px;background:#f9f9fb;border-radius:12px;margin:12px 0}
+.o-tl{font-size:14px;font-weight:600;color:var(--mu)}.o-tv{font-size:22px;font-weight:800}
+.btn-order{width:100%;padding:14px;background:var(--dk);color:#fff;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer}
+/* ORDERS */
+.ord-tabs{display:flex;gap:8px;margin-bottom:12px}
+.ord-tab{padding:8px 14px;border-radius:100px;font-size:13px;font-weight:600;background:#fff;color:var(--mu);border:1.5px solid transparent;cursor:pointer}
+.ord-tab.on{background:var(--pu2);border-color:var(--pu);color:var(--pu)}
+.ocard{background:#fff;border-radius:14px;padding:14px;margin-bottom:10px}
+.oc-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.oc-id{font-size:11px;font-weight:700;color:var(--mu);font-family:monospace}
+.oc-st{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+.s-p{background:var(--or2);color:var(--or)}.s-r{background:var(--gn2);color:var(--gn)}.s-d{background:#f4f4f6;color:var(--mu)}
+.oc-it{font-size:14px;font-weight:700;margin-bottom:2px}.oc-mt{font-size:12px;color:var(--mu)}.oc-tot{font-size:15px;font-weight:800;color:var(--pu);margin-top:6px}
+/* PROFILE */
+.prof-h{background:var(--dk);margin:-16px -16px 18px;padding:26px 18px 30px;border-radius:0 0 22px 22px;text-align:center}
+.pav{width:64px;height:64px;border-radius:50%;background:var(--pu);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff;margin:0 auto 11px}
+.p-n{font-size:19px;font-weight:800;color:#fff;margin-bottom:4px}.p-e{font-size:13px;color:rgba(255,255,255,.4)}.p-ph{font-size:13px;color:rgba(255,255,255,.55);margin-top:3px}
+.sg{margin-bottom:16px}.sg-t{font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:9px}
+.si{background:#fff;border-radius:12px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;cursor:pointer}
+.si-l{display:flex;align-items:center;gap:11px}
+.si-ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.si-lb{font-size:14px;font-weight:600}.si-sb{font-size:12px;color:var(--mu)}.si-ar{color:var(--mu);font-size:18px}
+.empty{text-align:center;padding:36px 16px;color:var(--mu)}
+.empty-i{font-size:36px;margin-bottom:10px}.empty p{font-size:14px;line-height:1.6}
+#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--dk);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div id="splash"><div class="sp-logo">Stash<b>lo</b></div><div class="dots"><i></i><i></i><i></i></div></div>
+<div id="auth">
+  <div class="a-box">
+    <div class="a-logo"><div class="a-ic">S</div><div class="a-nm">Stashlo</div></div>
+    <div class="a-tabs"><div class="a-tab on" id="tab-in" onclick="swTab('in')">Sign in</div><div class="a-tab" id="tab-up" onclick="swTab('up')">Join free</div></div>
+    <div id="form-in">
+      <div class="fhd">Welcome back</div><div class="fsb">Sign in to your loyalty wallet</div>
+      <div class="fi"><label>Email</label><input type="email" id="in-e" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
+      <div class="fi"><label>Password</label><input type="password" id="in-p" placeholder="Password" autocomplete="current-password"></div>
+      <button class="btn-a" id="btn-in" onclick="doIn()">Sign in</button>
+      <div class="err-b" id="in-err"></div>
+    </div>
+    <div id="form-up" style="display:none">
+      <div class="fhd">Create account</div>
+      <div class="fsb">Your phone number is your loyalty ID — merchants scan your QR to add points</div>
+      <div class="fi"><label>Your name</label><input type="text" id="up-n" placeholder="Full name" autocomplete="name"></div>
+      <div class="fi"><label>📱 Phone — your loyalty ID at every shop</label><input type="tel" id="up-ph" placeholder="07700 900000" autocomplete="tel" inputmode="tel"></div>
+      <div class="fi"><label>Email</label><input type="email" id="up-e" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
+      <div class="fi"><label>Password (6+ chars)</label><input type="password" id="up-p" placeholder="Choose a password" autocomplete="new-password"></div>
+      <button class="btn-a" id="btn-up" onclick="doUp()">Create account</button>
+      <div class="err-b" id="up-err"></div>
+    </div>
+  </div>
+</div>
+<div id="app">
+  <div class="topbar">
+    <div class="tb-logo">Stash<b>lo</b></div>
+    <div class="tb-btns">
+      <div class="tb-btn" onclick="go('orders')"><svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>
+      <div class="tb-btn" onclick="go('profile')"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    </div>
+  </div>
+  <div class="scr on" id="scr-home">
+    <div class="hero">
+      <div class="hg" id="hg">Good morning</div><div class="hn" id="hn">Your wallet</div>
+      <div class="hrow">
+        <div class="hst"><div class="hst-v" id="s-c">0</div><div class="hst-l">Cards</div></div>
+        <div class="hst"><div class="hst-v" id="s-p">0</div><div class="hst-l">Total pts</div></div>
+        <div class="hst"><div class="hst-v" id="s-o">0</div><div class="hst-l">Orders</div></div>
+      </div>
+    </div>
+    <div class="sr"><div class="st">My loyalty cards</div><div class="sl" onclick="go('cards')">See all</div></div>
+    <div class="cscroll" id="h-cards"><div class="lce">Tap + in Cards to add your first card</div></div>
+    <div id="h-st-hdr" class="sr" style="display:none"><div class="st">Stashlo Store</div><div class="sl" onclick="go('shop')">See all</div></div>
+    <div class="pgrid" id="h-st-g"></div>
+    <div id="h-lc-hdr" class="sr" style="display:none"><div class="st">Shop at your stores</div><div class="sl" onclick="go('shop')">See all</div></div>
+    <div class="pgrid" id="h-lc-g"></div>
+  </div>
+  <div class="scr" id="scr-cards">
+    <div class="sr" style="margin-top:0">
+      <div class="st">My loyalty cards</div>
+      <div style="width:36px;height:36px;border-radius:10px;background:var(--pu2);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="oAS()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pu)" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+    </div>
+    <div id="cards-list"><div class="empty"><div class="empty-i">💳</div><p>No cards yet.<br>Tap + to find any shop on Stashlo.</p></div></div>
+  </div>
+  <div class="scr" id="scr-shop">
+    <div class="shop-top">
+      <div class="sh-h">Shop &amp; collect</div><div class="sh-s">Order online · collect or get delivered</div>
+      <div class="sbar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search products..." id="sq" oninput="sProds(this.value)"></div>
+    </div>
+    <div class="dtabs">
+      <div class="dt on" id="dt-a" onclick="sDel('a')"><div class="dt-ic">🛍️</div>All</div>
+      <div class="dt" id="dt-c" onclick="sDel('c')"><div class="dt-ic">🏪</div>Collect</div>
+      <div class="dt" id="dt-d" onclick="sDel('d')"><div class="dt-ic">🚚</div>Delivery</div>
+    </div>
+    <div class="cats">
+      <div class="cat on" onclick="sCat(this,'all')">All</div>
+      <div class="cat" onclick="sCat(this,'stashlo')">⚡ Stashlo</div>
+      <div class="cat" onclick="sCat(this,'electronics')">📱 Tech</div>
+      <div class="cat" onclick="sCat(this,'food')">🍕 Food</div>
+      <div class="cat" onclick="sCat(this,'fashion')">👗 Fashion</div>
+      <div class="cat" onclick="sCat(this,'health')">💊 Health</div>
+    </div>
+    <div class="pgrid" id="shop-g"><div style="grid-column:1/-1" class="empty"><div class="empty-i">🛍️</div><p>Loading...</p></div></div>
+  </div>
+  <div class="scr" id="scr-orders">
+    <div class="sr" style="margin-top:0"><div class="st">My orders</div></div>
+    <div class="ord-tabs">
+      <div class="ord-tab on" onclick="fOrds('all',this)">All</div>
+      <div class="ord-tab" onclick="fOrds('act',this)">Active</div>
+      <div class="ord-tab" onclick="fOrds('done',this)">Done</div>
+    </div>
+    <div id="ords-list"><div class="empty"><div class="empty-i">📦</div><p>No orders yet.</p></div></div>
+  </div>
+  <div class="scr" id="scr-profile">
+    <div class="prof-h"><div class="pav" id="pav">?</div><div class="p-n" id="pnm">Loading...</div><div class="p-e" id="pem"></div><div class="p-ph" id="p-ph"></div></div>
+    <div class="sg"><div class="sg-t">My wallet</div>
+      <div class="si"><div class="si-l"><div class="si-ic" style="background:#e8f5e9">🎁</div><div><div class="si-lb">Rewards redeemed</div><div class="si-sb" id="prw">0</div></div></div></div>
+      <div class="si" onclick="go('orders')"><div class="si-l"><div class="si-ic" style="background:#ece9ff">📦</div><div><div class="si-lb">My orders</div><div class="si-sb" id="pord">0 placed</div></div></div><div class="si-ar">›</div></div>
+    </div>
+    <div class="sg"><div class="sg-t">Merchant portal</div>
+      <div class="si" onclick="window.open('merchant.html','_blank')"><div class="si-l"><div class="si-ic" style="background:#fff3e0">🏪</div><div><div class="si-lb">Open merchant portal</div><div class="si-sb">Register &amp; manage your shop</div></div></div><div class="si-ar">›</div></div>
+    </div>
+    <div class="sg"><div class="sg-t">App</div>
+      <div class="si" onclick="doOut()"><div class="si-l"><div class="si-ic" style="background:#ffebee">🚪</div><div><div class="si-lb" style="color:var(--rd)">Sign out</div></div></div></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="nv on" id="nv-home" onclick="go('home')"><svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home<div class="nd"></div></div>
+    <div class="nv" id="nv-shop" onclick="go('shop')"><svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Shop<div class="nd"></div></div>
+    <div class="nv" id="nv-cards" onclick="go('cards')"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Cards<div class="nd"></div></div>
+    <div class="nv" id="nv-orders" onclick="go('orders')"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Orders<div class="nd"></div></div>
+    <div class="nv" id="nv-profile" onclick="go('profile')"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile<div class="nd"></div></div>
+  </nav>
+</div>
+<!-- CARD DETAIL -->
+<div id="card-detail">
+  <div class="cdh">
+    <div class="cd-back" onclick="closeCD()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>
+    <div class="cd-shop" id="cd-sh"></div>
+    <div class="cd-pts" id="cd-pt">0</div>
+    <div class="cd-lbl">loyalty points</div>
+    <div class="cd-pg-row"><span id="cd-pl">0 pts</span><span id="cd-pr">Goal: 100 pts</span></div>
+    <div class="cd-bar"><div class="cd-fill" id="cd-fill" style="width:0%"></div></div>
+    <div class="cd-pill" id="cd-pill">🎁 <span id="cd-pill-t">Reward ready!</span></div>
+  </div>
+  <div class="cdb">
+    <div class="qr-sec" id="qr-sec" style="display:none">
+      <div class="qr-t">Your loyalty card — show at the shop</div>
+      <div class="qr-img"><img id="qr-img" src="" alt="QR" style="width:164px;height:164px"></div>
+      <div class="qr-ph" id="qr-ph"></div>
+      <div class="qr-sub">Merchant scans this QR code to add your points</div>
+    </div>
+    <div class="cd-stats">
+      <div class="cd-stat"><div class="cd-sv" id="cd-v">0</div><div class="cd-sl">Visits</div></div>
+      <div class="cd-stat"><div class="cd-sv" id="cd-sp">£0</div><div class="cd-sl">Spent</div></div>
+      <div class="cd-stat"><div class="cd-sv" id="cd-rw">0</div><div class="cd-sl">Rewards</div></div>
+    </div>
+    <div class="mini-sec" id="cd-ps" style="display:none"><div class="mini-t">Shop products — order now</div><div class="prod-mini-row" id="cd-prods"></div></div>
+    <div class="mini-sec"><div class="mini-t">Recent visits</div><div id="cd-hist"></div></div>
+  </div>
+</div>
+<!-- ADD SHEET -->
+<div id="add-sheet" onclick="if(event.target===this)cAS()">
+  <div class="sheet">
+    <div class="sheet-t">Add loyalty card</div>
+    <div class="type-g">
+      <div class="topt on" id="to-l" onclick="sAT('local')"><em>🏪</em>Local shop</div>
+      <div class="topt" id="to-n" onclick="sAT('national')"><em>🇬🇧</em>National brand</div>
+    </div>
+    <div id="al">
+      <div style="background:var(--gn2);border-radius:10px;padding:11px 13px;margin-bottom:13px;font-size:13px;color:#004D40;line-height:1.6">🔍 Search any shop on Stashlo. Your QR code is automatically linked — merchant scans it to add points.</div>
+      <div class="fi"><label>Shop name or ID (SL-XXXX)</label><input type="text" id="shi" placeholder="e.g. SL-AB12 or Coffee House" oninput="sSh(this.value)"></div>
+      <div id="shr"></div>
+    </div>
+    <div id="an" style="display:none"><div class="brands-g" id="brg"></div></div>
+    <div class="err-b" id="add-err" style="margin-top:8px"></div>
+  </div>
+</div>
+<!-- ORDER SHEET -->
+<div id="order-sheet" onclick="if(event.target===this)cOS()">
+  <div class="osheet">
+    <div class="oprev">
+      <div class="o-em" id="o-em">🛍️</div>
+      <div><div class="o-nm" id="o-nm">Product</div><div class="o-sh" id="o-sh">Shop</div><div class="o-pr" id="o-pr">£0.00</div></div>
+    </div>
+    <div class="ot">How do you want it?</div>
+    <div class="oopt on" id="o-co" onclick="sOT('collect')"><div class="orad"></div><div><div class="o-ol">🏪 Click &amp; Collect</div><div class="o-os">Order online, collect in store · 1 hour</div></div></div>
+    <div class="oopt" id="o-de" onclick="sOT('delivery')"><div class="orad"></div><div><div class="o-ol">🚚 Home Delivery</div><div class="o-os" id="o-ds">Delivered to your door</div></div></div>
+    <div id="o-as" style="display:none"><div class="ot">Delivery address</div><div class="fi"><input type="text" id="o-ad" placeholder="Your full delivery address" style="border:1.5px solid #e5e5ea;border-radius:12px;padding:12px;font-size:15px"></div></div>
+    <div class="ot">Quantity</div>
+    <div class="qty-row"><div class="qty-b" onclick="cQ(-1)">−</div><div class="qty-v" id="o-q">1</div><div class="qty-b" onclick="cQ(1)">+</div></div>
+    <div class="o-tot"><div class="o-tl">Total</div><div class="o-tv" id="o-tv">£0.00</div></div>
+    <button class="btn-order" onclick="pO()">Place order</button>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+var KEY='AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y',PID='stashlo';
+var FS='https://firestore.googleapis.com/v1/projects/'+PID+'/databases/(default)/documents/';
+var AU='https://identitytoolkit.googleapis.com/v1/accounts:';
+var TOKEN=null,UID=null,PHONE='',PROF=null;
+var CARDS=[],ORDS=[],STPR=[],LCPR=[],ALLPR=[];
+var CURCARD=null,CURPROD=null,OQ=1,OT='collect',SCAT='all',SDEL='a',AT='local',PM={},ST=null;
+var NB=[{id:'tesco',n:'Tesco Clubcard',e:'🛒',c:'#e31837'},{id:'nectar',n:"Nectar",e:'🟠',c:'#ff6600'},{id:'boots',n:'Boots Advantage',e:'💊',c:'#005eb8'},{id:'costa',n:'Costa Coffee',e:'☕',c:'#6b1f3c'},{id:'greggs',n:'Greggs Rewards',e:'🥐',c:'#00539b'},{id:'starbucks',n:'Starbucks Stars',e:'⭐',c:'#00704a'},{id:'mcdonalds',n:"McDonald's",e:'🍟',c:'#da291c'},{id:'bp',n:'BPme Rewards',e:'⛽',c:'#009900'},{id:'asda',n:'Asda Rewards',e:'🛍️',c:'#78be20'},{id:'waterstones',n:'Waterstones',e:'📚',c:'#2c4a1e'}];
+function H(){var h={'Content-Type':'application/json'};if(TOKEN)h['Authorization']='Bearer '+TOKEN;return h;}
+function toFS(o){var r={};Object.keys(o).forEach(function(k){var v=o[k];if(v===null||v===undefined)r[k]={nullValue:null};else if(typeof v==='boolean')r[k]={booleanValue:v};else if(typeof v==='number')r[k]=Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};else if(typeof v==='object')r[k]={mapValue:{fields:toFS(v)}};else r[k]={stringValue:String(v)};});return r;}
+function frFS(doc){if(!doc||!doc.fields)return null;var o={};Object.keys(doc.fields).forEach(function(k){var v=doc.fields[k];if('stringValue'in v)o[k]=v.stringValue;else if('integerValue'in v)o[k]=parseInt(v.integerValue);else if('doubleValue'in v)o[k]=v.doubleValue;else if('booleanValue'in v)o[k]=v.booleanValue;else if('mapValue'in v){var f=v.mapValue&&v.mapValue.fields?frFS(v.mapValue):{};o[k]=f||{};}else o[k]=null;});if(doc.name)o._id=doc.name.split('/').pop();return o;}
+function fGet(p){return fetch(FS+p,{headers:H()}).then(function(r){return r.json();});}
+function fList(p,n){return fetch(FS+p+'?pageSize='+(n||50),{headers:H()}).then(function(r){return r.json();});}
+function fSet(p,f){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();});}
+function fAdd(c,f){return fetch(FS+c,{method:'POST',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();});}
+function saveSess(tok,uid,email,exp){TOKEN=tok;UID=uid;localStorage.setItem('sl_s',JSON.stringify({t:tok,u:uid,e:email,x:Date.now()+parseInt(exp)*1000}));}
+function clearSess(){TOKEN=null;UID=null;localStorage.removeItem('sl_s');}
+function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_s')||'null');if(s&&s.x>Date.now()){TOKEN=s.t;UID=s.u;return s.e||'';}return null;}catch(e){return null;}}
+// BOOT
+(function(){hide('splash');var em=checkSess();if(em){show('app','flex');boot();}else show('auth','flex');})();
+function boot(){loadProf();loadCards();loadOrds();loadStPr();}
+window.swTab=function(t){$('tab-in').classList.toggle('on',t==='in');$('tab-up').classList.toggle('on',t==='up');$('form-in').style.display=t==='in'?'block':'none';$('form-up').style.display=t==='up'?'block':'none';};
+window.doIn=function(){
+  var e=$('in-e').value.trim(),p=$('in-p').value,err=$('in-err');err.style.display='none';
+  if(!e||!p){showE(err,'Enter email and password');return;}
+  $('btn-in').disabled=true;$('btn-in').textContent='Signing in...';
+  fetch(AU+'signInWithPassword?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p,returnSecureToken:true})})
+  .then(function(r){return r.json();}).then(function(d){
+    $('btn-in').disabled=false;$('btn-in').textContent='Sign in';
+    if(d.error){var m={EMAIL_NOT_FOUND:'No account found — join free',INVALID_PASSWORD:'Wrong password',INVALID_EMAIL:'Invalid email',INVALID_LOGIN_CREDENTIALS:'Incorrect email or password',TOO_MANY_ATTEMPTS_TRY_LATER:'Too many attempts — wait a moment'};showE(err,m[d.error.message]||'Sign in failed: '+d.error.message);return;}
+    saveSess(d.idToken,d.localId,d.email,d.expiresIn);hide('auth');show('app','flex');boot();
+  }).catch(function(){$('btn-in').disabled=false;$('btn-in').textContent='Sign in';showE(err,'Connection error — check internet');});
+};
+window.doUp=function(){
+  var name=$('up-n').value.trim(),phone=$('up-ph').value.replace(/\s/g,'');
+  var e=$('up-e').value.trim(),p=$('up-p').value,err=$('up-err');err.style.display='none';
+  if(!name){showE(err,'Enter your name');return;}
+  if(!phone||phone.length<10){showE(err,'Enter a valid phone number — this is your loyalty ID at every shop');return;}
+  if(!e){showE(err,'Enter your email');return;}
+  if(!p||p.length<6){showE(err,'Password must be at least 6 characters');return;}
+  $('btn-up').disabled=true;$('btn-up').textContent='Creating...';
+  fetch(AU+'signUp?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p,returnSecureToken:true})})
+  .then(function(r){return r.json();}).then(function(d){
+    $('btn-up').disabled=false;$('btn-up').textContent='Create account';
+    if(d.error){var m={EMAIL_EXISTS:'Email already registered — sign in',INVALID_EMAIL:'Invalid email',WEAK_PASSWORD:'Password too weak'};showE(err,m[d.error.message]||'Sign up failed: '+d.error.message);return;}
+    saveSess(d.idToken,d.localId,e,d.expiresIn);
+    fSet('users/'+d.localId,{name:name,phone:phone,email:e,createdAt:Date.now(),totalPoints:0,totalOrders:0,totalRewards:0}).catch(function(){});
+    hide('auth');show('app','flex');boot();
+  }).catch(function(){$('btn-up').disabled=false;$('btn-up').textContent='Create account';showE(err,'Connection error');});
+};
+window.doOut=function(){clearSess();hide('app');show('auth','flex');};
+function loadProf(){fGet('users/'+UID).then(function(d){PROF=frFS(d)||{};PHONE=PROF.phone||'';var nm=PROF.name||'there';var h=new Date().getHours();t('hg',h<12?'Good morning ☀️':h<17?'Good afternoon 🌤️':'Good evening 🌙');t('hn',nm+"'s wallet");t('pav',nm.charAt(0).toUpperCase());t('pnm',nm);t('pem',PROF.email||'');t('p-ph',PHONE?'📱 '+PHONE:'');t('prw',(PROF.totalRewards||0)+' redeemed');t('pord',(PROF.totalOrders||0)+' placed');}).catch(function(){});}
+function loadCards(){fList('users/'+UID+'/cards',50).then(function(d){CARDS=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop()},frFS(doc));});CARDS.sort(function(a,b){return(b.addedAt||0)-(a.addedAt||0);});rHCards();rCList();t('s-c',CARDS.length);t('s-p',CARDS.reduce(function(a,c){return a+(c.points||0);},0));loadLcPr();}).catch(function(){});}
+function pct(pts,thr){return Math.min(100,Math.round(((pts||0)/(thr||100))*100));}
+function rHCards(){var el=$('h-cards');if(!CARDS.length){el.innerHTML='<div class="lce">Tap + in Cards<br>to add your first card</div>';return;}el.innerHTML=CARDS.slice(0,6).map(function(c){var p=pct(c.points,c.threshold);return '<div class="lcard" style="background:'+(c.color||'#6C5CE7')+'" onclick="oCD(\''+c.id+'\')">' +'<div class="lc-sh">'+x(c.shopName||c.name||'Shop')+'</div>' +'<div class="lc-pt">'+(c.points||0)+'</div><div class="lc-lb">points</div>' +'<div class="lc-bar"><div class="lc-fill" style="width:'+p+'%"></div></div></div>';}).join('');}
+function rCList(){var el=$('cards-list');if(!CARDS.length){el.innerHTML='<div class="empty"><div class="empty-i">💳</div><p>No cards yet.<br>Tap + to find any shop on Stashlo.</p></div>';return;}el.innerHTML=CARDS.map(function(c){var p=pct(c.points,c.threshold);return '<div class="cfl" style="background:'+(c.color||'#6C5CE7')+'" onclick="oCD(\''+c.id+'\')">' +'<div class="cfl-top"><div class="cfl-nm">'+x(c.shopName||c.name||'Shop')+'</div>' +'<div class="cfl-bdg">'+(c.type==='national'?'🇬🇧 National':'🏪 Local')+'</div></div>' +'<div class="cfl-pt">'+(c.points||0)+'</div><div class="cfl-lb">loyalty points</div>' +'<div class="cfl-bar"><div class="cfl-fill" style="width:'+p+'%;background:rgba(255,255,255,.65)"></div></div></div>';}).join('');}
+window.oCD=function(id){CURCARD=CARDS.find(function(c){return c.id===id;});if(!CURCARD)return;show('card-detail','flex');t('cd-sh',CURCARD.shopName||CURCARD.name||'Shop');renderPts(CURCARD.points||0,CURCARD.threshold||100);t('cd-v',CURCARD.visitCount||0);t('cd-sp','£'+((CURCARD.totalSpend||0)).toFixed(0));t('cd-rw',CURCARD.rewardsRedeemed||0);
+if(CURCARD.type==='local'&&CURCARD.merchantId){show('qr-sec');var qd=PHONE||CURCARD.phone||'';if(qd){t('qr-ph',qd);$('qr-img').src='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(qd)+'&bgcolor=ffffff&color=0a0a14&margin=2';}
+if(PHONE){fGet('merchants/'+CURCARD.merchantId+'/customers/'+PHONE).then(function(d){var live=frFS(d);if(live&&typeof live.points!=='undefined'){renderPts(live.points||0,CURCARD.threshold||100);t('cd-v',live.visitCount||0);t('cd-sp','£'+(live.totalSpend||0).toFixed(0));t('cd-rw',live.rewardsRedeemed||0);fSet('users/'+UID+'/cards/'+CURCARD.id,Object.assign({},CURCARD,{points:live.points||0,visitCount:live.visitCount||0,totalSpend:live.totalSpend||0,rewardsRedeemed:live.rewardsRedeemed||0})).catch(function(){});}}).catch(function(){});}
+loadCDPr(CURCARD.merchantId);loadCDHist(CURCARD.merchantId,PHONE||CURCARD.phone||'');}else{hide('qr-sec');hide('cd-ps');$('cd-hist').innerHTML='<div class="empty" style="padding:16px"><p>Visit the shop to earn points</p></div>';}};
+function renderPts(pts,thr){t('cd-pt',pts);t('cd-pl',pts+' pts');t('cd-pr','Goal: '+thr+' pts');$('cd-fill').style.width=pct(pts,thr)+'%';var pill=$('cd-pill');if(pts>=thr){pill.style.display='inline-flex';t('cd-pill-t','Reward ready to redeem!');}else pill.style.display='none';}
+function loadCDPr(mid){fList('merchants/'+mid+'/products',10).then(function(d){var docs=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop()},frFS(doc));}).filter(function(p){return p.active!==false;});if(!docs.length){hide('cd-ps');return;}show('cd-ps');$('cd-prods').innerHTML=docs.map(function(p){PM[p.id]=p;return '<div class="pmini" onclick="oOS(\''+p.id+'\')">' +'<div class="pm-em">'+(p.emoji||'🛍️')+'</div><div class="pm-nm">'+x(p.name)+'</div>' +'<div class="pm-pr">£'+Number(p.price).toFixed(2)+'</div></div>';}).join('');}).catch(function(){hide('cd-ps');});}
+function loadCDHist(mid,phone){var el=$('cd-hist');if(!phone){el.innerHTML='<div class="empty" style="padding:16px"><p>No visits yet</p></div>';return;}fList('merchants/'+mid+'/transactions',15).then(function(d){var docs=(d.documents||[]).map(function(doc){return frFS(doc);}).filter(function(t){return t&&t.phone===phone;}).sort(function(a,b){return(b.timestamp||0)-(a.timestamp||0);}).slice(0,10);if(!docs.length){el.innerHTML='<div class="empty" style="padding:16px"><p>No visits yet</p></div>';return;}el.innerHTML=docs.map(function(t){var ir=t.type==='redeem';return '<div class="hi"><div><div class="hi-t">'+(ir?'Reward redeemed':'Visit')+'</div>' +'<div class="hi-s">'+tAgo(t.timestamp)+(t.amount?' · £'+Number(t.amount).toFixed(2)+' spent':'')+'</div></div>' +'<div class="hi-p'+(ir?' neg':'')+'>'+(ir?'−'+(t.pointsRedeemed||0):'+'+( t.pointsAdded||0))+' pts</div></div>';}).join('');}).catch(function(){el.innerHTML='<div class="empty" style="padding:16px"><p>History unavailable</p></div>';});}
+window.closeCD=function(){hide('card-detail');loadCards();};
+window.oAS=function(){show('add-sheet','flex');bBrands();};
+window.cAS=function(){hide('add-sheet');$('shi').value='';$('shr').innerHTML='';};
+window.sAT=function(t){AT=t;$('to-l').classList.toggle('on',t==='local');$('to-n').classList.toggle('on',t==='national');$('al').style.display=t==='local'?'block':'none';$('an').style.display=t==='national'?'block':'none';};
+function bBrands(){$('brg').innerHTML=NB.map(function(b){return '<div class="brand" onclick="aNat(\''+b.id+'\',\''+b.n.replace(/'/g,"\\'")+'\',\''+b.e+'\',\''+b.c+'\')">' +'<em>'+b.e+'</em><span>'+x(b.n)+'</span></div>';}).join('');}
+window.aNat=function(id,name,emoji,color){if(CARDS.find(function(c){return c.id===id;})){toast('Already in your wallet!');return;}fSet('users/'+UID+'/cards/'+id,{id:id,name:name,emoji:emoji,color:color,type:'national',points:0,threshold:500,addedAt:Date.now(),visitCount:0,totalSpend:0,rewardsRedeemed:0}).then(function(){window.cAS();loadCards();toast(name+' card added!');});};
+window.sSh=function(v){clearTimeout(ST);var el=$('shr');if(!v||v.length<2){el.innerHTML='';return;}ST=setTimeout(function(){fetch(FS+'merchants?pageSize=30',{headers:H()}).then(function(r){return r.json();}).then(function(d){var docs=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop()},frFS(doc));});var isId=v.toUpperCase().indexOf('SL-')===0;if(isId)docs=docs.filter(function(m){return(m.shopId||'').toUpperCase()===v.toUpperCase();});else docs=docs.filter(function(m){return(m.name||'').toLowerCase().indexOf(v.toLowerCase())>=0;});if(!docs.length){el.innerHTML='<div style="padding:12px;color:var(--mu);font-size:14px">No shops found</div>';return;}el.innerHTML=docs.slice(0,5).map(function(m){var already=CARDS.find(function(c){return c.merchantId===m.id;});return '<div class="sr-item" onclick="aLoc(\''+m.id+'\',\''+x(m.name||'Shop').replace(/'/g,"\\'")+'\')">'+  '<div><div class="sr-nm">'+x(m.name||'Shop')+'</div><div class="sr-id">'+(m.shopId||'')+'</div></div>'+(already?'<span style="font-size:12px;color:var(--gn);font-weight:700">✓ Added</span>':'<div style="color:var(--pu);font-weight:700;font-size:13px">Add ›</div>')+'</div>';}).join('');}).catch(function(){el.innerHTML='<div style="padding:12px;color:var(--rd);font-size:14px">Search error</div>';});},350);};
+window.aLoc=function(mid,shopName){if(CARDS.find(function(c){return c.merchantId===mid;})){toast('Already in your wallet!');return;}if(!PHONE){toast('Please set your phone number — it is your loyalty ID');return;}fGet('merchants/'+mid).then(function(d){var threshold=100;if(d.fields&&d.fields.rules&&d.fields.rules.mapValue){var rf=d.fields.rules.mapValue.fields||{};if(rf.threshold)threshold=parseInt(rf.threshold.integerValue||100);}fSet('users/'+UID+'/cards/local-'+mid,{id:'local-'+mid,merchantId:mid,shopName:shopName,type:'local',points:0,threshold:threshold,color:'#0a0a14',addedAt:Date.now(),visitCount:0,totalSpend:0,rewardsRedeemed:0,phone:PHONE}).then(function(){fSet('merchants/'+mid+'/customers/'+PHONE,{phone:PHONE,name:(PROF&&PROF.name)||'Customer',points:0,visitCount:0,totalSpend:0,joinedAt:Date.now(),rewardsRedeemed:0}).catch(function(){});window.cAS();loadCards();toast('✅ '+shopName+' card added!');});}).catch(function(){toast('Could not add card');});};
+function loadStPr(){fList('stashlo_products',20).then(function(d){STPR=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop(),shopId:'stashlo',shopName:'Stashlo Store',category:'electronics'},frFS(doc));}).filter(function(p){return p.active!==false;});STPR.forEach(function(p){PM[p.id]=p;});if(STPR.length){show('h-st-hdr','flex');$('h-st-g').innerHTML=STPR.slice(0,4).map(pH).join('');}rShop();}).catch(function(){rShop();});}
+function loadLcPr(){LCPR=[];var mids=CARDS.filter(function(c){return c.type==='local'&&c.merchantId;}).map(function(c){return c.merchantId;});if(!mids.length){rShop();return;}Promise.all(mids.map(function(mid){var card=CARDS.find(function(c){return c.merchantId===mid;});return fList('merchants/'+mid+'/products',8).then(function(d){return(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop(),merchantId:mid,shopName:(card&&card.shopName)||'Local shop'},frFS(doc));}).filter(function(p){return p.active!==false;});}).catch(function(){return[];});})).then(function(res){res.forEach(function(a){LCPR=LCPR.concat(a);});LCPR.forEach(function(p){PM[p.id]=p;});if(LCPR.length){show('h-lc-hdr','flex');$('h-lc-g').innerHTML=LCPR.slice(0,4).map(pH).join('');}rShop();});}
+function rShop(){ALLPR=STPR.concat(LCPR);var el=$('shop-g');var items=ALLPR.filter(function(p){if(SCAT==='stashlo'&&p.shopId!=='stashlo')return false;if(SCAT!=='all'&&SCAT!=='stashlo'&&p.category!==SCAT)return false;if(SDEL==='c'&&p.collect===false)return false;if(SDEL==='d'&&!p.delivery)return false;return true;});if(!items.length){el.innerHTML='<div style="grid-column:1/-1" class="empty"><div class="empty-i">🛍️</div><p>No products yet</p></div>';return;}el.innerHTML=items.map(pH).join('');}
+function pH(p){PM[p.id]=p;var tags='';if(p.collect!==false)tags+='<span class="ptag ptag-c">Collect</span>';if(p.delivery)tags+='<span class="ptag ptag-d">Delivery</span>';return '<div class="pcard" onclick="oOS(\''+p.id+'\')">' +'<div class="pcard-img">'+(p.emoji||'🛍️')+'</div>' +'<div class="pcard-bd"><div class="pcard-nm">'+x(p.name)+'</div><div class="pcard-sh">'+x(p.shopName||'Shop')+'</div>' +'<div class="pcard-pr">£'+Number(p.price).toFixed(2)+'</div><div class="pcard-tags">'+tags+'</div></div></div>';}
+window.sProds=function(q){var el=$('shop-g');if(!q){rShop();return;}var ql=q.toLowerCase();var r=ALLPR.filter(function(p){return(p.name||'').toLowerCase().indexOf(ql)>=0||(p.shopName||'').toLowerCase().indexOf(ql)>=0;});if(!r.length){el.innerHTML='<div style="grid-column:1/-1" class="empty"><div class="empty-i">🔍</div><p>No results</p></div>';return;}el.innerHTML=r.map(pH).join('');};
+window.sCat=function(el,c){document.querySelectorAll('.cat').forEach(function(x){x.classList.remove('on');});el.classList.add('on');SCAT=c;rShop();};
+window.sDel=function(d){SDEL=d;['a','c','d'].forEach(function(x){$('dt-'+x).classList.toggle('on',x===d);});rShop();};
+window.oOS=function(pid){var p=PM[pid];if(!p)return;CURPROD=p;OQ=1;OT=p.collect!==false?'collect':'delivery';$('o-em').textContent=p.emoji||'🛍️';t('o-nm',p.name);t('o-sh',p.shopName||'Shop');t('o-pr','£'+Number(p.price).toFixed(2));t('o-q','1');t('o-tv','£'+Number(p.price).toFixed(2));t('o-ds',p.shopId==='stashlo'?'Stashlo delivers · 1–3 days':'Delivered by shop');$('o-co').style.display=p.collect!==false?'flex':'none';$('o-de').style.display=p.delivery?'flex':'none';sOT(OT);show('order-sheet','flex');};
+window.cOS=function(){hide('order-sheet');};
+window.sOT=function(t){OT=t;$('o-co').classList.toggle('on',t==='collect');$('o-de').classList.toggle('on',t==='delivery');$('o-as').style.display=t==='delivery'?'block':'none';};
+window.cQ=function(d){OQ=Math.max(1,OQ+d);t('o-q',OQ);t('o-tv','£'+(OQ*CURPROD.price).toFixed(2));};
+window.pO=function(){if(!CURPROD)return;if(OT==='delivery'&&!$('o-ad').value.trim()){toast('Enter delivery address');return;}var ord={userId:UID,productId:CURPROD.id,productName:CURPROD.name,shopId:CURPROD.shopId||CURPROD.merchantId||'stashlo',shopName:CURPROD.shopName||'Shop',emoji:CURPROD.emoji||'🛍️',price:CURPROD.price,qty:OQ,total:OQ*CURPROD.price,type:OT,address:OT==='delivery'?$('o-ad').value.trim():'',status:'pending',createdAt:Date.now(),orderId:'SL-'+Math.random().toString(36).substr(2,6).toUpperCase()};fAdd('users/'+UID+'/orders',ord).then(function(){var sid=ord.shopId;if(sid==='stashlo')fAdd('stashlo_orders',ord).catch(function(){});else fAdd('merchants/'+sid+'/orders',ord).catch(function(){});window.cOS();toast('Order placed! '+(OT==='collect'?'Ready in 1 hour 🏪':'On its way 🚚'));loadOrds();}).catch(function(){toast('Could not place order');});};
+function loadOrds(){fList('users/'+UID+'/orders',30).then(function(d){ORDS=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop()},frFS(doc));}).sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});rOrds(ORDS);t('s-o',ORDS.length);t('pord',ORDS.length+' placed');}).catch(function(){});}
+function rOrds(list){var el=$('ords-list');if(!list.length){el.innerHTML='<div class="empty"><div class="empty-i">📦</div><p>No orders yet.</p></div>';return;}el.innerHTML=list.map(function(o){var sc=(o.status==='delivered'||o.status==='collected')?'s-d':o.status==='ready'?'s-r':'s-p';var sl=o.status==='collected'?'Collected':o.status==='delivered'?'Delivered':o.status==='ready'?'Ready 🎉':'Pending';return '<div class="ocard"><div class="oc-h"><div class="oc-id">'+(o.orderId||o.id.slice(0,8).toUpperCase())+'</div><div class="oc-st '+sc+'">'+sl+'</div></div>' +'<div class="oc-it">'+(o.emoji||'🛍️')+' '+x(o.productName)+' × '+(o.qty||1)+'</div>' +'<div class="oc-mt">'+x(o.shopName)+' · '+(o.type==='collect'?'Click & Collect':'Home Delivery')+' · '+tAgo(o.createdAt)+'</div>' +'<div class="oc-tot">£'+Number(o.total).toFixed(2)+'</div></div>';}).join('');}
+window.fOrds=function(f,btn){document.querySelectorAll('.ord-tab').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');if(f==='all')rOrds(ORDS);else if(f==='act')rOrds(ORDS.filter(function(o){return o.status==='pending'||o.status==='ready';}));else rOrds(ORDS.filter(function(o){return o.status==='delivered'||o.status==='collected';}));};
+window.go=function(s){document.querySelectorAll('.scr').forEach(function(x){x.classList.remove('on');});document.querySelectorAll('.nv').forEach(function(x){x.classList.remove('on');});var sc=$('scr-'+s);if(sc)sc.classList.add('on');var nb=$('nv-'+s);if(nb)nb.classList.add('on');window.scrollTo(0,0);};
+function $(id){return document.getElementById(id);}
+function t(id,v){var e=$(id);if(e)e.textContent=v;}
+function show(id,d){var e=$(id);if(e)e.style.display=d||'block';}
+function hide(id){var e=$(id);if(e)e.style.display='none';}
+function x(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function showE(el,msg){el.textContent=msg;el.style.display='block';}
+function tAgo(ts){if(!ts)return'';var d=Date.now()-ts,m=Math.floor(d/60000),h=Math.floor(d/3600000),dy=Math.floor(d/86400000);if(m<1)return'Just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';if(dy===1)return'Yesterday';return dy+'d ago';}
+var TT;function toast(msg){var t2=$('toast');t2.textContent=msg;t2.classList.add('on');clearTimeout(TT);TT=setTimeout(function(){t2.classList.remove('on');},2800);}
+</script>
+</body>
+</html>
