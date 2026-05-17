@@ -181,11 +181,11 @@ tr:last-child td{border:none}
       <button class="btn-m" id="btn-in" onclick="doIn()">Sign in</button>
       <div class="err-b" id="in-err"></div>
       <div style="text-align:center;margin-top:12px"><span onclick="doForgot()" style="font-size:13px;color:var(--pu);font-weight:600;cursor:pointer">Forgot password?</span></div>
-      <div id="fp-ok" style="display:none;background:#e0f2f1;color:#00897B;font-size:13px;padding:10px 12px;border-radius:10px;margin-top:10px;text-align:center">✅ Reset email sent — check your inbox</div>
+      <div id="fp-ok" style="display:none;background:#e0f2f1;color:#00897B;font-size:13px;padding:10px 12px;border-radius:10px;margin-top:10px;text-align:center"> Reset email sent  check your inbox</div>
     </div>
     <div id="form-up" style="display:none">
       <div class="fhd">Register your shop</div>
-      <div class="fsb">Set up your Stashlo loyalty programme â free to start</div>
+      <div class="fsb">Set up your Stashlo loyalty programme — free to start</div>
       <div class="fi"><label>Shop name</label><input type="text" id="up-sh" placeholder="e.g. Srisam Coffee House" autocomplete="organization"></div>
       <div class="fi"><label>Email</label><input type="email" id="up-e" placeholder="shop@email.com" autocomplete="email" inputmode="email"></div>
       <div class="fi"><label>Password (6+ chars)</label><input type="password" id="up-p" placeholder="Choose a password" autocomplete="new-password"></div>
@@ -202,19 +202,19 @@ tr:last-child td{border:none}
     <div class="tb-r"><div class="tb-u" id="tb-u"></div><div class="tb-out" onclick="doOut()">Sign out</div></div>
   </div>
   <div class="tab-bar">
-    <div class="tab-btn on" onclick="showTab('scanner')">ð· Scanner</div>
-    <div class="tab-btn" onclick="showTab('till')">ðª Till</div>
-    <div class="tab-btn" onclick="showTab('products')">ð¦ Products</div>
-    <div class="tab-btn" onclick="showTab('orders')">ðï¸ Orders</div>
-    <div class="tab-btn" onclick="showTab('customers')">ð¥ Customers</div>
-    <div class="tab-btn" onclick="showTab('settings')">âï¸ Settings</div>
+    <div class="tab-btn on" onclick="showTab('scanner')">📷 Scanner</div>
+    <div class="tab-btn" onclick="showTab('till')">🏪 Till</div>
+    <div class="tab-btn" onclick="showTab('products')">📦 Products</div>
+    <div class="tab-btn" onclick="showTab('orders')">🛍️ Orders</div>
+    <div class="tab-btn" onclick="showTab('customers')">👥 Customers</div>
+    <div class="tab-btn" onclick="showTab('settings')">⚙️ Settings</div>
   </div>
   <div class="main">
 
     <!-- SCANNER TAB -->
     <div id="tab-scanner">
       <div class="scanner-wrap">
-        <div class="scanner-title">ð· Scan customer loyalty card</div>
+        <div class="scanner-title">📷 Scan customer loyalty card</div>
         <div class="cam-box" id="cam-box">
           <video id="cam-video" playsinline muted autoplay></video>
           <canvas id="cam-canvas"></canvas>
@@ -222,12 +222,12 @@ tr:last-child td{border:none}
         </div>
         <div class="scan-status" id="scan-status">Tap Start Camera to scan a customer's QR code</div>
         <div class="scan-btns">
-          <button class="scan-btn start" id="btn-start-cam" onclick="startCam()">â¶ Start Camera</button>
-          <button class="scan-btn stop" id="btn-stop-cam" onclick="stopCam()" style="display:none">â  Stop</button>
+          <button class="scan-btn start" id="btn-start-cam" onclick="startCam()">▶ Start Camera</button>
+          <button class="scan-btn stop" id="btn-stop-cam" onclick="stopCam()" style="display:none">■ Stop</button>
         </div>
         <div class="manual-entry">
           <input type="tel" id="manual-phone" placeholder="Or type customer phone number" inputmode="tel">
-          <button onclick="lookupByPhone()">Look up customer â</button>
+          <button onclick="lookupByPhone()">Look up customer →</button>
         </div>
       </div>
 
@@ -245,18 +245,18 @@ tr:last-child td{border:none}
         </div>
         <!-- REWARD READY -->
         <div class="reward-banner" id="reward-banner">
-          <div class="rb-title">ð Reward Ready!</div>
+          <div class="rb-title">🎁 Reward Ready!</div>
           <div class="rb-sub" id="rb-sub">Customer has reached their reward threshold</div>
           <div class="rb-btns">
-            <div class="rb-btn rb-apply" onclick="applyReward()">â Apply Reward</div>
-            <div class="rb-btn rb-skip" onclick="skipReward()">â Skip (let accrue)</div>
+            <div class="rb-btn rb-apply" onclick="applyReward()">✓ Apply Reward</div>
+            <div class="rb-btn rb-skip" onclick="skipReward()">→ Skip (let accrue)</div>
           </div>
         </div>
         <!-- ADD POINTS -->
         <div class="add-pts-section">
           <div class="aps-title">Add points for this visit</div>
           <div class="aps-row">
-            <input class="aps-inp" type="number" id="aps-spend" placeholder="Amount spent Â£" step="0.01" min="0" oninput="updatePtsPreview()">
+            <input class="aps-inp" type="number" id="aps-spend" placeholder="Amount spent £" step="0.01" min="0" oninput="updatePtsPreview()">
             <button class="aps-btn" onclick="addPtsFromScan()">Add points</button>
           </div>
           <div class="pts-preview" id="pts-preview"></div>
@@ -267,7 +267,7 @@ tr:last-child td{border:none}
     <!-- TILL TAB -->
     <div id="tab-till" style="display:none">
       <div class="till-card">
-        <div class="tc-t">Your Shop ID â share with customers</div>
+        <div class="tc-t">Your Shop ID — share with customers</div>
         <div class="shop-id-box">
           <div><div class="si-lb">Customers search this in Stashlo app</div><div class="si-vl" id="shop-id-val">SL-XXXX</div></div>
           <div class="copy-btn" onclick="copyId()">Copy ID</div>
@@ -277,7 +277,7 @@ tr:last-child td{border:none}
       <div class="till-card">
         <div class="tc-t">Add points manually</div>
         <input class="tc-inp" type="tel" id="till-phone" placeholder="Customer phone number" inputmode="tel" oninput="tillLookup(this.value)">
-        <input class="tc-inp" type="number" id="till-spend" placeholder="Amount spent (Â£)" step="0.01" min="0">
+        <input class="tc-inp" type="number" id="till-spend" placeholder="Amount spent (£)" step="0.01" min="0">
         <div class="tc-row">
           <button class="tc-btn pri" onclick="tillAddPoints()">Add points</button>
           <button class="tc-btn sec" onclick="tillRedeem()">Redeem reward</button>
@@ -294,7 +294,7 @@ tr:last-child td{border:none}
     <div id="tab-products" style="display:none">
       <div class="sh"><div class="st">Your products</div><button class="btn-sm" onclick="oPM()">+ Add product</button></div>
       <div style="background:var(--pu2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--pu);font-weight:600">
-        ð¡ Products appear in the Stashlo customer app for Click &amp; Collect and delivery orders.
+        💡 Products appear in the Stashlo customer app for Click &amp; Collect and delivery orders.
       </div>
       <div class="pgrid" id="prod-g"><div class="empty">No products yet</div></div>
     </div>
@@ -326,8 +326,8 @@ tr:last-child td{border:none}
       <div class="sc">
         <div class="sc-t">Points rules</div>
         <div class="srow">
-          <div class="sf"><label>Points per Â£1 spent</label><input type="number" id="s-ppp" value="1" min="1" oninput="updateRPrev()"></div>
-          <div class="sf"><label>Min spend (Â£)</label><input type="number" id="s-min" value="2" step="0.5" min="0"></div>
+          <div class="sf"><label>Points per £1 spent</label><input type="number" id="s-ppp" value="1" min="1" oninput="updateRPrev()"></div>
+          <div class="sf"><label>Min spend (£)</label><input type="number" id="s-min" value="2" step="0.5" min="0"></div>
           <div class="sf"><label>Reward threshold (pts)</label><input type="number" id="s-thresh" value="100" min="10" oninput="updateRPrev()"></div>
         </div>
       </div>
@@ -336,12 +336,12 @@ tr:last-child td{border:none}
         <div class="srow">
           <div class="sf"><label>Reward type</label>
             <select id="s-rt" onchange="updateRPrev()">
-              <option value="pound">Â£ off bill</option>
+              <option value="pound">£ off bill</option>
               <option value="percent">% discount</option>
               <option value="free">Free item</option>
             </select>
           </div>
-          <div class="sf"><label>Value (Â£/% / item name)</label><input type="text" id="s-rv" value="5" placeholder="e.g. 5 or Coffee" oninput="updateRPrev()"></div>
+          <div class="sf"><label>Value (£/% / item name)</label><input type="text" id="s-rv" value="5" placeholder="e.g. 5 or Coffee" oninput="updateRPrev()"></div>
         </div>
         <div class="reward-preview">
           <div class="rp-t">Reward preview</div>
@@ -364,13 +364,13 @@ tr:last-child td{border:none}
 <!-- PRODUCT MODAL -->
 <div class="modal" id="prod-modal">
   <div class="mb">
-    <div class="mh"><div class="mt" id="pm-title">Add product</div><div class="mx" onclick="cPM()">â</div></div>
+    <div class="mh"><div class="mt" id="pm-title">Add product</div><div class="mx" onclick="cPM()">✕</div></div>
     <div class="fi"><label>Product name</label><input type="text" id="pm-nm" placeholder="e.g. Large Coffee"></div>
     <div class="srow" style="margin-bottom:11px">
-      <div class="sf"><label>Price (Â£)</label><input type="number" id="pm-pr" placeholder="0.00" step="0.01" min="0"></div>
-      <div class="sf"><label>Emoji</label><input type="text" id="pm-em" placeholder="â" maxlength="2"></div>
+      <div class="sf"><label>Price (£)</label><input type="number" id="pm-pr" placeholder="0.00" step="0.01" min="0"></div>
+      <div class="sf"><label>Emoji</label><input type="text" id="pm-em" placeholder="☕" maxlength="2"></div>
     </div>
-    <div class="fi"><label>Category</label><select id="pm-cat"><option value="food">ð Food &amp; Drink</option><option value="electronics">ð± Electronics</option><option value="fashion">ð Fashion</option><option value="health">ð Health</option><option value="other">ð¦ Other</option></select></div>
+    <div class="fi"><label>Category</label><select id="pm-cat"><option value="food">🍕 Food &amp; Drink</option><option value="electronics">📱 Electronics</option><option value="fashion">👗 Fashion</option><option value="health">💊 Health</option><option value="other">📦 Other</option></select></div>
     <div class="fi"><label>Description</label><input type="text" id="pm-desc" placeholder="Short description"></div>
     <div class="ck">
       <label><input type="checkbox" id="pm-co" checked> Click &amp; Collect</label>
@@ -418,7 +418,7 @@ window.doIn=function(){
   fetch(AU+'signInWithPassword?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p,returnSecureToken:true})})
   .then(function(r){return r.json();}).then(function(d){
     $('btn-in').disabled=false;$('btn-in').textContent='Sign in';
-    if(d.error){var m={EMAIL_NOT_FOUND:'No account â register your shop',INVALID_PASSWORD:'Wrong password',INVALID_EMAIL:'Invalid email',INVALID_LOGIN_CREDENTIALS:'Wrong email or password',TOO_MANY_ATTEMPTS_TRY_LATER:'Too many attempts'};showE(err,m[d.error.message]||'Sign in failed: '+d.error.message);return;}
+    if(d.error){var m={EMAIL_NOT_FOUND:'No account — register your shop',INVALID_PASSWORD:'Wrong password',INVALID_EMAIL:'Invalid email',INVALID_LOGIN_CREDENTIALS:'Wrong email or password',TOO_MANY_ATTEMPTS_TRY_LATER:'Too many attempts'};showE(err,m[d.error.message]||'Sign in failed: '+d.error.message);return;}
     saveSess(d.idToken,d.localId,d.email,d.expiresIn);
     document.getElementById('tb-u').textContent=d.email;
     hide('s-auth');show('s-app','flex');loadMerchant();
@@ -433,7 +433,7 @@ window.doUp=function(){
   fetch(AU+'signUp?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p,returnSecureToken:true})})
   .then(function(r){return r.json();}).then(function(d){
     $('btn-up').disabled=false;$('btn-up').textContent='Register shop';
-    if(d.error){var m={EMAIL_EXISTS:'Email already registered â sign in',INVALID_EMAIL:'Invalid email',WEAK_PASSWORD:'Password too weak'};showE(err,m[d.error.message]||'Registration failed: '+d.error.message);return;}
+    if(d.error){var m={EMAIL_EXISTS:'Email already registered — sign in',INVALID_EMAIL:'Invalid email',WEAK_PASSWORD:'Password too weak'};showE(err,m[d.error.message]||'Registration failed: '+d.error.message);return;}
     saveSess(d.idToken,d.localId,e,d.expiresIn);
     document.getElementById('tb-u').textContent=e;
     var shopId='SL-'+d.localId.slice(0,4).toUpperCase();
@@ -483,7 +483,7 @@ function loadMerchant(){
 // =====================
 window.startCam=function(){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    t('scan-status','Camera not available â use manual entry below');return;
+    t('scan-status','Camera not available — use manual entry below');return;
   }
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false}).then(function(stream){
     camStream=stream;
@@ -495,7 +495,7 @@ window.startCam=function(){
     t('scan-status','Hold customer QR code in front of camera...');
     camInterval=setInterval(scanFrame,300);
   }).catch(function(e){
-    t('scan-status','Camera error: '+e.message+' â use manual entry below');
+    t('scan-status','Camera error: '+e.message+' — use manual entry below');
   });
 };
 
@@ -521,7 +521,7 @@ function scanFrame(){
     var phone=code.data.trim().replace(/\s/g,'');
     if(phone&&phone!==SCAN_PHONE){
       stopCam();
-      t('scan-status','â QR scanned: '+phone);
+      t('scan-status','✅ QR scanned: '+phone);
       lookupCustomer(phone);
     }
   }
@@ -539,7 +539,7 @@ function lookupCustomer(phone){
   fGet('merchants/'+MID+'/customers/'+phone).then(function(d){
     var c=frFS(d);
     if(!c){
-      // New customer â auto register
+      // New customer — auto register
       c={phone:phone,name:'New customer',points:0,visitCount:0,totalSpend:0,joinedAt:Date.now(),rewardsRedeemed:0};
       fSet('merchants/'+MID+'/customers/'+phone,c).catch(function(){});
       toast('New customer registered!');
@@ -562,8 +562,8 @@ function showScanResult(){
   if(pts>=thresh){
     rb.style.display='block';
     var rt=RULES.rewardType,rv=RULES.rewardValue;
-    var rl=rt==='pound'?'Â£'+rv+' off':rt==='percent'?rv+'% discount':'Free '+rv;
-    t('rb-sub','Customer has earned: '+rl+' â Apply or let them keep accumulating');
+    var rl=rt==='pound'?'£'+rv+' off':rt==='percent'?rv+'% discount':'Free '+rv;
+    t('rb-sub','Customer has earned: '+rl+' — Apply or let them keep accumulating');
   } else rb.style.display='none';
   $('aps-spend').value='';t('pts-preview','');
   el.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -573,14 +573,14 @@ function updatePtsPreview(){
   var spend=parseFloat($('aps-spend').value)||0;
   if(!spend){t('pts-preview','');return;}
   var pts=Math.floor(spend*(RULES.pointsPerPound||1));
-  t('pts-preview','Will add: +'+pts+' points for Â£'+spend.toFixed(2)+' spend');
+  t('pts-preview','Will add: +'+pts+' points for £'+spend.toFixed(2)+' spend');
 }
 
 window.addPtsFromScan=function(){
   if(!SCAN_PHONE||!SCAN_CUST){toast('No customer selected');return;}
   var spend=parseFloat($('aps-spend').value);
   if(!spend||spend<=0){toast('Enter spend amount');return;}
-  if(spend<(RULES.minSpend||0)){toast('Min spend is Â£'+(RULES.minSpend||0).toFixed(2));return;}
+  if(spend<(RULES.minSpend||0)){toast('Min spend is £'+(RULES.minSpend||0).toFixed(2));return;}
   var pts=Math.floor(spend*(RULES.pointsPerPound||1));
   var newPts=(SCAN_CUST.points||0)+pts;
   fSet('merchants/'+MID+'/customers/'+SCAN_PHONE,Object.assign({},SCAN_CUST,{
@@ -601,20 +601,20 @@ window.applyReward=function(){
   var thresh=RULES.threshold||100;
   var newPts=(SCAN_CUST.points||0)-thresh;
   var rt=RULES.rewardType,rv=RULES.rewardValue;
-  var rl=rt==='pound'?'Â£'+rv+' off':rt==='percent'?rv+'% discount':'Free '+rv;
+  var rl=rt==='pound'?'£'+rv+' off':rt==='percent'?rv+'% discount':'Free '+rv;
   fSet('merchants/'+MID+'/customers/'+SCAN_PHONE,Object.assign({},SCAN_CUST,{
     points:newPts<0?0:newPts,rewardsRedeemed:(SCAN_CUST.rewardsRedeemed||0)+1
   })).then(function(){
     fAdd('merchants/'+MID+'/transactions',{phone:SCAN_PHONE,pointsRedeemed:thresh,timestamp:Date.now(),type:'redeem',reward:rl});
     SCAN_CUST.points=newPts<0?0:newPts;SCAN_CUST.rewardsRedeemed=(SCAN_CUST.rewardsRedeemed||0)+1;
     showScanResult();
-    toast('ð Reward applied: '+rl+' | Points reset to '+SCAN_CUST.points);
+    toast('🎁 Reward applied: '+rl+' | Points reset to '+SCAN_CUST.points);
     loadCusts();
   }).catch(function(){toast('Error applying reward');});
 };
 
 window.skipReward=function(){
-  toast('Reward skipped â customer keeps accumulating points');
+  toast('Reward skipped — customer keeps accumulating points');
   $('reward-banner').style.display='none';
 };
 
@@ -634,7 +634,7 @@ window.tillAddPoints=function(){
   var spend=parseFloat($('till-spend').value);
   if(!phone||phone.length<10){toast('Enter customer phone');return;}
   if(!spend||spend<=0){toast('Enter spend amount');return;}
-  if(spend<(RULES.minSpend||0)){toast('Min spend is Â£'+(RULES.minSpend||0).toFixed(2));return;}
+  if(spend<(RULES.minSpend||0)){toast('Min spend is £'+(RULES.minSpend||0).toFixed(2));return;}
   var pts=Math.floor(spend*(RULES.pointsPerPound||1));
   var custPath='merchants/'+MID+'/customers/'+phone;
   fGet(custPath).then(function(d){
@@ -642,7 +642,7 @@ window.tillAddPoints=function(){
     var newPts=(c.points||0)+pts;
     fSet(custPath,{phone:phone,name:c.name||'Customer',points:newPts,visitCount:(c.visitCount||0)+1,totalSpend:(c.totalSpend||0)+spend,joinedAt:c.joinedAt||Date.now(),lastVisit:Date.now(),rewardsRedeemed:c.rewardsRedeemed||0});
     fAdd('merchants/'+MID+'/transactions',{phone:phone,amount:spend,pointsAdded:pts,timestamp:Date.now(),type:'purchase'});
-    t('tr-pt',newPts+' pts (+'+pts+')');t('tr-sb','â Points added!');$('till-spend').value='';
+    t('tr-pt',newPts+' pts (+'+pts+')');t('tr-sb','✅ Points added!');$('till-spend').value='';
     toast('+'+pts+' points! Customer total: '+newPts+' pts');loadCusts();
   }).catch(function(){toast('Error adding points');});
 };
@@ -657,9 +657,9 @@ window.tillRedeem=function(){
     fSet('merchants/'+MID+'/customers/'+phone,Object.assign({},c,{points:newPts,rewardsRedeemed:(c.rewardsRedeemed||0)+1}));
     fAdd('merchants/'+MID+'/transactions',{phone:phone,pointsRedeemed:thresh,timestamp:Date.now(),type:'redeem'});
     var rt=RULES.rewardType,rv=RULES.rewardValue;
-    var rl=rt==='pound'?'Â£'+rv+' off':rt==='percent'?rv+'% off':'Free '+rv;
-    t('tr-pt',newPts+' pts');t('tr-sb','ð Reward applied: '+rl);
-    toast('ð Reward redeemed: '+rl);loadCusts();
+    var rl=rt==='pound'?'£'+rv+' off':rt==='percent'?rv+'% off':'Free '+rv;
+    t('tr-pt',newPts+' pts');t('tr-sb','🎁 Reward applied: '+rl);
+    toast('🎁 Reward redeemed: '+rl);loadCusts();
   }).catch(function(){toast('Error redeeming');});
 };
 window.copyId=function(){navigator.clipboard.writeText(t2('shop-id-val')).catch(function(){});toast('Shop ID copied!');};
@@ -674,16 +674,16 @@ function loadProds(){
 }
 function renderProds(){
   var el=$('prod-g');
-  if(!allProds.length){el.innerHTML='<div class="empty">No products yet â add your first above</div>';return;}
+  if(!allProds.length){el.innerHTML='<div class="empty">No products yet — add your first above</div>';return;}
   el.innerHTML=allProds.map(function(p){
     var tags='';
     if(p.collect!==false)tags+='<span class="bdg bp">Collect</span> ';
     if(p.delivery)tags+='<span class="bdg bg">Delivery</span> ';
     if(p.active===false)tags+='<span class="bdg bo">Hidden</span>';
-    return '<div class="pc"><div class="pc-img">'+(p.emoji||'ðï¸')+'</div>' +
+    return '<div class="pc"><div class="pc-img">'+(p.emoji||'🛍️')+'</div>' +
       '<div class="pc-bd"><div class="pc-nm">'+esc(p.name)+'</div>' +
       '<div style="margin-bottom:4px">'+tags+'</div>' +
-      '<div class="pc-pr">Â£'+Number(p.price).toFixed(2)+'</div>' +
+      '<div class="pc-pr">£'+Number(p.price).toFixed(2)+'</div>' +
       '<div class="pc-acts"><div class="pc-edit" onclick="editProd(\''+p.id+'\')">Edit</div>' +
       '<div class="pc-hide" onclick="togProd(\''+p.id+'\','+( p.active!==false)+')">'+( p.active===false?'Show':'Hide')+'</div></div></div></div>';
   }).join('');
@@ -695,7 +695,7 @@ window.togProd=function(id,cur){fUpd('merchants/'+MID+'/products/'+id,{active:!c
 window.saveProd=function(){
   var name=$('pm-nm').value.trim(),price=parseFloat($('pm-pr').value);
   if(!name){toast('Enter product name');return;}if(!price||price<=0){toast('Enter valid price');return;}
-  var data={name:name,price:price,emoji:$('pm-em').value||'ðï¸',category:$('pm-cat').value,description:$('pm-desc').value.trim(),collect:$('pm-co').checked,delivery:$('pm-de').checked,active:true,merchantId:MID,shopName:MDATA.name||'Shop',createdAt:Date.now()};
+  var data={name:name,price:price,emoji:$('pm-em').value||'🛍️',category:$('pm-cat').value,description:$('pm-desc').value.trim(),collect:$('pm-co').checked,delivery:$('pm-de').checked,active:true,merchantId:MID,shopName:MDATA.name||'Shop',createdAt:Date.now()};
   var p=editProdId?fUpd('merchants/'+MID+'/products/'+editProdId,data):fAdd('merchants/'+MID+'/products',data);
   p.then(function(){window.cPM();loadProds();toast(editProdId?'Updated!':'Product added!');}).catch(function(){toast('Error saving');});
 };
@@ -710,9 +710,9 @@ function loadOrds(){
       var sc=(o.status==='delivered'||o.status==='collected')?'bg':o.status==='ready'?'bp':'bo';
       var sl=o.status==='collected'?'Collected':o.status==='delivered'?'Delivered':o.status==='ready'?'Ready':'Pending';
       return '<div class="ocard"><div><div class="oc-id">'+(o.orderId||o.id.slice(0,8).toUpperCase())+'</div>' +
-        '<div class="oc-pn">'+(o.emoji||'ðï¸')+' '+esc(o.productName)+' Ã '+(o.qty||1)+'</div>' +
-        '<div class="oc-mt">'+(o.type==='collect'?'ðª Collect':'ð Delivery')+(o.address?' Â· '+esc(o.address):'')+'</div></div>' +
-        '<div style="text-align:right"><div class="oc-tot">Â£'+Number(o.total).toFixed(2)+'</div>' +
+        '<div class="oc-pn">'+(o.emoji||'🛍️')+' '+esc(o.productName)+' × '+(o.qty||1)+'</div>' +
+        '<div class="oc-mt">'+(o.type==='collect'?'🏪 Collect':'🚚 Delivery')+(o.address?' · '+esc(o.address):'')+'</div></div>' +
+        '<div style="text-align:right"><div class="oc-tot">£'+Number(o.total).toFixed(2)+'</div>' +
         '<span class="bdg '+sc+'">'+sl+'</span>' +
         (o.status==='pending'?'<div class="btn-rdy" onclick="markRdy(\''+o.id+'\')">Mark ready</div>':'')+
         '</div></div>';
@@ -746,8 +746,8 @@ window.filterC=function(q){renderCusts(q.trim()?allCusts.filter(function(c){retu
 window.updateRPrev=function(){
   var ppp=parseInt($('s-ppp').value)||1,thresh=parseInt($('s-thresh').value)||100;
   var rt=$('s-rt').value,rv=$('s-rv').value||'5';
-  var rl=rt==='pound'?'Â£'+rv+' off':rt==='percent'?rv+'% discount':'Free '+rv;
-  t('rp-s','Earn '+ppp+' point'+(ppp>1?'s':'')+' per Â£1 spent. Reach '+thresh+' points â get '+rl+'.');
+  var rl=rt==='pound'?'£'+rv+' off':rt==='percent'?rv+'% discount':'Free '+rv;
+  t('rp-s','Earn '+ppp+' point'+(ppp>1?'s':'')+' per £1 spent. Reach '+thresh+' points → get '+rl+'.');
 };
 window.saveSettings=function(){
   var r={pointsPerPound:parseInt($('s-ppp').value)||1,minSpend:parseFloat($('s-min').value)||0,threshold:parseInt($('s-thresh').value)||100,rewardType:$('s-rt').value,rewardValue:$('s-rv').value};
