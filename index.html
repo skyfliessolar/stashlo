@@ -396,7 +396,24 @@ function saveSess(tok,uid,email,exp){TOKEN=tok;UID=uid;localStorage.setItem('sl_
 function clearSess(){TOKEN=null;UID=null;localStorage.removeItem('sl_s');}
 function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_s')||'null');if(s&&s.x>Date.now()){TOKEN=s.t;UID=s.u;return s.e||'';}return null;}catch(e){return null;}}
 // BOOT
-(function(){hide('splash');var em=checkSess();if(em){show('app','flex');boot();}else show('auth','flex');})();
+(function(){
+  try{
+    // Always hide splash first - no matter what
+    var sp=document.getElementById('splash');if(sp)sp.style.display='none';
+    var em=checkSess();
+    if(em){
+      var ap=document.getElementById('app');if(ap)ap.style.display='flex';
+      boot();
+    }else{
+      var au=document.getElementById('auth');if(au)au.style.display='flex';
+    }
+  }catch(e){
+    // If anything fails, still show auth
+    var sp2=document.getElementById('splash');if(sp2)sp2.style.display='none';
+    var au2=document.getElementById('auth');if(au2)au2.style.display='flex';
+    console.error('Boot error:',e);
+  }
+})();
 function boot(){loadProf();loadCards();loadOrds();loadStPr();}
 window.swTab=function(t){$('tab-in').classList.toggle('on',t==='in');$('tab-up').classList.toggle('on',t==='up');$('form-in').style.display=t==='in'?'block':'none';$('form-up').style.display=t==='up'?'block':'none';};
 window.doIn=function(){
