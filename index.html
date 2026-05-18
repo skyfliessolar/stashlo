@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- Stashlo v3.1 -->
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -527,12 +527,8 @@ var TT;function toast(msg){var t2=$('toast');t2.textContent=msg;t2.classList.add
 
 
 function renderNotif(n){
-  return '<div class="ni" '+(n.link?'onclick="window.open(''+n.link+'','_blank')"':'')+'>'
-    +'<div class="ni-shop">'+(n._isAdmin?'📣 Stashlo':x(n.shopName||n._shopName||'Shop'))+'</div>'
-    +'<div class="ni-title">'+x(n.title)+'</div>'
-    +'<div class="ni-body">'+x(n.body)+'</div>'
-    +'<div class="ni-time">'+tAgo(n.sentAt)+'</div>'
-    +'</div>';
+  var lk=n.link?(' onclick="window.location.href=\"'+n.link+'\"" style="cursor:pointer"'):'';
+  return '<div class="ni"'+lk+'>'    +'<div class="ni-shop">'+(n._isAdmin?'Stashlo':x(n.shopName||n._shopName||'Shop'))+'</div>'    +'<div class="ni-title">'+x(n.title)+'</div>'    +'<div class="ni-body">'+x(n.body)+'</div>'    +'<div class="ni-time">'+tAgo(n.sentAt)+'</div>'    +'</div>';
 }
 function loadNotifs(){
   if(!UID)return;
