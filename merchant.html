@@ -181,7 +181,7 @@ tr:last-child td{border:none}
       <button class="btn-m" id="btn-in" onclick="doIn()">Sign in</button>
       <div class="err-b" id="in-err"></div>
       <div style="text-align:center;margin-top:12px"><span onclick="doForgot()" style="font-size:13px;color:var(--pu);font-weight:600;cursor:pointer">Forgot password?</span></div>
-      <div id="fp-ok" style="display:none;background:#e0f2f1;color:#00897B;font-size:13px;padding:10px 12px;border-radius:10px;margin-top:10px;text-align:center"> Reset email sent  check your inbox</div>
+      <div id="fp-ok" style="display:none;background:#e0f2f1;color:#00897B;font-size:13px;padding:10px 12px;border-radius:10px;margin-top:10px;text-align:center">✅ Reset email sent — check your inbox</div>
     </div>
     <div id="form-up" style="display:none">
       <div class="fhd">Register your shop</div>
@@ -208,6 +208,7 @@ tr:last-child td{border:none}
     <div class="tab-btn" onclick="showTab('orders')">🛍️ Orders</div>
     <div class="tab-btn" onclick="showTab('customers')">👥 Customers</div>
     <div class="tab-btn" onclick="showTab('settings')">⚙️ Settings</div>
+    <div class="tab-btn" onclick="showTab('notify')">🔔 Notify</div>
   </div>
   <div class="main">
 
@@ -361,6 +362,28 @@ tr:last-child td{border:none}
   </div>
 </div>
 
+
+    <!-- NOTIFY TAB -->
+    <div id="tab-notify" style="display:none">
+      <div class="sh"><div class="st">Message your customers</div></div>
+      <div style="background:var(--pu2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--pu);font-weight:600">
+        📢 Send a message to all <span id="notif-count">0</span> customers registered with your shop. They'll see it in their app next time they open it.
+      </div>
+      <div class="fi"><label>Message title</label><input type="text" id="notif-title" placeholder="e.g. Special Offer Today!" maxlength="60"></div>
+      <div class="fi"><label>Message body</label><textarea id="notif-body" placeholder="e.g. Get double points this weekend on all purchases over £10!" style="width:100%;padding:12px 14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px;resize:vertical;min-height:80px;font-family:inherit"></textarea></div>
+      <div class="fi">
+        <label>Link (optional)</label>
+        <input type="url" id="notif-link" placeholder="https://... or leave blank">
+      </div>
+      <button onclick="sendNotif()" style="width:100%;padding:13px;background:var(--pu);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;border:none;margin-bottom:8px" id="notif-btn">
+        📤 Send to all customers
+      </button>
+      <div id="notif-ok" style="display:none;background:#e0f2f1;color:#00897B;padding:12px 14px;border-radius:var(--r);font-size:13px;font-weight:600;text-align:center">
+        ✅ Message sent to all customers!
+      </div>
+      <div class="sh" style="margin-top:20px"><div class="st">Previous messages</div></div>
+      <div id="notif-hist"><div class="empty">No messages sent yet</div></div>
+    </div>
 <!-- PRODUCT MODAL -->
 <div class="modal" id="prod-modal">
   <div class="mb">
@@ -444,7 +467,16 @@ window.doUp=function(){
   }).catch(function(){$('btn-up').disabled=false;$('btn-up').textContent='Register shop';showE(err,'Connection error');});
 };
 window.doOut=function(){stopCam();clearSess();hide('s-app');show('s-auth','flex');};
-window.doForgot=function(){var e=$('in-e').value.trim();var err=$('in-err');err.style.display='none';$('fp-ok').style.display='none';if(!e){showE(err,'Enter your email first');return;}fetch(AU+'sendOobCode?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestType:'PASSWORD_RESET',email:e})}).then(function(r){return r.json();}).then(function(d){if(d.error){var m={EMAIL_NOT_FOUND:'No account with this email',INVALID_EMAIL:'Invalid email'};showE(err,m[d.error.message]||'Error: '+d.error.message);return;}$('fp-ok').style.display='block';}).catch(function(){showE(err,'Connection error');});};
+window.doForgot=function(){
+  var e=$('in-e').value.trim();
+  var err=$('in-err');err.style.display='none';$('fp-ok').style.display='none';
+  if(!e){showE(err,'Enter your email address first');return;}
+  fetch(AU+'sendOobCode?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestType:'PASSWORD_RESET',email:e})})
+  .then(function(r){return r.json();}).then(function(d){
+    if(d.error){var m={EMAIL_NOT_FOUND:'No account found with this email',INVALID_EMAIL:'Invalid email address'};showE(err,m[d.error.message]||'Error: '+d.error.message);return;}
+    $('fp-ok').style.display='block';
+  }).catch(function(){showE(err,'Connection error');});
+};
 
 // LOAD MERCHANT
 function loadMerchant(){
@@ -535,17 +567,35 @@ window.lookupByPhone=function(){
 
 function lookupCustomer(phone){
   SCAN_PHONE=phone;SCAN_CUST=null;
-  t('scan-status','Looking up customer...');
+  t('scan-status','Looking up...');
+  // Try merchant customers first, then look up real name from users collection
   fGet('merchants/'+MID+'/customers/'+phone).then(function(d){
-    var c=frFS(d);
-    if(!c){
-      // New customer — auto register
-      c={phone:phone,name:'New customer',points:0,visitCount:0,totalSpend:0,joinedAt:Date.now(),rewardsRedeemed:0};
-      fSet('merchants/'+MID+'/customers/'+phone,c).catch(function(){});
-      toast('New customer registered!');
-    }
-    SCAN_CUST=Object.assign({},c,{phone:phone});
-    showScanResult();
+    var c=frFS(d)||{};
+    var isNew=!c.phone&&!c.points;
+    // Always try to find real name from users collection by phone
+    return fList('users',200).then(function(ud){
+      var users=(ud.documents||[]).map(function(doc){return Object.assign({_uid:doc.name.split('/').pop()},frFS(doc));});
+      var match=users.find(function(u){return(u.phone||'').replace(/\s/g,'')===(phone||'').replace(/\s/g,'');});
+      var realName=match?match.name:null;
+      if(isNew){
+        c={phone:phone,name:realName||'Customer',points:0,visitCount:0,totalSpend:0,joinedAt:Date.now(),rewardsRedeemed:0};
+        fSet('merchants/'+MID+'/customers/'+phone,c).catch(function(){});
+        toast(realName?realName+' registered!':'New customer registered!');
+      } else if(realName&&c.name==='New customer'){
+        // Update name if we can now get real name
+        c.name=realName;
+        fSet('merchants/'+MID+'/customers/'+phone,c).catch(function(){});
+      } else if(realName){ c.name=realName; }
+      SCAN_CUST=Object.assign({},c,{phone:phone});
+      showScanResult();
+    }).catch(function(){
+      if(isNew){
+        c={phone:phone,name:'Customer',points:0,visitCount:0,totalSpend:0,joinedAt:Date.now(),rewardsRedeemed:0};
+        fSet('merchants/'+MID+'/customers/'+phone,c).catch(function(){});
+      }
+      SCAN_CUST=Object.assign({},c,{phone:phone});
+      showScanResult();
+    });
   }).catch(function(){toast('Error looking up customer');});
 }
 
@@ -624,9 +674,26 @@ window.skipReward=function(){
 window.tillLookup=function(phone){
   phone=phone.replace(/\s/g,'');if(phone.length<10){$('tc-res').style.display='none';return;}
   fGet('merchants/'+MID+'/customers/'+phone).then(function(d){
-    var c=frFS(d);var el=$('tc-res');el.style.display='block';
-    if(c){t('tr-nm',c.name||'Customer');t('tr-pt',(c.points||0)+' pts');t('tr-sb','Visits: '+(c.visitCount||0));}
-    else{t('tr-nm','New customer');t('tr-pt','0 pts');t('tr-sb','Will be auto-registered');}
+    var c=frFS(d)||{};var el=$('tc-res');el.style.display='block';
+    // Also look up real name from users collection
+    fList('users',200).then(function(ud){
+      var users=(ud.documents||[]).map(function(doc){return Object.assign({},frFS(doc));});
+      var match=users.find(function(u){return(u.phone||'').replace(/\s/g,'')===(phone||'').replace(/\s/g,'');});
+      var realName=match?match.name:null;
+      var nm=realName||(c&&c.name&&c.name!=='Customer'?c.name:'');
+      if(c&&c.phone){
+        t('tr-nm',nm||c.name||'Customer');
+        t('tr-pt',(c.points||0)+' pts');
+        t('tr-sb','Visits: '+(c.visitCount||0));
+      } else {
+        t('tr-nm',nm||(realName?realName:'New customer'));
+        t('tr-pt','0 pts');
+        t('tr-sb',nm?nm+' — first visit':'Will be auto-registered');
+      }
+    }).catch(function(){
+      if(c&&c.phone){t('tr-nm',c.name||'Customer');t('tr-pt',(c.points||0)+' pts');t('tr-sb','Visits: '+(c.visitCount||0));}
+      else{t('tr-nm','New customer');t('tr-pt','0 pts');t('tr-sb','Will be auto-registered');}
+    });
   }).catch(function(){});
 };
 window.tillAddPoints=function(){
@@ -695,9 +762,15 @@ window.togProd=function(id,cur){fUpd('merchants/'+MID+'/products/'+id,{active:!c
 window.saveProd=function(){
   var name=$('pm-nm').value.trim(),price=parseFloat($('pm-pr').value);
   if(!name){toast('Enter product name');return;}if(!price||price<=0){toast('Enter valid price');return;}
-  var data={name:name,price:price,emoji:$('pm-em').value||'🛍️',category:$('pm-cat').value,description:$('pm-desc').value.trim(),collect:$('pm-co').checked,delivery:$('pm-de').checked,active:true,merchantId:MID,shopName:MDATA.name||'Shop',createdAt:Date.now()};
-  var p=editProdId?fUpd('merchants/'+MID+'/products/'+editProdId,data):fAdd('merchants/'+MID+'/products',data);
-  p.then(function(){window.cPM();loadProds();toast(editProdId?'Updated!':'Product added!');}).catch(function(){toast('Error saving');});
+  if(!MID){toast('Not logged in — please refresh');return;}
+  var shopNm=MDATA&&MDATA.name?MDATA.name:($('s-nm')?$('s-nm').value.trim():'My Shop');
+  var data={name:name,price:price,emoji:$('pm-em').value.trim()||'🛍️',category:$('pm-cat').value,description:$('pm-desc').value.trim(),collect:$('pm-co').checked,delivery:$('pm-de').checked,active:true,merchantId:MID,shopName:shopNm,createdAt:editProdId?undefined:Date.now(),updatedAt:Date.now()};
+  if(data.createdAt===undefined)delete data.createdAt;
+  var p=editProdId?fSet('merchants/'+MID+'/products/'+editProdId,data):fAdd('merchants/'+MID+'/products',data);
+  p.then(function(res){
+    if(res.error){toast('Error: '+res.error.message);return;}
+    window.cPM();loadProds();toast(editProdId?'Product updated!':'✅ Product added!');
+  }).catch(function(e){toast('Error saving product');console.error(e);});
 };
 
 // ORDERS
@@ -723,7 +796,7 @@ window.markRdy=function(id){fUpd('merchants/'+MID+'/orders/'+id,{status:'ready'}
 
 // CUSTOMERS
 function loadCusts(){
-  fList('merchants/'+MID+'/customers',100).then(function(d){
+  fList('merchants/'+MID+'/customers',200).then(function(d){
     allCusts=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop()},frFS(doc));}).sort(function(a,b){return(b.points||0)-(a.points||0);});
     renderCusts(allCusts);
     t('kc',allCusts.length);
@@ -757,11 +830,14 @@ window.saveSettings=function(){
 };
 
 // TABS
-var TABS=['scanner','till','products','orders','customers','settings'];
+var TABS=['scanner','till','products','orders','customers','settings','notify'];
 window.showTab=function(tab){
+  if(tab==='notify'){t('notif-count',allCusts.length);loadNotifHist();}
   TABS.forEach(function(t2){var el=$('tab-'+t2);if(el)el.style.display=t2===tab?'block':'none';});
   document.querySelectorAll('.tab-btn').forEach(function(b,i){b.classList.toggle('on',TABS[i]===tab);});
-  if(tab==='orders')loadOrds();if(tab==='customers')loadCusts();if(tab==='products')loadProds();
+  if(tab==='orders')loadOrds();
+  if(tab==='customers'){loadCusts();clearInterval(window._custPoll);window._custPoll=setInterval(function(){if(document.getElementById('tab-customers')&&document.getElementById('tab-customers').style.display!=='none'){loadCusts();}else{clearInterval(window._custPoll);}},15000);}
+  if(tab==='products')loadProds();
   if(tab!=='scanner')stopCam();
 };
 
@@ -774,6 +850,67 @@ function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/<
 function showE(el,msg){el.textContent=msg;el.style.display='block';}
 function tAgo(ts){if(!ts)return'';var d=Date.now()-ts,m=Math.floor(d/60000),h=Math.floor(d/3600000),dy=Math.floor(d/86400000);if(m<1)return'Just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';return dy+'d ago';}
 var TT;function toast(msg){var t2=$('toast');t2.textContent=msg;t2.classList.add('on');clearTimeout(TT);TT=setTimeout(function(){t2.classList.remove('on');},2800);}
+
+// =====================
+// NOTIFICATIONS
+// =====================
+window.sendNotif=function(){
+  var title=($('notif-title').value||'').trim();
+  var body=($('notif-body').value||'').trim();
+  var link=($('notif-link').value||'').trim();
+  if(!title){toast('Enter a message title');return;}
+  if(!body){toast('Enter a message body');return;}
+  if(!MID){toast('Not logged in');return;}
+  $('notif-btn').disabled=true;
+  $('notif-btn').textContent='Sending...';
+  $('notif-ok').style.display='none';
+  var msg={title:title,body:body,link:link,sentAt:Date.now(),merchantId:MID,shopName:(MDATA&&MDATA.name)||'Shop',recipients:allCusts.length};
+  // Save notification to Firestore under merchant
+  fAdd('merchants/'+MID+'/notifications',msg).then(function(){
+    // Also save a copy to each customer's notifications
+    var promises=allCusts.slice(0,100).map(function(c){
+      return fAdd('users_notifs/'+c.id,{to:c.id,from:MID,shopName:msg.shopName,title:title,body:body,link:link,read:false,sentAt:Date.now()}).catch(function(){});
+    });
+    return Promise.all(promises);
+  }).then(function(){
+    $('notif-btn').disabled=false;
+    $('notif-btn').textContent='📤 Send to all customers';
+    $('notif-ok').style.display='block';
+    $('notif-title').value='';
+    $('notif-body').value='';
+    $('notif-link').value='';
+    t('notif-count',allCusts.length);
+    loadNotifHist();
+    toast('✅ Message sent to '+allCusts.length+' customers!');
+  }).catch(function(){
+    $('notif-btn').disabled=false;
+    $('notif-btn').textContent='📤 Send to all customers';
+    toast('Error sending notification');
+  });
+};
+
+function loadNotifHist(){
+  // Load messages sent by this merchant + admin broadcasts to merchants
+  Promise.all([
+    fList('merchants/'+MID+'/notifications',20).then(function(d){return(d.documents||[]).map(function(doc){return Object.assign({_type:'sent'},frFS(doc));});}).catch(function(){return[];}),
+    fList('merchant_broadcasts',10).then(function(d){return(d.documents||[]).map(function(doc){return Object.assign({_type:'admin'},frFS(doc));});}).catch(function(){return[];})
+  ]).then(function(res){
+    var sent=res[0],adminBc=res[1];
+    var el=$('notif-hist');
+    if(!el)return;
+    // Show admin broadcasts at top as info boxes
+    var adminHtml=adminBc.length?'<div style="background:var(--pu2);border-radius:var(--r);padding:11px 13px;margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:var(--pu);margin-bottom:4px">📣 FROM STASHLO ADMIN</div>'+adminBc.slice(0,3).map(function(m){return'<div style="font-size:13px;font-weight:600;margin-bottom:2px">'+esc(m.title)+'</div><div style="font-size:12px;color:var(--mu)">'+esc(m.body)+'</div>';}).join('<hr style="border:none;border-top:1px solid #ddd;margin:6px 0">')+'</div>':'';
+    if(!sent.length){el.innerHTML=adminHtml+'<div class="empty">No messages sent yet</div>';return;}
+    el.innerHTML=adminHtml+sent.map(function(m){
+      return '<div style="background:var(--wh);border-radius:var(--r);padding:13px 14px;margin-bottom:8px">'
+        +'<div style="font-weight:700;font-size:14px;margin-bottom:3px">'+esc(m.title)+'</div>'
+        +'<div style="font-size:13px;color:var(--mu);margin-bottom:4px">'+esc(m.body)+'</div>'
+        +'<div style="font-size:11px;color:var(--mu)">'+tAgo(m.sentAt)+' · '+(m.recipients||0)+' customers</div>'
+        +'</div>';
+    }).join('');
+  }).catch(function(){});
+}
+
 </script>
 </body>
 </html>
