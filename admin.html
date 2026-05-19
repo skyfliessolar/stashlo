@@ -204,9 +204,17 @@ function fList(p,n){return chkToken().then(function(){return fetch(FS+p+'?pageSi
 function fSet(p,f){return chkToken().then(function(){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();}).then(function(d){if(d&&d.error&&d.error.code===401){return rToken().then(function(){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r2){return r2.json();});});}return d;});});}
 function fAdd(c,f){return chkToken().then(function(){return fetch(FS+c,{method:'POST',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();}).then(function(d){if(d&&d.error&&d.error.code===401){return rToken().then(function(){return fetch(FS+c,{method:'POST',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r2){return r2.json();});});}return d;});});}
 function fDel(p){return fetch(FS+p,{method:'DELETE',headers:H()}).then(function(r){return r.ok;});}
-function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_adm')||'null');if(s&&s.u){ADMIN_UID=s.u;if(s.x>Date.now()){TOKEN=s.t;return s.e||'Admin';}if(s.r){rToken();return s.e||'Admin';}return s.e||'Admin';}return null;}catch(e){return null;}}
-function saveSess(tok,uid,email,exp,refresh){TOKEN=tok;ADMIN_UID=uid;var s={t:tok,u:uid,e:email,x:Date.now()+parseInt(exp)*1000};if(refresh)s.r=refresh;localStorage.setItem('sl_adm',JSON.stringify(s));}
-function clearSess(){TOKEN=null;ADMIN_UID=null;localStorage.removeItem('sl_adm');}
+function checkSess(){
+  try{
+    var s=JSON.parse(localStorage.getItem('sl_adm')||'null');
+    if(!s||!s.u)return null;
+    ADMIN_UID=s.u;
+    if(document.getElementById('adm-email'))document.getElementById('adm-email').textContent=s.e||'';
+    if(s.x>Date.now()){TOKEN=s.t;return s.e||'Admin';}
+    if(s.r){TOKEN=s.t;rToken();return s.e||'Admin';}
+    clearSess();return null;
+  }catch(e){return null;}
+}
 (function(){var em=checkSess();if(em){$('adm-email').textContent=em;show('app','flex');hide('auth');loadAll();}})();
 function doLogin(){
   var e=$('ae').value.trim(),p=$('ap').value,er=$('aerr');

@@ -174,7 +174,7 @@ tr:last-child td{border:none}
       <div class="a-tab" id="tab-up" onclick="swTab('up')">Register shop</div>
     </div>
     <div id="form-in">
-      <div class="fhd">Merchant login</div>
+      <div class="fhd">Merchant login</div><div id="sess-msg" style="display:none;background:#fff3e0;color:#e65100;padding:10px 12px;border-radius:10px;margin-bottom:10px;font-size:13px">⏱️ Session expired — please sign in again</div>
       <div class="fsb">Sign in to manage your loyalty programme.<br>Multiple staff can log in simultaneously.</div>
       <div class="fi"><label>Email</label><input type="email" id="in-e" placeholder="shop@email.com" autocomplete="email" inputmode="email"></div>
       <div class="fi"><label>Password</label><input type="password" id="in-p" placeholder="Password" autocomplete="current-password"></div>
@@ -435,7 +435,7 @@ function fDel(p){return fetch(FS+p,{method:'DELETE',headers:H()});}
 
 function saveSess(tok,uid,email,exp,refresh){TOKEN=tok;UID=uid;MID=uid;var s={t:tok,u:uid,e:email,x:Date.now()+parseInt(exp)*1000};if(refresh)s.r=refresh;localStorage.setItem('sl_m',JSON.stringify(s));}
 function clearSess(){TOKEN=null;UID=null;MID=null;localStorage.removeItem('sl_m');}
-function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_m')||'null');if(s&&s.u){UID=s.u;MID=s.u;document.getElementById('tb-u').textContent=s.e||'';if(s.x>Date.now()){TOKEN=s.t;return true;}if(s.r){rToken();return true;}return true;}return false;}catch(e){return false;}}
+function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_m')||'null');if(!s||!s.u)return false;UID=s.u;MID=s.u;document.getElementById('tb-u').textContent=s.e||'';if(s.x>Date.now()){TOKEN=s.t;return true;}if(s.r){TOKEN=s.t;rToken();return true;}clearSess();return false;}catch(e){return false;}}
 
 
 window.loadMsgThreads=function(){

@@ -220,7 +220,7 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
     <div class="a-logo"><div class="a-ic">S</div><div class="a-nm">Stashlo</div></div>
     <div class="a-tabs"><div class="a-tab on" id="tab-in" onclick="swTab('in')">Sign in</div><div class="a-tab" id="tab-up" onclick="swTab('up')">Join free</div></div>
     <div id="form-in">
-      <div class="fhd">Welcome back</div><div class="fsb">Sign in to your loyalty wallet</div>
+      <div class="fhd">Welcome back</div><div class="fsb">Sign in to your loyalty wallet</div><div id="sess-msg" style="display:none;background:#fff3e0;color:#e65100;padding:10px 12px;border-radius:10px;margin-bottom:12px;font-size:13px">⏱️ Session expired — please sign in again</div>
       <div class="fi"><label>Email</label><input type="email" id="in-e" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
       <div class="fi"><label>Password</label><input type="password" id="in-p" placeholder="Password" autocomplete="current-password"></div>
       <button class="btn-a" id="btn-in" onclick="doIn()">Sign in</button>
@@ -438,7 +438,8 @@ function fSet(p,f){return chkToken().then(function(){return fetch(FS+p,{method:'
 function fAdd(c,f){return chkToken().then(function(){return fetch(FS+c,{method:'POST',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();}).then(function(d){if(d&&d.error&&d.error.code===401){return rToken().then(function(){return fetch(FS+c,{method:'POST',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r2){return r2.json();});});}return d;});});}
 function saveSess(tok,uid,email,exp,refresh){TOKEN=tok;UID=uid;var s={t:tok,u:uid,e:email,x:Date.now()+parseInt(exp)*1000};if(refresh)s.r=refresh;localStorage.setItem('sl_s',JSON.stringify(s));}
 function clearSess(){TOKEN=null;UID=null;localStorage.removeItem('sl_s');}
-function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_s')||'null');if(s&&s.u){UID=s.u;if(s.x>Date.now()){TOKEN=s.t;return s.e||'';}if(s.r){rToken();return s.e||'';}return s.e||'';}return null;}catch(e){return null;}}
+function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_s')||'null');if(!s||!s.u)return null;UID=s.u;if(s.x>Date.now()){TOKEN=s.t;return s.e||'';}if(s.r){TOKEN=s.t;rToken();return s.e||'';}// Token expired, no refresh token - must sign in again
+clearSess();return null;}catch(e){return null;}}
 // BOOT
 (function(){
   try{
@@ -449,7 +450,7 @@ function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_s')||'null');
       var ap=document.getElementById('app');if(ap)ap.style.display='flex';
       boot();
     }else{
-      var au=document.getElementById('auth');if(au)au.style.display='flex';
+      var au=document.getElementById('auth');if(au)au.style.display='flex';var sm=document.getElementById('sess-msg');if(sm&&localStorage.getItem('sl_s'))sm.style.display='block';
     }
   }catch(e){
     // If anything fails, still show auth
