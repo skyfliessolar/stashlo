@@ -124,7 +124,7 @@ tr:hover td{background:#fafafa}
       <div class="search-bar"><input type="text" placeholder="Search customers..." id="cust-q" oninput="filterCustomers(this.value)"></div>
       <div class="card">
         <div class="card-hd"><div class="card-title">All customers (<span id="cust-count">0</span>)</div></div>
-        <table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Joined</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th>Name</th><th>Email</th><th>Joined</th><th>Points</th><th>Actions</th></tr></thead>
         <tbody id="cust-body"><tr class="empty-r"><td colspan="5">Loading...</td></tr></tbody></table>
       </div>
     </div>
@@ -279,8 +279,19 @@ function loadCustomers(){
 }
 function renderCustomers(list){
   var tbody=$('cust-body');$('cust-count').textContent=list.length;
-  if(!list.length){tbody.innerHTML='<tr class="empty-r"><td colspan="5">No customers yet</td></tr>';return;}
-  tbody.innerHTML=list.map(function(c){return'<tr><td><strong>'+esc(c.name||'–')+'</strong></td><td>'+esc(c.email||'–')+'</td><td>'+esc(c.phone||'–')+'</td><td>'+dateFmt(c.createdAt)+'</td><td><button class="btn-sm btn-rd" onclick="resetPw(\''+esc(c.email||'')+'\')">Reset pw</button></td></tr>';}).join('');
+  if(!list.length){tbody.innerHTML='<tr class="empty-r"><td colspan="6">No customers yet</td></tr>';return;}
+  tbody.innerHTML=list.map(function(c){
+    return'<tr>'+
+      '<td><strong>'+esc(c.name||'–')+'</strong><br><small style="color:var(--mu)">'+esc(c.phone||'')+'</small></td>'+
+      '<td>'+esc(c.email||'–')+'</td>'+
+      '<td>'+dateFmt(c.createdAt)+'</td>'+
+      '<td><strong style="color:var(--pu)">'+(c.totalPoints||0)+'</strong></td>'+
+      '<td style="white-space:nowrap">'+
+        '<button class="btn-sm" onclick="openGivePts(\''+c._id+'\',\''+esc(c.name||'Customer')+'\',\''+esc(c.email||'')+'\')" style="background:var(--pu2);color:var(--pu);border:none;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">Give pts</button>'+
+        '<button class="btn-sm btn-rd" onclick="resetPw(\''+esc(c.email||'')+'\')" style="background:var(--rd2);color:var(--rd);border:none;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">Reset pw</button>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
 }
 function filterCustomers(q){if(!q.trim()){renderCustomers(allCustomers);return;}var ql=q.toLowerCase();renderCustomers(allCustomers.filter(function(c){return(c.name||'').toLowerCase().includes(ql)||(c.email||'').toLowerCase().includes(ql)||(c.phone||'').includes(q);}));}
 window.resetPw=function(email){if(!email){toast('No email');return;}fetch(AU+'sendOobCode?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestType:'PASSWORD_RESET',email:email})}).then(function(r){return r.json();}).then(function(d){if(d.error)toast('Error: '+d.error.message);else toast('✅ Reset email sent to '+email);}).catch(function(){toast('Connection error');});};
@@ -304,7 +315,7 @@ window.saveProd=function(){
   if(!name){toast('Enter product name');return;}if(!price||price<=0){toast('Enter valid price');return;}
   var data={name:name,price:price,emoji:$('pm-em').value.trim()||'📦',category:$('pm-cat').value,description:$('pm-desc').value.trim(),collect:$('pm-co').checked,delivery:$('pm-de').checked,active:$('pm-ac').checked,updatedAt:Date.now()};
   if(!editProdId)data.createdAt=Date.now();
-  (editProdId?fSet('stashlo_products/'+editProdId,data):fAdd('stashlo_products',data)).then(function(){closeMod();loadStoreProds();toast(editProdId?'✅ Updated!':'✅ Product added!');}).catch(function(){toast('Error saving');});
+  (editProdId?fSet('stashlo_products/'+editProdId,data):fAdd('stashlo_products',data)).then(function(r){if(r&&r.error){toast('❌ Error: '+r.error.message.slice(0,60));return;}closeMod();loadStoreProds();toast(editProdId?'✅ Product updated!':'✅ Product added to Stashlo store!');}).catch(function(e){toast('Error: '+e.message);});
 };
 window.delProd=function(id){if(!confirm('Delete this product?'))return;fDel('stashlo_products/'+id).then(function(){loadStoreProds();toast('Deleted');}).catch(function(){toast('Error');});};
 function loadAllOrders(){
@@ -358,5 +369,32 @@ function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/<
 function dateFmt(ts){if(!ts)return'–';return new Date(ts).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
 var TT;function toast(msg){var el=$('toast');el.textContent=msg;el.classList.add('on');clearTimeout(TT);TT=setTimeout(function(){el.classList.remove('on');},2800);}
 </script>
+
+<!-- Give Points Modal -->
+<div id="give-pts-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:20px;padding:28px;width:100%;max-width:380px">
+    <div style="font-size:18px;font-weight:800;margin-bottom:6px">🎁 Give Points</div>
+    <div style="font-size:14px;color:var(--mu);margin-bottom:20px">Manually add loyalty points to a customer</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">Customer: <span id="gp-name" style="color:var(--pu)"></span></div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Select Merchant Shop</label>
+      <select id="gp-merchant" style="width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:12px;font-size:14px">
+        <option value="">-- Select shop --</option>
+      </select>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Points to add</label>
+      <input id="gp-pts" type="number" value="10" min="1" max="9999" style="width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:12px;font-size:14px">
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Reason (optional)</label>
+      <input id="gp-reason" type="text" placeholder="e.g. Loyalty reward, promotion..." style="width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:12px;font-size:14px">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="document.getElementById('give-pts-modal').style.display='none'" style="flex:1;padding:13px;background:#f4f4f6;color:var(--mu);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Cancel</button>
+      <button onclick="doGivePts()" style="flex:1;padding:13px;background:var(--dk);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Give Points</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
