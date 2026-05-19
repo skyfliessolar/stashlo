@@ -444,7 +444,19 @@ window.doIn=function(){
     if(d.error){var m={EMAIL_NOT_FOUND:'No account — register your shop',INVALID_PASSWORD:'Wrong password',INVALID_EMAIL:'Invalid email',INVALID_LOGIN_CREDENTIALS:'Wrong email or password',TOO_MANY_ATTEMPTS_TRY_LATER:'Too many attempts'};showE(err,m[d.error.message]||'Sign in failed: '+d.error.message);return;}
     saveSess(d.idToken,d.localId,d.email,d.expiresIn);
     document.getElementById('tb-u').textContent=d.email;
-    hide('s-auth');show('s-app','flex');loadMerchant();
+    // Check if merchant doc exists - if not, they need to register shop
+    fGet('merchants/'+d.localId).then(function(md){
+      if(md.error||!md.fields){
+        // No merchant doc - clear session and ask them to register
+        clearSess();
+        showE(err,'No shop registered with this email. Please use "Register shop" tab to create your shop first.');
+      } else {
+        hide('s-auth');show('s-app','flex');loadMerchant();
+      }
+    }).catch(function(){
+      // Can't verify - just proceed
+      hide('s-auth');show('s-app','flex');loadMerchant();
+    });
   }).catch(function(){$('btn-in').disabled=false;$('btn-in').textContent='Sign in';showE(err,'Connection error');});
 };
 window.doUp=function(){
@@ -481,6 +493,14 @@ window.doForgot=function(){
 // LOAD MERCHANT
 function loadMerchant(){
   fGet('merchants/'+MID).then(function(d){
+    if(d.error&&d.error.code===404){
+      // No merchant doc - create a default one
+      var sessEmail=JSON.parse(localStorage.getItem('sl_m')||'{}').e||'';
+      var shopId='SL-'+MID.slice(0,4).toUpperCase();
+      var defaultDoc={name:'My Shop',email:sessEmail,shopId:shopId,subscription:'trial',createdAt:Date.now(),rules:{pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'5'}};
+      fSet('merchants/'+MID,defaultDoc).then(function(){MDATA=defaultDoc;renderMerch();}).catch(function(){});
+      return;
+    }
     var m=frFS(d)||{};MDATA=m;
     // Parse nested rules
     if(d.fields&&d.fields.rules&&d.fields.rules.mapValue){
