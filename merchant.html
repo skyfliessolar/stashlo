@@ -414,84 +414,38 @@ tr:last-child td{border:none}
 var KEY='AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y';
 var PID='stashlo';
 var FS='https://firestore.googleapis.com/v1/projects/'+PID+'/databases/(default)/documents/';
-var AU='https://identitytoolkit.googleapis.com/v1/accounts:';
-var TOKEN=null,UID=null,MID=null,MDATA={},RULES={pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'5'};
-var allCusts=[],allProds=[],allOrds=[],editProdId=null;
-var SCAN_PHONE=null,SCAN_CUST=null;
-var camStream=null,camInterval=null;
-
+// ======= STASHLO v6 - AUTO TOKEN REFRESH =======
+var _pR=null;
+function rToken(){
+  var k=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');
+  var s=JSON.parse(localStorage.getItem(k)||'null');
+  if(!s||!s.r)return Promise.resolve();
+  if(_pR)return _pR;
+  _pR=fetch('https://securetoken.googleapis.com/v1/token?key='+KEY,{
+    method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(s.r)
+  }).then(function(r){return r.json();}).then(function(d){
+    _pR=null;
+    if(d.id_token){TOKEN=d.id_token;s.t=TOKEN;s.r=d.refresh_token;s.x=Date.now()+(parseInt(d.expires_in)||3600)*1000;localStorage.setItem(k,JSON.stringify(s));}
+  }).catch(function(){_pR=null;});
+  return _pR;
+}
+function chkToken(){
+  var k=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');
+  var s=JSON.parse(localStorage.getItem(k)||'null');
+  if(!s)return Promise.resolve();
+  if(s.x<Date.now()){TOKEN=null;if(s.r)return rToken();return Promise.resolve();}
+  if(s.x<Date.now()+300000&&s.r)return rToken();
+  return Promise.resolve();
+}
 function H(){var h={'Content-Type':'application/json'};if(TOKEN)h['Authorization']='Bearer '+TOKEN;return h;}
-function handleFSErr(d){if(d&&d.error&&(d.error.code===401||d.error.code===403)){TOKEN=null;var sk=localStorage.getItem('sl_m')||localStorage.getItem('sl_s')||localStorage.getItem('sl_a');var s=JSON.parse(sk||'null');if(s){s.t=null;localStorage.setItem(sk===localStorage.getItem('sl_m')?'sl_m':(sk===localStorage.getItem('sl_a')?'sl_a':'sl_s'),JSON.stringify(s));}return true;}return false;}
-function rToken(){var sk=localStorage.getItem('sl_m')||localStorage.getItem('sl_s')||localStorage.getItem('sl_a');var sess=JSON.parse(sk||'null');if(!sess||!sess.r)return Promise.resolve();return fetch('https://securetoken.googleapis.com/v1/token?key='+KEY,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(sess.r)}).then(function(r){return r.json();}).then(function(d){if(d.id_token){TOKEN=d.id_token;sess.t=d.id_token;sess.r=d.refresh_token;sess.x=Date.now()+(parseInt(d.expires_in)||3600)*1000;var key=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');localStorage.setItem(key,JSON.stringify(sess));}}).catch(function(){});}
-function chkToken(){var sk=localStorage.getItem('sl_m')||localStorage.getItem('sl_s')||localStorage.getItem('sl_a');var sess=JSON.parse(sk||'null');if(!sess)return Promise.resolve();if(sess.x<Date.now()){if(sess.r)return rToken();TOKEN=null;return Promise.resolve();}if(sess.x<Date.now()+120000&&sess.r)return rToken();return Promise.resolve();}
-function toFS(o){var r={};Object.keys(o).forEach(function(k){var v=o[k];if(v===null||v===undefined)r[k]={nullValue:null};else if(typeof v==='boolean')r[k]={booleanValue:v};else if(typeof v==='number')r[k]=Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};else if(typeof v==='object')r[k]={mapValue:{fields:toFS(v)}};else r[k]={stringValue:String(v)};});return r;}
-function frFS(doc){if(!doc||!doc.fields)return null;var o={};Object.keys(doc.fields).forEach(function(k){var v=doc.fields[k];if('stringValue'in v)o[k]=v.stringValue;else if('integerValue'in v)o[k]=parseInt(v.integerValue);else if('doubleValue'in v)o[k]=v.doubleValue;else if('booleanValue'in v)o[k]=v.booleanValue;else if('mapValue'in v){var f=v.mapValue&&v.mapValue.fields?frFS(v.mapValue):{};o[k]=f||{};}else o[k]=null;});if(doc.name)o._id=doc.name.split('/').pop();return o;}
-function fGet(p){return chkToken().then(function(){return fetch(FS+p,{headers:H()}).then(function(r){return r.json();}).then(function(d){if(d&&d.error&&d.error.code===401){return rToken().then(function(){return fetch(FS+p,{headers:H()}).then(function(r2){return r2.json();});});}return d;});});}
-function fList(p,n){return chkToken().then(function(){return fetch(FS+p+'?pageSize='+(n||50),{headers:H()}).then(function(r){return r.json();}).then(function(d){if(d&&d.error&&d.error.code===401){return rToken().then(function(){return fetch(FS+p+'?pageSize='+(n||50),{headers:H()}).then(function(r2){return r2.json();});});}return d;});});}
-function fSet(p,f){return chkToken().then(function(){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();}).then(function(d){if(d&&d.error&&d.error.code===401){return rToken().then(function(){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r2){return r2.json();});});}return d;});});}
-function fUpd(p,f){var mask=Object.keys(f).map(function(k){return'updateMask.fieldPaths='+k;}).join('&');return fetch(FS+p+'?'+mask,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();});}
-function fAdd(c,f){return chkToken().then(function(){return fetch(FS+c,{method:'POST',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();}).then(function(d){if(d&&d.error&&d.error.code===401){return rToken().then(function(){return fetch(FS+c,{method:'POST',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r2){return r2.json();});});}return d;});});}
-function fDel(p){return fetch(FS+p,{method:'DELETE',headers:H()});}
-
-function saveSess(tok,uid,email,exp,refresh){TOKEN=tok;UID=uid;MID=uid;var s={t:tok,u:uid,e:email,x:Date.now()+parseInt(exp)*1000};if(refresh)s.r=refresh;localStorage.setItem('sl_m',JSON.stringify(s));}
-function clearSess(){TOKEN=null;UID=null;MID=null;localStorage.removeItem('sl_m');}
-function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_m')||'null');if(!s||!s.u)return false;UID=s.u;MID=s.u;document.getElementById('tb-u').textContent=s.e||'';if(s.x>Date.now()){TOKEN=s.t;return true;}if(s.r){TOKEN=s.t;rToken();return true;}clearSess();return false;}catch(e){return false;}}
-
-
-window.loadMsgThreads=function(){
-  if(!MID)return;
-  var el=document.getElementById('msg-threads');if(!el)return;
-  el.innerHTML='<div style="color:var(--mu);font-size:13px">Loading messages...</div>';
-  // List all message threads (customers who messaged)
-  fList('merchants/'+MID+'/messages',100).then(function(d){
-    var threads=(d.documents||[]);
-    if(!threads.length){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--mu);font-size:13px">💬 No messages yet</div>';return;}
-    el.innerHTML=threads.map(function(doc){
-      var uid=doc.name.split('/').pop();
-      return '<div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:8px;cursor:pointer" onclick="openMsgThread(\''+uid+'\')">'
-        +'<div style="font-size:14px;font-weight:700">Customer '+uid.slice(0,8)+'...</div>'
-        +'<div style="font-size:12px;color:var(--mu);margin-top:3px">Tap to view conversation →</div>'
-        +'</div>';
-    }).join('');
-  }).catch(function(){el.innerHTML='<div style="color:var(--rd);font-size:13px">Error loading messages</div>';});
-};
-
-var openMsgUID=null;
-window.openMsgThread=function(uid){
-  openMsgUID=uid;
-  // Show message view
-  var html='<div onclick="loadMsgThreads()" style="cursor:pointer;font-size:14px;color:var(--pu);margin-bottom:16px">← Back to all messages</div>'+
-    '<div id="thread-msgs" style="max-height:300px;overflow-y:auto;margin-bottom:12px;background:#f9f9fb;border-radius:12px;padding:12px"></div>'+
-    '<div style="display:flex;gap:8px">'+
-    '<input id="merch-msg-in" type="text" placeholder="Reply..." style="flex:1;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:12px;font-size:14px">'+
-    '<button onclick="sendMerchMsg()" style="padding:11px 16px;background:var(--dk);color:#fff;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Send</button></div>';
-  document.getElementById('msg-threads').innerHTML=html;
-  // Load thread
-  fList('merchants/'+MID+'/messages/'+uid+'/thread',50).then(function(d){
-    var msgs=(d.documents||[]).map(function(doc){return frFS(doc);}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
-    var el=document.getElementById('thread-msgs');if(!el)return;
-    el.innerHTML=msgs.map(function(m){
-      var mine=m.from==='merchant';
-      return '<div style="margin-bottom:8px;text-align:'+(mine?'right':'left')+'">'+
-        '<div style="display:inline-block;max-width:85%;background:'+(mine?'var(--pu)':'#fff')+';color:'+(mine?'#fff':'var(--tx)')+';padding:8px 12px;border-radius:12px;font-size:13px">'+esc(m.text)+'</div></div>';
-    }).join('');
-    el.scrollTop=el.scrollHeight;
-  });
-};
-
-window.sendMerchMsg=function(){
-  var inp=document.getElementById('merch-msg-in');if(!inp||!inp.value.trim()||!openMsgUID)return;
-  var text=inp.value.trim();inp.value='';
-  fAdd('merchants/'+MID+'/messages/'+openMsgUID+'/thread',{text:text,from:'merchant',name:MDATA.name||'Shop',ts:Date.now()}).then(function(){
-    openMsgThread(openMsgUID);
-  });
-};
-
-window.deleteProd=function(id){
-  if(!confirm('Delete this product?'))return;
-  fetch(FS+'merchants/'+MID+'/products/'+id,{method:'DELETE',headers:H()}).then(function(){loadProds();toast('Product deleted');});
-};
-
+function toFS(o){var r={};Object.keys(o).forEach(function(k){var v=o[k];if(v===null||v===undefined)r[k]={nullValue:null};else if(typeof v==='boolean')r[k]={booleanValue:v};else if(typeof v==='number')r[k]=Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};else r[k]={stringValue:String(v)};});return r;}
+function frFS(doc){if(!doc||!doc.fields)return null;var o={};Object.keys(doc.fields).forEach(function(k){var v=doc.fields[k];if('stringValue'in v)o[k]=v.stringValue;else if('integerValue'in v)o[k]=parseInt(v.integerValue);else if('doubleValue'in v)o[k]=v.doubleValue;else if('booleanValue'in v)o[k]=v.booleanValue;else if('mapValue'in v&&v.mapValue&&v.mapValue.fields)o[k]=frFS(v.mapValue);});return o;}
+function fList(p,n){return chkToken().then(function(){return fetch(FS+p+'?pageSize='+(n||50),{headers:H()}).then(function(r){return r.json();});});}
+function fGet(p){return chkToken().then(function(){return fetch(FS+p,{headers:H()}).then(function(r){return r.json();});});}
+function fSet(p,f){return chkToken().then(function(){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();});});}
+function fAdd(c,f){return chkToken().then(function(){return fetch(FS+c,{method:'POST',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();});});}
+function fUpd(p,f){var fm={};Object.keys(f).forEach(function(k){if(f[k]!==undefined)fm[k]=f[k];});return chkToken().then(function(){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(fm)})}).then(function(r){return r.json();});});}
 // BOOT
 if(checkSess()){hide('s-auth');show('s-app','flex');loadMerchant();}
 

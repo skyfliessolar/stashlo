@@ -189,220 +189,36 @@ tr:hover td{background:#fafafa}
 <script>
 var KEY='AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y',PID='stashlo';
 var FS='https://firestore.googleapis.com/v1/projects/'+PID+'/databases/(default)/documents/';
-var AU='https://identitytoolkit.googleapis.com/v1/accounts:';
-var TOKEN=null,ADMIN_UID=null;
-var allMerchants=[],allCustomers=[],allProds=[],allOrders=[];
-var editProdId=null,bcAud='customers';
+// ======= STASHLO v6 - AUTO TOKEN REFRESH =======
+var _pR=null;
+function rToken(){
+  var k=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');
+  var s=JSON.parse(localStorage.getItem(k)||'null');
+  if(!s||!s.r)return Promise.resolve();
+  if(_pR)return _pR;
+  _pR=fetch('https://securetoken.googleapis.com/v1/token?key='+KEY,{
+    method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(s.r)
+  }).then(function(r){return r.json();}).then(function(d){
+    _pR=null;
+    if(d.id_token){TOKEN=d.id_token;s.t=TOKEN;s.r=d.refresh_token;s.x=Date.now()+(parseInt(d.expires_in)||3600)*1000;localStorage.setItem(k,JSON.stringify(s));}
+  }).catch(function(){_pR=null;});
+  return _pR;
+}
+function chkToken(){
+  var k=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');
+  var s=JSON.parse(localStorage.getItem(k)||'null');
+  if(!s)return Promise.resolve();
+  if(s.x<Date.now()){TOKEN=null;if(s.r)return rToken();return Promise.resolve();}
+  if(s.x<Date.now()+300000&&s.r)return rToken();
+  return Promise.resolve();
+}
 function H(){var h={'Content-Type':'application/json'};if(TOKEN)h['Authorization']='Bearer '+TOKEN;return h;}
-function handleFSErr(d){if(d&&d.error&&(d.error.code===401||d.error.code===403)){TOKEN=null;var sk=localStorage.getItem('sl_m')||localStorage.getItem('sl_s')||localStorage.getItem('sl_a');var s=JSON.parse(sk||'null');if(s){s.t=null;localStorage.setItem(sk===localStorage.getItem('sl_m')?'sl_m':(sk===localStorage.getItem('sl_a')?'sl_a':'sl_s'),JSON.stringify(s));}return true;}return false;}
-function rToken(){var sk=localStorage.getItem('sl_adm')||localStorage.getItem('sl_m')||localStorage.getItem('sl_s');var sess=JSON.parse(sk||'null');if(!sess||!sess.r)return Promise.resolve();return fetch('https://securetoken.googleapis.com/v1/token?key='+KEY,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(sess.r)}).then(function(r){return r.json();}).then(function(d){if(d.id_token){TOKEN=d.id_token;sess.t=d.id_token;sess.r=d.refresh_token;sess.x=Date.now()+(parseInt(d.expires_in)||3600)*1000;var key=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');localStorage.setItem(key,JSON.stringify(sess));}}).catch(function(){});}
-function chkToken(){var sk=localStorage.getItem('sl_adm')||localStorage.getItem('sl_m')||localStorage.getItem('sl_s');var sess=JSON.parse(sk||'null');if(!sess)return Promise.resolve();if(sess.x<Date.now()){if(sess.r)return rToken();TOKEN=null;return Promise.resolve();}if(sess.x<Date.now()+120000&&sess.r)return rToken();return Promise.resolve();}
-function toFS(o){var r={};Object.keys(o).forEach(function(k){var v=o[k];if(v===null||v===undefined)r[k]={nullValue:null};else if(typeof v==='boolean')r[k]={booleanValue:v};else if(typeof v==='number')r[k]=Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};else if(typeof v==='object')r[k]={mapValue:{fields:toFS(v)}};else r[k]={stringValue:String(v)};});return r;}
-function frFS(doc){if(!doc||!doc.fields)return null;var o={};Object.keys(doc.fields).forEach(function(k){var v=doc.fields[k];if('stringValue'in v)o[k]=v.stringValue;else if('integerValue'in v)o[k]=parseInt(v.integerValue);else if('doubleValue'in v)o[k]=v.doubleValue;else if('booleanValue'in v)o[k]=v.booleanValue;else if('mapValue'in v)o[k]=(v.mapValue&&v.mapValue.fields)?frFS(v.mapValue):{};else o[k]=null;});if(doc.name)o._id=doc.name.split('/').pop();return o;}
-function fGet(p){return chkToken().then(function(){return fetch(FS+p,{headers:H()}).then(function(r){return r.json();}).then(function(d){if(d&&d.error&&d.error.code===401){return rToken().then(function(){return fetch(FS+p,{headers:H()}).then(function(r2){return r2.json();});});}return d;});});}
-function fList(p,n){return chkToken().then(function(){return fetch(FS+p+'?pageSize='+(n||200),{headers:H()}).then(function(r){return r.json();}).then(function(d){if(d&&d.error&&d.error.code===401){return rToken().then(function(){return fetch(FS+p+'?pageSize='+(n||200),{headers:H()}).then(function(r2){return r2.json();});});}return d;});});}
-function fSet(p,f){return chkToken().then(function(){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();}).then(function(d){if(d&&d.error&&d.error.code===401){return rToken().then(function(){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r2){return r2.json();});});}return d;});});}
-function fAdd(c,f){return chkToken().then(function(){return fetch(FS+c,{method:'POST',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();}).then(function(d){if(d&&d.error&&d.error.code===401){return rToken().then(function(){return fetch(FS+c,{method:'POST',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r2){return r2.json();});});}return d;});});}
-function fDel(p){return fetch(FS+p,{method:'DELETE',headers:H()}).then(function(r){return r.ok;});}
-function checkSess(){
-  try{
-    var s=JSON.parse(localStorage.getItem('sl_adm')||'null');
-    if(!s||!s.u)return null;
-    ADMIN_UID=s.u;
-    if(document.getElementById('adm-email'))document.getElementById('adm-email').textContent=s.e||'';
-    if(s.x>Date.now()){TOKEN=s.t;return s.e||'Admin';}
-    if(s.r){TOKEN=s.t;rToken();return s.e||'Admin';}
-    clearSess();return null;
-  }catch(e){return null;}
-}
-(function(){var em=checkSess();if(em){$('adm-email').textContent=em;show('app','flex');hide('auth');loadAll();}})();
-function doLogin(){
-  var e=$('ae').value.trim(),p=$('ap').value,er=$('aerr');
-  er.style.display='none';
-  if(!e||!p){er.textContent='Enter email and password';er.style.display='block';return;}
-  $('btn-login').disabled=true;$('btn-login').textContent='Signing in...';
-  fetch(AU+'signInWithPassword?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p,returnSecureToken:true})})
-  .then(function(r){return r.json();}).then(function(d){
-    $('btn-login').disabled=false;$('btn-login').textContent='Sign in to Admin';
-    if(d.error){var m={EMAIL_NOT_FOUND:'No account found',INVALID_PASSWORD:'Wrong password',INVALID_LOGIN_CREDENTIALS:'Incorrect email or password'};er.textContent=m[d.error.message]||'Error: '+d.error.message;er.style.display='block';return;}
-    // Check if user is admin
-    var tok=d.idToken,uid=d.localId;
-    fetch(FS+'admins/'+uid,{headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok}})
-      .then(function(r){return r.json();}).then(function(adoc){
-        if(adoc.error||!adoc.fields){
-          // Not in admins collection - also check hardcoded admin emails for first-time setup
-          var ADMIN_EMAILS=['arumugams2019@gmail.com','arumugamcrazie@gmail.com'];
-          if(ADMIN_EMAILS.indexOf(e)<0){
-            er.textContent='Access denied — not an admin account';er.style.display='block';
-            clearSess();return;
-          }
-          // First time - auto-create admin record
-          fetch(FS+'admins/'+uid,{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({fields:{email:{stringValue:e},createdAt:{integerValue:String(Date.now())}}})}).catch(function(){});
-        }
-        saveSess(tok,uid,e,d.expiresIn,d.refreshToken);
-        $('adm-email').textContent=e;
-        hide('auth');show('app','flex');loadAll();
-      }).catch(function(){
-        // Firestore check failed - allow if email matches
-        var ADMIN_EMAILS=['arumugams2019@gmail.com','arumugamcrazie@gmail.com'];
-        if(ADMIN_EMAILS.indexOf(e)>=0){
-          saveSess(tok,uid,e,d.expiresIn,d.refreshToken);
-          $('adm-email').textContent=e;
-          hide('auth');show('app','flex');loadAll();
-        } else {
-          er.textContent='Access denied';er.style.display='block';
-        }
-      });
-  }).catch(function(){$('btn-login').disabled=false;$('btn-login').textContent='Sign in to Admin';er.textContent='Connection error';er.style.display='block';});
-}
-function doLogout(){clearSess();hide('app');show('auth','flex');}
-function loadAll(){loadMerchants();loadCustomers();loadStoreProds();loadAllOrders();}
-function loadMerchants(){
-  fList('merchants',200).then(function(d){
-    allMerchants=(d.documents||[]).map(function(doc){return Object.assign({_id:doc.name.split('/').pop()},frFS(doc));});
-    allMerchants.sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});
-    renderMerchants(allMerchants);
-    $('s-merchants').textContent=allMerchants.length;
-    $('aud-mcount').textContent=allMerchants.length+' shops';
-    var tbody=$('ov-merchants');
-    if(!allMerchants.length){tbody.innerHTML='<tr class="empty-r"><td colspan="4">No merchants yet</td></tr>';return;}
-    tbody.innerHTML=allMerchants.slice(0,5).map(function(m){return'<tr><td><strong>'+esc(m.name||'–')+'</strong></td><td>'+esc(m.email||'–')+'</td><td><span class="bdg bdg-p">'+(m.shopId||'–')+'</span></td><td>'+dateFmt(m.createdAt)+'</td></tr>';}).join('');
-  }).catch(function(){});
-}
-function renderMerchants(list){
-  var tbody=$('mer-body');$('mer-count').textContent=list.length;
-  if(!list.length){tbody.innerHTML='<tr class="empty-r"><td colspan="6">No merchants yet</td></tr>';return;}
-  tbody.innerHTML=list.map(function(m){return'<tr><td><strong>'+esc(m.name||'–')+'</strong></td><td>'+esc(m.email||'–')+'</td><td><span class="bdg bdg-p">'+(m.shopId||'–')+'</span></td><td><span id="mc-'+m._id+'">–</span></td><td><span class="bdg '+(m.subscription==='active'?'bdg-g':'bdg-o')+'">'+  (m.subscription||'free')+'</span></td><td>'+dateFmt(m.createdAt)+'</td></tr>';}).join('');
-  list.slice(0,20).forEach(function(m){fList('merchants/'+m._id+'/customers',5).then(function(d){var el=$('mc-'+m._id);if(el)el.textContent=(d.documents||[]).length+' custs';}).catch(function(){});});
-}
-function filterMerchants(q){if(!q.trim()){renderMerchants(allMerchants);return;}var ql=q.toLowerCase();renderMerchants(allMerchants.filter(function(m){return(m.name||'').toLowerCase().includes(ql)||(m.email||'').toLowerCase().includes(ql)||(m.shopId||'').toLowerCase().includes(ql);}));}
-function loadCustomers(){
-  fList('users',200).then(function(d){
-    allCustomers=(d.documents||[]).map(function(doc){return Object.assign({_id:doc.name.split('/').pop()},frFS(doc));});
-    allCustomers.sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});
-    renderCustomers(allCustomers);
-    $('s-customers').textContent=allCustomers.length;
-    $('aud-ccount').textContent=allCustomers.length+' users';
-  }).catch(function(){});
-}
-function renderCustomers(list){
-  var tbody=$('cust-body');$('cust-count').textContent=list.length;
-  if(!list.length){tbody.innerHTML='<tr class="empty-r"><td colspan="6">No customers yet</td></tr>';return;}
-  tbody.innerHTML=list.map(function(c){
-    return'<tr>'+
-      '<td><strong>'+esc(c.name||'–')+'</strong><br><small style="color:var(--mu)">'+esc(c.phone||'')+'</small></td>'+
-      '<td>'+esc(c.email||'–')+'</td>'+
-      '<td>'+dateFmt(c.createdAt)+'</td>'+
-      '<td><strong style="color:var(--pu)">'+(c.totalPoints||0)+'</strong></td>'+
-      '<td style="white-space:nowrap">'+
-        '<button class="btn-sm" onclick="openGivePts(\''+c._id+'\',\''+esc(c.name||'Customer')+'\',\''+esc(c.email||'')+'\')" style="background:var(--pu2);color:var(--pu);border:none;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">Give pts</button>'+
-        '<button class="btn-sm btn-rd" onclick="resetPw(\''+esc(c.email||'')+'\')" style="background:var(--rd2);color:var(--rd);border:none;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">Reset pw</button>'+
-      '</td>'+
-    '</tr>';
-  }).join('');
-}
-function filterCustomers(q){if(!q.trim()){renderCustomers(allCustomers);return;}var ql=q.toLowerCase();renderCustomers(allCustomers.filter(function(c){return(c.name||'').toLowerCase().includes(ql)||(c.email||'').toLowerCase().includes(ql)||(c.phone||'').includes(q);}));}
-window.resetPw=function(email){if(!email){toast('No email');return;}fetch(AU+'sendOobCode?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestType:'PASSWORD_RESET',email:email})}).then(function(r){return r.json();}).then(function(d){if(d.error)toast('Error: '+d.error.message);else toast('✅ Reset email sent to '+email);}).catch(function(){toast('Connection error');});};
-function loadStoreProds(){
-  fList('stashlo_products',100).then(function(d){allProds=(d.documents||[]).map(function(doc){return Object.assign({_id:doc.name.split('/').pop()},frFS(doc));});allProds.sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});renderProds();}).catch(function(){});
-}
-function renderProds(){
-  var tbody=$('prod-body');
-  if(!allProds.length){tbody.innerHTML='<tr class="empty-r"><td colspan="7">No products — add one above!</td></tr>';return;}
-  tbody.innerHTML=allProds.map(function(p){return'<tr><td><strong>'+(p.emoji||'📦')+' '+esc(p.name||'–')+'</strong><div style="font-size:11px;color:var(--mu)">'+(p.description||'')+'</div></td><td>£'+Number(p.price||0).toFixed(2)+'</td><td>'+esc(p.category||'–')+'</td><td>'+(p.collect!==false?'✅':'–')+'</td><td>'+(p.delivery?'✅':'–')+'</td><td><span class="bdg '+(p.active!==false?'bdg-g':'bdg-r')+'">'+  (p.active!==false?'Live':'Off')+'</span></td><td style="white-space:nowrap"><button class="btn-sm btn-pu" onclick="openProd(\''+p._id+'\')">Edit</button> <button class="btn-sm btn-rd" onclick="delProd(\''+p._id+'\')">Del</button></td></tr>';}).join('');
-}
-window.openProd=function(id){
-  editProdId=id;
-  if(id){var p=allProds.find(function(x){return x._id===id;});if(!p)return;$('mod-title').textContent='Edit Product';$('pm-save-btn').textContent='Save changes';$('pm-nm').value=p.name||'';;$('pm-pr').value=p.price||'';;$('pm-em').value=p.emoji||'';;$('pm-cat').value=p.category||'electronics';$('pm-desc').value=p.description||'';;$('pm-co').checked=p.collect!==false;$('pm-de').checked=!!p.delivery;$('pm-ac').checked=p.active!==false;}
-  else{$('mod-title').textContent='Add Product';$('pm-save-btn').textContent='Add product';['pm-nm','pm-pr','pm-em','pm-desc'].forEach(function(i){$(i).value='';});$('pm-co').checked=true;$('pm-de').checked=false;$('pm-ac').checked=true;$('pm-cat').value='electronics';}
-  show('modal-bg','flex');
-};
-function closeMod(){hide('modal-bg');}
-window.saveProd=function(){
-  var name=$('pm-nm').value.trim(),price=parseFloat($('pm-pr').value);
-  if(!name){toast('Enter product name');return;}if(!price||price<=0){toast('Enter valid price');return;}
-  var data={name:name,price:price,emoji:$('pm-em').value.trim()||'📦',category:$('pm-cat').value,description:$('pm-desc').value.trim(),collect:$('pm-co').checked,delivery:$('pm-de').checked,active:$('pm-ac').checked,updatedAt:Date.now()};
-  if(!editProdId)data.createdAt=Date.now();
-  (editProdId?fSet('stashlo_products/'+editProdId,data):fAdd('stashlo_products',data)).then(function(r){if(r&&r.error){toast('❌ Error: '+r.error.message.slice(0,60));return;}closeMod();loadStoreProds();toast(editProdId?'✅ Product updated!':'✅ Product added to Stashlo store!');}).catch(function(e){toast('Error: '+e.message);});
-};
-window.delProd=function(id){if(!confirm('Delete this product?'))return;fDel('stashlo_products/'+id).then(function(){loadStoreProds();toast('Deleted');}).catch(function(){toast('Error');});};
-function loadAllOrders(){
-  fList('stashlo_orders',100).then(function(d){
-    allOrders=(d.documents||[]).map(function(doc){return Object.assign({_id:doc.name.split('/').pop()},frFS(doc));});
-    allOrders.sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});
-    renderOrders();$('s-orders').textContent=allOrders.length;
-    var rev=allOrders.reduce(function(a,o){return a+(o.total||0);},0);$('s-rev').textContent='£'+rev.toFixed(0);
-    var tbody=$('ov-orders');
-    if(!allOrders.length){tbody.innerHTML='<tr class="empty-r"><td colspan="4">No orders yet</td></tr>';return;}
-    tbody.innerHTML=allOrders.slice(0,5).map(function(o){return'<tr><td><code>'+(o.orderId||o._id.slice(0,8).toUpperCase())+'</code></td><td>'+(o.emoji||'📦')+' '+esc(o.productName||'–')+'</td><td>£'+Number(o.total||0).toFixed(2)+'</td><td><span class="bdg bdg-o">'+(o.status||'pending')+'</span></td></tr>';}).join('');
-  }).catch(function(){});
-}
-function renderOrders(){
-  var tbody=$('ord-body');$('ord-count').textContent=allOrders.length;
-  if(!allOrders.length){tbody.innerHTML='<tr class="empty-r"><td colspan="6">No orders yet</td></tr>';return;}
-  tbody.innerHTML=allOrders.map(function(o){return'<tr><td><code style="font-size:11px">'+(o.orderId||o._id.slice(0,8).toUpperCase())+'</code></td><td>'+(o.emoji||'📦')+' '+esc(o.productName||'–')+'</td><td>£'+Number(o.total||0).toFixed(2)+'</td><td>'+(o.type==='collect'?'Collect':'Delivery')+'</td><td><span class="bdg bdg-o">'+(o.status||'pending')+'</span></td><td>'+dateFmt(o.createdAt)+'</td></tr>';}).join('');
-}
-window.setAud=function(a){bcAud=a;$('aud-customers').classList.toggle('on',a==='customers');$('aud-merchants').classList.toggle('on',a==='merchants');};
-window.sendBroadcast=function(){
-  var title=($('bc-title').value||''). trim(),body=($('bc-body').value||''). trim(),link=($('bc-link').value||''). trim();
-  if(!title){toast('Enter a title');return;}if(!body){toast('Enter a message');return;}
-  $('bc-btn').disabled=true;$('bc-btn').textContent='Sending...';$('bc-ok').style.display='none';
-  var msg={title:title,body:body,link:link,audience:bcAud,sentBy:'admin',sentAt:Date.now()};
-  fAdd('admin_broadcasts',msg).then(function(){
-    // If audience is merchants, also write to merchant_broadcasts for merchant portal
-    if(bcAud==='merchants'){
-      fAdd('merchant_broadcasts',msg).catch(function(){});
-    }
-    $('bc-btn').disabled=false;$('bc-btn').textContent='📤 Send broadcast';
-    $('bc-ok').style.display='block';
-    $('bc-title').value='';$('bc-body').value='';$('bc-link').value='';
-    toast('✅ Broadcast sent to '+(bcAud==='merchants'?allMerchants.length+' merchants':allCustomers.length+' customers')+'!');
-    loadBcHist();
-  }).catch(function(){$('bc-btn').disabled=false;$('bc-btn').textContent='📤 Send broadcast';toast('Error sending');});
-};
-function loadBcHist(){
-  fList('admin_broadcasts',20).then(function(d){
-    var msgs=(d.documents||[]).map(function(doc){return frFS(doc);}).sort(function(a,b){return(b.sentAt||0)-(a.sentAt||0);});
-    var tbody=$('bc-hist');
-    if(!msgs.length){tbody.innerHTML='<tr class="empty-r"><td colspan="4">No broadcasts yet</td></tr>';return;}
-    tbody.innerHTML=msgs.map(function(m){return'<tr><td>'+dateFmt(m.sentAt)+'</td><td><span class="bdg bdg-p">'+(m.audience||'all')+'</span></td><td><strong>'+esc(m.title)+'</strong></td><td style="max-width:300px">'+esc(m.body)+'</td></tr>';}).join('');
-  }).catch(function(){});
-}
-var TABS=['overview','merchants','customers','products','orders','notify'];
-window.showTab=function(name){TABS.forEach(function(t){var el=$('tab-'+t);if(el)el.style.display=t===name?'block':'none';var btn=$('tab-btn-'+t);if(btn)btn.classList.toggle('on',t===name);});if(name==='notify')loadBcHist();};
-function $(id){return document.getElementById(id);}
-function show(id,d){var e=$(id);if(e)e.style.display=d||'block';}
-function hide(id){var e=$(id);if(e)e.style.display='none';}
-function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function dateFmt(ts){if(!ts)return'–';return new Date(ts).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
-var TT;function toast(msg){var el=$('toast');el.textContent=msg;el.classList.add('on');clearTimeout(TT);TT=setTimeout(function(){el.classList.remove('on');},2800);}
-</script>
-
-<!-- Give Points Modal -->
-<div id="give-pts-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:20px;padding:28px;width:100%;max-width:380px">
-    <div style="font-size:18px;font-weight:800;margin-bottom:6px">🎁 Give Points</div>
-    <div style="font-size:14px;color:var(--mu);margin-bottom:20px">Manually add loyalty points to a customer</div>
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px">Customer: <span id="gp-name" style="color:var(--pu)"></span></div>
-    <div style="margin-bottom:14px">
-      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Select Merchant Shop</label>
-      <select id="gp-merchant" style="width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:12px;font-size:14px">
-        <option value="">-- Select shop --</option>
-      </select>
-    </div>
-    <div style="margin-bottom:14px">
-      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Points to add</label>
-      <input id="gp-pts" type="number" value="10" min="1" max="9999" style="width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:12px;font-size:14px">
-    </div>
-    <div style="margin-bottom:20px">
-      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Reason (optional)</label>
-      <input id="gp-reason" type="text" placeholder="e.g. Loyalty reward, promotion..." style="width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:12px;font-size:14px">
-    </div>
-    <div style="display:flex;gap:10px">
-      <button onclick="document.getElementById('give-pts-modal').style.display='none'" style="flex:1;padding:13px;background:#f4f4f6;color:var(--mu);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Cancel</button>
-      <button onclick="doGivePts()" style="flex:1;padding:13px;background:var(--dk);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Give Points</button>
-    </div>
-  </div>
-</div>
-</body>
-</html>
+function toFS(o){var r={};Object.keys(o).forEach(function(k){var v=o[k];if(v===null||v===undefined)r[k]={nullValue:null};else if(typeof v==='boolean')r[k]={booleanValue:v};else if(typeof v==='number')r[k]=Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};else r[k]={stringValue:String(v)};});return r;}
+function frFS(doc){if(!doc||!doc.fields)return null;var o={};Object.keys(doc.fields).forEach(function(k){var v=doc.fields[k];if('stringValue'in v)o[k]=v.stringValue;else if('integerValue'in v)o[k]=parseInt(v.integerValue);else if('doubleValue'in v)o[k]=v.doubleValue;else if('booleanValue'in v)o[k]=v.booleanValue;else if('mapValue'in v&&v.mapValue&&v.mapValue.fields)o[k]=frFS(v.mapValue);});return o;}
+function fList(p,n){return chkToken().then(function(){return fetch(FS+p+'?pageSize='+(n||50),{headers:H()}).then(function(r){return r.json();});});}
+function fGet(p){return chkToken().then(function(){return fetch(FS+p,{headers:H()}).then(function(r){return r.json();});});}
+function fSet(p,f){return chkToken().then(function(){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();});});}
+function fAdd(c,f){return chkToken().then(function(){return fetch(FS+c,{method:'POST',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();});});}
+function fUpd(p,f){var fm={};Object.keys(f).forEach(function(k){if(f[k]!==undefined)fm[k]=f[k];});return chkToken().then(function(){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(fm)})}).then(function(r){return r.json();});});}
+>
