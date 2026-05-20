@@ -411,23 +411,32 @@ tr:last-child td{border:none}
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script>
-var KEY='AIzaSyCFM8pVIRB2vRUbsaYOp4MMB8n9c0KAg3Y';
-var PID='stashlo';
-var FS='https://firestore.googleapis.com/v1/projects/'+PID+'/databases/(default)/documents/';
-// ======= STASHLO v6 - AUTO TOKEN REFRESH =======
+// ===== SUPABASE BACKEND v1.0 =====
+var SURL='https://gcwevgaymahywqjorhnn.supabase.co';
+var SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
+var TOKEN=null,UID=null;
+
+function SH(extra){var h={'apikey':SKEY,'Content-Type':'application/json','Authorization':'Bearer '+(TOKEN||SKEY)};if(extra)Object.assign(h,extra);return h;}
+
+// ── Auth ──────────────────────────────────────────────
+function doSignIn(email,pw){
+  return fetch(SURL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})}).then(function(r){return r.json();});
+}
+function doSignUp(email,pw){
+  return fetch(SURL+'/auth/v1/signup',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})}).then(function(r){return r.json();});
+}
+function doResetPw(email){
+  return fetch(SURL+'/auth/v1/recover',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:email})}).then(function(r){return r.json();});
+}
+
+// ── Token refresh ────────────────────────────────────
 var _pR=null;
 function rToken(){
   var k=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');
   var s=JSON.parse(localStorage.getItem(k)||'null');
   if(!s||!s.r)return Promise.resolve();
   if(_pR)return _pR;
-  _pR=fetch('https://securetoken.googleapis.com/v1/token?key='+KEY,{
-    method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(s.r)
-  }).then(function(r){return r.json();}).then(function(d){
-    _pR=null;
-    if(d.id_token){TOKEN=d.id_token;s.t=TOKEN;s.r=d.refresh_token;s.x=Date.now()+(parseInt(d.expires_in)||3600)*1000;localStorage.setItem(k,JSON.stringify(s));}
-  }).catch(function(){_pR=null;});
+  _pR=fetch(SURL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.r})}).then(function(r){return r.json();}).then(function(d){_pR=null;if(d.access_token){TOKEN=d.access_token;s.t=TOKEN;s.r=d.refresh_token;s.x=Date.now()+(d.expires_in||3600)*1000;localStorage.setItem(k,JSON.stringify(s));}}).catch(function(){_pR=null;});
   return _pR;
 }
 function chkToken(){
@@ -438,14 +447,14 @@ function chkToken(){
   if(s.x<Date.now()+300000&&s.r)return rToken();
   return Promise.resolve();
 }
-function H(){var h={'Content-Type':'application/json'};if(TOKEN)h['Authorization']='Bearer '+TOKEN;return h;}
-function toFS(o){var r={};Object.keys(o).forEach(function(k){var v=o[k];if(v===null||v===undefined)r[k]={nullValue:null};else if(typeof v==='boolean')r[k]={booleanValue:v};else if(typeof v==='number')r[k]=Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};else r[k]={stringValue:String(v)};});return r;}
-function frFS(doc){if(!doc||!doc.fields)return null;var o={};Object.keys(doc.fields).forEach(function(k){var v=doc.fields[k];if('stringValue'in v)o[k]=v.stringValue;else if('integerValue'in v)o[k]=parseInt(v.integerValue);else if('doubleValue'in v)o[k]=v.doubleValue;else if('booleanValue'in v)o[k]=v.booleanValue;else if('mapValue'in v&&v.mapValue&&v.mapValue.fields)o[k]=frFS(v.mapValue);});return o;}
-function fList(p,n){return chkToken().then(function(){return fetch(FS+p+'?pageSize='+(n||50),{headers:H()}).then(function(r){return r.json();});});}
-function fGet(p){return chkToken().then(function(){return fetch(FS+p,{headers:H()}).then(function(r){return r.json();});});}
-function fSet(p,f){return chkToken().then(function(){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();});});}
-function fAdd(c,f){return chkToken().then(function(){return fetch(FS+c,{method:'POST',headers:H(),body:JSON.stringify({fields:toFS(f)})}).then(function(r){return r.json();});});}
-function fUpd(p,f){var fm={};Object.keys(f).forEach(function(k){if(f[k]!==undefined)fm[k]=f[k];});return chkToken().then(function(){return fetch(FS+p,{method:'PATCH',headers:H(),body:JSON.stringify({fields:toFS(fm)})}).then(function(r){return r.json();});});}
+
+// ── CRUD helpers ─────────────────────────────────────
+function sGet(t,f){return chkToken().then(function(){var u=SURL+'/rest/v1/'+t+'?select=*';if(f)u+='&'+f;return fetch(u,{headers:SH()}).then(function(r){return r.json();});});}
+function sAdd(t,d){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t,{method:'POST',headers:SH({'Prefer':'return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
+function sUpsert(t,d,c){return chkToken().then(function(){var u=SURL+'/rest/v1/'+t+(c?'?on_conflict='+c:'');return fetch(u,{method:'POST',headers:SH({'Prefer':'resolution=merge-duplicates,return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
+function sUpd(t,f,d){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t+'?'+f,{method:'PATCH',headers:SH({'Prefer':'return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
+function sDel(t,f){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t+'?'+f,{method:'DELETE',headers:SH()}).then(function(r){return r.ok?{ok:true}:r.json();});});}
+// ===== END SUPABASE =====
 // BOOT
 if(checkSess()){hide('s-auth');show('s-app','flex');loadMerchant();}
 
@@ -455,11 +464,12 @@ window.doIn=function(){
   var e=$('in-e').value.trim(),p=$('in-p').value,err=$('in-err');err.style.display='none';
   if(!e||!p){showE(err,'Enter email and password');return;}
   $('btn-in').disabled=true;$('btn-in').textContent='Signing in...';
-  fetch(AU+'signInWithPassword?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p,returnSecureToken:true})})
-  .then(function(r){return r.json();}).then(function(d){
+  doSignIn(e,p).then(function(d){
     $('btn-in').disabled=false;$('btn-in').textContent='Sign in';
     if(d.error){var m={EMAIL_NOT_FOUND:'No account — register your shop',INVALID_PASSWORD:'Wrong password',INVALID_EMAIL:'Invalid email',INVALID_LOGIN_CREDENTIALS:'Wrong email or password',TOO_MANY_ATTEMPTS_TRY_LATER:'Too many attempts'};showE(err,m[d.error.message]||'Sign in failed: '+d.error.message);return;}
-    saveSess(d.idToken,d.localId,d.email,d.expiresIn,d.refreshToken);
+    if(!d.access_token){showE($('up-err'),d.error_description||d.msg||'Sign up failed');return;}
+    TOKEN=d.access_token;UID=d.user.id;MID=d.user.id;
+    saveSess(d.access_token,d.user.id,d.user.email,d.expires_in,d.refresh_token);
     document.getElementById('tb-u').textContent=d.email;
     // Check if merchant doc exists - if not, they need to register shop
     fGet('merchants/'+d.localId).then(function(md){
@@ -482,14 +492,14 @@ window.doUp=function(){
   if(!e){showE(err,'Enter your email');return;}
   if(!p||p.length<6){showE(err,'Password must be at least 6 characters');return;}
   $('btn-up').disabled=true;$('btn-up').textContent='Registering...';
-  fetch(AU+'signUp?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p,returnSecureToken:true})})
+  doSignUp(e,p)
   .then(function(r){return r.json();}).then(function(d){
     $('btn-up').disabled=false;$('btn-up').textContent='Register shop';
     if(d.error){var m={EMAIL_EXISTS:'Email already registered — sign in',INVALID_EMAIL:'Invalid email',WEAK_PASSWORD:'Password too weak'};showE(err,m[d.error.message]||'Registration failed: '+d.error.message);return;}
     saveSess(d.idToken,d.localId,e,d.expiresIn);
     document.getElementById('tb-u').textContent=e;
     var shopId='SL-'+d.localId.slice(0,4).toUpperCase();
-    fSet('merchants/'+d.localId,{
+    sUpsert('merchants',{id:d.access_token?d.user.id:d.localId,
       name:sh,email:e,shopId:shopId,subscription:'trial',createdAt:Date.now(),
       rules:{pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'5'}
     }).then(function(){hide('s-auth');show('s-app','flex');loadMerchant();});
@@ -500,7 +510,7 @@ window.doForgot=function(){
   var e=$('in-e').value.trim();
   var err=$('in-err');err.style.display='none';$('fp-ok').style.display='none';
   if(!e){showE(err,'Enter your email address first');return;}
-  fetch(AU+'sendOobCode?key='+KEY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestType:'PASSWORD_RESET',email:e})})
+  doResetPw(e)
   .then(function(r){return r.json();}).then(function(d){
     if(d.error){var m={EMAIL_NOT_FOUND:'No account found with this email',INVALID_EMAIL:'Invalid email address'};showE(err,m[d.error.message]||'Error: '+d.error.message);return;}
     $('fp-ok').style.display='block';
@@ -518,7 +528,7 @@ function loadMerchant(){
       fSet('merchants/'+MID,defaultDoc).then(function(){MDATA=defaultDoc;renderMerch();}).catch(function(){});
       return;
     }
-    var m=frFS(d)||{};MDATA=m;
+    var m=(Array.isArray(d)?d[0]:d)||{};MDATA=m;
     // Parse nested rules
     if(d.fields&&d.fields.rules&&d.fields.rules.mapValue){
       var rf=d.fields.rules.mapValue.fields||{};
@@ -606,8 +616,8 @@ function lookupCustomer(phone){
   SCAN_PHONE=phone;SCAN_CUST=null;
   t('scan-status','Looking up...');
   // Try merchant customers first, then look up real name from users collection
-  fGet('merchants/'+MID+'/customers/'+phone).then(function(d){
-    var c=frFS(d)||{};
+  sGet('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(function(d){
+    var c=(Array.isArray(d)?d[0]:d)||{};
     var isNew=!c.phone&&!c.points;
     // Always try to find real name from users collection by phone
     return fList('users',200).then(function(ud){
@@ -616,19 +626,19 @@ function lookupCustomer(phone){
       var realName=match?match.name:null;
       if(isNew){
         c={phone:phone,name:realName||'Customer',points:0,visitCount:0,totalSpend:0,joinedAt:Date.now(),rewardsRedeemed:0};
-        fSet('merchants/'+MID+'/customers/'+phone,c).catch(function(){});
+        sUpsert('merchant_customers',Object.assign({merchant_id:MID,phone:phone},c,{points:(c.points||0)+pts,visit_count:(c.visit_count||0)+1,last_updated:Date.now()}),'merchant_id,phone').catch(function(){});
         toast(realName?realName+' registered!':'New customer registered!');
       } else if(realName&&c.name==='New customer'){
         // Update name if we can now get real name
         c.name=realName;
-        fSet('merchants/'+MID+'/customers/'+phone,c).catch(function(){});
+        sUpsert('merchant_customers',Object.assign({merchant_id:MID,phone:phone},c,{points:(c.points||0)+pts,visit_count:(c.visit_count||0)+1,last_updated:Date.now()}),'merchant_id,phone').catch(function(){});
       } else if(realName){ c.name=realName; }
       SCAN_CUST=Object.assign({},c,{phone:phone});
       showScanResult();
     }).catch(function(){
       if(isNew){
         c={phone:phone,name:'Customer',points:0,visitCount:0,totalSpend:0,joinedAt:Date.now(),rewardsRedeemed:0};
-        fSet('merchants/'+MID+'/customers/'+phone,c).catch(function(){});
+        sUpsert('merchant_customers',Object.assign({merchant_id:MID,phone:phone},c,{points:(c.points||0)+pts,visit_count:(c.visit_count||0)+1,last_updated:Date.now()}),'merchant_id,phone').catch(function(){});
       }
       SCAN_CUST=Object.assign({},c,{phone:phone});
       showScanResult();
@@ -671,11 +681,11 @@ window.addPtsFromScan=function(){
   var pts=Math.floor(spend*(RULES.pointsPerPound||1));
   var newPts=(SCAN_CUST.points||0)+pts;
   fSet('merchants/'+MID+'/customers/'+SCAN_PHONE,Object.assign({},SCAN_CUST,{
-    points:newPts,visitCount:(SCAN_CUST.visitCount||0)+1,
-    totalSpend:(SCAN_CUST.totalSpend||0)+spend,lastVisit:Date.now()
+    points:newPts,visitCount:(SCAN_CUST.visit_count||0)+1,
+    totalSpend:(SCAN_CUST.total_spend||0)+spend,lastVisit:Date.now()
   })).then(function(){
-    fAdd('merchants/'+MID+'/transactions',{phone:SCAN_PHONE,amount:spend,pointsAdded:pts,timestamp:Date.now(),type:'purchase'});
-    SCAN_CUST.points=newPts;SCAN_CUST.visitCount=(SCAN_CUST.visitCount||0)+1;SCAN_CUST.totalSpend=(SCAN_CUST.totalSpend||0)+spend;
+    sAdd('transactions',{merchant_id:MID,phone:SCAN_PHONE,amount:spend,points_added:pts,timestamp:Date.now(),type:'purchase'});
+    SCAN_CUST.points=newPts;SCAN_CUST.visitCount=(SCAN_CUST.visit_count||0)+1;SCAN_CUST.totalSpend=(SCAN_CUST.total_spend||0)+spend;
     showScanResult();
     toast('+'+pts+' points added! Total: '+newPts+' pts');
     $('aps-spend').value='';t('pts-preview','');
@@ -692,7 +702,7 @@ window.applyReward=function(){
   fSet('merchants/'+MID+'/customers/'+SCAN_PHONE,Object.assign({},SCAN_CUST,{
     points:newPts<0?0:newPts,rewardsRedeemed:(SCAN_CUST.rewardsRedeemed||0)+1
   })).then(function(){
-    fAdd('merchants/'+MID+'/transactions',{phone:SCAN_PHONE,pointsRedeemed:thresh,timestamp:Date.now(),type:'redeem',reward:rl});
+    sAdd('transactions',{merchant_id:MID,phone:SCAN_PHONE,points_added:-thresh,timestamp:Date.now(),type:'redeem',reason:rl});
     SCAN_CUST.points=newPts<0?0:newPts;SCAN_CUST.rewardsRedeemed=(SCAN_CUST.rewardsRedeemed||0)+1;
     showScanResult();
     toast('🎁 Reward applied: '+rl+' | Points reset to '+SCAN_CUST.points);
@@ -710,8 +720,8 @@ window.skipReward=function(){
 // =====================
 window.tillLookup=function(phone){
   phone=phone.replace(/\s/g,'');if(phone.length<10){$('tc-res').style.display='none';return;}
-  fGet('merchants/'+MID+'/customers/'+phone).then(function(d){
-    var c=frFS(d)||{};var el=$('tc-res');el.style.display='block';
+  sGet('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(function(d){
+    var c=(Array.isArray(d)?d[0]:d)||{};var el=$('tc-res');el.style.display='block';
     // Also look up real name from users collection
     fList('users',200).then(function(ud){
       var users=(ud.documents||[]).map(function(doc){return Object.assign({},frFS(doc));});
@@ -721,14 +731,14 @@ window.tillLookup=function(phone){
       if(c&&c.phone){
         t('tr-nm',nm||c.name||'Customer');
         t('tr-pt',(c.points||0)+' pts');
-        t('tr-sb','Visits: '+(c.visitCount||0));
+        t('tr-sb','Visits: '+(c.visit_count||c.visit_count||0));
       } else {
         t('tr-nm',nm||(realName?realName:'New customer'));
         t('tr-pt','0 pts');
         t('tr-sb',nm?nm+' — first visit':'Will be auto-registered');
       }
     }).catch(function(){
-      if(c&&c.phone){t('tr-nm',c.name||'Customer');t('tr-pt',(c.points||0)+' pts');t('tr-sb','Visits: '+(c.visitCount||0));}
+      if(c&&c.phone){t('tr-nm',c.name||'Customer');t('tr-pt',(c.points||0)+' pts');t('tr-sb','Visits: '+(c.visit_count||c.visit_count||0));}
       else{t('tr-nm','New customer');t('tr-pt','0 pts');t('tr-sb','Will be auto-registered');}
     });
   }).catch(function(){});
@@ -740,12 +750,11 @@ window.tillAddPoints=function(){
   if(!spend||spend<=0){toast('Enter spend amount');return;}
   if(spend<(RULES.minSpend||0)){toast('Min spend is £'+(RULES.minSpend||0).toFixed(2));return;}
   var pts=Math.floor(spend*(RULES.pointsPerPound||1));
-  var custPath='merchants/'+MID+'/customers/'+phone;
-  fGet(custPath).then(function(d){
-    var c=frFS(d)||{points:0,visitCount:0,totalSpend:0,name:'Customer',rewardsRedeemed:0};
-    var newPts=(c.points||0)+pts;
-    fSet(custPath,{phone:phone,name:c.name||'Customer',points:newPts,visitCount:(c.visitCount||0)+1,totalSpend:(c.totalSpend||0)+spend,joinedAt:c.joinedAt||Date.now(),lastVisit:Date.now(),rewardsRedeemed:c.rewardsRedeemed||0});
-    fAdd('merchants/'+MID+'/transactions',{phone:phone,amount:spend,pointsAdded:pts,timestamp:Date.now(),type:'purchase'});
+  sGet('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(function(d){
+    var cu=(Array.isArray(d)?d[0]:null)||{points:0,visit_count:0,total_spend:0,name:'Customer'};
+    var newPts=(cu.points||0)+pts;
+    sUpsert('merchant_customers',{merchant_id:MID,phone:phone,name:cu.name||'Customer',points:newPts,visit_count:(cu.visit_count||0)+1,total_spend:(cu.total_spend||0)+spend,joined_at:cu.joined_at||Date.now(),last_updated:Date.now()},'merchant_id,phone');
+    sAdd('transactions',{merchant_id:MID,phone:phone,amount:spend,points_added:pts,timestamp:Date.now(),type:'purchase'});
     t('tr-pt',newPts+' pts (+'+pts+')');t('tr-sb','✅ Points added!');$('till-spend').value='';
     toast('+'+pts+' points! Customer total: '+newPts+' pts');loadCusts();
   }).catch(function(){toast('Error adding points');});
@@ -753,26 +762,23 @@ window.tillAddPoints=function(){
 window.tillRedeem=function(){
   var phone=$('till-phone').value.replace(/\s/g,'');
   if(!phone||phone.length<10){toast('Enter customer phone');return;}
-  fGet('merchants/'+MID+'/customers/'+phone).then(function(d){
-    var c=frFS(d);if(!c){toast('Customer not found');return;}
+  sGet('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(function(d){
+    var cu=(Array.isArray(d)?d[0]:null)||{};if(!cu.phone){toast('Customer not found');return;}
     var thresh=RULES.threshold||100;
-    if((c.points||0)<thresh){toast('Not enough points ('+c.points+'/'+thresh+')');return;}
-    var newPts=(c.points||0)-thresh;
-    fSet('merchants/'+MID+'/customers/'+phone,Object.assign({},c,{points:newPts,rewardsRedeemed:(c.rewardsRedeemed||0)+1}));
-    fAdd('merchants/'+MID+'/transactions',{phone:phone,pointsRedeemed:thresh,timestamp:Date.now(),type:'redeem'});
-    var rt=RULES.rewardType,rv=RULES.rewardValue;
-    var rl=rt==='pound'?'£'+rv+' off':rt==='percent'?rv+'% off':'Free '+rv;
-    t('tr-pt',newPts+' pts');t('tr-sb','🎁 Reward applied: '+rl);
-    toast('🎁 Reward redeemed: '+rl);loadCusts();
+    if((cu.points||0)<thresh){toast('Not enough points ('+cu.points+'/'+thresh+')');return;}
+    var newPts=Math.max(0,(cu.points||0)-thresh);
+    sUpsert('merchant_customers',Object.assign({},cu,{merchant_id:MID,phone:phone,points:newPts,last_updated:Date.now()}),'merchant_id,phone');
+    sAdd('transactions',{merchant_id:MID,phone:phone,points_added:-thresh,timestamp:Date.now(),type:'redeem'});
+    toast('🎁 Reward redeemed! Points: '+newPts);loadCusts();
   }).catch(function(){toast('Error redeeming');});
 };
-window.copyId=function(){navigator.clipboard.writeText(t2('shop-id-val')).catch(function(){});toast('Shop ID copied!');};
+window.copyId=function(){var sid=MDATA&&MDATA.shop_id||MDATA&&MDATA.shopId||'';if(sid){navigator.clipboard.writeText(sid).catch(function(){});toast('Shop ID copied: '+sid);}}
 function t2(id){var e=$(id);return e?e.textContent:'';}
 
 // PRODUCTS
 function loadProds(){
-  fList('merchants/'+MID+'/products',30).then(function(d){
-    allProds=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop()},frFS(doc));});
+  sGet('products','merchant_id=eq.'+MID+'&order=created_at.desc').then(function(d){
+    allProds=(Array.isArray(d)?d:[]);
     renderProds();
   }).catch(function(){});
 }
@@ -803,7 +809,7 @@ window.saveProd=function(){
   var shopNm=MDATA&&MDATA.name?MDATA.name:($('s-nm')?$('s-nm').value.trim():'My Shop');
   var data={name:name,price:price,emoji:$('pm-em').value.trim()||'🛍️',category:$('pm-cat').value,description:$('pm-desc').value.trim(),collect:$('pm-co').checked,delivery:$('pm-de').checked,active:true,merchantId:MID,shopName:shopNm,createdAt:editProdId?undefined:Date.now(),updatedAt:Date.now()};
   if(data.createdAt===undefined)delete data.createdAt;
-  var p=editProdId?fSet('merchants/'+MID+'/products/'+editProdId,data):fAdd('merchants/'+MID+'/products',data);
+  var p=editProdId?sUpd('products','id=eq.'+editProdId,data):sAdd('products',Object.assign({merchant_id:MID},data));
   p.then(function(res){
     if(res.error){toast('Error: '+res.error.message);return;}
     window.cPM();loadProds();toast(editProdId?'Product updated!':'✅ Product added!');
@@ -813,7 +819,7 @@ window.saveProd=function(){
 // ORDERS
 function loadOrds(){
   fList('merchants/'+MID+'/orders',30).then(function(d){
-    allOrds=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop()},frFS(doc));}).sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});
+    allOrds=(Array.isArray(d)?d:[]).sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});
     var el=$('ords-list');
     if(!allOrds.length){el.innerHTML='<div class="empty">No orders yet</div>';return;}
     el.innerHTML=allOrds.map(function(o){
@@ -833,8 +839,8 @@ window.markRdy=function(id){fUpd('merchants/'+MID+'/orders/'+id,{status:'ready'}
 
 // CUSTOMERS
 function loadCusts(){
-  fList('merchants/'+MID+'/customers',200).then(function(d){
-    allCusts=(d.documents||[]).map(function(doc){return Object.assign({id:doc.name.split('/').pop()},frFS(doc));}).sort(function(a,b){return(b.points||0)-(a.points||0);});
+  sGet('merchant_customers','merchant_id=eq.'+MID).then(function(d){
+    allCusts=(Array.isArray(d)?d:[]).sort(function(a,b){return(b.points||0)-(a.points||0);});
     renderCusts(allCusts);
     t('kc',allCusts.length);
     var totalRew=allCusts.reduce(function(a,c){return a+(c.rewardsRedeemed||0);},0);
@@ -847,7 +853,7 @@ function renderCusts(list){
   var b=$('custs-body');
   if(!list.length){b.innerHTML='<tr class="empty-r"><td colspan="5">No customers yet</td></tr>';return;}
   b.innerHTML=list.map(function(c){return '<tr><td><strong>'+esc(c.name||'Customer')+'</strong></td><td>'+esc(c.phone||c.id)+'</td>' +
-    '<td><span class="bdg bp">'+(c.points||0)+' pts</span></td><td>'+(c.visitCount||0)+'</td>' +
+    '<td><span class="bdg bp">'+(c.points||0)+' pts</span></td><td>'+(c.visit_count||c.visit_count||0)+'</td>' +
     '<td>'+(c.joinedAt?tAgo(c.joinedAt):'-')+'</td></tr>';}).join('');
 }
 window.filterC=function(q){renderCusts(q.trim()?allCusts.filter(function(c){return(c.name||'').toLowerCase().includes(q.toLowerCase())||(c.phone||'').includes(q);}):allCusts);};
@@ -903,7 +909,7 @@ window.sendNotif=function(){
   $('notif-ok').style.display='none';
   var msg={title:title,body:body,link:link,sentAt:Date.now(),merchantId:MID,shopName:(MDATA&&MDATA.name)||'Shop',recipients:allCusts.length};
   // Save notification to Firestore under merchant
-  fAdd('merchants/'+MID+'/notifications',msg).then(function(){
+  sAdd('notifications',Object.assign({merchant_id:MID},msg)).then(function(){
     // Also save a copy to each customer's notifications
     var promises=allCusts.slice(0,100).map(function(c){
       return fAdd('users_notifs/'+c.id,{to:c.id,from:MID,shopName:msg.shopName,title:title,body:body,link:link,read:false,sentAt:Date.now()}).catch(function(){});
@@ -929,8 +935,8 @@ window.sendNotif=function(){
 function loadNotifHist(){
   // Load messages sent by this merchant + admin broadcasts to merchants
   Promise.all([
-    fList('merchants/'+MID+'/notifications',20).then(function(d){return(d.documents||[]).map(function(doc){return Object.assign({_type:'sent'},frFS(doc));});}).catch(function(){return[];}),
-    fList('merchant_broadcasts',10).then(function(d){return(d.documents||[]).map(function(doc){return Object.assign({_type:'admin'},frFS(doc));});}).catch(function(){return[];})
+    sGet('notifications','merchant_id=eq.'+MID+'&order=sent_at.desc&limit=20').then(function(d){return(d.documents||[]).map(function(doc){return Object.assign({_type:'sent'},frFS(doc));});}).catch(function(){return[];}),
+    sGet('broadcasts','audience=eq.merchants&order=sent_at.desc&limit=10').then(function(d){return(d.documents||[]).map(function(doc){return Object.assign({_type:'admin'},frFS(doc));});}).catch(function(){return[];})
   ]).then(function(res){
     var sent=res[0],adminBc=res[1];
     var el=$('notif-hist');
