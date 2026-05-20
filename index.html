@@ -646,8 +646,8 @@ window.selOT=function(type){
 
 window.loadShopMsgs=function(mid){
   var el=$('cd-msgs');if(!el)return;
-  fList('merchants/'+mid+'/messages/'+UID+'/thread',20).then(function(d){
-    var msgs=(d.documents||[]).map(function(doc){return frFS(doc);}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+  sGet('messages','merchant_id=eq.'+mid+'&user_id=eq.'+UID+'&order=ts.asc&limit=20').then(function(d){
+    var msgs=(Array.isArray(d)?d:[]).map(function(doc){return frFS(doc);}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
     if(!msgs.length){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--mu);font-size:13px">No messages yet. Say hello!</div>';return;}
     el.innerHTML=msgs.map(function(m){
       var mine=m.from==='customer';
@@ -686,8 +686,8 @@ window.aNat=function(id,name,emoji,color){
   if(CARDS.find(function(c){return c.id===id;})){toast('Already in your wallet!');return;}
   if(!UID){toast('Please sign out and sign back in.');return;}
   var card={id:id,name:name,shopName:name,emoji:emoji,color:color,type:'national',points:0,threshold:500,addedAt:Date.now(),visitCount:0,totalSpend:0,rewardsRedeemed:0};
-  fSet('users/'+UID+'/cards/'+id,card).then(function(r){
-    if(r&&r.error){toast('❌ '+r.error.message.slice(0,50));return;}
+  sUpsert('cards',card,'user_id,card_id').then(function(r){
+    if(Array.isArray(r)&&r[0]||r&&!r.error){toast('✅ '+card.name+' added!');window.cAS();loadCards();return;}if(r&&r.error){toast('❌ '+(r.error.message||'Failed').slice(0,50));return;}
     CARDS.push(card);
     window.cAS();
     loadCards();
@@ -727,8 +727,8 @@ window.oOS=function(pid){var p=PM[pid];if(!p)return;CURPROD=p;OQ=1;OT=p.collect!
 window.cOS=function(){hide('order-sheet');};
 window.sOT=function(t){OT=t;$('o-co').classList.toggle('on',t==='collect');$('o-de').classList.toggle('on',t==='delivery');$('o-as').style.display=t==='delivery'?'block':'none';};
 window.cQ=function(d){OQ=Math.max(1,OQ+d);t('o-q',OQ);t('o-tv','£'+(OQ*CURPROD.price).toFixed(2));};
-window.pO=function(){if(!CURPROD)return;if(OT==='delivery'&&!$('o-ad').value.trim()){toast('Enter delivery address');return;}var ord={userId:UID,productId:CURPROD.id,productName:CURPROD.name,shopId:CURPROD.shopId||CURPROD.merchantId||'stashlo',shopName:CURPROD.shopName||'Shop',emoji:CURPROD.emoji||'🛍️',price:CURPROD.price,qty:OQ,total:OQ*CURPROD.price,type:OT,address:OT==='delivery'?$('o-ad').value.trim():'',status:'pending',createdAt:Date.now(),orderId:'SL-'+Math.random().toString(36).substr(2,6).toUpperCase()};sAdd('orders',Object.assign({user_id:UID},ord)).then(function(){var sid=ord.shopId;if(sid==='stashlo')fAdd('stashlo_orders',ord).catch(function(){});else fAdd('merchants/'+sid+'/orders',ord).catch(function(){});window.cOS();toast('Order placed! '+(OT==='collect'?'Ready in 1 hour 🏪':'On its way 🚚'));loadOrds();}).catch(function(){toast('Could not place order');});};
-function loadOrds(){fList('users/'+UID+'/orders',30).then(function(d){ORDS=(Array.isArray(d)?d:[]).sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});rOrds(ORDS);t('s-o',ORDS.length);t('pord',ORDS.length+' placed');}).catch(function(){});}
+window.pO=function(){if(!CURPROD)return;if(OT==='delivery'&&!$('o-ad').value.trim()){toast('Enter delivery address');return;}var ord={userId:UID,productId:CURPROD.id,productName:CURPROD.name,shopId:CURPROD.shopId||CURPROD.merchantId||'stashlo',shopName:CURPROD.shopName||'Shop',emoji:CURPROD.emoji||'🛍️',price:CURPROD.price,qty:OQ,total:OQ*CURPROD.price,type:OT,address:OT==='delivery'?$('o-ad').value.trim():'',status:'pending',createdAt:Date.now(),orderId:'SL-'+Math.random().toString(36).substr(2,6).toUpperCase()};sAdd('orders',Object.assign({user_id:UID},ord)).then(function(){var sid=ord.shopId;if(sid==='stashlo')sAdd('orders',ord).catch(function(){});else sAdd('orders',Object.assign({},ord,{merchant_id:sid})).catch(function(){});window.cOS();toast('Order placed! '+(OT==='collect'?'Ready in 1 hour 🏪':'On its way 🚚'));loadOrds();}).catch(function(){toast('Could not place order');});};
+function loadOrds(){sGet('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=30').then(function(d){ORDS=(Array.isArray(d)?d:[]).sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});rOrds(ORDS);t('s-o',ORDS.length);t('pord',ORDS.length+' placed');}).catch(function(){});}
 function rOrds(list){var el=$('ords-list');if(!list.length){el.innerHTML='<div class="empty"><div class="empty-i">📦</div><p>No orders yet.</p></div>';return;}el.innerHTML=list.map(function(o){var sc=(o.status==='delivered'||o.status==='collected')?'s-d':o.status==='ready'?'s-r':'s-p';var sl=o.status==='collected'?'Collected':o.status==='delivered'?'Delivered':o.status==='ready'?'Ready 🎉':'Pending';return '<div class="ocard"><div class="oc-h"><div class="oc-id">'+(o.orderId||o.id.slice(0,8).toUpperCase())+'</div><div class="oc-st '+sc+'">'+sl+'</div></div>' +'<div class="oc-it">'+(o.emoji||'🛍️')+' '+x(o.productName)+' × '+(o.qty||1)+'</div>' +'<div class="oc-mt">'+x(o.shopName)+' · '+(o.type==='collect'?'Click & Collect':'Home Delivery')+' · '+tAgo(o.createdAt)+'</div>' +'<div class="oc-tot">£'+Number(o.total).toFixed(2)+'</div></div>';}).join('');}
 window.fOrds=function(f,btn){document.querySelectorAll('.ord-tab').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');if(f==='all')rOrds(ORDS);else if(f==='act')rOrds(ORDS.filter(function(o){return o.status==='pending'||o.status==='ready';}));else rOrds(ORDS.filter(function(o){return o.status==='delivered'||o.status==='collected';}));};
 window.go=function(s){
@@ -755,8 +755,8 @@ function loadNotifs(){
   if(!merchantIds.length){adminPromise.then(function(adm){var el=$('notifs-list');if(!adm.length){el.innerHTML='<div class="empty"><div class="empty-i">🔔</div><p>No messages yet.<br>Add shops to receive loyalty updates.</p></div>';return;}el.innerHTML=adm.map(function(n){return renderNotif(n);}).join('');});return;}
   Promise.all([adminPromise].concat(merchantIds.map(function(mid){
     var card=CARDS.find(function(c){return c.merchantId===mid;});
-    return fList('merchants/'+mid+'/notifications',5).then(function(d){
-      return (d.documents||[]).map(function(doc){return Object.assign({_shopName:(card&&card.shopName)||'Shop'},frFS(doc));});
+    return sGet('notifications','merchant_id=eq.'+mid+'&order=sent_at.desc&limit=5').then(function(d){
+      return (Array.isArray(d)?d:[]).map(function(doc){return Object.assign({_shopName:(card&&card.shopName)||'Shop'},frFS(doc));});
     }).catch(function(){return[];});
   }))).then(function(results){
     var all=[].concat.apply([],results).sort(function(a,b){return(b.sentAt||0)-(a.sentAt||0);});

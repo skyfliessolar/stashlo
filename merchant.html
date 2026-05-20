@@ -475,8 +475,8 @@ window.doIn=function(){
     saveSess(d.access_token,d.user.id,d.user.email,d.expires_in,d.refresh_token);
     document.getElementById('tb-u').textContent=d.email;
     // Check if merchant doc exists - if not, they need to register shop
-    fGet('merchants/'+d.localId).then(function(md){
-      if(md.error||!md.fields){
+    sGet('merchants','id=eq.'+d.localId).then(function(md){
+      var mdData=Array.isArray(md)?md[0]:null;if(!mdData){
         // No merchant doc - clear session and ask them to register
         clearSess();
         showE(err,'No shop registered with this email. Please use "Register shop" tab to create your shop first.');
@@ -522,13 +522,13 @@ window.doForgot=function(){
 
 // LOAD MERCHANT
 function loadMerchant(){
-  fGet('merchants/'+MID).then(function(d){
-    if(d.error&&d.error.code===404){
+  sGet('merchants','id=eq.'+MID).then(function(d){
+    var mdData=Array.isArray(d)?d[0]:null;if(!mdData){
       // No merchant doc - create a default one
       var sessEmail=JSON.parse(localStorage.getItem('sl_m')||'{}').e||'';
       var shopId='SL-'+MID.slice(0,4).toUpperCase();
       var defaultDoc={name:'My Shop',email:sessEmail,shopId:shopId,subscription:'trial',createdAt:Date.now(),rules:{pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'5'}};
-      fSet('merchants/'+MID,defaultDoc).then(function(){MDATA=defaultDoc;renderMerch();}).catch(function(){});
+      sUpsert('merchants',Object.assign({id:MID},defaultDoc),'id').then(function(){MDATA=defaultDoc;renderMerch();}).catch(function(){});
       return;
     }
     var m=(Array.isArray(d)?d[0]:d)||{};MDATA=m;
@@ -623,8 +623,8 @@ function lookupCustomer(phone){
     var c=(Array.isArray(d)?d[0]:d)||{};
     var isNew=!c.phone&&!c.points;
     // Always try to find real name from users collection by phone
-    return fList('users',200).then(function(ud){
-      var users=(ud.documents||[]).map(function(doc){return Object.assign({_uid:doc.name.split('/').pop()},frFS(doc));});
+    return sGet('users','phone=eq.'+encodeURIComponent(SCAN_PHONE)+'&limit=1').then(function(ud){
+      var users=(Array.isArray(ud)?ud:[]).map(function(doc){return Object.assign({_uid:doc.name.split('/').pop()},frFS(doc));});
       var match=users.find(function(u){return(u.phone||'').replace(/\s/g,'')===(phone||'').replace(/\s/g,'');});
       var realName=match?match.name:null;
       if(isNew){
@@ -683,7 +683,7 @@ window.addPtsFromScan=function(){
   if(spend<(RULES.minSpend||0)){toast('Min spend is £'+(RULES.minSpend||0).toFixed(2));return;}
   var pts=Math.floor(spend*(RULES.pointsPerPound||1));
   var newPts=(SCAN_CUST.points||0)+pts;
-  fSet('merchants/'+MID+'/customers/'+SCAN_PHONE,Object.assign({},SCAN_CUST,{
+  sUpsert('merchant_customers',Object.assign({merchant_id:MID,phone:SCAN_PHONE},SCAN_CUST,{
     points:newPts,visitCount:(SCAN_CUST.visit_count||0)+1,
     totalSpend:(SCAN_CUST.total_spend||0)+spend,lastVisit:Date.now()
   })).then(function(){
@@ -702,7 +702,7 @@ window.applyReward=function(){
   var newPts=(SCAN_CUST.points||0)-thresh;
   var rt=RULES.rewardType,rv=RULES.rewardValue;
   var rl=rt==='pound'?'£'+rv+' off':rt==='percent'?rv+'% discount':'Free '+rv;
-  fSet('merchants/'+MID+'/customers/'+SCAN_PHONE,Object.assign({},SCAN_CUST,{
+  sUpsert('merchant_customers',Object.assign({merchant_id:MID,phone:SCAN_PHONE},SCAN_CUST,{
     points:newPts<0?0:newPts,rewardsRedeemed:(SCAN_CUST.rewardsRedeemed||0)+1
   })).then(function(){
     sAdd('transactions',{merchant_id:MID,phone:SCAN_PHONE,points_added:-thresh,timestamp:Date.now(),type:'redeem',reason:rl});
@@ -726,8 +726,8 @@ window.tillLookup=function(phone){
   sGet('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(function(d){
     var c=(Array.isArray(d)?d[0]:d)||{};var el=$('tc-res');el.style.display='block';
     // Also look up real name from users collection
-    fList('users',200).then(function(ud){
-      var users=(ud.documents||[]).map(function(doc){return Object.assign({},frFS(doc));});
+    sGet('users','phone=eq.'+encodeURIComponent(SCAN_PHONE)+'&limit=1').then(function(ud){
+      var users=(Array.isArray(ud)?ud:[]).map(function(doc){return Object.assign({},frFS(doc));});
       var match=users.find(function(u){return(u.phone||'').replace(/\s/g,'')===(phone||'').replace(/\s/g,'');});
       var realName=match?match.name:null;
       var nm=realName||(c&&c.name&&c.name!=='Customer'?c.name:'');
@@ -804,7 +804,7 @@ function renderProds(){
 window.oPM=function(){editProdId=null;$('pm-title').textContent='Add product';$('pm-btn').textContent='Add product';['pm-nm','pm-pr','pm-em','pm-desc'].forEach(function(i){$(i).value='';});$('pm-co').checked=true;$('pm-de').checked=false;$('prod-modal').classList.add('show');};
 window.cPM=function(){$('prod-modal').classList.remove('show');};
 window.editProd=function(id){var p=allProds.find(function(x){return x.id===id;});if(!p)return;editProdId=id;$('pm-title').textContent='Edit product';$('pm-btn').textContent='Save changes';$('pm-nm').value=p.name||'';$('pm-pr').value=p.price||'';$('pm-em').value=p.emoji||'';$('pm-cat').value=p.category||'other';$('pm-desc').value=p.description||'';$('pm-co').checked=p.collect!==false;$('pm-de').checked=p.delivery||false;$('prod-modal').classList.add('show');};
-window.togProd=function(id,cur){fUpd('merchants/'+MID+'/products/'+id,{active:!cur}).then(function(){loadProds();toast(cur?'Product hidden':'Product visible');});};
+window.togProd=function(id,cur){sUpd('products','id=eq.'+id,{active:!cur}).then(function(){loadProds();toast(cur?'Product hidden':'Product visible');});};
 window.saveProd=function(){
   var name=$('pm-nm').value.trim(),price=parseFloat($('pm-pr').value);
   if(!name){toast('Enter product name');return;}if(!price||price<=0){toast('Enter valid price');return;}
@@ -821,7 +821,7 @@ window.saveProd=function(){
 
 // ORDERS
 function loadOrds(){
-  fList('merchants/'+MID+'/orders',30).then(function(d){
+  sGet('orders','merchant_id=eq.'+MID+'&order=created_at.desc&limit=30').then(function(d){
     allOrds=(Array.isArray(d)?d:[]).sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});
     var el=$('ords-list');
     if(!allOrds.length){el.innerHTML='<div class="empty">No orders yet</div>';return;}
@@ -838,7 +838,7 @@ function loadOrds(){
     }).join('');
   }).catch(function(){});
 }
-window.markRdy=function(id){fUpd('merchants/'+MID+'/orders/'+id,{status:'ready'}).then(function(){loadOrds();toast('Order marked ready!');});};
+window.markRdy=function(id){sUpd('orders','id=eq.'+id,{status:'ready'}).then(function(){loadOrds();toast('Order marked ready!');});};
 
 // CUSTOMERS
 function loadCusts(){
@@ -851,7 +851,7 @@ function loadCusts(){
     loadTxCount();
   }).catch(function(){});
 }
-function loadTxCount(){fList('merchants/'+MID+'/transactions',100).then(function(d){t('kt',(d.documents||[]).length);}).catch(function(){});}
+function loadTxCount(){sGet('transactions','merchant_id=eq.'+MID+'&order=timestamp.desc&limit=100').then(function(d){t('kt',(Array.isArray(d)?d:[]).length);}).catch(function(){});}
 function renderCusts(list){
   var b=$('custs-body');
   if(!list.length){b.innerHTML='<tr class="empty-r"><td colspan="5">No customers yet</td></tr>';return;}
@@ -871,7 +871,7 @@ window.updateRPrev=function(){
 window.saveSettings=function(){
   var r={pointsPerPound:parseInt($('s-ppp').value)||1,minSpend:parseFloat($('s-min').value)||0,threshold:parseInt($('s-thresh').value)||100,rewardType:$('s-rt').value,rewardValue:$('s-rv').value};
   RULES=r;
-  fSet('merchants/'+MID,{rules:r,name:$('s-nm').value.trim()||MDATA.name||'',phone:$('s-ph').value.trim(),address:$('s-ad').value.trim(),shopId:MDATA.shopId||('SL-'+MID.slice(0,4).toUpperCase()),subscription:MDATA.subscription||'trial',createdAt:MDATA.createdAt||Date.now(),email:MDATA.email||''})
+  sUpsert('merchants',{id:MID,rules_json:JSON.stringify(r),name:$('s-nm').value.trim()||MDATA.name||'',phone:$('s-ph').value.trim(),address:$('s-ad').value.trim(),shopId:MDATA.shopId||('SL-'+MID.slice(0,4).toUpperCase()),subscription:MDATA.subscription||'trial',createdAt:MDATA.createdAt||Date.now(),email:MDATA.email||''})
     .then(function(){toast('Settings saved!');loadMerchant();}).catch(function(){toast('Error saving');});
 };
 
@@ -915,7 +915,7 @@ window.sendNotif=function(){
   sAdd('notifications',Object.assign({merchant_id:MID},msg)).then(function(){
     // Also save a copy to each customer's notifications
     var promises=allCusts.slice(0,100).map(function(c){
-      return fAdd('users_notifs/'+c.id,{to:c.id,from:MID,shopName:msg.shopName,title:title,body:body,link:link,read:false,sentAt:Date.now()}).catch(function(){});
+      return sAdd('notifications',{merchant_id:MID,title:title,body:body,link:link,read:false,sentAt:Date.now()}).catch(function(){});
     });
     return Promise.all(promises);
   }).then(function(){
