@@ -467,7 +467,10 @@ window.doIn=function(){
   doSignIn(e,p).then(function(d){
     $('btn-in').disabled=false;$('btn-in').textContent='Sign in';
     if(d.error){var m={EMAIL_NOT_FOUND:'No account — register your shop',INVALID_PASSWORD:'Wrong password',INVALID_EMAIL:'Invalid email',INVALID_LOGIN_CREDENTIALS:'Wrong email or password',TOO_MANY_ATTEMPTS_TRY_LATER:'Too many attempts'};showE(err,m[d.error.message]||'Sign in failed: '+d.error.message);return;}
-    if(!d.access_token){showE($('up-err'),d.error_description||d.msg||'Sign up failed');return;}
+    if(!d.access_token||!d.user){var errMsg=d.msg||d.error_description||(d.error&&d.error.message)||'Sign up failed';
+      if(d.error_code==='user_already_exists'||errMsg.includes('already'))errMsg='Account exists — sign in';
+      showE($('up-err'),errMsg);return;
+    }
     TOKEN=d.access_token;UID=d.user.id;MID=d.user.id;
     saveSess(d.access_token,d.user.id,d.user.email,d.expires_in,d.refresh_token);
     document.getElementById('tb-u').textContent=d.email;

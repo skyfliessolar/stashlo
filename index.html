@@ -491,16 +491,16 @@ window.doIn=function(){
   fetch(SURL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})})
   .then(function(r){return r.json();}).then(function(d){
     $('btn-in').disabled=false;$('btn-in').textContent='Sign in';
-    if(d.error){var m={EMAIL_NOT_FOUND:'No account found — join free',INVALID_PASSWORD:'Wrong password',INVALID_EMAIL:'Invalid email',INVALID_LOGIN_CREDENTIALS:'Incorrect email or password',TOO_MANY_ATTEMPTS_TRY_LATER:'Too many attempts — wait a moment'};showE(err,m[d.error.message]||'Sign in failed: '+d.error.message);return;}
+    if(!d.access_token||!d.user){
+      var errMsg=d.msg||d.error_description||(d.error&&d.error.message)||'Incorrect email or password';
+      var friendly={invalid_credentials:'Incorrect email or password',user_not_found:'No account — join free!'};
+      showE(err,friendly[d.error_code]||errMsg);return;
+    }
+    TOKEN=d.access_token;UID=d.user.id;
     saveSess(d.access_token,d.user.id,d.user.email,d.expires_in,d.refresh_token);
-    // Ensure user profile doc exists in Firestore
-    sGet('users','id=eq.'+d.localId).then(function(ud){
-      if(ud.error&&ud.error.code===404){
-        sUpsert('users',{id:d.localId,email:d.email,created_at:Date.now(),total_points:0},'id').catch(function(){});
-      }
-    }).catch(function(){});
+    sUpsert('users',{id:d.user.id,email:d.user.email,created_at:Date.now(),total_points:0},'id').catch(function(){});
     hide('auth');show('app','flex');boot();
-  }).catch(function(){$('btn-in').disabled=false;$('btn-in').textContent='Sign in';showE(err,'Connection error — check internet');});
+  }).catch(function(e){$('btn-in').disabled=false;$('btn-in').textContent='Sign in';showE(err,'Connection error — check your internet connection');console.error('Login error:',e);});
 };
 window.doUp=function(){
   var name=$('up-n').value.trim(),phone=$('up-ph').value.replace(/\s/g,'');
