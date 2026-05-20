@@ -499,8 +499,20 @@ window.doIn=function(){
     TOKEN=d.access_token;UID=d.user.id;
     saveSess(d.access_token,d.user.id,d.user.email,d.expires_in,d.refresh_token);
     sUpsert('users',{id:d.user.id,email:d.user.email,created_at:Date.now(),total_points:0},'id').catch(function(){});
-    hide('auth');show('app','flex');boot();
-  }).catch(function(e){$('btn-in').disabled=false;$('btn-in').textContent='Sign in';showE(err,'Connection error — check your internet connection');console.error('Login error:',e);});
+    hide('auth');show('app','flex');
+    try{boot();}catch(be){console.error('boot:',be);}
+  }).catch(function(e){
+    // Only show error if we don't have a valid token (login actually failed)
+    if(!TOKEN){
+      $('btn-in').disabled=false;$('btn-in').textContent='Sign in';
+      showE(err,'Connection error — please try again');
+      console.error('Login error:',e);
+    } else {
+      // Token exists but post-login crashed - hide auth and show app anyway
+      hide('auth');show('app','flex');
+      try{boot();}catch(e2){console.error('boot error:',e2);}
+    }
+  });
 };
 window.doUp=function(){
   var name=$('up-n').value.trim(),phone=$('up-ph').value.replace(/\s/g,'');
@@ -516,7 +528,8 @@ window.doUp=function(){
     if(d.error){var m={EMAIL_EXISTS:'Email already registered — sign in',INVALID_EMAIL:'Invalid email',WEAK_PASSWORD:'Password too weak'};showE(err,m[d.error.message]||'Sign up failed: '+d.error.message);return;}
     saveSess(d.idToken,d.localId,e,d.expiresIn);
     sUpsert('users',{id:d.localId,name:name,phone:phone,email:e,created_at:Date.now()},'id').catch(function(){});
-    hide('auth');show('app','flex');boot();
+    hide('auth');show('app','flex');
+    try{boot();}catch(be){console.error('boot:',be);}
   }).catch(function(){$('btn-up').disabled=false;$('btn-up').textContent='Create account';showE(err,'Connection error');});
 };
 window.doOut=function(){clearSess();hide('app');show('auth','flex');};
