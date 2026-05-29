@@ -178,7 +178,7 @@ tr:last-child td{border:none}
       <div class="fsb">Sign in to manage your loyalty programme.<br>Multiple staff can log in simultaneously.</div>
       <div class="fi"><label>Email</label><input type="email" id="in-e" placeholder="shop@email.com" autocomplete="email" inputmode="email"></div>
       <div class="fi"><label>Password</label><input type="password" id="in-p" placeholder="Password" autocomplete="current-password"></div>
-      <button class="btn-m" id="btn-in" onclick="doIn()">Sign in</button>
+      <button class="btn-m" id="btn-in" onclick="handleMerchantSignIn()">Sign in</button>
       <div class="err-b" id="in-err"></div>
       <div style="text-align:center;margin-top:12px"><span onclick="doForgot()" style="font-size:13px;color:var(--pu);font-weight:600;cursor:pointer">Forgot password?</span></div>
       <div id="fp-ok" style="display:none;background:#e0f2f1;color:#00897B;font-size:13px;padding:10px 12px;border-radius:10px;margin-top:10px;text-align:center">✅ Reset email sent — check your inbox</div>
@@ -189,7 +189,7 @@ tr:last-child td{border:none}
       <div class="fi"><label>Shop name</label><input type="text" id="up-sh" placeholder="e.g. Srisam Coffee House" autocomplete="organization"></div>
       <div class="fi"><label>Email</label><input type="email" id="up-e" placeholder="shop@email.com" autocomplete="email" inputmode="email"></div>
       <div class="fi"><label>Password (6+ chars)</label><input type="password" id="up-p" placeholder="Choose a password" autocomplete="new-password"></div>
-      <button class="btn-m" id="btn-up" onclick="doUp()">Register shop</button>
+      <button class="btn-m" id="btn-up" onclick="handleMerchantRegister()">Register shop</button>
       <div class="err-b" id="up-err"></div>
     </div>
   </div>
@@ -459,6 +459,8 @@ function sDel(t,f){return chkToken().then(function(){return fetch(SURL+'/rest/v1
 if(checkSess()){hide('s-auth');show('s-app','flex');loadMerchant();}
 
 // AUTH
+window.handleMerchantSignIn=function(){doIn();};
+window.handleMerchantRegister=function(){doUp();};
 window.swTab=function(t){$('tab-in').classList.toggle('on',t==='in');$('tab-up').classList.toggle('on',t==='up');$('form-in').style.display=t==='in'?'block':'none';$('form-up').style.display=t==='up'?'block':'none';};
 window.doIn=function(){
   var e=$('in-e').value.trim(),p=$('in-p').value,err=$('in-err');err.style.display='none';
