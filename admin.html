@@ -224,6 +224,32 @@ function chkToken(){
   return Promise.resolve();
 }
 
+// Admin login/logout handlers
+window.doLogin=function(){
+  var e=document.getElementById('ae').value.trim();
+  var p=document.getElementById('ap').value.trim();
+  if(!e||!p){alert('Enter email and password');return;}
+  doSignIn(e,p).then(function(d){
+    if(d.error||!d.access_token){alert('Invalid credentials');return;}
+    TOKEN=d.access_token;UID=d.user.id;
+    localStorage.setItem('sl_a',JSON.stringify({t:TOKEN,r:d.refresh_token,x:Date.now()+(d.expires_in||3600)*1000}));
+    document.getElementById('adm-login').style.display='none';
+    document.getElementById('adm-app').style.display='flex';
+    document.getElementById('adm-email').textContent=e;
+    loadAdminData();
+  }).catch(function(){alert('Login failed');});
+};
+window.doLogout=function(){
+  if(!confirm('Logout?'))return;
+  localStorage.removeItem('sl_a');
+  TOKEN=null;UID=null;
+  document.getElementById('adm-app').style.display='none';
+  document.getElementById('adm-login').style.display='flex';
+  document.getElementById('ae').value='';
+  document.getElementById('ap').value='';
+};
+
+
 // ── CRUD helpers ─────────────────────────────────────
 function sGet(t,f){return chkToken().then(function(){var u=SURL+'/rest/v1/'+t+'?select=*';if(f)u+='&'+f;return fetch(u,{headers:SH()}).then(function(r){return r.json();});});}
 function sAdd(t,d){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t,{method:'POST',headers:SH({'Prefer':'return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
