@@ -223,7 +223,7 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
       <div class="fhd">Welcome back</div><div class="fsb">Sign in to your loyalty wallet</div><div id="sess-msg" style="display:none;background:#fff3e0;color:#e65100;padding:10px 12px;border-radius:10px;margin-bottom:12px;font-size:13px">⏱️ Session expired — please sign in again</div>
       <div class="fi"><label>Email</label><input type="email" id="in-e" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
       <div class="fi"><label>Password</label><input type="password" id="in-p" placeholder="Password" autocomplete="current-password"></div>
-      <button class="btn-a" id="btn-in" onclick="doIn()">Sign in</button>
+      <button class="btn-a" id="btn-in" onclick="handleSignIn()">Sign in</button>
       <div class="err-b" id="in-err"></div>
       <div style="text-align:center;margin-top:12px"><span onclick="doForgot()" style="font-size:13px;color:var(--pu);font-weight:600;cursor:pointer">Forgot password?</span></div>
       <div id="fp-ok" style="display:none;background:#e0f2f1;color:#00897B;font-size:13px;padding:10px 12px;border-radius:10px;margin-top:10px;text-align:center">✅ Reset email sent — check your inbox</div>
@@ -235,7 +235,7 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
       <div class="fi"><label>📱 Phone — your loyalty ID at every shop</label><input type="tel" id="up-ph" placeholder="07700 900000" autocomplete="tel" inputmode="tel"></div>
       <div class="fi"><label>Email</label><input type="email" id="up-e" placeholder="you@email.com" autocomplete="email" inputmode="email"></div>
       <div class="fi"><label>Password (6+ chars)</label><input type="password" id="up-p" placeholder="Choose a password" autocomplete="new-password"></div>
-      <button class="btn-a" id="btn-up" onclick="doUp()">Create account</button>
+      <button class="btn-a" id="btn-up" onclick="handleSignUp()">Create account</button>
       <div class="err-b" id="up-err"></div>
     </div>
   </div>
@@ -422,7 +422,7 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
 // ===== SUPABASE BACKEND v1.0 =====
 var SURL='https://gcwevgaymahywqjorhnn.supabase.co';
 var SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
-var TOKEN=null,UID=null;
+var TOKEN=null,UID=null,PHONE='',PROF={},CARDS=[],STPR=[],LCPR=[],ALLPR=[],ORDS=[],SCAT='all',SDEL='a',ADDTYPE='local',CURPROD=null,OQ=1,OT='collect',PM={};
 
 function SH(extra){var h={'apikey':SKEY,'Content-Type':'application/json','Authorization':'Bearer '+(TOKEN||SKEY)};if(extra)Object.assign(h,extra);return h;}
 
@@ -778,6 +778,54 @@ function loadNotifs(){
     el.innerHTML=all.map(function(n){return renderNotif(n);}).join('');
   });
 }
+
+// ===== MISSING FUNCTIONS ADDED =====
+// Sign in handler
+window.handleSignIn=function(){
+  var email=$('in-e').value.trim();
+  var pw=$('in-p').value.trim();
+  if(!email||!pw){showE($('in-err'),'Email and password required');return;}
+  $('btn-in').disabled=true;
+  doSignIn(email,pw).then(function(d){
+    if(d.error){showE($('in-err'),d.error.message||'Sign in failed');$('btn-in').disabled=false;return;}
+    if(!d.access_token){showE($('in-err'),'No token received');$('btn-in').disabled=false;return;}
+    TOKEN=d.access_token;UID=d.user.id;PROF={email:d.user.email,phone:'',name:''};
+    localStorage.setItem('sl_s',JSON.stringify({t:TOKEN,r:d.refresh_token,x:Date.now()+(d.expires_in||3600)*1000}));
+    hide('auth');show('app','flex');go('home');loadCards();loadOrds();chkToken();
+  }).catch(function(e){showE($('in-err'),'Network error: '+e.message);$('btn-in').disabled=false;});
+};
+// Sign up handler
+window.handleSignUp=function(){
+  var nm=$('up-n').value.trim();var ph=$('up-ph').value.trim();var em=$('up-e').value.trim();var pw=$('up-p').value.trim();
+  if(!nm||!ph||!em||!pw){showE($('up-err'),'All fields required');return;}
+  if(pw.length<6){showE($('up-err'),'Password must be 6+ characters');return;}
+  $('btn-up').disabled=true;
+  doSignUp(em,pw).then(function(d){
+    if(d.error){showE($('up-err'),d.error.message||'Sign up failed');$('btn-up').disabled=false;return;}
+    TOKEN=d.access_token;UID=d.user.id;PROF={email:em,phone:ph.replace(/\s/g,''),name:nm};
+    localStorage.setItem('sl_s',JSON.stringify({t:TOKEN,r:d.refresh_token||'',x:Date.now()+(d.expires_in||3600)*1000}));
+    sUpsert('users',{id:UID,email:em,phone:ph.replace(/\s/g,''),name:nm},'id').then(function(){hide('auth');show('app','flex');go('home');loadCards();loadOrds();chkToken();}).catch(function(){});
+  }).catch(function(e){showE($('up-err'),'Sign up error: '+e.message);$('btn-up').disabled=false;});
+};
+// Forgot password handler
+window.doForgot=function(){var e=$('in-e').value.trim();if(!e){toast('Enter email');return;}doResetPw(e).then(function(){toast('✅ Reset email sent — check your inbox');}).catch(function(){toast('Error sending reset email');});};
+// Sign out handler
+window.doOut=function(){if(!confirm('Sign out?'))return;localStorage.removeItem('sl_s');TOKEN=null;UID=null;CARDS=[];PROF={};hide('app');show('auth','flex');$('in-e').value='';$('in-p').value='';$('in-err').style.display='none';};
+// Card type switcher
+window.sAT=function(t){ADDTYPE=t;document.querySelectorAll('.topt').forEach(function(x){x.classList.remove('on');});if(t==='local'){$('to-l').classList.add('on');show('al','block');hide('an');}else{$('to-n').classList.add('on');hide('al');show('an','block');loadNational();}};
+// Search local shops
+window.sSh=function(q){if(!q){$('shr').innerHTML='';return;}sGet('merchants','name=ilike.%'+q+'%&limit=8').then(function(d){$('shr').innerHTML=(Array.isArray(d)?d:[]).map(function(m){return'<div class="shop-result" onclick="addLC(\''+m.id+'\',\''+x(m.name)+'\')"><div>'+x(m.name)+'</div><div style="font-size:11px;color:#999">'+m.address+'</div></div>';}).join('');}).catch(function(){$('shr').innerHTML='<div style="color:#999;font-size:13px">No results</div>';});};
+// Add local card
+window.addLC=function(mid,shop){if(!UID){toast('Please sign in first');return;}var sh=$('shi').value.trim()||shop;addCardToDb(mid,sh);};
+// Load national brands
+window.loadNational=function(){sGet('merchants','type=eq.national&active=eq.true&limit=20').then(function(d){$('brg').innerHTML=(Array.isArray(d)?d:[]).map(function(m){return'<div class="brand-pill" onclick="addNC(\''+m.id+'\',\''+x(m.name)+'\')"><div style="font-size:24px;margin-bottom:4px">'+m.emoji+'</div><div style="font-size:12px">'+x(m.name)+'</div></div>';}).join('');}).catch(function(){});};
+// Add national card
+window.addNC=function(mid,shop){if(!UID){toast('Please sign in first');return;}addCardToDb(mid,shop);};
+// Add card to database
+window.addCardToDb=function(mid,shopName){sGet('merchants','id=eq.'+mid).then(function(d){var md=Array.isArray(d)?d[0]:(d||{});var threshold=100;if(md&&md.rules_json){try{var rf=JSON.parse(md.rules_json);if(rf.threshold)threshold=parseInt(rf.threshold)||100;}catch(e){}}return sUpsert('cards',{user_id:UID,card_id:'local-'+mid,merchant_id:mid,shop_name:shopName,name:shopName,type:'local',points:0,threshold:threshold,color:'#0a0a14',added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0},'user_id,card_id');}).then(function(){sUpsert('merchant_customers',{merchant_id:mid,phone:PHONE,name:(PROF&&PROF.name)||'Customer',points:0,visit_count:0,total_spend:0,joined_at:Date.now(),rewards_redeemed:0},'merchant_id,phone').catch(function(){});window.cAS();loadCards();toast('✅ '+shopName+' card added!');}).catch(function(){toast('Could not add card. Please try again.');});};
+// Close add sheet
+window.cAS=function(){hide('add-sheet');$('shi').value='';$('shr').innerHTML='';};
+
 </script>
 </body>
 </html>
