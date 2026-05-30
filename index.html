@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- Stashlo v5.1 - National Cards Integrated -->
+<!DOCTYPE html><!-- Stashlo v5.1 - National Cards with Details Form -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -354,21 +354,72 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
     </div>
   </div>
 </div>
-<!-- ADD SHEET -->
+<!-- ADD SHEET - WITH CARD DETAILS FORM -->
 <div id="add-sheet" onclick="if(event.target===this)cAS()">
   <div class="sheet">
     <div class="sheet-t">Add loyalty card</div>
-    <div class="type-g">
-      <div class="topt on" id="to-l" onclick="sAT('local')"><em>🏪</em>Local shop</div>
-      <div class="topt" id="to-n" onclick="sAT('national')"><em>🇬🇧</em>National brand</div>
+    
+    <!-- STEP 0: TYPE SELECTION -->
+    <div id="step-type" style="display:block">
+      <div class="type-g">
+        <div class="topt on" id="to-l" onclick="sAT('local')"><em>🏪</em>Local shop</div>
+        <div class="topt" id="to-n" onclick="sAT('national')"><em>🇬🇧</em>National brand</div>
+      </div>
     </div>
-    <div id="al">
+    
+    <!-- STEP 1A: LOCAL SHOP SEARCH -->
+    <div id="step-local" style="display:none">
       <div style="background:var(--gn2);border-radius:10px;padding:11px 13px;margin-bottom:13px;font-size:13px;color:#004D40;line-height:1.6">🔍 Search any shop on Stashlo. Your QR code is automatically linked — merchant scans it to add points.</div>
       <div class="fi"><label>Shop name or ID (SL-XXXX)</label><input type="text" id="shi" placeholder="e.g. SL-AB12 or Coffee House" oninput="sSh(this.value)"></div>
       <div id="shr"></div>
+      <button style="width:100%;padding:10px;background:#f0f0f0;color:var(--mu);border:none;border-radius:10px;margin-top:12px;cursor:pointer;font-weight:600" onclick="sAT('type')">← Back</button>
     </div>
-    <div id="an" style="display:none"><div class="brands-g" id="brg"></div></div>
-    <div class="err-b" id="add-err" style="margin-top:8px"></div>
+    
+    <!-- STEP 1B: NATIONAL BRANDS -->
+    <div id="step-national" style="display:none">
+      <div style="margin-bottom:12px">
+        <div class="brands-g" id="brg"></div>
+      </div>
+      <button style="width:100%;padding:10px;background:#f0f0f0;color:var(--mu);border:none;border-radius:10px;cursor:pointer;font-weight:600" onclick="sAT('type')">← Back</button>
+    </div>
+    
+    <!-- STEP 2: CARD DETAILS (National only) -->
+    <div id="step-card-details" style="display:none">
+      <div style="background:#f9f9fb;border-radius:12px;padding:14px;margin-bottom:14px;display:flex;gap:10px;align-items:center">
+        <div id="card-preview-emoji" style="font-size:32px"></div>
+        <div>
+          <div style="font-weight:700" id="card-preview-name"></div>
+          <div style="font-size:12px;color:var(--mu)">Enter your card details below</div>
+        </div>
+      </div>
+      
+      <div class="fi">
+        <label>Your card number</label>
+        <input type="text" id="nat-card-num" placeholder="e.g. 1234567890123456" inputmode="numeric">
+      </div>
+      
+      <div class="fi">
+        <label>Cardholder name (optional)</label>
+        <input type="text" id="nat-card-holder" placeholder="Your name on the card">
+      </div>
+      
+      <div style="background:#f0f8ff;border-radius:10px;padding:12px;margin:14px 0;border-left:4px solid var(--pu)">
+        <div style="font-size:12px;font-weight:700;color:var(--pu);margin-bottom:8px">📍 Store Location (Optional)</div>
+        <div style="font-size:12px;color:var(--mu);margin-bottom:10px;line-height:1.5">Add your favorite store location. Your card pops up when you arrive.</div>
+        <div class="fi" style="margin-bottom:8px">
+          <input type="text" id="nat-store-name" placeholder="e.g. Tesco Camden Town" style="border:1.5px solid #e5e5ea;border-radius:12px;padding:12px;font-size:14px;width:100%">
+        </div>
+        <button style="width:100%;padding:10px;background:var(--pu2);color:var(--pu);border:1.5px solid var(--pu);border-radius:10px;cursor:pointer;font-weight:600;font-size:13px" onclick="grabLoc()">📍 Use my GPS location</button>
+        <div id="loc-ok" style="display:none;background:var(--gn2);color:var(--gn);padding:8px 12px;border-radius:10px;font-size:13px;margin-top:8px;font-weight:600">✓ GPS location captured</div>
+      </div>
+      
+      <button style="width:100%;padding:12px;background:var(--dk);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:700;font-size:15px;margin-bottom:8px" onclick="saveNatCard()">Save card</button>
+      
+      <button style="width:100%;padding:10px;background:#f0f0f0;color:var(--mu);border:none;border-radius:10px;cursor:pointer;font-weight:600" onclick="sAT('national')">← Back to brands</button>
+      
+      <div class="err-b" id="card-err" style="margin-top:8px"></div>
+    </div>
+    
   </div>
 </div>
 <!-- ORDER SHEET -->
@@ -393,10 +444,8 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
 var SURL='https://gcwevgaymahywqjorhnn.supabase.co';
 var SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
 var TOKEN=null,UID=null,PHONE='',PROF={},CARDS=[],STPR=[],LCPR=[],ALLPR=[],ORDS=[],SCAT='all',SDEL='a',ADDTYPE='local',CURPROD=null,OQ=1,OT='collect',PM={};
+var CURNAT={},tmpLat=null,tmpLng=null;
 
-// ═══════════════════════════════════════════════════════════════════
-// 20 NATIONAL BRANDS (INTEGRATED)
-// ═══════════════════════════════════════════════════════════════════
 var NB=[
   {id:'tesco',n:'Tesco Clubcard',e:'🛒',c:'#00539B'},
   {id:'nectar',n:'Nectar',e:'🎯',c:'#FF6600'},
@@ -421,29 +470,18 @@ var NB=[
 ];
 
 function SH(extra){var h={'apikey':SKEY,'Content-Type':'application/json','Authorization':'Bearer '+(TOKEN||SKEY)};if(extra)Object.assign(h,extra);return h;}
-
-// ── Auth ──────────────────────────────────────────────
 function doSignIn(email,pw){return fetch(SURL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})}).then(function(r){return r.json();});}
 function doSignUp(email,pw){return fetch(SURL+'/auth/v1/signup',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})}).then(function(r){return r.json();});}
 function doResetPw(email){return fetch(SURL+'/auth/v1/recover',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:email})}).then(function(r){return r.json();});}
-
-// ── Token refresh ────────────────────────────────────
 var _pR=null;
 function rToken(){var k=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');var s=JSON.parse(localStorage.getItem(k)||'null');if(!s||!s.r)return Promise.resolve();if(_pR)return _pR;_pR=fetch(SURL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.r})}).then(function(r){return r.json();}).then(function(d){_pR=null;if(d.access_token){TOKEN=d.access_token;s.t=TOKEN;s.r=d.refresh_token;s.x=Date.now()+(d.expires_in||3600)*1000;localStorage.setItem(k,JSON.stringify(s));}}).catch(function(){_pR=null;});return _pR;}
 function chkToken(){var k=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');var s=JSON.parse(localStorage.getItem(k)||'null');if(!s)return Promise.resolve();if(s.x<Date.now()){TOKEN=null;if(s.r)return rToken();return Promise.resolve();}if(s.x<Date.now()+300000&&s.r)return rToken();return Promise.resolve();}
-
-// ── CRUD helpers ─────────────────────────────────────
 function sGet(t,f){return chkToken().then(function(){var u=SURL+'/rest/v1/'+t+'?select=*';if(f)u+='&'+f;return fetch(u,{headers:SH()}).then(function(r){return r.json();});});}
 function sAdd(t,d){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t,{method:'POST',headers:SH({'Prefer':'return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
 function sUpsert(t,d,c){return chkToken().then(function(){var u=SURL+'/rest/v1/'+t+(c?'?on_conflict='+c:'');return fetch(u,{method:'POST',headers:SH({'Prefer':'resolution=merge-duplicates,return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
 function sUpd(t,f,d){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t+'?'+f,{method:'PATCH',headers:SH({'Prefer':'return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
-function sDel(t,f){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t+'?'+f,{method:'DELETE',headers:SH()}).then(function(r){return r.ok?{ok:true}:r.json();});});}
-
-// ── BOOT ────────────────────────────────────────────
 (function(){try{var sp=document.getElementById('splash');if(sp)sp.style.display='none';var em=checkSess();if(em){var ap=document.getElementById('app');if(ap)ap.style.display='flex';boot();}else{var au=document.getElementById('auth');if(au)au.style.display='flex';var sm=document.getElementById('sess-msg');if(sm&&localStorage.getItem('sl_s'))sm.style.display='block';}}catch(e){var sp2=document.getElementById('splash');if(sp2)sp2.style.display='none';var au2=document.getElementById('auth');if(au2)au2.style.display='flex';console.error('Boot error:',e);}})();
 function boot(){loadProf();loadCards();loadOrds();loadStPr();}
-
-// ── MAIN FUNCTIONS ──────────────────────────────────
 window.swTab=function(t){$('tab-in').classList.toggle('on',t==='in');$('tab-up').classList.toggle('on',t==='up');$('form-in').style.display=t==='in'?'block':'none';$('form-up').style.display=t==='up'?'block':'none';};
 window.handleSignIn=function(){var e=$('in-e').value.trim(),p=$('in-p').value,err=$('in-err');err.style.display='none';if(!e||!p){showE(err,'Enter email and password');return;}$('btn-in').disabled=true;$('btn-in').textContent='Signing in...';doSignIn(e,p).then(function(d){$('btn-in').disabled=false;$('btn-in').textContent='Sign in';if(!d.access_token||!d.user){showE(err,d.msg||d.error_description||(d.error&&d.error.message)||'Incorrect email or password');return;}TOKEN=d.access_token;UID=d.user.id;saveSess(d.access_token,d.user.id,d.user.email,d.expires_in,d.refresh_token);sUpsert('users',{id:d.user.id,email:d.user.email,created_at:Date.now(),total_points:0},'id').catch(function(){});hide('auth');show('app','flex');boot();}).catch(function(e){$('btn-in').disabled=false;$('btn-in').textContent='Sign in';showE(err,'Connection error — please try again');console.error(e);});};
 window.handleSignUp=function(){var n=$('up-n').value.trim(),ph=$('up-ph').value.replace(/\s/g,''),e=$('up-e').value.trim(),p=$('up-p').value,err=$('up-err');err.style.display='none';if(!n){showE(err,'Enter your name');return;}if(!ph||ph.length<10){showE(err,'Enter a valid phone number');return;}if(!e){showE(err,'Enter your email');return;}if(!p||p.length<6){showE(err,'Password must be at least 6 characters');return;}$('btn-up').disabled=true;$('btn-up').textContent='Creating...';doSignUp(e,p).then(function(d){$('btn-up').disabled=false;$('btn-up').textContent='Create account';if(d.error){var m={EMAIL_EXISTS:'Email already registered — sign in',INVALID_EMAIL:'Invalid email',WEAK_PASSWORD:'Password too weak'};showE(err,m[d.error.message]||'Sign up failed: '+d.error.message);return;}saveSess(d.idToken,d.localId,e,d.expiresIn);sUpsert('users',{id:d.localId,name:n,phone:ph,email:e,created_at:Date.now()},'id').catch(function(){});hide('auth');show('app','flex');boot();}).catch(function(){$('btn-up').disabled=false;$('btn-up').textContent='Create account';showE(err,'Connection error');});};
@@ -454,42 +492,7 @@ function loadCards(){sGet('cards','user_id=eq.'+UID).then(function(d){CARDS=(Arr
 function pct(pts,thr){return Math.min(100,Math.round(((pts||0)/(thr||100))*100));}
 function rHCards(){var el=$('h-cards');if(!CARDS.length){el.innerHTML='<div class="lce">Tap + in Cards<br>to add your first card</div>';return;}el.innerHTML=CARDS.slice(0,6).map(function(c){var p=pct(c.points,c.threshold);return '<div class="lcard" style="background:'+(c.color||'#6C5CE7')+'" onclick="oCD(\''+c.id+'\')">'+'<div class="lc-sh">'+x(c.shopName||c.name||'Shop')+'</div>'+'<div class="lc-pt">'+(c.points||0)+'</div><div class="lc-lb">points</div>'+'<div class="lc-bar"><div class="lc-fill" style="width:'+p+'%"></div></div></div>';}).join('');}
 function rCList(){var el=$('cards-list');if(!CARDS.length){el.innerHTML='<div class="empty"><div class="empty-i">💳</div><p>No cards yet.<br>Tap + to find any shop on Stashlo.</p></div>';return;}el.innerHTML=CARDS.map(function(c){var p=pct(c.points,c.threshold);return '<div class="cfl" style="background:'+(c.color||'#6C5CE7')+'" onclick="oCD(\''+c.id+'\')">'+'<div class="cfl-top"><div class="cfl-nm">'+x(c.shopName||c.name||'Shop')+'</div>'+'<div class="cfl-bdg">'+(c.type==='national'?'🇬🇧 National':'🏪 Local')+'</div></div>'+'<div class="cfl-pt">'+(c.points||0)+'</div><div class="cfl-lb">loyalty points</div>'+'<div class="cfl-bar"><div class="cfl-fill" style="width:'+p+'%;background:rgba(255,255,255,.65)"></div></div></div>';}).join('');}
-
-// ═══════════════════════════════════════════════════════════════════
-// CARD DETAIL & NATIONAL CARD SUPPORT
-// ═══════════════════════════════════════════════════════════════════
-window.oCD=function(id){
-  CURCARD=CARDS.find(function(c){return c.id===id;});
-  if(!CURCARD)return;
-  show('card-detail','flex');
-  t('cd-sh',CURCARD.shopName||CURCARD.name||'Shop');
-  renderPts(CURCARD.points||0,CURCARD.threshold||100);
-  t('cd-v',CURCARD.visitCount||0);
-  t('cd-sp','£'+((CURCARD.totalSpend||0)).toFixed(0));
-  t('cd-rw',CURCARD.rewardsRedeemed||0);
-  
-  // National card handling
-  if(CURCARD.type==='national'){
-    hide('qr-sec');
-    hide('cd-actions');
-    var natEmoji=CURCARD.emoji||'🛍️';
-    $('cd-hist').innerHTML='<div style="text-align:center;padding:20px 0;color:var(--mu)"><div style="font-size:50px;margin-bottom:10px">'+natEmoji+'</div>'+'<div style="font-size:13px;line-height:1.6">Show this card at the till or give your phone number.<br>Staff will add your points automatically.</div></div>';
-    return;
-  }
-  
-  // Local card handling
-  if(CURCARD.type==='local'&&CURCARD.merchantId){
-    show('qr-sec');
-    show('cd-actions');
-    cdTab('products');
-    var qd=PHONE||CURCARD.phone||'';
-    if(qd){t('qr-ph',qd);$('qr-img').src='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(qd)+'&bgcolor=ffffff&color=0a0a14&margin=2';}
-    if(PHONE){sGet('merchant_customers','merchant_id=eq.'+CURCARD.merchantId+'&phone=eq.'+encodeURIComponent(PHONE)).then(function(d){var live=((Array.isArray(d)?d[0]:d));if(live&&typeof live.points!=='undefined'){renderPts(live.points||0,CURCARD.threshold||100);t('cd-v',live.visitCount||0);t('cd-sp','£'+(live.totalSpend||0).toFixed(0));t('cd-rw',live.rewardsRedeemed||0);sUpd('cards','user_id=eq.'+UID+'&card_id=eq.'+CURCARD.id,{points:live.points||0,visit_count:live.visit_count||live.visitCount||0,total_spend:live.total_spend||live.totalSpend||0,rewards_redeemed:live.rewards_redeemed||live.rewardsRedeemed||0}).catch(function(){});}}).catch(function(){});}
-    loadCDPr(CURCARD.merchantId);
-    loadCDHist(CURCARD.merchantId,PHONE||CURCARD.phone||'');
-  }
-};
-
+window.oCD=function(id){CURCARD=CARDS.find(function(c){return c.id===id;});if(!CURCARD)return;show('card-detail','flex');t('cd-sh',CURCARD.shopName||CURCARD.name||'Shop');renderPts(CURCARD.points||0,CURCARD.threshold||100);t('cd-v',CURCARD.visitCount||0);t('cd-sp','£'+((CURCARD.totalSpend||0)).toFixed(0));t('cd-rw',CURCARD.rewardsRedeemed||0);if(CURCARD.type==='national'){hide('qr-sec');hide('cd-actions');var natEmoji=CURCARD.emoji||'🛍️';$('cd-hist').innerHTML='<div style="text-align:center;padding:20px 0;color:var(--mu)"><div style="font-size:50px;margin-bottom:10px">'+natEmoji+'</div>'+'<div style="font-size:13px;line-height:1.6">Show this card at the till or give your phone number.<br>Staff will add your points automatically.</div></div>';return;}if(CURCARD.type==='local'&&CURCARD.merchantId){show('qr-sec');show('cd-actions');cdTab('products');var qd=PHONE||CURCARD.phone||'';if(qd){t('qr-ph',qd);$('qr-img').src='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(qd)+'&bgcolor=ffffff&color=0a0a14&margin=2';}if(PHONE){sGet('merchant_customers','merchant_id=eq.'+CURCARD.merchantId+'&phone=eq.'+encodeURIComponent(PHONE)).then(function(d){var live=((Array.isArray(d)?d[0]:d));if(live&&typeof live.points!=='undefined'){renderPts(live.points||0,CURCARD.threshold||100);t('cd-v',live.visitCount||0);t('cd-sp','£'+(live.totalSpend||0).toFixed(0));t('cd-rw',live.rewardsRedeemed||0);sUpd('cards','user_id=eq.'+UID+'&card_id=eq.'+CURCARD.id,{points:live.points||0,visit_count:live.visit_count||live.visitCount||0,total_spend:live.total_spend||live.totalSpend||0,rewards_redeemed:live.rewards_redeemed||live.rewardsRedeemed||0}).catch(function(){});}}).catch(function(){});}loadCDPr(CURCARD.merchantId);loadCDHist(CURCARD.merchantId,PHONE||CURCARD.phone||'');}};
 function renderPts(pts,thr){t('cd-pt',pts);t('cd-pl',pts+' pts');t('cd-pr','Goal: '+thr+' pts');$('cd-fill').style.width=pct(pts,thr)+'%';var pill=$('cd-pill');if(pts>=thr){pill.style.display='inline-flex';t('cd-pill-t','Reward ready to redeem!');}else pill.style.display='none';}
 function loadCDPr(mid){sGet('products','merchant_id=eq.'+mid+'&active=eq.true&limit=10').then(function(d){var docs=(Array.isArray(d)?d:[]).filter(function(p){return p.active!==false;});if(!docs.length){return;}$('cd-prods').innerHTML=docs.map(function(p){PM[p.id]=p;return '<div class="pmini" onclick="oOS(\''+p.id+'\')">'+'<div class="pm-em">'+(p.emoji||'🛍️')+'</div><div class="pm-nm">'+x(p.name)+'</div>'+'<div class="pm-pr">£'+Number(p.price).toFixed(2)+'</div></div>';}).join('');}).catch(function(){});}
 function loadCDHist(mid,phone){var el=$('cd-hist');if(!phone){el.innerHTML='<div class="empty" style="padding:16px"><p>No visits yet</p></div>';return;}sGet('transactions','merchant_id=eq.'+mid+'&order=timestamp.desc&limit=15').then(function(d){var docs=(d.documents||[]).map(function(doc){return doc;}).filter(function(t){return t&&t.phone===phone;}).sort(function(a,b){return(b.timestamp||0)-(a.timestamp||0);}).slice(0,10);if(!docs.length){el.innerHTML='<div class="empty" style="padding:16px"><p>No visits yet</p></div>';return;}el.innerHTML=docs.map(function(t){var ir=t.type==='redeem';return '<div class="hi"><div><div class="hi-t">'+(ir?'Reward redeemed':'Visit')+'</div>'+'<div class="hi-s">'+tAgo(t.timestamp)+(t.amount?' · £'+Number(t.amount).toFixed(2)+' spent':'')+'</div></div>'+'<div class="hi-p'+(ir?' neg':'')+'>'+(ir?'−'+(t.pointsRedeemed||0):'+'+( t.pointsAdded||0))+' pts</div></div>';}).join('');}).catch(function(){el.innerHTML='<div class="empty" style="padding:16px"><p>History unavailable</p></div>';});}
@@ -499,82 +502,15 @@ window._cdProds={};
 window.loadCDProducts=function(mid){var grid=$('cd-prods-grid'),empty=$('cd-prods-empty');if(!grid)return;grid.innerHTML='<div style="color:var(--mu);font-size:13px;grid-column:1/-1;padding:16px 0">Loading...</div>';sGet('products','merchant_id=eq.'+mid+'&active=eq.true').then(function(d){var prods=(d.documents||[]).map(function(doc){return Object.assign({_id:doc.name.split('/').pop()},doc);}).filter(function(p){return p.active!==false;});if(!prods.length){grid.innerHTML='';if(empty)empty.style.display='block';return;}if(empty)empty.style.display='none';prods.forEach(function(p){window._cdProds[p._id||p.name]=p;});grid.innerHTML=prods.map(function(p){var pid=x(p._id||p.name||'');return '<div onclick="oOS(\''+pid+'\')" style="background:#f9f9fb;border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent"><div style="height:80px;background:linear-gradient(135deg,#ece9ff,#e0f2f1);display:flex;align-items:center;justify-content:center;font-size:32px">'+(p.emoji||'🛍️')+'</div><div style="padding:10px"><div style="font-size:13px;font-weight:700;margin-bottom:2px;line-height:1.3">'+x(p.name)+'</div><div style="font-size:11px;color:var(--mu);margin-bottom:6px;line-height:1.4">'+(p.description?x(p.description.slice(0,40)):'')+'</div><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:15px;font-weight:800;color:var(--pu)">£'+parseFloat(p.price||0).toFixed(2)+'</div></div></div></div>';}).join('');}).catch(function(){grid.innerHTML='<div style="color:var(--rd);font-size:13px;grid-column:1/-1;padding:16px 0">Could not load products</div>';});};
 window.loadShopMsgs=function(mid){var el=$('cd-msgs');if(!el)return;sGet('messages','merchant_id=eq.'+mid+'&user_id=eq.'+UID+'&order=ts.asc&limit=20').then(function(d){var msgs=(Array.isArray(d)?d:[]).map(function(doc){return doc;}).sort(function(a,b){return(a.ts||0)-(b.ts||0);});if(!msgs.length){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--mu);font-size:13px">No messages yet. Say hello!</div>';return;}el.innerHTML=msgs.map(function(m){var mine=m.from==='customer';return '<div style="margin-bottom:8px;text-align:'+(mine?'right':'left')+'"><div style="display:inline-block;max-width:80%;background:'+(mine?'var(--pu)':'#f0f0f5')+';color:'+(mine?'#fff':'var(--tx)')+';padding:8px 12px;border-radius:'+(mine?'12px 12px 4px 12px':'12px 12px 12px 4px')+';font-size:13px">'+x(m.text)+'</div></div>';}).join('');el.scrollTop=el.scrollHeight;}).catch(function(){});};
 window.sendShopMsg=function(){var inp=$('cd-msg-in');if(!inp||!inp.value.trim())return;var text=inp.value.trim();inp.value='';if(!CURCARD||!CURCARD.merchantId)return;var msg={text:text,from:'customer',name:(PROF&&PROF.name)||'Customer',ts:Date.now()};sAdd('messages',{merchant_id:CURCARD.merchantId,user_id:UID,text:msg.text,from_role:msg.from,sender_name:msg.name,ts:msg.ts}).then(function(){loadShopMsgs(CURCARD.merchantId);});sAdd('notifications',{merchant_id:CURCARD.merchantId,title:'💬 Message from '+(PROF&&PROF.name||'Customer'),body:text.slice(0,80),type:'message',customerUID:UID,sentAt:Date.now()}).catch(function(){});};
-
-// ═══════════════════════════════════════════════════════════════════
-// ADD CARD SHEET - TYPE & BRAND SELECTION
-// ═══════════════════════════════════════════════════════════════════
-window.oAS=function(){show('add-sheet','flex');bBrands();};
-window.cAS=function(){
-  hide('add-sheet');
-  $('shi').value='';
-  $('shr').innerHTML='';
-  ADDTYPE='local';
-  $('to-l').classList.add('on');
-  $('to-n').classList.remove('on');
-};
-window.sAT=function(t){
-  ADDTYPE=t;
-  $('to-l').classList.toggle('on',t==='local');
-  $('to-n').classList.toggle('on',t==='national');
-  $('al').style.display=t==='local'?'block':'none';
-  $('an').style.display=t==='national'?'block':'none';
-  if(t==='national')bBrands();
-};
-
-// ═══════════════════════════════════════════════════════════════════
-// NATIONAL BRANDS RENDERING & HANDLING
-// ═══════════════════════════════════════════════════════════════════
-function bBrands(){
-  var el=$('brg');
-  if(!el)return;
-  el.innerHTML=NB.map(function(b){
-    return '<div class="brand" onclick="aNat(\''+b.id+'\',\''+b.n.replace(/'/g,"\\'")+'\',\''+b.e+'\',\''+b.c+'\')">' +
-      '<em>'+b.e+'</em><span>'+x(b.n)+'</span></div>';
-  }).join('');
-}
-
-window.aNat=function(id,name,emoji,color){
-  if(!UID){toast('Please sign in first');return;}
-  if(CARDS.find(function(c){return c.id===id;})){toast('✅ Already in your wallet!');return;}
-  
-  var card={
-    id:id,
-    name:name,
-    shopName:name,
-    emoji:emoji,
-    color:color,
-    type:'national',
-    points:0,
-    threshold:500,
-    addedAt:Date.now(),
-    visitCount:0,
-    totalSpend:0,
-    rewardsRedeemed:0
-  };
-  
-  sUpsert('cards',Object.assign({user_id:UID},card),'user_id,id').then(function(r){
-    if(Array.isArray(r)&&r[0]||r&&!r.error){
-      toast('✅ '+card.name+' added!');
-      window.cAS();
-      loadCards();
-      return;
-    }
-    toast('✅ '+name+' added!');
-    window.cAS();
-    loadCards();
-  }).catch(function(e){
-    toast('Connection error. Try again.');
-    console.error(e);
-  });
-};
-
-// ═══════════════════════════════════════════════════════════════════
-// LOCAL SHOP SEARCH
-// ═══════════════════════════════════════════════════════════════════
+window.oAS=function(){sAT('type');show('add-sheet','flex');};
+window.cAS=function(){hide('add-sheet');$('shi').value='';$('shr').innerHTML='';$('nat-card-num').value='';$('nat-card-holder').value='';$('nat-store-name').value='';$('loc-ok').style.display='none';$('card-err').style.display='none';CURNAT={};tmpLat=null;tmpLng=null;sAT('type');};
+window.sAT=function(t){if(t==='type'){show('step-type','block');hide('step-local');hide('step-national');hide('step-card-details');ADDTYPE='local';return;}if(t==='local'){hide('step-type');show('step-local','block');hide('step-national');hide('step-card-details');ADDTYPE='local';return;}if(t==='national'){hide('step-type');hide('step-local');show('step-national','block');hide('step-card-details');ADDTYPE='national';bBrands();return;}};
+function bBrands(){var el=$('brg');if(!el)return;el.innerHTML=NB.map(function(b){return '<div class="brand" onclick="selectNatBrand(\''+b.id+'\',\''+b.n.replace(/'/g,"\\'")+'\',\''+b.e+'\',\''+b.c+'\')">'+'<em>'+b.e+'</em><span>'+x(b.n)+'</span></div>';}).join('');}
+window.selectNatBrand=function(id,name,emoji,color){if(!UID){toast('Please sign in first');return;}if(CARDS.find(function(c){return c.id===id;})){toast('✅ Already in your wallet!');return;}CURNAT={id:id,name:name,emoji:emoji,color:color};$('card-preview-emoji').textContent=emoji;$('card-preview-name').textContent=name;$('nat-card-num').value='';$('nat-card-holder').value='';$('nat-store-name').value='';$('loc-ok').style.display='none';tmpLat=null;tmpLng=null;$('card-err').style.display='none';hide('step-national');show('step-card-details','block');};
+window.saveNatCard=function(){if(!CURNAT||!CURNAT.id){toast('Please select a brand');return;}var cardNum=$('nat-card-num').value.trim();var cardHolder=$('nat-card-holder').value.trim();var storeName=$('nat-store-name').value.trim();var err=$('card-err');err.style.display='none';if(!cardNum){err.textContent='Please enter your card number';err.style.display='block';return;}if(cardNum.length<8){err.textContent='Card number too short (minimum 8 digits)';err.style.display='block';return;}var card={id:CURNAT.id,name:CURNAT.name,shopName:CURNAT.name,emoji:CURNAT.emoji,color:CURNAT.color,type:'national',points:0,threshold:500,addedAt:Date.now(),visitCount:0,totalSpend:0,rewardsRedeemed:0,cardNumber:cardNum,cardHolder:cardHolder||null,storeLocation:storeName||null,lat:tmpLat||null,lng:tmpLng||null};sUpsert('cards',Object.assign({user_id:UID},card),'user_id,id').then(function(r){if(Array.isArray(r)&&r[0]||r&&!r.error){toast('✅ '+CURNAT.name+' added!');window.cAS();loadCards();return;}toast('✅ '+CURNAT.name+' added!');window.cAS();loadCards();}).catch(function(e){err.textContent='Connection error. Try again.';err.style.display='block';console.error(e);});};
+window.grabLoc=function(){if(!navigator.geolocation){toast('Geolocation not supported on this device');return;}var btn=event.target;btn.disabled=true;btn.textContent='📍 Getting location...';navigator.geolocation.getCurrentPosition(function(pos){tmpLat=pos.coords.latitude;tmpLng=pos.coords.longitude;$('loc-ok').style.display='block';btn.disabled=false;btn.textContent='📍 Use my GPS location';toast('✓ Location captured');},function(err){toast('Location access denied');btn.disabled=false;btn.textContent='📍 Use my GPS location';console.error(err);});};
 window.sSh=function(v){clearTimeout(ST);var el=$('shr');if(!v||v.length<2){el.innerHTML='';return;}ST=setTimeout(function(){chkToken().then(function(){return fetch(SURL+'/rest/v1/merchants?select=id,name,shop_id,address,rules_json',{headers:SH()}).then(function(r){return r.json();})}).then(function(d){var docs=(Array.isArray(d)?d:[]);var isId=v.toUpperCase().indexOf('SL-')===0||/^[A-Z]{2}[0-9]{2}$/i.test(v.trim());if(isId){var sv=v.toUpperCase().replace('SL-','');docs=docs.filter(function(m){var sid=(m.shopId||'').toUpperCase().replace('SL-','');return sid===sv||sid.indexOf(sv)===0||(m.shopId||'').toUpperCase()===v.toUpperCase();});}else{docs=docs.filter(function(m){return(m.name||'').toLowerCase().indexOf(v.toLowerCase())>=0||(m.shopId||'').toUpperCase().indexOf(v.toUpperCase())>=0;});}if(!docs.length){el.innerHTML='<div style="padding:12px;color:var(--mu);font-size:14px">No shops found</div>';return;}el.innerHTML=docs.slice(0,5).map(function(m){var already=CARDS.find(function(c){return c.merchant_id===m.id||c.merchantId===m.id;});return '<div class="sr-item" onclick="aLoc(\''+m.id+'\',\''+x(m.name||'Shop').replace(/'/g,"\\'")+'\')">'+  '<div><div class="sr-nm">'+x(m.name||'Shop')+'</div><div class="sr-id">'+(m.shopId||'')+'</div></div>'+(already?'<span style="font-size:12px;color:var(--gn);font-weight:700">✓ Added</span>':'<div style="color:var(--pu);font-weight:700;font-size:13px">Add ›</div>')+'</div>';}).join('');}).catch(function(){el.innerHTML='<div style="padding:12px;color:var(--rd);font-size:14px">Search error</div>';});},350);};
 window.aLoc=function(mid,shopName){if(CARDS.find(function(c){return c.merchantId===mid;})){toast('Already in your wallet!');return;}if(!PHONE){var ph=prompt('Enter your phone number (loyalty ID):');if(!ph||ph.replace(/\s/g,'').length<10){toast('Invalid phone number');return;}ph=ph.replace(/\s/g,'');PHONE=ph;PROF.phone=ph;sUpsert('users',Object.assign({},PROF,{id:UID,phone:ph}),'id').catch(function(){});t('p-ph','📱 '+ph);}sGet('merchants','id=eq.'+mid).then(function(d){var md=Array.isArray(d)?d[0]:(d||{});var threshold=100;if(md&&md.rules_json){try{var rf=JSON.parse(md.rules_json);if(rf.threshold)threshold=parseInt(rf.threshold)||100;}catch(e){}}return sUpsert('cards',{user_id:UID,card_id:'local-'+mid,merchant_id:mid,shop_name:shopName,name:shopName,type:'local',points:0,threshold:threshold,color:'#0a0a14',added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0},'user_id,card_id');}).then(function(){sUpsert('merchant_customers',{merchant_id:mid,phone:PHONE,name:(PROF&&PROF.name)||'Customer',points:0,visit_count:0,total_spend:0,joined_at:Date.now(),rewards_redeemed:0},'merchant_id,phone').catch(function(){});window.cAS();loadCards();toast('✅ '+shopName+' card added!');}).catch(function(){toast('Could not add card. Please try again.');});};
-
-// ─ Shop and products ────────────────────────────────────────────────
 function loadStPr(){sGet('stashlo_products','active=eq.true&order=created_at.desc&limit=20').then(function(d){STPR=(Array.isArray(d)?d:[]).map(function(p){return Object.assign({shopId:'stashlo',shopName:'Stashlo Store'},p);});STPR.forEach(function(p){PM[p.id]=p;});if(STPR.length){show('h-st-hdr','flex');$('h-st-g').innerHTML=STPR.slice(0,4).map(pH).join('');}rShop();}).catch(function(){rShop();});}
 function loadLcPr(){LCPR=[];var mids=CARDS.filter(function(c){return c.type==='local'&&c.merchantId;}).map(function(c){return c.merchantId;});if(!mids.length){rShop();return;}Promise.all(mids.map(function(mid){var card=CARDS.find(function(c){return c.merchantId===mid;});return sGet('products','merchant_id=eq.'+mid+'&active=eq.true&limit=8').then(function(d){return(Array.isArray(d)?d:[]).map(function(p){return Object.assign({merchantId:mid,shopName:(card&&card.shopName)||'Local shop'},p);});}).catch(function(){return[];});})).then(function(res){res.forEach(function(a){LCPR=LCPR.concat(a);});LCPR.forEach(function(p){PM[p.id]=p;});if(LCPR.length){show('h-lc-hdr','flex');$('h-lc-g').innerHTML=LCPR.slice(0,4).map(pH).join('');}rShop();});}
 function rShop(){ALLPR=STPR.concat(LCPR);var el=$('shop-g');var items=ALLPR.filter(function(p){if(SCAT==='stashlo'&&p.shopId!=='stashlo')return false;if(SCAT!=='all'&&SCAT!=='stashlo'&&p.category!==SCAT)return false;if(SDEL==='c'&&p.collect===false)return false;if(SDEL==='d'&&!p.delivery)return false;return true;});if(!items.length){el.innerHTML='<div style="grid-column:1/-1" class="empty"><div class="empty-i">🛍️</div><p>No products yet</p></div>';return;}el.innerHTML=items.map(pH).join('');}
