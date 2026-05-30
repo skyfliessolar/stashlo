@@ -47,13 +47,14 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
 .sr{display:flex;justify-content:space-between;align-items:center;margin:18px 0 11px}
 .st{font-size:15px;font-weight:700}.sl{font-size:13px;color:var(--pu);font-weight:600;cursor:pointer}
 .cscroll{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px}
-.lcard{min-width:180px;border-radius:16px;padding:16px;flex-shrink:0;cursor:pointer;position:relative;overflow:hidden}
-.lcard:active{opacity:.8}
+.lcard{min-width:180px;border-radius:16px;padding:16px;flex-shrink:0;cursor:pointer;position:relative;overflow:hidden;perspective:1000px;transform:rotateY(-5deg) rotateX(2deg);transition:transform 0.3s ease}
+.lcard:active{opacity:.8;transform:rotateY(-2deg) rotateX(1deg)}
 .lc-nm{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:8px}
 .lc-pt{font-size:28px;font-weight:800;color:#fff;letter-spacing:-1px}
 .lc-lb{font-size:11px;color:rgba(255,255,255,.4)}
 .lce{min-width:180px;background:#fff;border-radius:16px;padding:20px;text-align:center;color:var(--mu);font-size:13px;flex-shrink:0}
-.cfl{border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;position:relative;display:flex;flex-direction:column}
+.cfl{border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;position:relative;display:flex;flex-direction:column;perspective:1000px;transform:rotateY(-3deg) rotateX(1deg);transition:transform 0.3s ease}
+.cfl:active{transform:rotateY(-1deg) rotateX(0deg)}
 .cfl-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .cfl-nm{font-size:14px;font-weight:700;color:#fff}
 .cfl-bdg{font-size:10px;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.6)}
@@ -84,6 +85,8 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
 .cd-info{background:#f9f9fb;border-radius:12px;padding:14px;margin-bottom:14px}
 .cd-info-lbl{font-size:11px;font-weight:700;color:var(--mu);margin-bottom:4px}
 .cd-info-val{font-size:14px;font-weight:700;color:var(--tx)}
+.loc-btn{width:100%;padding:11px;background:var(--gn);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:13px;margin-bottom:10px}
+.loc-status{font-size:11px;color:var(--mu);text-align:center;margin-top:4px}
 </style>
 </head>
 <body>
@@ -170,6 +173,9 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
     <div class="cd-info"><div class="cd-info-lbl">Visits</div><div class="cd-info-val" id="cd-visits">0</div></div>
     <div class="cd-info"><div class="cd-info-lbl">Total spent</div><div class="cd-info-val" id="cd-spent">£0</div></div>
     <div class="cd-info"><div class="cd-info-lbl">Rewards</div><div class="cd-info-val" id="cd-rewards">0</div></div>
+    <div class="cd-info"><div class="cd-info-lbl">Card Number</div><div class="cd-info-val" id="cd-cardnum">****</div></div>
+    <div class="cd-info"><div class="cd-info-lbl">Store Location</div><div class="cd-info-val" id="cd-store">-</div></div>
+    <div class="cd-info"><div class="cd-info-lbl">Order Reference</div><div class="cd-info-val" id="cd-order">-</div></div>
   </div>
 </div>
 
@@ -201,8 +207,12 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
         <div id="card-preview-emoji" style="font-size:32px;margin-bottom:8px"></div>
         <div id="card-preview-name" style="font-weight:700;font-size:14px"></div>
       </div>
-      <div class="fi"><label>Card number</label><input type="text" id="nat-card-num" placeholder="1234567890"></div>
+      <div class="fi"><label>Card number</label><input type="text" id="nat-card-num" placeholder="e.g., 1234567890"></div>
+      <div class="fi"><label>Order reference (optional)</label><input type="text" id="nat-card-order" placeholder="e.g., ORDER-12345"></div>
+      <div class="fi"><label>Store location (optional)</label><input type="text" id="nat-card-store" placeholder="e.g., London West End"></div>
       <div class="fi"><label>Name (optional)</label><input type="text" id="nat-card-holder" placeholder="Your name"></div>
+      <button class="loc-btn" onclick="captureLocation()">📍 Capture Location</button>
+      <div class="loc-status" id="loc-status"></div>
       <button style="width:100%;padding:12px;background:var(--dk);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:700;margin-bottom:8px;margin-top:16px" onclick="saveNatCard()">✓ Save card</button>
       <button style="width:100%;padding:10px;background:#f0f0f0;color:var(--mu);border:none;border-radius:10px;cursor:pointer;font-weight:600" onclick="sAT('national')">← Back</button>
       <div class="err-b" id="card-err"></div>
@@ -218,6 +228,7 @@ var SURL='https://gcwevgaymahywqjorhnn.supabase.co';
 var SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
 var TOKEN=null,UID=null,PROF={},CARDS=[];
 var ADDTYPE='local',CURNAT={},CURCARD=null;
+var tmpLat=null,tmpLng=null;
 
 // National Brands
 var NB=[
@@ -243,7 +254,7 @@ var NB=[
   {id:'cineworld',n:'Cineworld',e:'🎬',c:'#C41230'}
 ];
 
-console.log('✓ STASHLO CARD SECTION - STARTING...');
+console.log('✓ STASHLO SENIOR FIX v2 - STARTING...');
 
 setTimeout(function(){
   try{
@@ -321,7 +332,7 @@ window.doOut=function(){
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// CARD FUNCTIONS - COMPLETE FIX
+// CARD FUNCTIONS - SENIOR DEVELOPER FIX
 // ═══════════════════════════════════════════════════════════════════
 
 function loadProf(){
@@ -367,11 +378,11 @@ function renderCards(){
   }else{
     hc.innerHTML=CARDS.slice(0,4).map(c=>{
       var c1=c.color||'#6C5CE7';
-      return '<div class="lcard" style="background:'+c1+'" onclick="oCD(\''+c.id+'\')">'
-        +'<div class="lc-nm">'+x(c.shopName||c.name)+'</div>'
-        +'<div class="lc-pt">'+(c.points||0)+'</div>'
-        +'<div class="lc-lb">points</div>'
-        +'</div>';
+      return '<div class="lcard" style="background:'+c1+'" onclick="oCD(\''+c.id+'\')">'+
+        '<div class="lc-nm">'+x(c.shopName||c.name)+'</div>'+
+        '<div class="lc-pt">'+(c.points||0)+'</div>'+
+        '<div class="lc-lb">points</div>'+
+        '</div>';
     }).join('');
   }
   
@@ -383,14 +394,14 @@ function renderCards(){
     cl.innerHTML=CARDS.map(c=>{
       var c1=c.color||'#6C5CE7';
       var pct=Math.min(100,Math.round(((c.points||0)/(c.threshold||100))*100));
-      return '<div class="cfl" style="background:'+c1+'" onclick="oCD(\''+c.id+'\')">'
-        +'<div class="cfl-header">'
-        +'<div class="cfl-nm">'+x(c.shopName||c.name)+'</div>'
-        +'<div class="cfl-bdg">'+(c.type==='national'?'🇬🇧':'🏪')+'</div>'
-        +'</div>'
-        +'<div class="cfl-pt">'+(c.points||0)+'</div>'
-        +'<div class="cfl-lb">points</div>'
-        +'</div>';
+      return '<div class="cfl" style="background:'+c1+'" onclick="oCD(\''+c.id+'\')">'+
+        '<div class="cfl-header">'+
+        '<div class="cfl-nm">'+x(c.shopName||c.name)+'</div>'+
+        '<div class="cfl-bdg">'+(c.type==='national'?'🇬🇧':'🏪')+'</div>'+
+        '</div>'+
+        '<div class="cfl-pt">'+(c.points||0)+'</div>'+
+        '<div class="cfl-lb">points</div>'+
+        '</div>';
     }).join('');
   }
   
@@ -410,6 +421,9 @@ window.oCD=function(id){
   t('cd-visits',CURCARD.visitCount||0);
   t('cd-spent','£'+((CURCARD.totalSpend||0)).toFixed(0));
   t('cd-rewards',CURCARD.rewardsRedeemed||0);
+  t('cd-cardnum',CURCARD.cardNumber?'****'+CURCARD.cardNumber.slice(-4):'****');
+  t('cd-store',CURCARD.storeLocation||'-');
+  t('cd-order',CURCARD.orderRef||'-');
 };
 
 window.closeCD=function(){
@@ -433,9 +447,14 @@ window.cAS=function(){
   $('shi').value='';
   $('shr').innerHTML='';
   $('nat-card-num').value='';
+  $('nat-card-order').value='';
+  $('nat-card-store').value='';
   $('nat-card-holder').value='';
   $('card-err').style.display='none';
+  t('loc-status','');
   CURNAT={};
+  tmpLat=null;
+  tmpLng=null;
   sAT('type');
 };
 
@@ -449,8 +468,8 @@ window.sAT=function(t){
 
 function bBrands(){
   var el=$('brg');
-  el.innerHTML=NB.map(b=>'<div class="brand" onclick="selectNatBrand(\''+b.id+'\',\''+b.n.replace(/'/g,"\\'")+'\',\''+b.e+'\',\''+b.c+'\')">'
-    +'<em>'+b.e+'</em><span>'+x(b.n)+'</span></div>').join('');
+  el.innerHTML=NB.map(b=>'<div class="brand" onclick="selectNatBrand(\''+b.id+'\',\''+b.n.replace(/'/g,"\\'")+'\',\''+b.e+'\',\''+b.c+'\')">'+
+    '<em>'+b.e+'</em><span>'+x(b.n)+'</span></div>').join('');
 }
 
 window.selectNatBrand=function(id,name,emoji,color){
@@ -461,13 +480,39 @@ window.selectNatBrand=function(id,name,emoji,color){
   $('card-preview-emoji').textContent=emoji;
   $('card-preview-name').textContent=name;
   $('nat-card-num').value='';
+  $('nat-card-order').value='';
+  $('nat-card-store').value='';
   $('nat-card-holder').value='';
+  t('loc-status','');
   hide('step-national');
   show('step-card-details');
 };
 
+window.captureLocation=function(){
+  console.log('→ Capturing location');
+  if(!navigator.geolocation){
+    t('loc-status','📍 Geolocation not supported');
+    return;
+  }
+  t('loc-status','📍 Locating...');
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      tmpLat=pos.coords.latitude;
+      tmpLng=pos.coords.longitude;
+      t('loc-status','✓ Location captured: '+tmpLat.toFixed(4)+', '+tmpLng.toFixed(4));
+      console.log('✓ Location:', tmpLat, tmpLng);
+    },
+    function(err){
+      t('loc-status','✗ Location failed: '+err.message);
+      console.error('Geolocation error:', err);
+    }
+  );
+};
+
 window.saveNatCard=function(){
   var cardNum=$('nat-card-num').value.trim();
+  var orderRef=$('nat-card-order').value.trim();
+  var storeLocation=$('nat-card-store').value.trim();
   var cardHolder=$('nat-card-holder').value.trim();
   var err=$('card-err');
   err.style.display='none';
@@ -494,7 +539,11 @@ window.saveNatCard=function(){
     totalSpend:0,
     rewardsRedeemed:0,
     cardNumber:cardNum,
-    cardHolder:cardHolder||null
+    cardHolder:cardHolder||null,
+    orderRef:orderRef||null,
+    storeLocation:storeLocation||null,
+    latitude:tmpLat,
+    longitude:tmpLng
   };
   
   console.log('→ Sending to Supabase:', card);
@@ -542,7 +591,7 @@ function saveSess(token,uid,email){localStorage.setItem('sl_s',JSON.stringify({t
 function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_s')||'null');if(s&&s.t&&s.uid&&s.x>Date.now()){TOKEN=s.t;UID=s.uid;return s.email||s.uid;}}catch(e){}clearSess();return false;}
 function clearSess(){localStorage.removeItem('sl_s');TOKEN=null;UID=null;PROF={};CARDS=[];}
 
-console.log('✓ STASHLO READY - CARD SECTION COMPLETE');
+console.log('✓ STASHLO READY - ALL SECTIONS COMPLETE');
 </script>
 </body>
 </html>
