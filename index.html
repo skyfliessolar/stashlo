@@ -4,387 +4,542 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0a0a14">
-<title>Stashlo — Smart Loyalty Wallet [DEBUG]</title>
+<title>Stashlo</title>
 <style>
-:root{--bg:#f0efff;--dk:#0a0a14;--wh:#fff;--pu:#6C5CE7;--pu2:#ece9ff;--gn:#00897B;--tx:#1a1a2e;--mu:#706f87;--fn:system-ui,-apple-system,'Segoe UI',sans-serif}
-*{box-sizing:border-box;margin:0;padding:0;font-family:var(--fn)}
-body{background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
-button{cursor:pointer;border:none;outline:none}
-input{outline:none;-webkit-appearance:none}
-#splash{position:fixed;inset:0;background:var(--dk);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;z-index:9999}
-#auth{display:none;min-height:100vh;background:var(--dk);align-items:center;justify-content:center;padding:20px}
-.a-box{background:#fff;border-radius:24px;padding:32px 24px;width:100%;max-width:380px}
-.a-box input{width:100%;padding:13px 14px;border:1.5px solid #e5e5ea;border-radius:12px;font-size:15px;margin-bottom:10px}
-.a-box button{width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:12px;font-size:15px;font-weight:700;margin-top:10px}
-#app{display:none;flex-direction:column;min-height:100vh;padding-bottom:72px}
-.topbar{background:var(--dk);padding:13px 18px;color:#fff;font-weight:800}
-.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #ebebef;display:flex;z-index:100}
-.nv{flex:1;padding:9px;text-align:center;font-size:10px;cursor:pointer;color:var(--mu)}
-.nv.on{color:var(--pu);font-weight:700}
-.scr{display:none;padding:16px}.scr.on{display:block}
-.hero{background:var(--dk);border-radius:20px;padding:20px 18px;margin-bottom:16px;color:#fff}
-.hst{background:rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;flex:1;display:inline-block}
-.sr{display:flex;justify-content:space-between;align-items:center;margin:18px 0 11px}
-.cscroll{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px}
-.lcard{min-width:180px;border-radius:16px;padding:16px;flex-shrink:0;cursor:pointer;color:#fff;transform:perspective(1000px) rotateY(-5deg);transition:transform 0.3s}
-.lcard:active{transform:perspective(1000px) rotateY(-2deg)}
-.cfl{border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;color:#fff;transform:perspective(1000px) rotateY(-3deg);transition:transform 0.3s}
-.empty{text-align:center;padding:36px 16px;color:var(--mu)}
-#add-sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end}
-.sheet{background:#fff;border-radius:24px 24px 0 0;padding:24px 18px;width:100%;max-height:90vh;overflow-y:auto}
-.sheet input{width:100%;padding:11px 12px;border:1px solid #e5e5ea;border-radius:10px;font-size:14px;margin-bottom:10px}
-.sheet label{display:block;font-size:11px;font-weight:700;color:var(--mu);margin-bottom:4px;text-transform:uppercase}
-.sheet button{width:100%;padding:12px;background:var(--dk);color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:600;margin:10px 0}
-.sheet .back{background:#f0f0f0;color:var(--mu)}
-.sheet .loc{background:var(--gn);margin:8px 0}
-.topt{padding:10px;background:#f9f9fb;border-radius:10px;border:1.5px solid transparent;cursor:pointer;text-align:center;margin:5px}
-.topt.on{background:var(--pu2);border-color:var(--pu)}
-.brand{background:#f9f9fb;border-radius:10px;padding:10px;text-align:center;cursor:pointer;margin:5px;font-size:12px}
-#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--dk);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;z-index:999;opacity:0;transition:opacity .3s}
-#toast.on{opacity:1}
-#card-detail{position:fixed;inset:0;background:var(--dk);z-index:150;display:none;flex-direction:column;color:#fff;overflow-y:auto}
-.cd-header{padding:20px;flex-shrink:0}
-.cd-body{background:#fff;border-radius:24px 24px 0 0;flex:1;padding:20px;color:var(--tx)}
-.cd-info{background:#f9f9fb;border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px}
-.cd-info-lbl{color:var(--mu);font-weight:700;font-size:11px;text-transform:uppercase}
-.cd-info-val{color:var(--tx);font-weight:700;margin-top:4px}
-.err{background:#ffebee;color:#c62828;padding:10px;border-radius:8px;font-size:12px;margin-top:10px}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:system-ui,-apple-system,'Segoe UI',sans-serif; background:#f0efff; color:#1a1a2e; }
+button { cursor:pointer; border:none; font-family:inherit; }
+input { font-family:inherit; border:none; }
+
+#splash { position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; z-index:9999; }
+#splash-text { color:#fff; font-size:40px; font-weight:800; }
+#splash-text b { color:#6C5CE7; }
+#splash-loader { display:flex; gap:8px; }
+#splash-loader div { width:8px; height:8px; background:#6C5CE7; border-radius:50%; animation:bounce 1.2s infinite; }
+#splash-loader div:nth-child(2) { animation-delay:0.2s; }
+#splash-loader div:nth-child(3) { animation-delay:0.4s; }
+@keyframes bounce { 0%,100% { opacity:0.3; } 50% { opacity:1; } }
+
+#auth { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; align-items:center; justify-content:center; padding:20px; }
+.auth-box { background:#fff; border-radius:24px; padding:32px 24px; width:100%; max-width:380px; }
+.auth-box h1 { font-size:20px; font-weight:800; margin-bottom:5px; }
+.auth-box p { font-size:13px; color:#706f87; margin-bottom:20px; line-height:1.5; }
+.auth-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; margin-bottom:12px; font-size:15px; }
+.auth-btn { width:100%; padding:13px; background:#0a0a14; color:#fff; border-radius:12px; font-weight:700; font-size:15px; margin-top:8px; }
+.auth-error { color:#c62828; font-size:12px; margin-top:10px; padding:10px; background:#ffebee; border-radius:8px; display:none; }
+
+#app { display:none; flex-direction:column; min-height:100vh; padding-bottom:80px; }
+.topbar { background:#0a0a14; color:#fff; padding:14px 18px; font-weight:800; font-size:16px; position:sticky; top:0; z-index:100; }
+.topbar b { color:#6C5CE7; }
+
+.screen { display:none; padding:16px; }
+.screen.active { display:block; }
+
+.hero { background:#0a0a14; color:#fff; border-radius:20px; padding:20px 18px; margin-bottom:16px; }
+.hero-greeting { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:8px; }
+.hero-name { font-size:18px; font-weight:800; margin-bottom:14px; }
+.hero-stats { display:flex; gap:10px; }
+.stat { background:rgba(255,255,255,0.08); border-radius:10px; padding:12px; flex:1; }
+.stat-value { font-size:20px; font-weight:800; color:#fff; }
+.stat-label { font-size:11px; color:rgba(255,255,255,0.4); margin-top:4px; }
+
+.section-header { display:flex; justify-content:space-between; align-items:center; margin:18px 0 12px; }
+.section-title { font-size:15px; font-weight:700; }
+.add-btn { width:36px; height:36px; background:#ece9ff; border-radius:10px; color:#6C5CE7; font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+
+.cards-container { display:flex; flex-direction:column; gap:12px; }
+.card { border-radius:16px; padding:16px; cursor:pointer; color:#fff; transform:perspective(1000px) rotateY(-3deg); transition:transform 0.3s; }
+.card:active { transform:perspective(1000px) rotateY(-1deg); }
+.card-brand { font-size:12px; opacity:0.6; margin-bottom:8px; }
+.card-points { font-size:32px; font-weight:800; }
+.card-label { font-size:11px; opacity:0.5; }
+
+.empty { text-align:center; padding:40px 20px; color:#706f87; }
+.empty-icon { font-size:40px; margin-bottom:12px; }
+.empty-text { font-size:14px; line-height:1.6; }
+
+.nav { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #ebebef; display:flex; z-index:100; }
+.nav-item { flex:1; padding:12px; text-align:center; font-size:11px; font-weight:600; color:#706f87; cursor:pointer; }
+.nav-item.active { color:#6C5CE7; }
+
+#add-modal { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:none; align-items:flex-end; z-index:200; }
+.modal-content { background:#fff; width:100%; border-radius:24px 24px 0 0; padding:24px 18px; max-height:90vh; overflow-y:auto; }
+.modal-title { font-size:18px; font-weight:800; margin-bottom:16px; }
+.modal-field { margin-bottom:14px; }
+.modal-label { font-size:11px; font-weight:700; color:#706f87; text-transform:uppercase; margin-bottom:6px; display:block; }
+.modal-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; font-size:14px; }
+.modal-btn { width:100%; padding:12px; border-radius:12px; font-weight:700; font-size:14px; margin:10px 0; }
+.modal-btn-primary { background:#0a0a14; color:#fff; }
+.modal-btn-secondary { background:#f0f0f0; color:#706f87; }
+.modal-btn-location { background:#00897B; color:#fff; }
+.modal-error { color:#c62828; font-size:12px; margin-top:10px; padding:10px; background:#ffebee; border-radius:8px; display:none; }
+
+.brands-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+.brand-item { background:#f9f9fb; border-radius:12px; padding:12px; text-align:center; cursor:pointer; }
+.brand-emoji { font-size:28px; margin-bottom:6px; }
+.brand-name { font-size:12px; font-weight:600; }
+
+.card-preview { background:#f9f9fb; border-radius:12px; padding:14px; margin-bottom:14px; }
+.card-preview-emoji { font-size:32px; margin-bottom:6px; }
+.card-preview-name { font-size:14px; font-weight:700; color:#1a1a2e; }
+
+#detail-modal { position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; display:none; flex-direction:column; color:#fff; z-index:150; overflow-y:auto; }
+.detail-header { padding:20px; flex-shrink:0; }
+.detail-back { background:rgba(255,255,255,0.1); color:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; margin-bottom:14px; display:inline-block; font-size:13px; }
+.detail-shop { font-size:13px; opacity:0.5; margin-bottom:4px; }
+.detail-points { font-size:56px; font-weight:800; margin:10px 0; line-height:1; }
+.detail-label { font-size:13px; opacity:0.5; }
+.detail-body { background:#fff; border-radius:24px 24px 0 0; flex:1; padding:20px; color:#1a1a2e; }
+.detail-row { background:#f9f9fb; border-radius:12px; padding:14px; margin-bottom:12px; }
+.detail-row-label { font-size:11px; font-weight:700; color:#706f87; text-transform:uppercase; margin-bottom:6px; }
+.detail-row-value { font-size:14px; font-weight:700; color:#1a1a2e; }
+
+.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#0a0a14; color:#fff; padding:10px 20px; border-radius:100px; font-size:13px; z-index:999; opacity:0; transition:opacity 0.3s; }
+.toast.show { opacity:1; }
 </style>
 </head>
 <body>
 
 <div id="splash">
-  <div style="font-size:40px;font-weight:800;color:#fff">Stash<span style="color:var(--pu)">lo</span></div>
-  <div style="color:var(--pu);text-align:center">
-    <div>Loading...</div>
-    <div style="font-size:11px;color:#fff;margin-top:10px" id="debug-splash"></div>
-  </div>
+  <div id="splash-text">Stash<b>lo</b></div>
+  <div id="splash-loader"><div></div><div></div><div></div></div>
 </div>
 
 <div id="auth">
-  <div class="a-box">
-    <div style="font-size:18px;font-weight:800;margin-bottom:20px">Stashlo</div>
-    <div style="margin-bottom:20px" id="auth-form">
-      <div style="font-size:14px;font-weight:700;margin-bottom:5px">Email</div>
-      <input type="email" id="in-e" placeholder="you@email.com">
-      <div style="font-size:14px;font-weight:700;margin-bottom:5px;margin-top:10px">Password</div>
-      <input type="password" id="in-p" placeholder="Password">
-      <button onclick="handleSignIn()">Sign in</button>
-      <div id="err" style="color:#c62828;font-size:12px;margin-top:10px"></div>
-    </div>
+  <div class="auth-box">
+    <h1>Stashlo</h1>
+    <p>Smart Loyalty Wallet</p>
+    <input type="email" id="email" class="auth-input" placeholder="Email" value="arumugams2019@gmail.com">
+    <input type="password" id="password" class="auth-input" placeholder="Password" value="test@123">
+    <button class="auth-btn" onclick="login()">Sign in</button>
+    <div class="auth-error" id="auth-error"></div>
   </div>
 </div>
 
 <div id="app">
-  <div class="topbar">Stash<span style="color:var(--pu)">lo</span></div>
-  <div class="scr on" id="scr-home">
+  <div class="topbar">Stash<b>lo</b></div>
+
+  <div class="screen active" id="home-screen">
     <div class="hero">
-      <div style="color:rgba(255,255,255,.4);font-size:12px">Good morning</div>
-      <div style="font-size:18px;font-weight:800;margin:8px 0" id="hn">Your wallet</div>
-      <div style="display:flex;gap:10px">
-        <div class="hst"><div style="font-size:18px;font-weight:800" id="s-c">0</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Cards</div></div>
-        <div class="hst"><div style="font-size:18px;font-weight:800" id="s-p">0</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Points</div></div>
+      <div class="hero-greeting">Good morning</div>
+      <div class="hero-name" id="greeting-name">Your wallet</div>
+      <div class="hero-stats">
+        <div class="stat">
+          <div class="stat-value" id="stat-cards">0</div>
+          <div class="stat-label">Cards</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-points">0</div>
+          <div class="stat-label">Points</div>
+        </div>
       </div>
     </div>
-    <div class="sr"><div style="font-size:14px;font-weight:700">My cards</div></div>
-    <div class="cscroll" id="h-cards"><div style="background:#fff;border-radius:12px;padding:15px;text-align:center;color:var(--mu);font-size:12px;flex-shrink:0;width:150px">Tap + to add</div></div>
-  </div>
-  <div class="scr" id="scr-cards">
-    <div class="sr"><div style="font-size:14px;font-weight:700">My cards</div><button onclick="oAS()" style="background:var(--pu2);color:var(--pu);width:36px;height:36px;border-radius:8px;cursor:pointer">+</button></div>
-    <div id="cards-list"></div>
-  </div>
-  <nav class="nav">
-    <div class="nv on" onclick="go('home')">🏠 Home</div>
-    <div class="nv" onclick="go('cards')">💳 Cards</div>
-  </nav>
-</div>
-
-<div id="card-detail">
-  <div class="cd-header">
-    <button onclick="closeCD()" style="background:rgba(255,255,255,.1);color:#fff;padding:8px 12px;border-radius:8px;margin-bottom:15px">← Back</button>
-    <div style="color:rgba(255,255,255,.5);font-size:13px" id="cd-shop"></div>
-    <div style="font-size:50px;font-weight:800;margin:10px 0" id="cd-pts">0</div>
-    <div style="color:rgba(255,255,255,.5);font-size:13px">points</div>
-  </div>
-  <div class="cd-body">
-    <div class="cd-info"><div class="cd-info-lbl">Visits</div><div class="cd-info-val" id="cd-visits">0</div></div>
-    <div class="cd-info"><div class="cd-info-lbl">Total spent</div><div class="cd-info-val" id="cd-spent">£0</div></div>
-    <div class="cd-info"><div class="cd-info-lbl">Rewards</div><div class="cd-info-val" id="cd-rewards">0</div></div>
-    <div class="cd-info"><div class="cd-info-lbl">Card Number</div><div class="cd-info-val" id="cd-cardnum">****</div></div>
-    <div class="cd-info"><div class="cd-info-lbl">Store Location</div><div class="cd-info-val" id="cd-store">—</div></div>
-    <div class="cd-info"><div class="cd-info-lbl">Order Reference</div><div class="cd-info-val" id="cd-order">—</div></div>
-  </div>
-</div>
-
-<div id="add-sheet" onclick="if(event.target===this)cAS()">
-  <div class="sheet">
-    <div style="font-size:16px;font-weight:800;margin-bottom:15px">Add card</div>
-    <div id="step-type">
-      <button class="topt on" onclick="sAT('national')">🇬🇧 National Brands</button>
+    <div class="section-header">
+      <div class="section-title">My loyalty cards</div>
     </div>
-    <div id="step-national" style="display:none">
-      <div id="brg" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"></div>
-      <button class="back" onclick="sAT('type')">← Back</button>
-    </div>
-    <div id="step-card-details" style="display:none">
-      <div style="background:#f9f9fb;border-radius:10px;padding:12px;margin-bottom:12px">
-        <div id="card-preview-emoji" style="font-size:28px;margin-bottom:8px"></div>
-        <div id="card-preview-name" style="font-weight:700;font-size:13px"></div>
+    <div class="cards-container" id="home-cards">
+      <div class="empty">
+        <div class="empty-icon">💳</div>
+        <div class="empty-text">No cards yet<br>Tap + in Cards to add</div>
       </div>
-      
-      <label>Card Number ★</label>
-      <input type="text" id="nat-card-num" placeholder="1234567890">
-      
-      <label>Order Reference</label>
-      <input type="text" id="nat-card-order" placeholder="ORDER-12345">
-      
-      <label>Store Location</label>
-      <input type="text" id="nat-card-store" placeholder="London Branch">
-      
-      <label>Name</label>
-      <input type="text" id="nat-card-holder" placeholder="Your name">
-      
-      <button class="loc" onclick="captureLocation()">📍 Capture Location</button>
-      <div id="loc-status" style="text-align:center;font-size:11px;color:var(--mu);height:16px"></div>
-      
-      <button onclick="saveNatCard()">✓ Save</button>
-      <button class="back" onclick="sAT('national')">← Back</button>
-      <div id="card-err" class="err" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="cards-screen">
+    <div class="section-header">
+      <div class="section-title">My loyalty cards</div>
+      <div class="add-btn" onclick="openAddModal()">+</div>
+    </div>
+    <div class="cards-container" id="cards-list">
+      <div class="empty">
+        <div class="empty-icon">💳</div>
+        <div class="empty-text">No cards yet<br>Tap + to add</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <div class="nav-item active" onclick="switchScreen('home')">🏠 Home</div>
+    <div class="nav-item" onclick="switchScreen('cards')">💳 Cards</div>
+  </div>
+</div>
+
+<div id="add-modal" onclick="if(event.target===this)closeAddModal()">
+  <div class="modal-content">
+    <div class="modal-title">Add loyalty card</div>
+    
+    <div id="step-brands" style="display:block">
+      <div class="brands-grid" id="brands-grid"></div>
+      <button class="modal-btn modal-btn-secondary" onclick="closeAddModal()">Cancel</button>
+    </div>
+
+    <div id="step-form" style="display:none">
+      <div class="card-preview">
+        <div class="card-preview-emoji" id="preview-emoji"></div>
+        <div class="card-preview-name" id="preview-name"></div>
+      </div>
+
+      <div class="modal-field">
+        <label class="modal-label">Card number ★</label>
+        <input type="text" id="card-number" class="modal-input" placeholder="e.g., 1234567890">
+      </div>
+
+      <div class="modal-field">
+        <label class="modal-label">Order reference</label>
+        <input type="text" id="order-ref" class="modal-input" placeholder="e.g., ORDER-12345">
+      </div>
+
+      <div class="modal-field">
+        <label class="modal-label">Store location</label>
+        <input type="text" id="store-loc" class="modal-input" placeholder="e.g., London Branch">
+      </div>
+
+      <div class="modal-field">
+        <label class="modal-label">Name</label>
+        <input type="text" id="card-name" class="modal-input" placeholder="Your name">
+      </div>
+
+      <button class="modal-btn modal-btn-location" onclick="captureLocation()">📍 Capture Location</button>
+      <div id="location-status" style="text-align:center; font-size:11px; color:#706f87; height:18px; margin-bottom:8px;"></div>
+
+      <button class="modal-btn modal-btn-primary" onclick="saveCard()">✓ Save card</button>
+      <button class="modal-btn modal-btn-secondary" onclick="backTobrands()">← Back</button>
+      <div class="modal-error" id="form-error"></div>
     </div>
   </div>
 </div>
 
-<div id="toast"></div>
+<div id="detail-modal" onclick="if(event.target===this)closeDetail()">
+  <div class="detail-header">
+    <div class="detail-back" onclick="closeDetail()">← Back</div>
+    <div class="detail-shop" id="detail-shop"></div>
+    <div class="detail-points" id="detail-points">0</div>
+    <div class="detail-label">loyalty points</div>
+  </div>
+  <div class="detail-body">
+    <div class="detail-row">
+      <div class="detail-row-label">Visits</div>
+      <div class="detail-row-value" id="detail-visits">0</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-row-label">Total spent</div>
+      <div class="detail-row-value" id="detail-spent">£0</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-row-label">Rewards</div>
+      <div class="detail-row-value" id="detail-rewards">0</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-row-label">Card Number</div>
+      <div class="detail-row-value" id="detail-cardnum">****</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-row-label">Store Location</div>
+      <div class="detail-row-value" id="detail-store">—</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-row-label">Order Reference</div>
+      <div class="detail-row-value" id="detail-order">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-console.log('🔴 STASHLO DEBUG VERSION LOADING...');
+const SURL = 'https://gcwevgaymahywqjorhnn.supabase.co';
+const SKEY = 'sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
 
-var SURL='https://gcwevgaymahywqjorhnn.supabase.co';
-var SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
-var TOKEN=null,UID=null,PROF={},CARDS=[];
-var CURNAT={},CURCARD=null,tmpLat=null,tmpLng=null;
+let TOKEN = null, UID = null, CARDS = [], CURRENT_BRAND = null, TEMP_LAT = null, TEMP_LNG = null;
 
-var NB=[
-  {id:'tesco',n:'Tesco',e:'🛒',c:'#00539B'},
-  {id:'nectar',n:'Nectar',e:'🎯',c:'#FF6600'},
-  {id:'boots',n:'Boots',e:'💊',c:'#00A3AD'},
-  {id:'costa',n:'Costa',e:'☕',c:'#622F22'},
-  {id:'bp',n:'BP',e:'⛽',c:'#009A44'},
-  {id:'greggs',n:'Greggs',e:'🥐',c:'#002E5B'},
-  {id:'mcdonalds',n:"McDonald's",e:'🍟',c:'#DA291C'},
-  {id:'starbucks',n:'Starbucks',e:'☕',c:'#00704A'},
-  {id:'waterstones',n:'Waterstones',e:'📚',c:'#1B365D'},
-  {id:'johnlewis',n:'John Lewis',e:'🏬',c:'#3D3D3D'},
-  {id:'ikea',n:'IKEA',e:'🛋️',c:'#0058A3'},
-  {id:'lidl',n:'Lidl',e:'🛍️',c:'#0050AA'},
-  {id:'asda',n:'Asda',e:'🛒',c:'#78BE20'},
-  {id:'morrisons',n:'Morrisons',e:'🛒',c:'#F5A623'},
-  {id:'waitrose',n:'Waitrose',e:'🥬',c:'#2d2d2d'},
-  {id:'nandos',n:"Nando's",e:'🍗',c:'#BE0000'},
-  {id:'pizza',n:'Pizza',e:'🍕',c:'#D72027'},
-  {id:'odeon',n:'ODEON',e:'🎬',c:'#E20714'},
-  {id:'vue',n:'Vue',e:'🎭',c:'#1B1464'},
-  {id:'cineworld',n:'Cineworld',e:'🎬',c:'#C41230'}
+const BRANDS = [
+  {id: 'tesco', name: 'Tesco Clubcard', emoji: '🛒', color: '#00539B'},
+  {id: 'nectar', name: 'Nectar', emoji: '🎯', color: '#FF6600'},
+  {id: 'boots', name: 'Boots Advantage', emoji: '💊', color: '#00A3AD'},
+  {id: 'costa', name: 'Costa Coffee', emoji: '☕', color: '#622F22'},
+  {id: 'bp', name: 'BP Rewards', emoji: '⛽', color: '#009A44'},
+  {id: 'greggs', name: 'Greggs', emoji: '🥐', color: '#002E5B'},
+  {id: 'mcdonalds', name: "McDonald's", emoji: '🍟', color: '#DA291C'},
+  {id: 'starbucks', name: 'Starbucks', emoji: '☕', color: '#00704A'},
+  {id: 'waterstones', name: 'Waterstones', emoji: '📚', color: '#1B365D'},
+  {id: 'johnlewis', name: 'John Lewis', emoji: '🏬', color: '#3D3D3D'},
+  {id: 'ikea', name: 'IKEA Family', emoji: '🛋️', color: '#0058A3'},
+  {id: 'lidl', name: 'Lidl Plus', emoji: '🛍️', color: '#0050AA'},
+  {id: 'asda', name: 'Asda', emoji: '🛒', color: '#78BE20'},
+  {id: 'morrisons', name: 'Morrisons', emoji: '🛒', color: '#F5A623'},
+  {id: 'waitrose', name: 'myWaitrose', emoji: '🥬', color: '#2d2d2d'},
+  {id: 'nandos', name: "Nando's", emoji: '🍗', color: '#BE0000'},
+  {id: 'pizza', name: 'Pizza Express', emoji: '🍕', color: '#D72027'},
+  {id: 'odeon', name: 'ODEON', emoji: '🎬', color: '#E20714'},
+  {id: 'vue', name: 'Vue Cinemas', emoji: '🎭', color: '#1B1464'},
+  {id: 'cineworld', name: 'Cineworld', emoji: '🎬', color: '#C41230'}
 ];
 
-log('✓ Globals initialized');
-log('✓ 20 brands loaded');
-
-function log(msg){
-  console.log(msg);
-  var splash=document.getElementById('debug-splash');
-  if(splash){
-    splash.innerHTML=splash.innerHTML+msg+'<br>';
-    splash.scrollTop=splash.scrollHeight;
-  }
-}
-
-setTimeout(function(){
-  log('→ Checking session...');
-  try{
-    if(checkSess()){
-      log('✓ Session found');
-      hide('splash');
-      show('app');
-      loadProf();
-      loadCards();
-    }else{
-      log('→ No session, showing login');
-      hide('splash');
-      show('auth');
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const sess = JSON.parse(localStorage.getItem('sl_session') || 'null');
+    if (sess && sess.token && sess.uid && sess.expiry > Date.now()) {
+      TOKEN = sess.token;
+      UID = sess.uid;
+      showApp();
+    } else {
+      showAuth();
     }
-  }catch(e){
-    log('✗ Error: '+e.message);
-    hide('splash');
-    show('auth');
+  }, 1500);
+});
+
+function login() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errDiv = document.getElementById('auth-error');
+  
+  if (!email || !password) {
+    errDiv.textContent = 'Enter email and password';
+    errDiv.style.display = 'block';
+    return;
   }
-},1000);
 
-window.handleSignIn=function(){
-  var e=document.getElementById('in-e').value.trim();
-  var p=document.getElementById('in-p').value;
-  var err=document.getElementById('err');
-  err.style.display='none';
-  if(!e||!p){err.textContent='Enter email and password';err.style.display='block';return;}
-  log('→ Signing in...');
-  fetch(SURL+'/auth/v1/token?grant_type=password',{
-    method:'POST',
-    headers:{'apikey':SKEY,'Content-Type':'application/json'},
-    body:JSON.stringify({email:e,password:p})
-  }).then(r=>r.json()).then(d=>{
-    if(!d.access_token){err.textContent='Wrong email or password';err.style.display='block';return;}
-    TOKEN=d.access_token;
-    UID=d.user.id;
-    saveSess(TOKEN,UID,e);
-    log('✓ Signed in');
-    hide('auth');
-    show('app');
-    loadProf();
-    loadCards();
-  }).catch(e=>{err.textContent='Error: '+e.message;err.style.display='block';log('✗ '+e.message);});
-};
-
-function loadProf(){
-  if(!UID)return;
-  log('→ Loading profile...');
-  fetch(SURL+'/rest/v1/users?id=eq.'+UID+'&select=*',{headers:{apikey:SKEY}}).then(r=>r.json()).then(d=>{
-    PROF=Array.isArray(d)?d[0]:{};
-    var nm=PROF.name||'there';
-    document.getElementById('hn').textContent=nm+"'s wallet";
-    log('✓ Profile loaded: '+nm);
-  }).catch(e=>log('✗ Profile error: '+e.message));
+  fetch(`${SURL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
+    body: JSON.stringify({email, password})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.access_token) {
+      errDiv.textContent = 'Wrong email or password';
+      errDiv.style.display = 'block';
+      return;
+    }
+    TOKEN = d.access_token;
+    UID = d.user.id;
+    localStorage.setItem('sl_session', JSON.stringify({token: TOKEN, uid: UID, expiry: Date.now() + 3600000}));
+    showApp();
+  })
+  .catch(e => {
+    errDiv.textContent = 'Login error';
+    errDiv.style.display = 'block';
+  });
 }
 
-function loadCards(){
-  if(!UID){log('✗ No UID');return;}
-  log('→ Loading cards...');
-  fetch(SURL+'/rest/v1/cards?user_id=eq.'+UID+'&order=addedAt.desc',{headers:{apikey:SKEY}}).then(r=>r.json()).then(d=>{
-    CARDS=Array.isArray(d)?d:[];
-    log('✓ Cards loaded: '+CARDS.length);
+function showAuth() {
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('auth').style.display = 'flex';
+}
+
+function showApp() {
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('auth').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  loadCards();
+}
+
+function loadCards() {
+  if (!UID) return;
+  
+  fetch(`${SURL}/rest/v1/cards?user_id=eq.${UID}&order=addedAt.desc`, {
+    headers: {'apikey': SKEY}
+  })
+  .then(r => r.json())
+  .then(d => {
+    CARDS = Array.isArray(d) ? d : [];
     renderCards();
-  }).catch(e=>{log('✗ Cards error: '+e.message);renderCards();});
+  })
+  .catch(e => renderCards());
 }
 
-function renderCards(){
-  log('→ Rendering '+CARDS.length+' cards');
-  var hc=document.getElementById('h-cards');
-  if(!CARDS.length){hc.innerHTML='<div style="background:#fff;border-radius:12px;padding:15px;text-align:center;color:var(--mu);flex-shrink:0;width:150px;font-size:12px">Tap + to add</div>';}else{hc.innerHTML=CARDS.slice(0,4).map(c=>'<div class="lcard" style="background:'+c.color+'" onclick="oCD(\''+c.id+'\')"><div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">'+c.shopName+'</div><div style="font-size:24px;font-weight:800">'+(c.points||0)+'</div><div style="font-size:10px;color:rgba(255,255,255,.4)">pts</div></div>').join('');}
-  var cl=document.getElementById('cards-list');
-  if(!CARDS.length){cl.innerHTML='<div class="empty"><div style="font-size:32px;margin-bottom:10px">💳</div><p>No cards<br>Tap + to add</p></div>';}else{cl.innerHTML=CARDS.map(c=>'<div class="cfl" style="background:'+c.color+'" onclick="oCD(\''+c.id+'\')"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><div style="font-size:13px;font-weight:700">'+c.shopName+'</div><div style="font-size:10px;background:rgba(255,255,255,.2);padding:3px 6px;border-radius:12px">'+(c.type==='national'?'🇬🇧':'🏪')+'</div></div><div style="font-size:28px;font-weight:800">'+(c.points||0)+'</div></div>').join('');}
-  document.getElementById('s-c').textContent=CARDS.length;
-  document.getElementById('s-p').textContent=CARDS.reduce((a,c)=>a+(c.points||0),0);
-  log('✓ Rendered');
+function renderCards() {
+  const homeCards = document.getElementById('home-cards');
+  const cardsList = document.getElementById('cards-list');
+  
+  if (CARDS.length === 0) {
+    homeCards.innerHTML = '<div class="empty"><div class="empty-icon">💳</div><div class="empty-text">No cards yet<br>Tap + in Cards to add</div></div>';
+    cardsList.innerHTML = '<div class="empty"><div class="empty-icon">💳</div><div class="empty-text">No cards yet<br>Tap + to add</div></div>';
+  } else {
+    homeCards.innerHTML = CARDS.slice(0, 4).map(c => `
+      <div class="card" style="background:${c.color}" onclick="openDetail('${c.id}')">
+        <div class="card-brand">${c.shopName}</div>
+        <div class="card-points">${c.points || 0}</div>
+        <div class="card-label">points</div>
+      </div>
+    `).join('');
+    
+    cardsList.innerHTML = CARDS.map(c => `
+      <div class="card" style="background:${c.color}" onclick="openDetail('${c.id}')">
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+          <div class="card-brand">${c.shopName}</div>
+          <div style="font-size:10px;background:rgba(255,255,255,0.2);padding:3px 6px;border-radius:12px">${c.type === 'national' ? '🇬🇧' : '🏪'}</div>
+        </div>
+        <div class="card-points">${c.points || 0}</div>
+        <div class="card-label">points</div>
+      </div>
+    `).join('');
+  }
+  
+  document.getElementById('stat-cards').textContent = CARDS.length;
+  document.getElementById('stat-points').textContent = CARDS.reduce((a, c) => a + (c.points || 0), 0);
 }
 
-window.oCD=function(id){
-  CURCARD=CARDS.find(c=>c.id===id);
-  if(!CURCARD)return;
-  log('→ Opening card: '+CURCARD.shopName);
-  show('card-detail');
-  document.getElementById('cd-shop').textContent=CURCARD.shopName;
-  document.getElementById('cd-pts').textContent=CURCARD.points||0;
-  document.getElementById('cd-visits').textContent=CURCARD.visitCount||0;
-  document.getElementById('cd-spent').textContent='£'+((CURCARD.totalSpend||0)).toFixed(0);
-  document.getElementById('cd-rewards').textContent=CURCARD.rewardsRedeemed||0;
-  document.getElementById('cd-cardnum').textContent=CURCARD.cardNumber?'****'+CURCARD.cardNumber.slice(-4):'****';
-  document.getElementById('cd-store').textContent=CURCARD.storeLocation||'—';
-  document.getElementById('cd-order').textContent=CURCARD.orderRef||'—';
-};
-
-window.closeCD=function(){hide('card-detail');CURCARD=null;};
-
-window.oAS=function(){log('→ Opening add sheet');sAT('national');show('add-sheet');};
-window.cAS=function(){log('→ Closing add sheet');hide('add-sheet');document.getElementById('nat-card-num').value='';document.getElementById('nat-card-order').value='';document.getElementById('nat-card-store').value='';document.getElementById('nat-card-holder').value='';document.getElementById('loc-status').textContent='';document.getElementById('card-err').style.display='none';CURNAT={};tmpLat=null;tmpLng=null;sAT('type');};
-
-window.sAT=function(t){
-  log('→ Step: '+t);
-  hide('step-type');hide('step-national');hide('step-card-details');
-  if(t==='type')show('step-type');
-  if(t==='national'){show('step-national');bBrands();}
-};
-
-function bBrands(){
-  var el=document.getElementById('brg');
-  el.innerHTML=NB.map(b=>'<div class="brand" onclick="selectNatBrand(\''+b.id+'\',\''+b.n.replace(/'/g,"\\'")+'\',\''+b.e+'\',\''+b.c+'\')"><div style="font-size:22px;margin-bottom:4px">'+b.e+'</div><div style="font-size:10px">'+b.n+'</div></div>').join('');
+function openAddModal() {
+  const grid = document.getElementById('brands-grid');
+  grid.innerHTML = BRANDS.map(b => `
+    <div class="brand-item" onclick="selectBrand('${b.id}', '${b.name}', '${b.emoji}', '${b.color}')">
+      <div class="brand-emoji">${b.emoji}</div>
+      <div class="brand-name">${b.name}</div>
+    </div>
+  `).join('');
+  
+  document.getElementById('step-brands').style.display = 'block';
+  document.getElementById('step-form').style.display = 'none';
+  document.getElementById('add-modal').style.display = 'flex';
 }
 
-window.selectNatBrand=function(id,name,emoji,color){
-  if(!UID){toast('Sign in first');return;}
-  if(CARDS.find(c=>c.id===id)){toast('Already added!');return;}
-  log('→ Selected: '+name);
-  CURNAT={id,name,emoji,color};
-  document.getElementById('card-preview-emoji').textContent=emoji;
-  document.getElementById('card-preview-name').textContent=name;
-  document.getElementById('nat-card-num').value='';
-  document.getElementById('nat-card-order').value='';
-  document.getElementById('nat-card-store').value='';
-  document.getElementById('nat-card-holder').value='';
-  document.getElementById('loc-status').textContent='';
-  hide('step-national');
-  show('step-card-details');
-};
+function closeAddModal() {
+  document.getElementById('add-modal').style.display = 'none';
+  resetForm();
+}
 
-window.captureLocation=function(){
-  if(!navigator.geolocation){document.getElementById('loc-status').textContent='Not supported';return;}
-  log('→ Capturing location...');
-  document.getElementById('loc-status').textContent='📍 Locating...';
+function selectBrand(id, name, emoji, color) {
+  CURRENT_BRAND = {id, name, emoji, color};
+  
+  document.getElementById('preview-emoji').textContent = emoji;
+  document.getElementById('preview-name').textContent = name;
+  document.getElementById('card-number').value = '';
+  document.getElementById('order-ref').value = '';
+  document.getElementById('store-loc').value = '';
+  document.getElementById('card-name').value = '';
+  document.getElementById('location-status').textContent = '';
+  document.getElementById('form-error').style.display = 'none';
+  TEMP_LAT = null;
+  TEMP_LNG = null;
+  
+  document.getElementById('step-brands').style.display = 'none';
+  document.getElementById('step-form').style.display = 'block';
+}
+
+function backTobrands() {
+  document.getElementById('step-brands').style.display = 'block';
+  document.getElementById('step-form').style.display = 'none';
+}
+
+function captureLocation() {
+  if (!navigator.geolocation) {
+    document.getElementById('location-status').textContent = '📍 Not supported';
+    return;
+  }
+  
+  document.getElementById('location-status').textContent = '📍 Locating...';
   navigator.geolocation.getCurrentPosition(
-    function(pos){
-      tmpLat=pos.coords.latitude;
-      tmpLng=pos.coords.longitude;
-      document.getElementById('loc-status').textContent='✓ '+tmpLat.toFixed(4)+', '+tmpLng.toFixed(4);
-      log('✓ Location: '+tmpLat+', '+tmpLng);
+    pos => {
+      TEMP_LAT = pos.coords.latitude;
+      TEMP_LNG = pos.coords.longitude;
+      document.getElementById('location-status').textContent = `✓ ${TEMP_LAT.toFixed(4)}, ${TEMP_LNG.toFixed(4)}`;
     },
-    function(err){
-      document.getElementById('loc-status').textContent='✗ '+err.message;
-      log('✗ Geolocation error: '+err.message);
+    err => {
+      document.getElementById('location-status').textContent = `✗ ${err.message}`;
     }
   );
-};
+}
 
-window.saveNatCard=function(){
-  var num=document.getElementById('nat-card-num').value.trim();
-  var order=document.getElementById('nat-card-order').value.trim();
-  var store=document.getElementById('nat-card-store').value.trim();
-  var holder=document.getElementById('nat-card-holder').value.trim();
-  var err=document.getElementById('card-err');
-  err.style.display='none';
+function saveCard() {
+  const num = document.getElementById('card-number').value.trim();
+  const order = document.getElementById('order-ref').value.trim();
+  const store = document.getElementById('store-loc').value.trim();
+  const name = document.getElementById('card-name').value.trim();
+  const errDiv = document.getElementById('form-error');
   
-  if(!num||num.length<4){err.textContent='Card number required (4+ digits)';err.style.display='block';return;}
+  errDiv.style.display = 'none';
   
-  log('→ Saving: '+CURNAT.name);
-  fetch(SURL+'/rest/v1/cards',{
-    method:'POST',
-    headers:{apikey:SKEY,'Content-Type':'application/json'},
-    body:JSON.stringify({user_id:UID,id:CURNAT.id,name:CURNAT.name,shopName:CURNAT.name,emoji:CURNAT.emoji,color:CURNAT.color,type:'national',points:0,threshold:500,addedAt:Date.now(),visitCount:0,totalSpend:0,rewardsRedeemed:0,cardNumber:num,cardHolder:holder||null,orderRef:order||null,storeLocation:store||null,latitude:tmpLat,longitude:tmpLng})
-  }).then(r=>r.json()).then(d=>{
-    log('✓ Saved to Supabase');
-    toast('✅ '+CURNAT.name+' added!');
-    window.cAS();
+  if (!num || num.length < 4) {
+    errDiv.textContent = 'Card number required (4+ digits)';
+    errDiv.style.display = 'block';
+    return;
+  }
+  
+  const payload = {
+    user_id: UID,
+    id: CURRENT_BRAND.id,
+    name: CURRENT_BRAND.name,
+    shopName: CURRENT_BRAND.name,
+    emoji: CURRENT_BRAND.emoji,
+    color: CURRENT_BRAND.color,
+    type: 'national',
+    points: 0,
+    threshold: 500,
+    addedAt: Date.now(),
+    visitCount: 0,
+    totalSpend: 0,
+    rewardsRedeemed: 0,
+    cardNumber: num,
+    cardHolder: name || null,
+    orderRef: order || null,
+    storeLocation: store || null,
+    latitude: TEMP_LAT,
+    longitude: TEMP_LNG
+  };
+  
+  fetch(`${SURL}/rest/v1/cards`, {
+    method: 'POST',
+    headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(d => {
+    showToast(`✅ ${CURRENT_BRAND.name} added!`);
+    closeAddModal();
     loadCards();
-  }).catch(e=>{err.textContent='Error: '+e.message;err.style.display='block';log('✗ '+e.message);});
-};
+  })
+  .catch(e => {
+    errDiv.textContent = `Error: ${e.message}`;
+    errDiv.style.display = 'block';
+  });
+}
 
-window.go=function(s){
-  log('→ Go to: '+s);
-  document.querySelectorAll('.scr').forEach(x=>x.classList.remove('on'));
-  document.querySelectorAll('.nv').forEach(x=>x.classList.remove('on'));
-  var scr=document.getElementById('scr-'+s);
-  var nv=document.querySelector('.nv:nth-child('+(s==='home'?1:2)+')');
-  if(scr)scr.classList.add('on');
-  if(nv)nv.classList.add('on');
-};
+function resetForm() {
+  document.getElementById('card-number').value = '';
+  document.getElementById('order-ref').value = '';
+  document.getElementById('store-loc').value = '';
+  document.getElementById('card-name').value = '';
+  document.getElementById('location-status').textContent = '';
+  document.getElementById('form-error').style.display = 'none';
+  TEMP_LAT = null;
+  TEMP_LNG = null;
+}
 
-function show(id){var e=document.getElementById(id);if(e)e.style.display=e.id==='add-sheet'?'flex':'block';}
-function hide(id){var e=document.getElementById(id);if(e)e.style.display='none';}
-function saveSess(token,uid,email){localStorage.setItem('sl_s',JSON.stringify({t:token,uid:uid,email:email||'',x:Date.now()+3600000}));}
-function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_s')||'null');if(s&&s.t&&s.uid&&s.x>Date.now()){TOKEN=s.t;UID=s.uid;return s.email||s.uid;}}catch(e){}clearSess();return false;}
-function clearSess(){localStorage.removeItem('sl_s');TOKEN=null;UID=null;PROF={};CARDS=[];}
-var TT;function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(TT);TT=setTimeout(()=>t.classList.remove('on'),2800);}
+function openDetail(id) {
+  const card = CARDS.find(c => c.id === id);
+  if (!card) return;
+  
+  document.getElementById('detail-shop').textContent = card.shopName;
+  document.getElementById('detail-points').textContent = card.points || 0;
+  document.getElementById('detail-visits').textContent = card.visitCount || 0;
+  document.getElementById('detail-spent').textContent = '£' + ((card.totalSpend || 0)).toFixed(0);
+  document.getElementById('detail-rewards').textContent = card.rewardsRedeemed || 0;
+  document.getElementById('detail-cardnum').textContent = card.cardNumber ? '****' + card.cardNumber.slice(-4) : '****';
+  document.getElementById('detail-store').textContent = card.storeLocation || '—';
+  document.getElementById('detail-order').textContent = card.orderRef || '—';
+  
+  document.getElementById('detail-modal').style.display = 'flex';
+}
 
-log('✓ ALL CODE LOADED');
-log('✓ Ready to test');
+function closeDetail() {
+  document.getElementById('detail-modal').style.display = 'none';
+}
 
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(name + '-screen').classList.add('active');
+  
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2800);
+}
 </script>
 </body>
 </html>
