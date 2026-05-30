@@ -30,30 +30,35 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
 .fi label{display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;margin-bottom:5px}
 .fi input{width:100%;padding:13px 14px;border:1.5px solid #e5e5ea;border-radius:12px;font-size:15px}
 .btn-a{width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:12px;font-size:15px;font-weight:700}
-.btn-a:disabled{opacity:.6}
 .err-b{background:var(--rd2);color:var(--rd);font-size:13px;padding:10px 12px;border-radius:10px;display:none;margin-top:10px}
 #app{display:none;flex-direction:column;min-height:100vh;padding-bottom:72px}
 .topbar{background:var(--dk);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .tb-logo{font-size:17px;font-weight:800;color:#fff}.tb-logo b{color:var(--pu)}
-.tb-status{font-size:10px;padding:3px 8px;border-radius:6px;background:var(--or2);color:#e65100;font-weight:600}
 .nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #ebebef;display:flex;z-index:100}
 .nv{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 8px;font-size:10px;font-weight:600;color:var(--mu);cursor:pointer}
 .nv.on{color:var(--pu)}
 .scr{display:none;padding:16px}.scr.on{display:block}
 .hero{background:var(--dk);border-radius:20px;padding:20px 18px;margin-bottom:16px}
-.hg{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:3px}
+.hg{font-size:13px;color:rgba(255,255,255,.4)}
 .hn{font-size:19px;font-weight:800;color:#fff;margin-bottom:14px}
 .hrow{display:flex;gap:10px}
 .hst{background:rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;flex:1}
 .hst-v{font-size:19px;font-weight:800;color:#fff}.hst-l{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px}
-.sr{display:flex;align-items:center;justify-content:space-between;margin:18px 0 11px}
+.sr{display:flex;justify-content:space-between;align-items:center;margin:18px 0 11px}
 .st{font-size:15px;font-weight:700}.sl{font-size:13px;color:var(--pu);font-weight:600;cursor:pointer}
 .cscroll{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px}
-.lcard{min-width:180px;border-radius:16px;padding:16px;flex-shrink:0;cursor:pointer}
-.lc-pt{font-size:28px;font-weight:800;color:#fff}
-.cfl{border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer}
-.cfl-pt{font-size:34px;font-weight:800;color:#fff}
+.lcard{min-width:180px;border-radius:16px;padding:16px;flex-shrink:0;cursor:pointer;position:relative;overflow:hidden}
+.lcard:active{opacity:.8}
+.lc-nm{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:8px}
+.lc-pt{font-size:28px;font-weight:800;color:#fff;letter-spacing:-1px}
+.lc-lb{font-size:11px;color:rgba(255,255,255,.4)}
 .lce{min-width:180px;background:#fff;border-radius:16px;padding:20px;text-align:center;color:var(--mu);font-size:13px;flex-shrink:0}
+.cfl{border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;position:relative;display:flex;flex-direction:column}
+.cfl-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cfl-nm{font-size:14px;font-weight:700;color:#fff}
+.cfl-bdg{font-size:10px;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.6)}
+.cfl-pt{font-size:34px;font-weight:800;color:#fff;letter-spacing:-1px;margin:10px 0}
+.cfl-lb{font-size:11px;color:rgba(255,255,255,.4)}
 .empty{text-align:center;padding:36px 16px;color:var(--mu)}
 .empty-i{font-size:36px;margin-bottom:10px}.empty p{font-size:14px;line-height:1.6}
 #add-sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end}
@@ -65,9 +70,20 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
 .topt.on{background:var(--pu2);border-color:var(--pu);color:var(--pu)}
 .brands-g{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .brand{background:#f9f9fb;border-radius:12px;padding:12px;text-align:center;cursor:pointer}
+.brand:active{background:#ece9ff}
 .brand em{font-size:24px;display:block;margin-bottom:4px;font-style:normal}.brand span{font-size:12px;font-weight:600}
-#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--dk);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;white-space:nowrap}
+#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--dk);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s}
 #toast.on{opacity:1}
+#card-detail{position:fixed;inset:0;background:var(--dk);z-index:150;display:none;flex-direction:column;overflow-y:auto;color:#fff}
+.cd-header{padding:22px 18px 24px;flex-shrink:0}
+.cd-back{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:18px}
+.cd-shop{font-size:14px;color:rgba(255,255,255,.4);margin-bottom:4px}
+.cd-pts{font-size:60px;font-weight:800;letter-spacing:-3px;line-height:1;margin:10px 0}
+.cd-lbl{font-size:14px;color:rgba(255,255,255,.4);margin-bottom:16px}
+.cd-body{background:#fff;border-radius:24px 24px 0 0;flex:1;padding:20px 16px 30px;color:var(--tx)}
+.cd-info{background:#f9f9fb;border-radius:12px;padding:14px;margin-bottom:14px}
+.cd-info-lbl{font-size:11px;font-weight:700;color:var(--mu);margin-bottom:4px}
+.cd-info-val{font-size:14px;font-weight:700;color:var(--tx)}
 </style>
 </head>
 <body>
@@ -77,7 +93,7 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
 <div id="auth">
   <div class="a-box">
     <div class="a-logo"><div class="a-ic">S</div><div class="a-nm">Stashlo</div></div>
-    <div class="a-tabs"><div class="a-tab on" id="tab-in" onclick="swTab('in')">Sign in</div><div class="a-tab" id="tab-up" onclick="swTab('up')">Join free</div></div>
+    <div class="a-tabs"><div class="a-tab on" id="tab-in" onclick="swTab('in')">Sign in</div><div class="a-tab" id="tab-up" onclick="swTab('up')">Join</div></div>
     
     <div id="form-in">
       <div class="fhd">Welcome back</div><div class="fsb">Sign in to your loyalty wallet</div>
@@ -91,7 +107,7 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
       <div class="fhd">Create account</div><div class="fsb">Join Stashlo now</div>
       <div class="fi"><label>Your name</label><input type="text" id="up-n" placeholder="Full name"></div>
       <div class="fi"><label>Email</label><input type="email" id="up-e" placeholder="you@email.com"></div>
-      <div class="fi"><label>Password (6+ chars)</label><input type="password" id="up-p" placeholder="Password"></div>
+      <div class="fi"><label>Password</label><input type="password" id="up-p" placeholder="Password"></div>
       <button class="btn-a" onclick="handleSignUp()">Create account</button>
       <div class="err-b" id="up-err"></div>
     </div>
@@ -101,7 +117,6 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
 <div id="app">
   <div class="topbar">
     <div class="tb-logo">Stash<b>lo</b></div>
-    <div class="tb-status" id="net-status" style="display:none">⚠ Offline</div>
   </div>
 
   <div class="scr on" id="scr-home">
@@ -112,8 +127,8 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
         <div class="hst"><div class="hst-v" id="s-p">0</div><div class="hst-l">Points</div></div>
       </div>
     </div>
-    <div class="sr"><div class="st">My loyalty cards</div><div class="sl" onclick="go('cards')">See all</div></div>
-    <div class="cscroll" id="h-cards"><div class="lce">Tap + in Cards to add your first card</div></div>
+    <div class="sr"><div class="st">My loyalty cards</div></div>
+    <div class="cscroll" id="h-cards"><div class="lce">Tap + in Cards to add</div></div>
   </div>
 
   <div class="scr" id="scr-cards">
@@ -123,25 +138,39 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pu)" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </div>
     </div>
-    <div id="cards-list"><div class="empty"><div class="empty-i">💳</div><p>No cards yet.<br>Tap + to add your first card.</p></div></div>
+    <div id="cards-list"></div>
   </div>
 
   <div class="scr" id="scr-profile">
     <div style="background:var(--dk);color:#fff;border-radius:16px;padding:24px;margin-bottom:16px;text-align:center">
       <div style="font-size:40px;margin-bottom:10px" id="pav">?</div>
-      <div style="font-size:18px;font-weight:800;margin-bottom:4px" id="pnm">Loading...</div>
-      <div style="font-size:13px;color:rgba(255,255,255,.4)" id="pem"></div>
+      <div style="font-size:18px;font-weight:800;margin-bottom:4px" id="pnm">Loading</div>
     </div>
-    <div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:14px;cursor:pointer" onclick="doOut()">
+    <div style="background:#fff;border-radius:12px;padding:14px;cursor:pointer" onclick="doOut()">
       <div style="font-size:14px;font-weight:700;color:var(--rd)">🚪 Sign out</div>
     </div>
   </div>
 
   <nav class="nav">
-    <div class="nv on" id="nv-home" onclick="go('home')"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</div>
-    <div class="nv" id="nv-cards" onclick="go('cards')"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Cards</div>
-    <div class="nv" id="nv-profile" onclick="go('profile')"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</div>
+    <div class="nv on" id="nv-home" onclick="go('home')"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none" stroke-width="1.8"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Home</div>
+    <div class="nv" id="nv-cards" onclick="go('cards')"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none" stroke-width="1.8"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Cards</div>
+    <div class="nv" id="nv-profile" onclick="go('profile')"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</div>
   </nav>
+</div>
+
+<!-- CARD DETAIL VIEW -->
+<div id="card-detail">
+  <div class="cd-header">
+    <div class="cd-back" onclick="closeCD()">← Back</div>
+    <div class="cd-shop" id="cd-shop"></div>
+    <div class="cd-pts" id="cd-pts">0</div>
+    <div class="cd-lbl">loyalty points</div>
+  </div>
+  <div class="cd-body">
+    <div class="cd-info"><div class="cd-info-lbl">Visits</div><div class="cd-info-val" id="cd-visits">0</div></div>
+    <div class="cd-info"><div class="cd-info-lbl">Total spent</div><div class="cd-info-val" id="cd-spent">£0</div></div>
+    <div class="cd-info"><div class="cd-info-lbl">Rewards</div><div class="cd-info-val" id="cd-rewards">0</div></div>
+  </div>
 </div>
 
 <!-- ADD CARD SHEET -->
@@ -151,13 +180,12 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
     
     <div id="step-type" style="display:block">
       <div class="type-g">
-        <div class="topt on" id="to-l" onclick="sAT('local')"><em>🏪</em>Local shop</div>
-        <div class="topt" id="to-n" onclick="sAT('national')"><em>🇬🇧</em>National brand</div>
+        <div class="topt on" id="to-l" onclick="sAT('local')"><em>🏪</em>Local</div>
+        <div class="topt" id="to-n" onclick="sAT('national')"><em>🇬🇧</em>National</div>
       </div>
     </div>
     
     <div id="step-local" style="display:none">
-      <div style="background:var(--gn2);border-radius:10px;padding:11px 13px;margin-bottom:13px;font-size:13px;color:#004D40">🔍 Search any local shop</div>
       <div class="fi"><label>Shop name</label><input type="text" id="shi" placeholder="Search shops..."></div>
       <div id="shr"></div>
       <button style="width:100%;padding:10px;background:#f0f0f0;color:var(--mu);border:none;border-radius:10px;margin-top:12px;cursor:pointer;font-weight:600" onclick="sAT('type')">← Back</button>
@@ -171,10 +199,11 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
     <div id="step-card-details" style="display:none">
       <div style="background:#f9f9fb;border-radius:12px;padding:14px;margin-bottom:14px">
         <div id="card-preview-emoji" style="font-size:32px;margin-bottom:8px"></div>
-        <div id="card-preview-name" style="font-weight:700"></div>
+        <div id="card-preview-name" style="font-weight:700;font-size:14px"></div>
       </div>
       <div class="fi"><label>Card number</label><input type="text" id="nat-card-num" placeholder="1234567890"></div>
-      <button style="width:100%;padding:12px;background:var(--dk);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:700;margin-bottom:8px" onclick="saveNatCard()">Save card</button>
+      <div class="fi"><label>Name (optional)</label><input type="text" id="nat-card-holder" placeholder="Your name"></div>
+      <button style="width:100%;padding:12px;background:var(--dk);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:700;margin-bottom:8px;margin-top:16px" onclick="saveNatCard()">✓ Save card</button>
       <button style="width:100%;padding:10px;background:#f0f0f0;color:var(--mu);border:none;border-radius:10px;cursor:pointer;font-weight:600" onclick="sAT('national')">← Back</button>
       <div class="err-b" id="card-err"></div>
     </div>
@@ -188,7 +217,7 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
 var SURL='https://gcwevgaymahywqjorhnn.supabase.co';
 var SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
 var TOKEN=null,UID=null,PROF={},CARDS=[];
-var ADDTYPE='local',CURNAT={};
+var ADDTYPE='local',CURNAT={},CURCARD=null;
 
 // National Brands
 var NB=[
@@ -214,16 +243,13 @@ var NB=[
   {id:'cineworld',n:'Cineworld',e:'🎬',c:'#C41230'}
 ];
 
-// BOOT - SIMPLE AND DIRECT
-console.log('⏳ Booting Stashlo...');
+console.log('✓ STASHLO CARD SECTION - STARTING...');
+
 setTimeout(function(){
-  console.log('✓ Starting initialization');
   try{
     var em=checkSess();
-    console.log('✓ Session check done. UID:', em);
-    
     if(em){
-      console.log('✓ User logged in, showing app');
+      console.log('✓ User logged in');
       hide('splash');
       show('app','flex');
       loadProf();
@@ -252,20 +278,12 @@ window.handleSignIn=function(){
   var e=$('in-e').value.trim(),p=$('in-p').value,err=$('in-err');
   err.style.display='none';
   if(!e||!p){showE(err,'Enter email and password');return;}
-  $('btn-in').disabled=true;
-  console.log('→ Signing in...');
   fetch(SURL+'/auth/v1/token?grant_type=password',{
     method:'POST',
     headers:{'apikey':SKEY,'Content-Type':'application/json'},
     body:JSON.stringify({email:e,password:p})
   }).then(r=>r.json()).then(d=>{
-    $('btn-in').disabled=false;
-    if(!d.access_token){
-      console.log('✗ Login failed');
-      showE(err,'Incorrect email or password');
-      return;
-    }
-    console.log('✓ Login successful');
+    if(!d.access_token){showE(err,'Wrong email or password');return;}
     TOKEN=d.access_token;
     UID=d.user.id;
     saveSess(TOKEN,UID,e);
@@ -273,31 +291,19 @@ window.handleSignIn=function(){
     show('app','flex');
     loadProf();
     loadCards();
-  }).catch(e=>{
-    $('btn-in').disabled=false;
-    console.error('Login error:',e);
-    showE(err,'Connection error');
-  });
+  }).catch(e=>showE(err,'Error'));
 };
 
 window.handleSignUp=function(){
   var n=$('up-n').value.trim(),e=$('up-e').value.trim(),p=$('up-p').value,err=$('up-err');
   err.style.display='none';
-  if(!n||!e||!p||p.length<6){showE(err,'Fill all fields');return;}
-  $('btn-up').disabled=true;
-  console.log('→ Creating account...');
+  if(!n||!e||!p){showE(err,'Fill all fields');return;}
   fetch(SURL+'/auth/v1/signup',{
     method:'POST',
     headers:{'apikey':SKEY,'Content-Type':'application/json'},
     body:JSON.stringify({email:e,password:p})
   }).then(r=>r.json()).then(d=>{
-    $('btn-up').disabled=false;
-    if(d.error){
-      console.log('✗ Signup failed');
-      showE(err,'Sign up failed');
-      return;
-    }
-    console.log('✓ Signup successful');
+    if(d.error){showE(err,'Sign up failed');return;}
     TOKEN=d.access_token;
     UID=d.user.id;
     saveSess(TOKEN,UID,e);
@@ -305,11 +311,7 @@ window.handleSignUp=function(){
     show('app','flex');
     loadProf();
     loadCards();
-  }).catch(e=>{
-    $('btn-up').disabled=false;
-    console.error('Signup error:',e);
-    showE(err,'Connection error');
-  });
+  }).catch(e=>showE(err,'Error'));
 };
 
 window.doOut=function(){
@@ -318,10 +320,13 @@ window.doOut=function(){
   show('auth','flex');
 };
 
-// CARDS
+// ═══════════════════════════════════════════════════════════════════
+// CARD FUNCTIONS - COMPLETE FIX
+// ═══════════════════════════════════════════════════════════════════
+
 function loadProf(){
   if(!UID)return;
-  console.log('→ Loading profile...');
+  console.log('→ Loading profile for:', UID);
   fetch(SURL+'/rest/v1/users?id=eq.'+UID+'&select=*',{
     headers:{apikey:SKEY}
   }).then(r=>r.json()).then(d=>{
@@ -331,128 +336,186 @@ function loadProf(){
     t('hn',nm+"'s wallet");
     t('pav',nm.charAt(0).toUpperCase());
     t('pnm',nm);
-    t('pem',PROF.email||'');
-  }).catch(e=>{
-    console.error('Profile error:',e);
-  });
+  }).catch(e=>console.error('Profile error:',e));
 }
 
 function loadCards(){
-  if(!UID)return;
-  console.log('→ Loading cards...');
-  fetch(SURL+'/rest/v1/cards?user_id=eq.'+UID+'&order=addedAt.desc&select=*',{
+  if(!UID){console.warn('No UID');return;}
+  console.log('→ Loading cards for:', UID);
+  fetch(SURL+'/rest/v1/cards?user_id=eq.'+UID+'&order=addedAt.desc',{
     headers:{apikey:SKEY}
   }).then(r=>r.json()).then(d=>{
     CARDS=Array.isArray(d)?d:[];
     console.log('✓ Cards loaded:',CARDS.length);
-    rHCards();
-    rCList();
-    t('s-c',CARDS.length);
-    t('s-p',CARDS.reduce(function(a,c){return a+(c.points||0);},0));
+    CARDS.forEach(c=>{
+      console.log('  -', c.name||c.shopName, '('+c.type+')', 'points:', c.points);
+    });
+    renderCards();
   }).catch(e=>{
-    console.error('Cards error:',e);
+    console.error('✗ Cards error:',e);
+    renderCards();
   });
 }
 
-function rHCards(){
-  var el=$('h-cards');
-  if(!CARDS.length){el.innerHTML='<div class="lce">Tap + in Cards</div>';return;}
-  el.innerHTML=CARDS.slice(0,6).map(function(c){
-    return '<div class="lcard" style="background:'+(c.color||'#6C5CE7')+'" onclick="oCD(\''+c.id+'\')">'
-      +'<div style="font-size:12px;color:rgba(255,255,255,.45)">'+x(c.shopName||'Shop')+'</div>'
-      +'<div class="lc-pt">'+(c.points||0)+'</div>'
-      +'<div style="font-size:11px;color:rgba(255,255,255,.4)">points</div>'
-      +'</div>';
-  }).join('');
+function renderCards(){
+  console.log('→ Rendering', CARDS.length, 'cards');
+  
+  // Update home screen cards
+  var hc=$('h-cards');
+  if(!CARDS.length){
+    hc.innerHTML='<div class="lce">Tap + in Cards<br>to add</div>';
+  }else{
+    hc.innerHTML=CARDS.slice(0,4).map(c=>{
+      var c1=c.color||'#6C5CE7';
+      return '<div class="lcard" style="background:'+c1+'" onclick="oCD(\''+c.id+'\')">'
+        +'<div class="lc-nm">'+x(c.shopName||c.name)+'</div>'
+        +'<div class="lc-pt">'+(c.points||0)+'</div>'
+        +'<div class="lc-lb">points</div>'
+        +'</div>';
+    }).join('');
+  }
+  
+  // Update cards list
+  var cl=$('cards-list');
+  if(!CARDS.length){
+    cl.innerHTML='<div class="empty"><div class="empty-i">💳</div><p>No cards yet.<br>Tap + to add.</p></div>';
+  }else{
+    cl.innerHTML=CARDS.map(c=>{
+      var c1=c.color||'#6C5CE7';
+      var pct=Math.min(100,Math.round(((c.points||0)/(c.threshold||100))*100));
+      return '<div class="cfl" style="background:'+c1+'" onclick="oCD(\''+c.id+'\')">'
+        +'<div class="cfl-header">'
+        +'<div class="cfl-nm">'+x(c.shopName||c.name)+'</div>'
+        +'<div class="cfl-bdg">'+(c.type==='national'?'🇬🇧':'🏪')+'</div>'
+        +'</div>'
+        +'<div class="cfl-pt">'+(c.points||0)+'</div>'
+        +'<div class="cfl-lb">points</div>'
+        +'</div>';
+    }).join('');
+  }
+  
+  // Update stats
+  t('s-c',CARDS.length);
+  t('s-p',CARDS.reduce((a,c)=>a+(c.points||0),0));
+  console.log('✓ Cards rendered');
 }
 
-function rCList(){
-  var el=$('cards-list');
-  if(!CARDS.length){el.innerHTML='<div class="empty"><div class="empty-i">💳</div><p>No cards yet</p></div>';return;}
-  el.innerHTML=CARDS.map(function(c){
-    return '<div class="cfl" style="background:'+(c.color||'#6C5CE7')+'" onclick="oCD(\''+c.id+'\')">'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:12px">'
-      +'<div style="font-size:14px;font-weight:700;color:#fff">'+x(c.shopName||c.name)+'</div>'
-      +'<div style="font-size:10px;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)">'+(c.type==='national'?'🇬🇧':'🏪')+'</div>'
-      +'</div>'
-      +'<div class="cfl-pt">'+(c.points||0)+'</div>'
-      +'<div style="font-size:11px;color:rgba(255,255,255,.4)">points</div>'
-      +'</div>';
-  }).join('');
-}
-
-var CURCARD=null;
 window.oCD=function(id){
   CURCARD=CARDS.find(c=>c.id===id);
-  if(!CURCARD)return;
-  console.log('Opened card:',CURCARD.name);
-  toast('Opened: '+CURCARD.name);
+  if(!CURCARD){console.warn('Card not found:', id);return;}
+  console.log('✓ Opened card:',CURCARD.name);
+  show('card-detail','flex');
+  t('cd-shop',x(CURCARD.shopName||CURCARD.name));
+  t('cd-pts',CURCARD.points||0);
+  t('cd-visits',CURCARD.visitCount||0);
+  t('cd-spent','£'+((CURCARD.totalSpend||0)).toFixed(0));
+  t('cd-rewards',CURCARD.rewardsRedeemed||0);
 };
 
+window.closeCD=function(){
+  hide('card-detail');
+  CURCARD=null;
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// ADD CARD FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════
+
 window.oAS=function(){
+  console.log('→ Opening add sheet');
   sAT('type');
   show('add-sheet','flex');
 };
 
 window.cAS=function(){
+  console.log('→ Closing add sheet');
   hide('add-sheet');
   $('shi').value='';
   $('shr').innerHTML='';
   $('nat-card-num').value='';
+  $('nat-card-holder').value='';
   $('card-err').style.display='none';
   CURNAT={};
   sAT('type');
 };
 
 window.sAT=function(t){
-  if(t==='type'){show('step-type');hide('step-local');hide('step-national');hide('step-card-details');return;}
-  if(t==='local'){hide('step-type');show('step-local');hide('step-national');hide('step-card-details');return;}
-  if(t==='national'){hide('step-type');hide('step-local');show('step-national');hide('step-card-details');bBrands();return;}
+  console.log('→ Step:', t);
+  hide('step-type');hide('step-local');hide('step-national');hide('step-card-details');
+  if(t==='type')show('step-type');
+  if(t==='local')show('step-local');
+  if(t==='national'){show('step-national');bBrands();}
 };
 
 function bBrands(){
   var el=$('brg');
-  el.innerHTML=NB.map(b=>'<div class="brand" onclick="selectNatBrand(\''+b.id+'\',\''+b.n.replace(/'/g,"\\'")+'\',\''+b.e+'\',\''+b.c+'\')">'+'<em>'+b.e+'</em><span>'+x(b.n)+'</span></div>').join('');
+  el.innerHTML=NB.map(b=>'<div class="brand" onclick="selectNatBrand(\''+b.id+'\',\''+b.n.replace(/'/g,"\\'")+'\',\''+b.e+'\',\''+b.c+'\')">'
+    +'<em>'+b.e+'</em><span>'+x(b.n)+'</span></div>').join('');
 }
 
 window.selectNatBrand=function(id,name,emoji,color){
+  console.log('→ Selected brand:', name);
   if(!UID){toast('Sign in first');return;}
-  if(CARDS.find(c=>c.id===id)){toast('Already have this!');return;}
+  if(CARDS.find(c=>c.id===id)){toast('Already added!');return;}
   CURNAT={id,name,emoji,color};
   $('card-preview-emoji').textContent=emoji;
   $('card-preview-name').textContent=name;
   $('nat-card-num').value='';
+  $('nat-card-holder').value='';
   hide('step-national');
   show('step-card-details');
 };
 
 window.saveNatCard=function(){
-  if(!CURNAT||!CURNAT.id){toast('Select a brand');return;}
   var cardNum=$('nat-card-num').value.trim();
+  var cardHolder=$('nat-card-holder').value.trim();
   var err=$('card-err');
   err.style.display='none';
-  if(!cardNum||cardNum.length<8){
-    err.textContent='Card number required (8+ digits)';
+  
+  console.log('→ Saving card:', CURNAT.name);
+  
+  if(!cardNum||cardNum.length<4){
+    err.textContent='Card number required (4+ digits)';
     err.style.display='block';
     return;
   }
-  console.log('→ Adding card:',CURNAT.name);
+  
   var card={
-    id:CURNAT.id,name:CURNAT.name,shopName:CURNAT.name,emoji:CURNAT.emoji,color:CURNAT.color,
-    type:'national',points:0,threshold:500,addedAt:Date.now(),visitCount:0,totalSpend:0,rewardsRedeemed:0,
-    cardNumber:cardNum
+    id:CURNAT.id,
+    name:CURNAT.name,
+    shopName:CURNAT.name,
+    emoji:CURNAT.emoji,
+    color:CURNAT.color,
+    type:'national',
+    points:0,
+    threshold:500,
+    addedAt:Date.now(),
+    visitCount:0,
+    totalSpend:0,
+    rewardsRedeemed:0,
+    cardNumber:cardNum,
+    cardHolder:cardHolder||null
   };
+  
+  console.log('→ Sending to Supabase:', card);
+  
   fetch(SURL+'/rest/v1/cards',{
     method:'POST',
     headers:{apikey:SKEY,'Content-Type':'application/json'},
     body:JSON.stringify({user_id:UID,...card})
-  }).then(r=>r.json()).then(d=>{
-    console.log('✓ Card added');
+  }).then(r=>{
+    console.log('→ Response:', r.status);
+    return r.json();
+  }).then(d=>{
+    console.log('✓ Card saved to Supabase');
     toast('✅ '+CURNAT.name+' added!');
     window.cAS();
+    
+    // RELOAD CARDS IMMEDIATELY
+    console.log('→ Reloading cards...');
     loadCards();
   }).catch(e=>{
-    console.error('Add card error:',e);
+    console.error('✗ Save error:',e);
     err.textContent='Error: '+e.message;
     err.style.display='block';
   });
@@ -460,6 +523,7 @@ window.saveNatCard=function(){
 
 // NAVIGATION
 window.go=function(s){
+  console.log('→ Go to:', s);
   document.querySelectorAll('.scr').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.nv').forEach(x=>x.classList.remove('on'));
   $('scr-'+s)&&$('scr-'+s).classList.add('on');
@@ -469,7 +533,7 @@ window.go=function(s){
 // UTILS
 function $(id){return document.getElementById(id);}
 function t(id,v){var e=$(id);if(e)e.textContent=v;}
-function show(id){var e=$(id);if(e)e.style.display='block';}
+function show(id){var e=$(id);if(e)e.style.display='flex';}
 function hide(id){var e=$(id);if(e)e.style.display='none';}
 function x(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function showE(el,msg){el.textContent=msg;el.style.display='block';}
@@ -478,7 +542,7 @@ function saveSess(token,uid,email){localStorage.setItem('sl_s',JSON.stringify({t
 function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_s')||'null');if(s&&s.t&&s.uid&&s.x>Date.now()){TOKEN=s.t;UID=s.uid;return s.email||s.uid;}}catch(e){}clearSess();return false;}
 function clearSess(){localStorage.removeItem('sl_s');TOKEN=null;UID=null;PROF={};CARDS=[];}
 
-console.log('✓ Stashlo v5.2 READY');
+console.log('✓ STASHLO READY - CARD SECTION COMPLETE');
 </script>
 </body>
 </html>
