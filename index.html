@@ -826,6 +826,168 @@ window.addCardToDb=function(mid,shopName){sGet('merchants','id=eq.'+mid).then(fu
 // Close add sheet
 window.cAS=function(){hide('add-sheet');$('shi').value='';$('shr').innerHTML='';};
 
+
+
+/* ===== SENIOR BUGFIX PATCH v5.1.1 ===== */
+(function(){
+  function byId(id){return document.getElementById(id);}
+  function safeText(v){return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+  window.esc = window.x || safeText;
+  window.frFS = function(row){return normRow(row || {});};
+  if(typeof window.ST === 'undefined') window.ST = null;
+  if(typeof window.NB === 'undefined') window.NB = [
+    {id:'tesco',n:'Tesco',e:'🛒',c:'#00539F'},
+    {id:'boots',n:'Boots',e:'💊',c:'#005EB8'},
+    {id:'greggs',n:'Greggs',e:'🥐',c:'#006F3C'},
+    {id:'costa',n:'Costa Coffee',e:'☕',c:'#6F2C1F'}
+  ];
+
+  function normRow(r){
+    if(!r || typeof r !== 'object') return r;
+    var o = Object.assign({}, r);
+    var map = {
+      card_id:'id', shop_name:'shopName', shop_id:'shopId', merchant_id:'merchantId',
+      added_at:'addedAt', visit_count:'visitCount', total_spend:'totalSpend', rewards_redeemed:'rewardsRedeemed',
+      total_rewards:'totalRewards', total_orders:'totalOrders', product_id:'productId', product_name:'productName',
+      user_id:'userId', order_id:'orderId', created_at:'createdAt', sent_at:'sentAt', from_role:'from', sender_name:'senderName',
+      points_added:'pointsAdded', points_redeemed:'pointsRedeemed'
+    };
+    Object.keys(map).forEach(function(k){ if(o[k] !== undefined && o[map[k]] === undefined) o[map[k]] = o[k]; });
+    if(!o.id && o.cardId) o.id = o.cardId;
+    if(!o.id && o.card_id) o.id = o.card_id;
+    return o;
+  }
+  function normData(d){return Array.isArray(d) ? d.map(normRow) : normRow(d);}
+
+  var _oldSGet = window.sGet || sGet;
+  window.sGet = sGet = function(t,f){
+    return chkToken().then(function(){
+      var u=SURL+'/rest/v1/'+t+'?select=*'; if(f) u+='&'+f;
+      return fetch(u,{headers:SH()}).then(function(r){return r.json();}).then(normData);
+    });
+  };
+  var _oldSAdd = window.sAdd || sAdd;
+  window.sAdd = sAdd = function(t,d){
+    return chkToken().then(function(){
+      return fetch(SURL+'/rest/v1/'+t,{method:'POST',headers:SH({'Prefer':'return=representation'}),body:JSON.stringify(d)})
+        .then(function(r){return r.json();}).then(normData);
+    });
+  };
+  var _oldSUpsert = window.sUpsert || sUpsert;
+  window.sUpsert = sUpsert = function(t,d,c){
+    return chkToken().then(function(){
+      var u=SURL+'/rest/v1/'+t+(c?'?on_conflict='+c:'');
+      return fetch(u,{method:'POST',headers:SH({'Prefer':'resolution=merge-duplicates,return=representation'}),body:JSON.stringify(d)})
+        .then(function(r){return r.json();}).then(normData);
+    });
+  };
+
+  window.saveSess = function(token, uid, email, expiresIn, refreshToken){
+    TOKEN = token || null; UID = uid || null;
+    var s = {t:TOKEN, uid:UID, email:email || '', r:refreshToken || '', x:Date.now() + (Number(expiresIn || 3600) * 1000)};
+    localStorage.setItem('sl_s', JSON.stringify(s));
+  };
+  window.checkSess = function(){
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem('sl_s') || 'null'); } catch(e) {}
+    if(!s || !s.t || !s.uid || (s.x && s.x < Date.now() && !s.r)){ clearSess(); return false; }
+    TOKEN = s.t; UID = s.uid; if(s.email) PROF.email = s.email;
+    return s.email || UID;
+  };
+  window.clearSess = function(){ localStorage.removeItem('sl_s'); TOKEN=null; UID=null; PHONE=''; PROF={}; CARDS=[]; ORDS=[]; };
+
+  window.handleSignIn = window.doIn = function(){
+    var email=byId('in-e').value.trim(), pw=byId('in-p').value, err=byId('in-err');
+    err.style.display='none';
+    if(!email || !pw){showE(err,'Enter email and password');return;}
+    byId('btn-in').disabled=true; byId('btn-in').textContent='Signing in...';
+    doSignIn(email,pw).then(function(d){
+      byId('btn-in').disabled=false; byId('btn-in').textContent='Sign in';
+      if(!d || !d.access_token || !d.user){showE(err,(d && (d.error_description || d.msg)) || 'Incorrect email or password');return;}
+      saveSess(d.access_token,d.user.id,d.user.email,d.expires_in,d.refresh_token);
+      hide('auth'); show('app','flex'); go('home'); boot();
+    }).catch(function(e){byId('btn-in').disabled=false;byId('btn-in').textContent='Sign in';showE(err,'Connection error — please try again');console.error(e);});
+  };
+
+  window.handleSignUp = window.doUp = function(){
+    var name=byId('up-n').value.trim(), phone=byId('up-ph').value.replace(/\s/g,''), email=byId('up-e').value.trim(), pw=byId('up-p').value, err=byId('up-err');
+    err.style.display='none';
+    if(!name){showE(err,'Enter your name');return;} if(!phone || phone.length<10){showE(err,'Enter a valid phone number');return;}
+    if(!email){showE(err,'Enter your email');return;} if(!pw || pw.length<6){showE(err,'Password must be at least 6 characters');return;}
+    byId('btn-up').disabled=true; byId('btn-up').textContent='Creating...';
+    doSignUp(email,pw).then(function(d){
+      byId('btn-up').disabled=false; byId('btn-up').textContent='Create account';
+      if(!d || !d.user){showE(err,(d && (d.error_description || d.msg || d.message)) || 'Sign up failed');return;}
+      if(d.access_token){saveSess(d.access_token,d.user.id,d.user.email || email,d.expires_in,d.refresh_token);}
+      else { showE(err,'Account created. Please check email or sign in.'); swTab('in'); return; }
+      PROF={name:name,phone:phone,email:email}; PHONE=phone;
+      sUpsert('users',{id:UID,name:name,phone:phone,email:email},'id').catch(function(){});
+      hide('auth'); show('app','flex'); go('home'); boot();
+    }).catch(function(e){byId('btn-up').disabled=false;byId('btn-up').textContent='Create account';showE(err,'Connection error');console.error(e);});
+  };
+
+  window.doForgot = function(){
+    var email=byId('in-e').value.trim(), err=byId('in-err'), ok=byId('fp-ok');
+    err.style.display='none'; if(ok) ok.style.display='none';
+    if(!email){showE(err,'Enter your email address first');return;}
+    doResetPw(email).then(function(d){
+      if(d && d.error){showE(err,d.error_description || d.msg || 'Could not send reset email');return;}
+      if(ok) ok.style.display='block'; else toast('✅ Reset email sent');
+    }).catch(function(){showE(err,'Connection error');});
+  };
+  window.doOut = function(){ clearSess(); hide('app'); show('auth','flex'); };
+
+  window.closeCD = function(){ hide('card-detail'); loadCards(); };
+  window.cdTab = function(tab){
+    ['products','history','message'].forEach(function(name){
+      var panel=byId('cd-panel-'+name), btn=byId('cd-tab-'+name);
+      if(panel) panel.style.display = name===tab ? 'block' : 'none';
+      if(btn){ btn.style.background = name===tab ? 'var(--pu2)' : '#f4f4f6'; btn.style.color = name===tab ? 'var(--pu)' : 'var(--mu)'; btn.style.borderColor = name===tab ? 'var(--pu)' : 'transparent'; }
+    });
+    if(tab==='products' && CURCARD && CURCARD.merchantId) loadCDProducts(CURCARD.merchantId);
+    if(tab==='message' && CURCARD && CURCARD.merchantId) loadShopMsgs(CURCARD.merchantId);
+  };
+  window._cdProds = window._cdProds || {};
+  window.loadCDProducts = function(mid){
+    var grid=byId('cd-prods-grid'), empty=byId('cd-prods-empty'); if(!grid) return;
+    grid.innerHTML='<div style="grid-column:1/-1;color:var(--mu);font-size:13px;padding:16px 0">Loading...</div>';
+    sGet('products','merchant_id=eq.'+encodeURIComponent(mid)+'&active=eq.true&limit=20').then(function(rows){
+      var prods=(Array.isArray(rows)?rows:[]).filter(function(p){return p.active!==false;});
+      if(!prods.length){grid.innerHTML=''; if(empty) empty.style.display='block'; return;}
+      if(empty) empty.style.display='none';
+      prods.forEach(function(p){ window._cdProds[p.id]=p; PM[p.id]=p; });
+      grid.innerHTML=prods.map(function(p){return '<div class="cd-prod-card" onclick="oOS(\''+safeText(p.id)+'\')"><div style="height:80px;background:linear-gradient(135deg,#ece9ff,#e0f2f1);display:flex;align-items:center;justify-content:center;font-size:32px">'+safeText(p.emoji||'🛍️')+'</div><div style="padding:10px"><div style="font-size:13px;font-weight:700;margin-bottom:2px">'+safeText(p.name)+'</div><div style="font-size:11px;color:var(--mu);margin-bottom:6px">'+safeText((p.description||'').slice(0,45))+'</div><div style="font-size:15px;font-weight:800;color:var(--pu)">£'+Number(p.price||0).toFixed(2)+'</div></div></div>';}).join('');
+    }).catch(function(){grid.innerHTML='<div style="grid-column:1/-1;color:var(--rd);font-size:13px;padding:16px 0">Could not load products</div>';});
+  };
+  window.loadShopMsgs = function(mid){
+    var el=byId('cd-msgs'); if(!el) return;
+    sGet('messages','merchant_id=eq.'+encodeURIComponent(mid)+'&user_id=eq.'+encodeURIComponent(UID)+'&order=ts.asc&limit=20').then(function(rows){
+      var msgs=(Array.isArray(rows)?rows:[]).sort(function(a,b){return(a.ts||0)-(b.ts||0);});
+      if(!msgs.length){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--mu);font-size:13px">No messages yet. Say hello!</div>';return;}
+      el.innerHTML=msgs.map(function(m){var mine=(m.from||m.from_role)==='customer';return '<div style="margin-bottom:8px;text-align:'+(mine?'right':'left')+'"><div style="display:inline-block;max-width:80%;background:'+(mine?'var(--pu)':'#f0f0f5')+';color:'+(mine?'#fff':'var(--tx)')+';padding:8px 12px;border-radius:'+(mine?'12px 12px 4px 12px':'12px 12px 12px 4px')+';font-size:13px">'+safeText(m.text)+'</div></div>';}).join('');
+      el.scrollTop=el.scrollHeight;
+    }).catch(function(){});
+  };
+  window.sendShopMsg = function(){
+    var inp=byId('cd-msg-in'); if(!inp || !inp.value.trim() || !CURCARD || !CURCARD.merchantId) return;
+    var text=inp.value.trim(); inp.value='';
+    sAdd('messages',{merchant_id:CURCARD.merchantId,user_id:UID,text:text,from_role:'customer',sender_name:(PROF&&PROF.name)||'Customer',ts:Date.now()}).then(function(){loadShopMsgs(CURCARD.merchantId);}).catch(function(){toast('Message failed');});
+  };
+  window.updateOTot = function(){ if(CURPROD && byId('o-tv')) t('o-tv','£'+(Number(CURPROD.price||0)*OQ).toFixed(2)); };
+  window.pO = function(){
+    if(!CURPROD) return;
+    if(OT==='delivery' && !byId('o-ad').value.trim()){toast('Enter delivery address');return;}
+    var shopId=CURPROD.shopId||CURPROD.merchantId||'stashlo';
+    var orderId='SL-'+Math.random().toString(36).slice(2,8).toUpperCase();
+    var row={user_id:UID,product_id:CURPROD.id,product_name:CURPROD.name,shop_id:shopId,merchant_id:shopId==='stashlo'?null:shopId,shop_name:CURPROD.shopName||'Shop',emoji:CURPROD.emoji||'🛍️',price:Number(CURPROD.price||0),qty:OQ,total:OQ*Number(CURPROD.price||0),type:OT,address:OT==='delivery'?byId('o-ad').value.trim():'',status:'pending',created_at:Date.now(),order_id:orderId};
+    sAdd('orders',row).then(function(){window.cOS();toast('Order placed! '+(OT==='collect'?'Ready in 1 hour 🏪':'On its way 🚚'));loadOrds();}).catch(function(e){console.error(e);toast('Could not place order');});
+  };
+
+  // Re-read session after patch loads, because the original boot may have run before these helpers existed.
+  try { if(!UID && checkSess()){ hide('auth'); show('app','flex'); boot(); } } catch(e){ console.error('patch boot:', e); }
+})();
+/* ===== END SENIOR BUGFIX PATCH ===== */
+
 </script>
 </body>
 </html>
