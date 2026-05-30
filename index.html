@@ -4,130 +4,107 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0a0a14">
-<title>Stashlo — Smart Loyalty Wallet</title>
+<title>Stashlo — Smart Loyalty Wallet [DEBUG]</title>
 <style>
-:root{--bg:#f0efff;--dk:#0a0a14;--wh:#fff;--pu:#6C5CE7;--pu2:#ece9ff;--gn:#00897B;--gn2:#e0f2f1;--rd:#c62828;--rd2:#ffebee;--tx:#1a1a2e;--mu:#706f87;--fn:system-ui,-apple-system,'Segoe UI',sans-serif}
+:root{--bg:#f0efff;--dk:#0a0a14;--wh:#fff;--pu:#6C5CE7;--pu2:#ece9ff;--gn:#00897B;--tx:#1a1a2e;--mu:#706f87;--fn:system-ui,-apple-system,'Segoe UI',sans-serif}
 *{box-sizing:border-box;margin:0;padding:0;font-family:var(--fn)}
 body{background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
-button{cursor:pointer;border:none;outline:none;font-family:var(--fn)}
-input{outline:none;font-family:var(--fn);-webkit-appearance:none}
+button{cursor:pointer;border:none;outline:none}
+input{outline:none;-webkit-appearance:none}
 #splash{position:fixed;inset:0;background:var(--dk);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;z-index:9999}
-.sp-logo{font-size:40px;font-weight:800;color:#fff}.sp-logo b{color:var(--pu)}
-.dots{display:flex;gap:7px}.dots i{width:8px;height:8px;border-radius:50%;background:var(--pu);animation:dp 1.2s ease infinite;font-style:normal}
-.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
-@keyframes dp{0%,100%{opacity:.3}50%{opacity:1}}
 #auth{display:none;min-height:100vh;background:var(--dk);align-items:center;justify-content:center;padding:20px}
 .a-box{background:#fff;border-radius:24px;padding:32px 24px;width:100%;max-width:380px}
-.a-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
-.a-ic{width:42px;height:42px;background:var(--pu);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff}
-.a-nm{font-size:19px;font-weight:800}
-.a-tabs{display:flex;background:#f4f4f6;border-radius:10px;padding:4px;margin-bottom:20px}
-.a-tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:600;color:var(--mu);border-radius:8px;cursor:pointer}
-.a-tab.on{background:#fff;color:var(--pu);box-shadow:0 1px 4px rgba(0,0,0,.1)}
-.fhd{font-size:20px;font-weight:800;margin-bottom:5px}
-.fsb{font-size:13px;color:var(--mu);margin-bottom:18px;line-height:1.6}
-.fi{margin-bottom:11px}
-.fi label{display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;margin-bottom:5px}
-.fi input{width:100%;padding:13px 14px;border:1.5px solid #e5e5ea;border-radius:12px;font-size:15px}
-.btn-a{width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:12px;font-size:15px;font-weight:700}
-.err-b{background:var(--rd2);color:var(--rd);font-size:13px;padding:10px 12px;border-radius:10px;display:none;margin-top:10px}
+.a-box input{width:100%;padding:13px 14px;border:1.5px solid #e5e5ea;border-radius:12px;font-size:15px;margin-bottom:10px}
+.a-box button{width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:12px;font-size:15px;font-weight:700;margin-top:10px}
 #app{display:none;flex-direction:column;min-height:100vh;padding-bottom:72px}
-.topbar{background:var(--dk);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.tb-logo{font-size:17px;font-weight:800;color:#fff}.tb-logo b{color:var(--pu)}
+.topbar{background:var(--dk);padding:13px 18px;color:#fff;font-weight:800}
 .nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #ebebef;display:flex;z-index:100}
-.nv{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 8px;font-size:10px;font-weight:600;color:var(--mu);cursor:pointer}
-.nv.on{color:var(--pu)}
+.nv{flex:1;padding:9px;text-align:center;font-size:10px;cursor:pointer;color:var(--mu)}
+.nv.on{color:var(--pu);font-weight:700}
 .scr{display:none;padding:16px}.scr.on{display:block}
-.hero{background:var(--dk);border-radius:20px;padding:20px 18px;margin-bottom:16px}
-.hg{font-size:13px;color:rgba(255,255,255,.4)}
-.hn{font-size:19px;font-weight:800;color:#fff;margin-bottom:14px}
-.hrow{display:flex;gap:10px}
-.hst{background:rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;flex:1}
-.hst-v{font-size:19px;font-weight:800;color:#fff}.hst-l{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px}
+.hero{background:var(--dk);border-radius:20px;padding:20px 18px;margin-bottom:16px;color:#fff}
+.hst{background:rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;flex:1;display:inline-block}
 .sr{display:flex;justify-content:space-between;align-items:center;margin:18px 0 11px}
-.st{font-size:15px;font-weight:700}.sl{font-size:13px;color:var(--pu);font-weight:600;cursor:pointer}
 .cscroll{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px}
-.lcard{min-width:180px;border-radius:16px;padding:16px;flex-shrink:0;cursor:pointer;position:relative;overflow:hidden;transform:perspective(1000px) rotateY(-5deg) rotateX(2deg);transition:transform 0.3s ease}
-.lcard:active{transform:perspective(1000px) rotateY(-2deg) rotateX(1deg)}
-.lc-nm{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:8px}
-.lc-pt{font-size:28px;font-weight:800;color:#fff;letter-spacing:-1px}
-.lc-lb{font-size:11px;color:rgba(255,255,255,.4)}
-.lce{min-width:180px;background:#fff;border-radius:16px;padding:20px;text-align:center;color:var(--mu);font-size:13px;flex-shrink:0}
-.cfl{border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;position:relative;display:flex;flex-direction:column;transform:perspective(1000px) rotateY(-3deg) rotateX(1deg);transition:transform 0.3s ease}
-.cfl:active{transform:perspective(1000px) rotateY(-1deg) rotateX(0deg)}
-.cfl-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.cfl-nm{font-size:14px;font-weight:700;color:#fff}
-.cfl-bdg{font-size:10px;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.6)}
-.cfl-pt{font-size:34px;font-weight:800;color:#fff;letter-spacing:-1px;margin:10px 0}
-.cfl-lb{font-size:11px;color:rgba(255,255,255,.4)}
+.lcard{min-width:180px;border-radius:16px;padding:16px;flex-shrink:0;cursor:pointer;color:#fff;transform:perspective(1000px) rotateY(-5deg);transition:transform 0.3s}
+.lcard:active{transform:perspective(1000px) rotateY(-2deg)}
+.cfl{border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;color:#fff;transform:perspective(1000px) rotateY(-3deg);transition:transform 0.3s}
 .empty{text-align:center;padding:36px 16px;color:var(--mu)}
-.empty-i{font-size:36px;margin-bottom:10px}.empty p{font-size:14px;line-height:1.6}
 #add-sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end}
 .sheet{background:#fff;border-radius:24px 24px 0 0;padding:24px 18px;width:100%;max-height:90vh;overflow-y:auto}
-.sheet-t{font-size:18px;font-weight:800;margin-bottom:16px}
-.type-g{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
-.topt{padding:13px;background:#f9f9fb;border-radius:12px;text-align:center;font-size:12px;font-weight:600;border:1.5px solid transparent;cursor:pointer}
-.topt em{font-size:22px;display:block;margin-bottom:5px;font-style:normal}
-.topt.on{background:var(--pu2);border-color:var(--pu);color:var(--pu)}
-.brands-g{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.brand{background:#f9f9fb;border-radius:12px;padding:12px;text-align:center;cursor:pointer}
-.brand:active{background:#ece9ff}
-.brand em{font-size:24px;display:block;margin-bottom:4px;font-style:normal}.brand span{font-size:12px;font-weight:600}
-#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--dk);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s}
+.sheet input{width:100%;padding:11px 12px;border:1px solid #e5e5ea;border-radius:10px;font-size:14px;margin-bottom:10px}
+.sheet label{display:block;font-size:11px;font-weight:700;color:var(--mu);margin-bottom:4px;text-transform:uppercase}
+.sheet button{width:100%;padding:12px;background:var(--dk);color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:600;margin:10px 0}
+.sheet .back{background:#f0f0f0;color:var(--mu)}
+.sheet .loc{background:var(--gn);margin:8px 0}
+.topt{padding:10px;background:#f9f9fb;border-radius:10px;border:1.5px solid transparent;cursor:pointer;text-align:center;margin:5px}
+.topt.on{background:var(--pu2);border-color:var(--pu)}
+.brand{background:#f9f9fb;border-radius:10px;padding:10px;text-align:center;cursor:pointer;margin:5px;font-size:12px}
+#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--dk);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;z-index:999;opacity:0;transition:opacity .3s}
 #toast.on{opacity:1}
-#card-detail{position:fixed;inset:0;background:var(--dk);z-index:150;display:none;flex-direction:column;overflow-y:auto;color:#fff}
-.cd-header{padding:22px 18px 24px;flex-shrink:0}
-.cd-back{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:18px}
-.cd-shop{font-size:14px;color:rgba(255,255,255,.4);margin-bottom:4px}
-.cd-pts{font-size:60px;font-weight:800;letter-spacing:-3px;line-height:1;margin:10px 0}
-.cd-lbl{font-size:14px;color:rgba(255,255,255,.4);margin-bottom:16px}
-.cd-body{background:#fff;border-radius:24px 24px 0 0;flex:1;padding:20px 16px 30px;color:var(--tx)}
-.cd-info{background:#f9f9fb;border-radius:12px;padding:14px;margin-bottom:14px}
-.cd-info-lbl{font-size:11px;font-weight:700;color:var(--mu);margin-bottom:4px}
-.cd-info-val{font-size:14px;font-weight:700;color:var(--tx)}
+#card-detail{position:fixed;inset:0;background:var(--dk);z-index:150;display:none;flex-direction:column;color:#fff;overflow-y:auto}
+.cd-header{padding:20px;flex-shrink:0}
+.cd-body{background:#fff;border-radius:24px 24px 0 0;flex:1;padding:20px;color:var(--tx)}
+.cd-info{background:#f9f9fb;border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px}
+.cd-info-lbl{color:var(--mu);font-weight:700;font-size:11px;text-transform:uppercase}
+.cd-info-val{color:var(--tx);font-weight:700;margin-top:4px}
+.err{background:#ffebee;color:#c62828;padding:10px;border-radius:8px;font-size:12px;margin-top:10px}
 </style>
 </head>
 <body>
 
-<div id="splash"><div class="sp-logo">Stash<b>lo</b></div><div class="dots"><i></i><i></i><i></i></div></div>
+<div id="splash">
+  <div style="font-size:40px;font-weight:800;color:#fff">Stash<span style="color:var(--pu)">lo</span></div>
+  <div style="color:var(--pu);text-align:center">
+    <div>Loading...</div>
+    <div style="font-size:11px;color:#fff;margin-top:10px" id="debug-splash"></div>
+  </div>
+</div>
 
 <div id="auth">
   <div class="a-box">
-    <div class="a-logo"><div class="a-ic">S</div><div class="a-nm">Stashlo</div></div>
-    <div class="a-tabs"><div class="a-tab on" id="tab-in" onclick="swTab('in')">Sign in</div><div class="a-tab" id="tab-up" onclick="swTab('up')">Join</div></div>
-    <div id="form-in"><div class="fhd">Welcome back</div><div class="fsb">Sign in to your loyalty wallet</div><div class="fi"><label>Email</label><input type="email" id="in-e" placeholder="you@email.com"></div><div class="fi"><label>Password</label><input type="password" id="in-p" placeholder="Password"></div><button class="btn-a" onclick="handleSignIn()">Sign in</button><div class="err-b" id="in-err"></div></div>
-    <div id="form-up" style="display:none"><div class="fhd">Create account</div><div class="fsb">Join Stashlo now</div><div class="fi"><label>Your name</label><input type="text" id="up-n" placeholder="Full name"></div><div class="fi"><label>Email</label><input type="email" id="up-e" placeholder="you@email.com"></div><div class="fi"><label>Password</label><input type="password" id="up-p" placeholder="Password"></div><button class="btn-a" onclick="handleSignUp()">Create account</button><div class="err-b" id="up-err"></div></div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:20px">Stashlo</div>
+    <div style="margin-bottom:20px" id="auth-form">
+      <div style="font-size:14px;font-weight:700;margin-bottom:5px">Email</div>
+      <input type="email" id="in-e" placeholder="you@email.com">
+      <div style="font-size:14px;font-weight:700;margin-bottom:5px;margin-top:10px">Password</div>
+      <input type="password" id="in-p" placeholder="Password">
+      <button onclick="handleSignIn()">Sign in</button>
+      <div id="err" style="color:#c62828;font-size:12px;margin-top:10px"></div>
+    </div>
   </div>
 </div>
 
 <div id="app">
-  <div class="topbar"><div class="tb-logo">Stash<b>lo</b></div></div>
+  <div class="topbar">Stash<span style="color:var(--pu)">lo</span></div>
   <div class="scr on" id="scr-home">
-    <div class="hero"><div class="hg">Good morning</div><div class="hn" id="hn">Your wallet</div><div class="hrow"><div class="hst"><div class="hst-v" id="s-c">0</div><div class="hst-l">Cards</div></div><div class="hst"><div class="hst-v" id="s-p">0</div><div class="hst-l">Points</div></div></div></div>
-    <div class="sr"><div class="st">My loyalty cards</div></div>
-    <div class="cscroll" id="h-cards"><div class="lce">Tap + in Cards to add</div></div>
+    <div class="hero">
+      <div style="color:rgba(255,255,255,.4);font-size:12px">Good morning</div>
+      <div style="font-size:18px;font-weight:800;margin:8px 0" id="hn">Your wallet</div>
+      <div style="display:flex;gap:10px">
+        <div class="hst"><div style="font-size:18px;font-weight:800" id="s-c">0</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Cards</div></div>
+        <div class="hst"><div style="font-size:18px;font-weight:800" id="s-p">0</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Points</div></div>
+      </div>
+    </div>
+    <div class="sr"><div style="font-size:14px;font-weight:700">My cards</div></div>
+    <div class="cscroll" id="h-cards"><div style="background:#fff;border-radius:12px;padding:15px;text-align:center;color:var(--mu);font-size:12px;flex-shrink:0;width:150px">Tap + to add</div></div>
   </div>
   <div class="scr" id="scr-cards">
-    <div class="sr" style="margin-top:0"><div class="st">My loyalty cards</div><div style="width:36px;height:36px;border-radius:10px;background:var(--pu2);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="oAS()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pu)" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div></div>
+    <div class="sr"><div style="font-size:14px;font-weight:700">My cards</div><button onclick="oAS()" style="background:var(--pu2);color:var(--pu);width:36px;height:36px;border-radius:8px;cursor:pointer">+</button></div>
     <div id="cards-list"></div>
   </div>
-  <div class="scr" id="scr-profile">
-    <div style="background:var(--dk);color:#fff;border-radius:16px;padding:24px;margin-bottom:16px;text-align:center"><div style="font-size:40px;margin-bottom:10px" id="pav">?</div><div style="font-size:18px;font-weight:800;margin-bottom:4px" id="pnm">Loading</div></div>
-    <div style="background:#fff;border-radius:12px;padding:14px;cursor:pointer" onclick="doOut()"><div style="font-size:14px;font-weight:700;color:var(--rd)">🚪 Sign out</div></div>
-  </div>
   <nav class="nav">
-    <div class="nv on" id="nv-home" onclick="go('home')"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none" stroke-width="1.8"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Home</div>
-    <div class="nv" id="nv-cards" onclick="go('cards')"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none" stroke-width="1.8"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Cards</div>
-    <div class="nv" id="nv-profile" onclick="go('profile')"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</div>
+    <div class="nv on" onclick="go('home')">🏠 Home</div>
+    <div class="nv" onclick="go('cards')">💳 Cards</div>
   </nav>
 </div>
 
 <div id="card-detail">
   <div class="cd-header">
-    <div class="cd-back" onclick="closeCD()">← Back</div>
-    <div class="cd-shop" id="cd-shop"></div>
-    <div class="cd-pts" id="cd-pts">0</div>
-    <div class="cd-lbl">loyalty points</div>
+    <button onclick="closeCD()" style="background:rgba(255,255,255,.1);color:#fff;padding:8px 12px;border-radius:8px;margin-bottom:15px">← Back</button>
+    <div style="color:rgba(255,255,255,.5);font-size:13px" id="cd-shop"></div>
+    <div style="font-size:50px;font-weight:800;margin:10px 0" id="cd-pts">0</div>
+    <div style="color:rgba(255,255,255,.5);font-size:13px">points</div>
   </div>
   <div class="cd-body">
     <div class="cd-info"><div class="cd-info-lbl">Visits</div><div class="cd-info-val" id="cd-visits">0</div></div>
@@ -141,36 +118,38 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
 
 <div id="add-sheet" onclick="if(event.target===this)cAS()">
   <div class="sheet">
-    <div class="sheet-t">Add loyalty card</div>
-    <div id="step-type" style="display:block">
-      <div class="type-g">
-        <div class="topt on" id="to-l" onclick="sAT('local')"><em>🏪</em>Local</div>
-        <div class="topt" id="to-n" onclick="sAT('national')"><em>🇬🇧</em>National</div>
-      </div>
-    </div>
-    <div id="step-local" style="display:none">
-      <div class="fi"><label>Shop name</label><input type="text" id="shi" placeholder="Search shops..."></div>
-      <div id="shr"></div>
-      <button style="width:100%;padding:10px;background:#f0f0f0;color:var(--mu);border:none;border-radius:10px;margin-top:12px;cursor:pointer;font-weight:600" onclick="sAT('type')">← Back</button>
+    <div style="font-size:16px;font-weight:800;margin-bottom:15px">Add card</div>
+    <div id="step-type">
+      <button class="topt on" onclick="sAT('national')">🇬🇧 National Brands</button>
     </div>
     <div id="step-national" style="display:none">
-      <div class="brands-g" id="brg"></div>
-      <button style="width:100%;padding:10px;background:#f0f0f0;color:var(--mu);border:none;border-radius:10px;cursor:pointer;font-weight:600;margin-top:12px" onclick="sAT('type')">← Back</button>
+      <div id="brg" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"></div>
+      <button class="back" onclick="sAT('type')">← Back</button>
     </div>
     <div id="step-card-details" style="display:none">
-      <div style="background:#f9f9fb;border-radius:12px;padding:14px;margin-bottom:14px">
-        <div id="card-preview-emoji" style="font-size:32px;margin-bottom:8px"></div>
-        <div id="card-preview-name" style="font-weight:700;font-size:14px;color:var(--tx)"></div>
+      <div style="background:#f9f9fb;border-radius:10px;padding:12px;margin-bottom:12px">
+        <div id="card-preview-emoji" style="font-size:28px;margin-bottom:8px"></div>
+        <div id="card-preview-name" style="font-weight:700;font-size:13px"></div>
       </div>
-      <div class="fi"><label>Card number ★</label><input type="text" id="nat-card-num" placeholder="e.g., 1234567890"></div>
-      <div class="fi"><label>Order reference</label><input type="text" id="nat-card-order" placeholder="e.g., ORDER-12345"></div>
-      <div class="fi"><label>Store location</label><input type="text" id="nat-card-store" placeholder="e.g., London West End"></div>
-      <div class="fi"><label>Name</label><input type="text" id="nat-card-holder" placeholder="Your name"></div>
-      <button style="width:100%;padding:11px;background:var(--gn);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:700;margin:8px 0 12px;font-size:14px" onclick="captureLocation()">📍 Capture Location</button>
-      <div id="loc-status" style="text-align:center;font-size:11px;color:var(--mu);margin-bottom:8px;min-height:18px"></div>
-      <button style="width:100%;padding:13px;background:var(--dk);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:700;margin-bottom:8px;font-size:15px" onclick="saveNatCard()">✓ Save card</button>
-      <button style="width:100%;padding:10px;background:#f0f0f0;color:var(--mu);border:none;border-radius:10px;cursor:pointer;font-weight:600;font-size:14px" onclick="sAT('national')">← Back</button>
-      <div class="err-b" id="card-err"></div>
+      
+      <label>Card Number ★</label>
+      <input type="text" id="nat-card-num" placeholder="1234567890">
+      
+      <label>Order Reference</label>
+      <input type="text" id="nat-card-order" placeholder="ORDER-12345">
+      
+      <label>Store Location</label>
+      <input type="text" id="nat-card-store" placeholder="London Branch">
+      
+      <label>Name</label>
+      <input type="text" id="nat-card-holder" placeholder="Your name">
+      
+      <button class="loc" onclick="captureLocation()">📍 Capture Location</button>
+      <div id="loc-status" style="text-align:center;font-size:11px;color:var(--mu);height:16px"></div>
+      
+      <button onclick="saveNatCard()">✓ Save</button>
+      <button class="back" onclick="sAT('national')">← Back</button>
+      <div id="card-err" class="err" style="display:none"></div>
     </div>
   </div>
 </div>
@@ -178,60 +157,234 @@ input{outline:none;font-family:var(--fn);-webkit-appearance:none}
 <div id="toast"></div>
 
 <script>
+console.log('🔴 STASHLO DEBUG VERSION LOADING...');
+
 var SURL='https://gcwevgaymahywqjorhnn.supabase.co';
 var SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
 var TOKEN=null,UID=null,PROF={},CARDS=[];
 var CURNAT={},CURCARD=null,tmpLat=null,tmpLng=null;
+
 var NB=[
-  {id:'tesco',n:'Tesco Clubcard',e:'🛒',c:'#00539B'},
+  {id:'tesco',n:'Tesco',e:'🛒',c:'#00539B'},
   {id:'nectar',n:'Nectar',e:'🎯',c:'#FF6600'},
-  {id:'boots',n:'Boots Advantage',e:'💊',c:'#00A3AD'},
-  {id:'costa',n:'Costa Coffee',e:'☕',c:'#622F22'},
-  {id:'bp',n:'BP Rewards',e:'⛽',c:'#009A44'},
+  {id:'boots',n:'Boots',e:'💊',c:'#00A3AD'},
+  {id:'costa',n:'Costa',e:'☕',c:'#622F22'},
+  {id:'bp',n:'BP',e:'⛽',c:'#009A44'},
   {id:'greggs',n:'Greggs',e:'🥐',c:'#002E5B'},
   {id:'mcdonalds',n:"McDonald's",e:'🍟',c:'#DA291C'},
   {id:'starbucks',n:'Starbucks',e:'☕',c:'#00704A'},
   {id:'waterstones',n:'Waterstones',e:'📚',c:'#1B365D'},
   {id:'johnlewis',n:'John Lewis',e:'🏬',c:'#3D3D3D'},
-  {id:'ikea',n:'IKEA Family',e:'🛋️',c:'#0058A3'},
-  {id:'lidl',n:'Lidl Plus',e:'🛍️',c:'#0050AA'},
+  {id:'ikea',n:'IKEA',e:'🛋️',c:'#0058A3'},
+  {id:'lidl',n:'Lidl',e:'🛍️',c:'#0050AA'},
   {id:'asda',n:'Asda',e:'🛒',c:'#78BE20'},
   {id:'morrisons',n:'Morrisons',e:'🛒',c:'#F5A623'},
-  {id:'waitrose',n:'myWaitrose',e:'🥬',c:'#2d2d2d'},
+  {id:'waitrose',n:'Waitrose',e:'🥬',c:'#2d2d2d'},
   {id:'nandos',n:"Nando's",e:'🍗',c:'#BE0000'},
-  {id:'pizza',n:'Pizza Express',e:'🍕',c:'#D72027'},
+  {id:'pizza',n:'Pizza',e:'🍕',c:'#D72027'},
   {id:'odeon',n:'ODEON',e:'🎬',c:'#E20714'},
   {id:'vue',n:'Vue',e:'🎭',c:'#1B1464'},
   {id:'cineworld',n:'Cineworld',e:'🎬',c:'#C41230'}
 ];
-setTimeout(()=>{try{if(checkSess()){hide('splash');show('app','flex');loadProf();loadCards();}else{hide('splash');show('auth','flex');}}catch(e){console.error(e);hide('splash');show('auth','flex');}},500);
-window.swTab=t=>{$('tab-in').classList.toggle('on',t==='in');$('tab-up').classList.toggle('on',t==='up');$('form-in').style.display=t==='in'?'block':'none';$('form-up').style.display=t==='up'?'block':'none';};
-window.handleSignIn=()=>{var e=$('in-e').value.trim(),p=$('in-p').value,err=$('in-err');err.style.display='none';if(!e||!p){showE(err,'Enter email and password');return;}fetch(SURL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}).then(r=>r.json()).then(d=>{if(!d.access_token){showE(err,'Wrong email or password');return;}TOKEN=d.access_token;UID=d.user.id;saveSess(TOKEN,UID,e);hide('auth');show('app','flex');loadProf();loadCards();}).catch(e=>showE(err,'Error'));};
-window.handleSignUp=()=>{var n=$('up-n').value.trim(),e=$('up-e').value.trim(),p=$('up-p').value,err=$('up-err');err.style.display='none';if(!n||!e||!p){showE(err,'Fill all fields');return;}fetch(SURL+'/auth/v1/signup',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})}).then(r=>r.json()).then(d=>{if(d.error){showE(err,'Sign up failed');return;}TOKEN=d.access_token;UID=d.user.id;saveSess(TOKEN,UID,e);hide('auth');show('app','flex');loadProf();loadCards();}).catch(e=>showE(err,'Error'));};
-window.doOut=()=>{clearSess();hide('app');show('auth','flex');};
-function loadProf(){if(!UID)return;fetch(SURL+'/rest/v1/users?id=eq.'+UID+'&select=*',{headers:{apikey:SKEY}}).then(r=>r.json()).then(d=>{PROF=Array.isArray(d)?d[0]:{};var nm=PROF.name||'there';t('hn',nm+"'s wallet");t('pav',nm.charAt(0).toUpperCase());t('pnm',nm);}).catch(e=>console.error(e));}
-function loadCards(){if(!UID)return;fetch(SURL+'/rest/v1/cards?user_id=eq.'+UID+'&order=addedAt.desc',{headers:{apikey:SKEY}}).then(r=>r.json()).then(d=>{CARDS=Array.isArray(d)?d:[];renderCards();}).catch(e=>{console.error(e);renderCards();});}
-function renderCards(){var hc=$('h-cards');if(!CARDS.length){hc.innerHTML='<div class="lce">Tap + in Cards<br>to add</div>';}else{hc.innerHTML=CARDS.slice(0,4).map(c=>'<div class="lcard" style="background:'+c.color+';" onclick="oCD(\''+c.id+'\')"><div class="lc-nm">'+x(c.shopName||c.name)+'</div><div class="lc-pt">'+(c.points||0)+'</div><div class="lc-lb">points</div></div>').join('');}var cl=$('cards-list');if(!CARDS.length){cl.innerHTML='<div class="empty"><div class="empty-i">💳</div><p>No cards yet.<br>Tap + to add.</p></div>';}else{cl.innerHTML=CARDS.map(c=>'<div class="cfl" style="background:'+c.color+';" onclick="oCD(\''+c.id+'\')"><div class="cfl-header"><div class="cfl-nm">'+x(c.shopName||c.name)+'</div><div class="cfl-bdg">'+(c.type==='national'?'🇬🇧':'🏪')+'</div></div><div class="cfl-pt">'+(c.points||0)+'</div><div class="cfl-lb">points</div></div>').join('');}t('s-c',CARDS.length);t('s-p',CARDS.reduce((a,c)=>a+(c.points||0),0));}
-window.oCD=id=>{CURCARD=CARDS.find(c=>c.id===id);if(!CURCARD)return;show('card-detail','flex');t('cd-shop',x(CURCARD.shopName||CURCARD.name));t('cd-pts',CURCARD.points||0);t('cd-visits',CURCARD.visitCount||0);t('cd-spent','£'+((CURCARD.totalSpend||0)).toFixed(0));t('cd-rewards',CURCARD.rewardsRedeemed||0);t('cd-cardnum',CURCARD.cardNumber?'****'+CURCARD.cardNumber.slice(-4):'****');t('cd-store',CURCARD.storeLocation||'—');t('cd-order',CURCARD.orderRef||'—');};
-window.closeCD=()=>{hide('card-detail');CURCARD=null;};
-window.oAS=()=>{sAT('type');show('add-sheet','flex');};
-window.cAS=()=>{hide('add-sheet');$('shi').value='';$('shr').innerHTML='';$('nat-card-num').value='';$('nat-card-order').value='';$('nat-card-store').value='';$('nat-card-holder').value='';t('loc-status','');$('card-err').style.display='none';CURNAT={};tmpLat=null;tmpLng=null;sAT('type');};
-window.sAT=t=>{hide('step-type');hide('step-local');hide('step-national');hide('step-card-details');if(t==='type')show('step-type');if(t==='local')show('step-local');if(t==='national'){show('step-national');bBrands();}};
-function bBrands(){var el=$('brg');el.innerHTML=NB.map(b=>'<div class="brand" onclick="selectNatBrand(\''+b.id+'\',\''+b.n.replace(/'/g,"\\'")+'\',\''+b.e+'\',\''+b.c+'\')"><em>'+b.e+'</em><span>'+x(b.n)+'</span></div>').join('');}
-window.selectNatBrand=(id,name,emoji,color)=>{if(!UID){toast('Sign in first');return;}if(CARDS.find(c=>c.id===id)){toast('Already added!');return;}CURNAT={id,name,emoji,color};$('card-preview-emoji').textContent=emoji;$('card-preview-name').textContent=name;$('nat-card-num').value='';$('nat-card-order').value='';$('nat-card-store').value='';$('nat-card-holder').value='';t('loc-status','');hide('step-national');show('step-card-details');};
-window.captureLocation=()=>{if(!navigator.geolocation){t('loc-status','📍 Not supported');return;}t('loc-status','📍 Locating...');navigator.geolocation.getCurrentPosition(pos=>{tmpLat=pos.coords.latitude;tmpLng=pos.coords.longitude;t('loc-status','✓ '+tmpLat.toFixed(4)+', '+tmpLng.toFixed(4));},err=>{t('loc-status','✗ '+err.message);});};
-window.saveNatCard=()=>{var num=$('nat-card-num').value.trim(),order=$('nat-card-order').value.trim(),store=$('nat-card-store').value.trim(),holder=$('nat-card-holder').value.trim(),err=$('card-err');err.style.display='none';if(!num||num.length<4){err.textContent='Card number required (4+ digits)';err.style.display='block';return;}fetch(SURL+'/rest/v1/cards',{method:'POST',headers:{apikey:SKEY,'Content-Type':'application/json'},body:JSON.stringify({user_id:UID,id:CURNAT.id,name:CURNAT.name,shopName:CURNAT.name,emoji:CURNAT.emoji,color:CURNAT.color,type:'national',points:0,threshold:500,addedAt:Date.now(),visitCount:0,totalSpend:0,rewardsRedeemed:0,cardNumber:num,cardHolder:holder||null,orderRef:order||null,storeLocation:store||null,latitude:tmpLat,longitude:tmpLng})}).then(r=>r.json()).then(d=>{toast('✅ '+CURNAT.name+' added!');window.cAS();loadCards();}).catch(e=>{err.textContent='Error: '+e.message;err.style.display='block';});};
-window.go=s=>{document.querySelectorAll('.scr').forEach(x=>x.classList.remove('on'));document.querySelectorAll('.nv').forEach(x=>x.classList.remove('on'));$('scr-'+s)&&$('scr-'+s).classList.add('on');$('nv-'+s)&&$('nv-'+s).classList.add('on');};
-function $(id){return document.getElementById(id);}
-function t(id,v){var e=$(id);if(e)e.textContent=v;}
-function show(id){var e=$(id);if(e)e.style.display='flex';}
-function hide(id){var e=$(id);if(e)e.style.display='none';}
-function x(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function showE(el,msg){el.textContent=msg;el.style.display='block';}
-var TT;function toast(msg){var t2=$('toast');t2.textContent=msg;t2.classList.add('on');clearTimeout(TT);TT=setTimeout(()=>t2.classList.remove('on'),2800);}
+
+log('✓ Globals initialized');
+log('✓ 20 brands loaded');
+
+function log(msg){
+  console.log(msg);
+  var splash=document.getElementById('debug-splash');
+  if(splash){
+    splash.innerHTML=splash.innerHTML+msg+'<br>';
+    splash.scrollTop=splash.scrollHeight;
+  }
+}
+
+setTimeout(function(){
+  log('→ Checking session...');
+  try{
+    if(checkSess()){
+      log('✓ Session found');
+      hide('splash');
+      show('app');
+      loadProf();
+      loadCards();
+    }else{
+      log('→ No session, showing login');
+      hide('splash');
+      show('auth');
+    }
+  }catch(e){
+    log('✗ Error: '+e.message);
+    hide('splash');
+    show('auth');
+  }
+},1000);
+
+window.handleSignIn=function(){
+  var e=document.getElementById('in-e').value.trim();
+  var p=document.getElementById('in-p').value;
+  var err=document.getElementById('err');
+  err.style.display='none';
+  if(!e||!p){err.textContent='Enter email and password';err.style.display='block';return;}
+  log('→ Signing in...');
+  fetch(SURL+'/auth/v1/token?grant_type=password',{
+    method:'POST',
+    headers:{'apikey':SKEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email:e,password:p})
+  }).then(r=>r.json()).then(d=>{
+    if(!d.access_token){err.textContent='Wrong email or password';err.style.display='block';return;}
+    TOKEN=d.access_token;
+    UID=d.user.id;
+    saveSess(TOKEN,UID,e);
+    log('✓ Signed in');
+    hide('auth');
+    show('app');
+    loadProf();
+    loadCards();
+  }).catch(e=>{err.textContent='Error: '+e.message;err.style.display='block';log('✗ '+e.message);});
+};
+
+function loadProf(){
+  if(!UID)return;
+  log('→ Loading profile...');
+  fetch(SURL+'/rest/v1/users?id=eq.'+UID+'&select=*',{headers:{apikey:SKEY}}).then(r=>r.json()).then(d=>{
+    PROF=Array.isArray(d)?d[0]:{};
+    var nm=PROF.name||'there';
+    document.getElementById('hn').textContent=nm+"'s wallet";
+    log('✓ Profile loaded: '+nm);
+  }).catch(e=>log('✗ Profile error: '+e.message));
+}
+
+function loadCards(){
+  if(!UID){log('✗ No UID');return;}
+  log('→ Loading cards...');
+  fetch(SURL+'/rest/v1/cards?user_id=eq.'+UID+'&order=addedAt.desc',{headers:{apikey:SKEY}}).then(r=>r.json()).then(d=>{
+    CARDS=Array.isArray(d)?d:[];
+    log('✓ Cards loaded: '+CARDS.length);
+    renderCards();
+  }).catch(e=>{log('✗ Cards error: '+e.message);renderCards();});
+}
+
+function renderCards(){
+  log('→ Rendering '+CARDS.length+' cards');
+  var hc=document.getElementById('h-cards');
+  if(!CARDS.length){hc.innerHTML='<div style="background:#fff;border-radius:12px;padding:15px;text-align:center;color:var(--mu);flex-shrink:0;width:150px;font-size:12px">Tap + to add</div>';}else{hc.innerHTML=CARDS.slice(0,4).map(c=>'<div class="lcard" style="background:'+c.color+'" onclick="oCD(\''+c.id+'\')"><div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px">'+c.shopName+'</div><div style="font-size:24px;font-weight:800">'+(c.points||0)+'</div><div style="font-size:10px;color:rgba(255,255,255,.4)">pts</div></div>').join('');}
+  var cl=document.getElementById('cards-list');
+  if(!CARDS.length){cl.innerHTML='<div class="empty"><div style="font-size:32px;margin-bottom:10px">💳</div><p>No cards<br>Tap + to add</p></div>';}else{cl.innerHTML=CARDS.map(c=>'<div class="cfl" style="background:'+c.color+'" onclick="oCD(\''+c.id+'\')"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><div style="font-size:13px;font-weight:700">'+c.shopName+'</div><div style="font-size:10px;background:rgba(255,255,255,.2);padding:3px 6px;border-radius:12px">'+(c.type==='national'?'🇬🇧':'🏪')+'</div></div><div style="font-size:28px;font-weight:800">'+(c.points||0)+'</div></div>').join('');}
+  document.getElementById('s-c').textContent=CARDS.length;
+  document.getElementById('s-p').textContent=CARDS.reduce((a,c)=>a+(c.points||0),0);
+  log('✓ Rendered');
+}
+
+window.oCD=function(id){
+  CURCARD=CARDS.find(c=>c.id===id);
+  if(!CURCARD)return;
+  log('→ Opening card: '+CURCARD.shopName);
+  show('card-detail');
+  document.getElementById('cd-shop').textContent=CURCARD.shopName;
+  document.getElementById('cd-pts').textContent=CURCARD.points||0;
+  document.getElementById('cd-visits').textContent=CURCARD.visitCount||0;
+  document.getElementById('cd-spent').textContent='£'+((CURCARD.totalSpend||0)).toFixed(0);
+  document.getElementById('cd-rewards').textContent=CURCARD.rewardsRedeemed||0;
+  document.getElementById('cd-cardnum').textContent=CURCARD.cardNumber?'****'+CURCARD.cardNumber.slice(-4):'****';
+  document.getElementById('cd-store').textContent=CURCARD.storeLocation||'—';
+  document.getElementById('cd-order').textContent=CURCARD.orderRef||'—';
+};
+
+window.closeCD=function(){hide('card-detail');CURCARD=null;};
+
+window.oAS=function(){log('→ Opening add sheet');sAT('national');show('add-sheet');};
+window.cAS=function(){log('→ Closing add sheet');hide('add-sheet');document.getElementById('nat-card-num').value='';document.getElementById('nat-card-order').value='';document.getElementById('nat-card-store').value='';document.getElementById('nat-card-holder').value='';document.getElementById('loc-status').textContent='';document.getElementById('card-err').style.display='none';CURNAT={};tmpLat=null;tmpLng=null;sAT('type');};
+
+window.sAT=function(t){
+  log('→ Step: '+t);
+  hide('step-type');hide('step-national');hide('step-card-details');
+  if(t==='type')show('step-type');
+  if(t==='national'){show('step-national');bBrands();}
+};
+
+function bBrands(){
+  var el=document.getElementById('brg');
+  el.innerHTML=NB.map(b=>'<div class="brand" onclick="selectNatBrand(\''+b.id+'\',\''+b.n.replace(/'/g,"\\'")+'\',\''+b.e+'\',\''+b.c+'\')"><div style="font-size:22px;margin-bottom:4px">'+b.e+'</div><div style="font-size:10px">'+b.n+'</div></div>').join('');
+}
+
+window.selectNatBrand=function(id,name,emoji,color){
+  if(!UID){toast('Sign in first');return;}
+  if(CARDS.find(c=>c.id===id)){toast('Already added!');return;}
+  log('→ Selected: '+name);
+  CURNAT={id,name,emoji,color};
+  document.getElementById('card-preview-emoji').textContent=emoji;
+  document.getElementById('card-preview-name').textContent=name;
+  document.getElementById('nat-card-num').value='';
+  document.getElementById('nat-card-order').value='';
+  document.getElementById('nat-card-store').value='';
+  document.getElementById('nat-card-holder').value='';
+  document.getElementById('loc-status').textContent='';
+  hide('step-national');
+  show('step-card-details');
+};
+
+window.captureLocation=function(){
+  if(!navigator.geolocation){document.getElementById('loc-status').textContent='Not supported';return;}
+  log('→ Capturing location...');
+  document.getElementById('loc-status').textContent='📍 Locating...';
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      tmpLat=pos.coords.latitude;
+      tmpLng=pos.coords.longitude;
+      document.getElementById('loc-status').textContent='✓ '+tmpLat.toFixed(4)+', '+tmpLng.toFixed(4);
+      log('✓ Location: '+tmpLat+', '+tmpLng);
+    },
+    function(err){
+      document.getElementById('loc-status').textContent='✗ '+err.message;
+      log('✗ Geolocation error: '+err.message);
+    }
+  );
+};
+
+window.saveNatCard=function(){
+  var num=document.getElementById('nat-card-num').value.trim();
+  var order=document.getElementById('nat-card-order').value.trim();
+  var store=document.getElementById('nat-card-store').value.trim();
+  var holder=document.getElementById('nat-card-holder').value.trim();
+  var err=document.getElementById('card-err');
+  err.style.display='none';
+  
+  if(!num||num.length<4){err.textContent='Card number required (4+ digits)';err.style.display='block';return;}
+  
+  log('→ Saving: '+CURNAT.name);
+  fetch(SURL+'/rest/v1/cards',{
+    method:'POST',
+    headers:{apikey:SKEY,'Content-Type':'application/json'},
+    body:JSON.stringify({user_id:UID,id:CURNAT.id,name:CURNAT.name,shopName:CURNAT.name,emoji:CURNAT.emoji,color:CURNAT.color,type:'national',points:0,threshold:500,addedAt:Date.now(),visitCount:0,totalSpend:0,rewardsRedeemed:0,cardNumber:num,cardHolder:holder||null,orderRef:order||null,storeLocation:store||null,latitude:tmpLat,longitude:tmpLng})
+  }).then(r=>r.json()).then(d=>{
+    log('✓ Saved to Supabase');
+    toast('✅ '+CURNAT.name+' added!');
+    window.cAS();
+    loadCards();
+  }).catch(e=>{err.textContent='Error: '+e.message;err.style.display='block';log('✗ '+e.message);});
+};
+
+window.go=function(s){
+  log('→ Go to: '+s);
+  document.querySelectorAll('.scr').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.nv').forEach(x=>x.classList.remove('on'));
+  var scr=document.getElementById('scr-'+s);
+  var nv=document.querySelector('.nv:nth-child('+(s==='home'?1:2)+')');
+  if(scr)scr.classList.add('on');
+  if(nv)nv.classList.add('on');
+};
+
+function show(id){var e=document.getElementById(id);if(e)e.style.display=e.id==='add-sheet'?'flex':'block';}
+function hide(id){var e=document.getElementById(id);if(e)e.style.display='none';}
 function saveSess(token,uid,email){localStorage.setItem('sl_s',JSON.stringify({t:token,uid:uid,email:email||'',x:Date.now()+3600000}));}
 function checkSess(){try{var s=JSON.parse(localStorage.getItem('sl_s')||'null');if(s&&s.t&&s.uid&&s.x>Date.now()){TOKEN=s.t;UID=s.uid;return s.email||s.uid;}}catch(e){}clearSess();return false;}
 function clearSess(){localStorage.removeItem('sl_s');TOKEN=null;UID=null;PROF={};CARDS=[];}
+var TT;function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(TT);TT=setTimeout(()=>t.classList.remove('on'),2800);}
+
+log('✓ ALL CODE LOADED');
+log('✓ Ready to test');
+
 </script>
 </body>
 </html>
