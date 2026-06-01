@@ -1,260 +1,455 @@
-<!DOCTYPE html><!-- Stashlo v5.1 -->
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Stashlo Admin</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a0a14">
+<title>Stashlo - Admin Portal</title>
 <style>
-:root{--bg:#f4f4f6;--sf:#fff;--dk:#0a0a14;--pu:#6C5CE7;--pu2:#ece9ff;--gn:#00897B;--gn2:#e0f2f1;--rd:#c62828;--rd2:#ffebee;--or:#F57C00;--or2:#fff3e0;--tx:#1a1a2e;--mu:#706f87;--fn:system-ui,-apple-system,'Segoe UI',sans-serif;--r:12px}
-*{box-sizing:border-box;margin:0;padding:0;font-family:var(--fn)}
-body{background:var(--bg);color:var(--tx);min-height:100vh}
-button{cursor:pointer;border:none;font-family:var(--fn)}
-input,select,textarea{outline:none;font-family:var(--fn)}
-#auth{display:flex;min-height:100vh;background:var(--dk);align-items:center;justify-content:center;padding:20px}
-.abox{background:#fff;border-radius:20px;padding:32px 24px;width:100%;max-width:360px}
-.alo{font-size:22px;font-weight:800;margin-bottom:4px}
-.asb{font-size:13px;color:var(--mu);margin-bottom:24px}
-.fi{margin-bottom:12px}
-.fi label{display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
-.fi input{width:100%;padding:12px 14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:15px}
-.fi input:focus{border-color:var(--pu)}
-.btn-a{width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700}
-.aerr{background:var(--rd2);color:var(--rd);font-size:13px;padding:10px 12px;border-radius:10px;margin-top:10px;display:none}
-#app{display:none;flex-direction:column;min-height:100vh}
-.topbar{background:var(--dk);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.tb-logo{font-size:17px;font-weight:800;color:#fff}.tb-logo b{color:var(--pu)}
-.tb-right{display:flex;align-items:center;gap:12px}
-.tb-email{font-size:12px;color:rgba(255,255,255,.5)}
-.tb-out{background:rgba(255,255,255,.1);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none}
-.tabs{display:flex;gap:2px;padding:0 20px;background:#fff;border-bottom:1px solid #ebebef;overflow-x:auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tab{padding:14px 16px;font-size:13px;font-weight:600;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
-.tab.on{color:var(--pu);border-bottom-color:var(--pu)}
-.main{padding:20px;max-width:1200px;margin:0 auto;width:100%}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
-.stat{background:#fff;border-radius:var(--r);padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-.stat-v{font-size:28px;font-weight:800;margin-bottom:3px}
-.stat-l{font-size:12px;color:var(--mu)}
-.card{background:#fff;border-radius:var(--r);box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:16px;overflow:hidden}
-.card-hd{padding:14px 16px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center}
-.card-title{font-size:15px;font-weight:700}
-table{width:100%;border-collapse:collapse}
-th{text-align:left;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;padding:10px 16px;border-bottom:1px solid #f0f0f0}
-td{padding:11px 16px;font-size:13px;border-bottom:1px solid #f8f8f8}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#fafafa}
-.bdg{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
-.bdg-g{background:var(--gn2);color:var(--gn)}.bdg-o{background:var(--or2);color:var(--or)}.bdg-r{background:var(--rd2);color:var(--rd)}.bdg-p{background:var(--pu2);color:var(--pu)}
-.empty-r td{text-align:center;color:var(--mu);padding:24px}
-.btn-sm{padding:7px 13px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none}
-.btn-pu{background:var(--pu);color:#fff}.btn-rd{background:var(--rd2);color:var(--rd)}.btn-gn{background:var(--gn2);color:var(--gn)}
-.nbox{background:#fff;border-radius:var(--r);padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:16px}
-.nbox-t{font-size:16px;font-weight:700;margin-bottom:14px}
-.nfi{margin-bottom:12px}
-.nfi label{display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
-.nfi input,.nfi textarea,.nfi select{width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px}
-.nfi textarea{resize:vertical;min-height:70px}
-.audience-g{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.aud-opt{padding:12px;background:#f9f9fb;border-radius:var(--r);text-align:center;cursor:pointer;border:1.5px solid transparent;font-size:13px;font-weight:600;color:var(--mu)}
-.aud-opt.on{background:var(--pu2);border-color:var(--pu);color:var(--pu)}
-.aud-opt em{font-size:20px;display:block;margin-bottom:4px;font-style:normal}
-.search-bar{display:flex;gap:8px;margin-bottom:14px}
-.search-bar input{flex:1;padding:10px 14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px}
-#modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;align-items:center;justify-content:center;padding:20px}
-.modal{background:#fff;border-radius:16px;padding:24px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto}
-.modal-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
-.modal-title{font-size:17px;font-weight:800}
-.modal-x{font-size:20px;cursor:pointer;color:var(--mu)}
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--dk);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none}
-#toast.on{opacity:1}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:system-ui,-apple-system,'Segoe UI',sans-serif; background:#f0efff; color:#1a1a2e; }
+button { cursor:pointer; border:none; font-family:inherit; }
+input, select { font-family:inherit; border:none; }
+
+#splash { position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; display:flex; align-items:center; justify-content:center; gap:20px; flex-direction:column; z-index:9999; }
+#splash-text { color:#fff; font-size:40px; font-weight:800; }
+#splash-text b { color:#6C5CE7; }
+
+#auth { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; align-items:center; justify-content:center; padding:20px; }
+.auth-box { background:#fff; border-radius:24px; padding:32px 24px; width:100%; max-width:380px; }
+.auth-box h1 { font-size:20px; font-weight:800; margin-bottom:5px; }
+.auth-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; margin-bottom:12px; font-size:15px; }
+.auth-btn { width:100%; padding:13px; background:#0a0a14; color:#fff; border-radius:12px; font-weight:700; font-size:15px; margin-top:8px; }
+.auth-error { color:#c62828; font-size:12px; margin-top:10px; padding:10px; background:#ffebee; border-radius:8px; display:none; }
+
+#app { display:none; flex-direction:column; min-height:100vh; padding-bottom:80px; }
+.topbar { background:#0a0a14; color:#fff; padding:14px 18px; font-weight:800; font-size:16px; position:sticky; top:0; z-index:100; display:flex; justify-content:space-between; align-items:center; }
+.topbar b { color:#6C5CE7; }
+.topbar-action { cursor:pointer; font-size:18px; }
+
+.screen { display:none; padding:16px; }
+.screen.active { display:block; }
+
+.dashboard-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+.stat-card { background:linear-gradient(135deg, #6C5CE7 0%, #a890d6 100%); color:#fff; border-radius:16px; padding:18px; }
+.stat-card.alt { background:linear-gradient(135deg, #00897B 0%, #4db8a8 100%); }
+.stat-card.alt2 { background:linear-gradient(135deg, #E91E63 0%, #f06292 100%); }
+.stat-label { font-size:11px; opacity:0.8; margin-bottom:6px; }
+.stat-value { font-size:28px; font-weight:800; }
+
+.section-header { display:flex; justify-content:space-between; align-items:center; margin:18px 0 12px; }
+.section-title { font-size:15px; font-weight:700; }
+
+.table-container { overflow-x:auto; margin-bottom:16px; }
+.data-table { width:100%; border-collapse:collapse; font-size:13px; }
+.data-table th { background:#f9f9fb; padding:10px; text-align:left; font-weight:700; color:#706f87; }
+.data-table td { padding:10px; border-bottom:1px solid #ebebef; }
+.data-table tr:hover { background:#f9f9fb; }
+
+.badge { display:inline-block; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+.badge-active { background:#e8f5e9; color:#00897B; }
+.badge-pending { background:#fff3e0; color:#f57c00; }
+.badge-inactive { background:#f3e5f5; color:#7b1fa2; }
+
+.modal { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; padding:20px; z-index:200; }
+.modal-content { background:#fff; border-radius:20px; padding:24px; width:100%; max-width:500px; max-height:90vh; overflow-y:auto; }
+.modal-title { font-size:18px; font-weight:800; margin-bottom:16px; }
+.modal-field { margin-bottom:14px; }
+.modal-label { font-size:11px; font-weight:700; color:#706f87; text-transform:uppercase; margin-bottom:6px; display:block; }
+.modal-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; font-size:14px; }
+.modal-textarea { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; font-size:14px; min-height:100px; resize:vertical; }
+.modal-btn { width:100%; padding:12px; border-radius:12px; font-weight:700; font-size:14px; margin:10px 0; background:#0a0a14; color:#fff; }
+.modal-btn-secondary { background:#f0f0f0; color:#706f87; }
+
+.nav { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #ebebef; display:flex; z-index:100; overflow-x:auto; }
+.nav-item { flex:0 1 auto; padding:12px 14px; text-align:center; font-size:11px; font-weight:600; color:#706f87; cursor:pointer; white-space:nowrap; }
+.nav-item.active { color:#6C5CE7; }
+
+.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#0a0a14; color:#fff; padding:10px 20px; border-radius:100px; font-size:13px; z-index:999; opacity:0; transition:opacity 0.3s; }
+.toast.show { opacity:1; }
+
+.search-box { width:100%; padding:10px 12px; border:1.5px solid #e5e5ea; border-radius:12px; margin-bottom:16px; font-size:14px; }
 </style>
 </head>
 <body>
+
+<div id="splash">
+  <div id="splash-text">Stash<b>lo</b> Admin</div>
+</div>
+
 <div id="auth">
-  <div class="abox">
-    <div class="alo">Stashlo Admin</div>
-    <div class="asb">Manage the entire Stashlo platform</div>
-    <div class="fi"><label>Admin Email</label><input type="email" id="ae" placeholder="admin@stashlo.com" autocomplete="email" onkeydown="if(event.key==='Enter')doLogin()"></div>
-    <div class="fi"><label>Password</label><input type="password" id="ap" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
-    <button class="btn-a" onclick="doLogin()" id="btn-login">Sign in to Admin</button>
-    <div class="aerr" id="aerr"></div>
+  <div class="auth-box">
+    <h1>Admin Portal</h1>
+    <p>System administration & analytics</p>
+    <input type="email" id="email" class="auth-input" placeholder="Email">
+    <input type="password" id="password" class="auth-input" placeholder="Password">
+    <button class="auth-btn" onclick="login()">Sign in</button>
+    <div class="auth-error" id="auth-error"></div>
   </div>
 </div>
+
 <div id="app">
-  <div class="topbar">
-    <div class="tb-logo">Stashlo <b>Admin</b></div>
-    <div class="tb-right"><div class="tb-email" id="adm-email"></div><button class="tb-out" onclick="doLogout()">Sign out</button></div>
+  <div class="topbar">Stash<b>lo</b> Admin <div class="topbar-action" onclick="logout()">🚪</div></div>
+
+  <!-- OVERVIEW SCREEN -->
+  <div class="screen active" id="overview-screen">
+    <div class="dashboard-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Users</div>
+        <div class="stat-value" id="stat-users">0</div>
+      </div>
+      <div class="stat-card alt">
+        <div class="stat-label">Merchants</div>
+        <div class="stat-value" id="stat-merchants">0</div>
+      </div>
+    </div>
+    <div class="dashboard-grid">
+      <div class="stat-card alt2">
+        <div class="stat-label">Orders</div>
+        <div class="stat-value" id="stat-orders">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Revenue</div>
+        <div class="stat-value" id="stat-revenue">£0</div>
+      </div>
+    </div>
   </div>
-  <div class="tabs">
-    <div class="tab on" id="tab-btn-overview" onclick="showTab('overview')">📊 Overview</div>
-    <div class="tab" id="tab-btn-merchants" onclick="showTab('merchants')">🏪 Merchants</div>
-    <div class="tab" id="tab-btn-customers" onclick="showTab('customers')">👥 Customers</div>
-    <div class="tab" id="tab-btn-products" onclick="showTab('products')">📦 Products</div>
-    <div class="tab" id="tab-btn-orders" onclick="showTab('orders')">🛍️ Orders</div>
-    <div class="tab" id="tab-btn-notify" onclick="showTab('notify')">🔔 Broadcast</div>
+
+  <!-- MERCHANTS SCREEN -->
+  <div class="screen" id="merchants-screen">
+    <div class="section-header">
+      <div class="section-title">Merchants</div>
+    </div>
+    <input type="text" class="search-box" id="merchant-search" placeholder="Search merchants..." onkeyup="filterMerchants()">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Orders</th>
+          </tr>
+        </thead>
+        <tbody id="merchants-list">
+          <tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-  <div class="main">
-    <div id="tab-overview">
-      <div class="stats">
-        <div class="stat"><div class="stat-v" id="s-merchants">–</div><div class="stat-l">Merchants</div></div>
-        <div class="stat"><div class="stat-v" id="s-customers">–</div><div class="stat-l">Customers</div></div>
-        <div class="stat"><div class="stat-v" id="s-orders">–</div><div class="stat-l">Orders</div></div>
-        <div class="stat"><div class="stat-v" id="s-rev">£–</div><div class="stat-l">Revenue (est.)</div></div>
-      </div>
-      <div class="card">
-        <div class="card-hd"><div class="card-title">Recent merchants</div></div>
-        <table><thead><tr><th>Shop</th><th>Email</th><th>Shop ID</th><th>Joined</th></tr></thead>
-        <tbody id="ov-merchants"><tr class="empty-r"><td colspan="4">Loading...</td></tr></tbody></table>
-      </div>
-      <div class="card">
-        <div class="card-hd"><div class="card-title">Recent Stashlo Store orders</div></div>
-        <table><thead><tr><th>Order ID</th><th>Product</th><th>Total</th><th>Status</th></tr></thead>
-        <tbody id="ov-orders"><tr class="empty-r"><td colspan="4">Loading...</td></tr></tbody></table>
-      </div>
+
+  <!-- CUSTOMERS SCREEN -->
+  <div class="screen" id="customers-screen">
+    <div class="section-header">
+      <div class="section-title">Customers</div>
     </div>
-    <div id="tab-merchants" style="display:none">
-      <div class="search-bar"><input type="text" placeholder="Search merchants..." id="mer-q" oninput="filterMerchants(this.value)"></div>
-      <div class="card">
-        <div class="card-hd"><div class="card-title">All merchants (<span id="mer-count">0</span>)</div></div>
-        <table><thead><tr><th>Shop Name</th><th>Email</th><th>Shop ID</th><th>Customers</th><th>Plan</th><th>Joined</th></tr></thead>
-        <tbody id="mer-body"><tr class="empty-r"><td colspan="6">Loading...</td></tr></tbody></table>
-      </div>
+    <input type="text" class="search-box" id="customer-search" placeholder="Search customers..." onkeyup="filterCustomers()">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Cards</th>
+            <th>Points</th>
+          </tr>
+        </thead>
+        <tbody id="customers-list">
+          <tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87;">Loading...</td></tr>
+        </tbody>
+      </table>
     </div>
-    <div id="tab-customers" style="display:none">
-      <div class="search-bar"><input type="text" placeholder="Search customers..." id="cust-q" oninput="filterCustomers(this.value)"></div>
-      <div class="card">
-        <div class="card-hd"><div class="card-title">All customers (<span id="cust-count">0</span>)</div></div>
-        <table><thead><tr><th>Name</th><th>Email</th><th>Joined</th><th>Points</th><th>Actions</th></tr></thead>
-        <tbody id="cust-body"><tr class="empty-r"><td colspan="5">Loading...</td></tr></tbody></table>
-      </div>
+  </div>
+
+  <!-- ORDERS SCREEN -->
+  <div class="screen" id="orders-screen">
+    <div class="section-header">
+      <div class="section-title">All Orders</div>
     </div>
-    <div id="tab-products" style="display:none">
-      <div class="card">
-        <div class="card-hd"><div class="card-title">Stashlo Store Products</div><button class="btn-sm btn-pu" onclick="openProd(null)">+ Add product</button></div>
-        <table><thead><tr><th>Product</th><th>Price</th><th>Category</th><th>Collect</th><th>Delivery</th><th>Active</th><th>Actions</th></tr></thead>
-        <tbody id="prod-body"><tr class="empty-r"><td colspan="7">Loading...</td></tr></tbody></table>
-      </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Merchant</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="orders-list">
+          <tr><td colspan="5" style="text-align:center;padding:20px;color:#706f87;">Loading...</td></tr>
+        </tbody>
+      </table>
     </div>
-    <div id="tab-orders" style="display:none">
-      <div class="card">
-        <div class="card-hd"><div class="card-title">Stashlo Store Orders (<span id="ord-count">0</span>)</div></div>
-        <table><thead><tr><th>Order ID</th><th>Product</th><th>Total</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
-        <tbody id="ord-body"><tr class="empty-r"><td colspan="6">Loading...</td></tr></tbody></table>
-      </div>
+  </div>
+
+  <!-- BROADCAST SCREEN -->
+  <div class="screen" id="broadcast-screen">
+    <div class="section-header">
+      <div class="section-title">Send Broadcast</div>
     </div>
-    <div id="tab-notify" style="display:none">
-      <div class="nbox">
-        <div class="nbox-t">📢 Broadcast Message</div>
-        <p style="font-size:13px;color:var(--mu);margin-bottom:16px;line-height:1.6">Send a message to all customers or all merchants across the platform.</p>
-        <div style="margin-bottom:14px">
-          <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Audience</div>
-          <div class="audience-g">
-            <div class="aud-opt on" id="aud-customers" onclick="setAud('customers')"><em>👥</em>All Customers<br><span style="font-size:11px;opacity:.7" id="aud-ccount">0 users</span></div>
-            <div class="aud-opt" id="aud-merchants" onclick="setAud('merchants')"><em>🏪</em>All Merchants<br><span style="font-size:11px;opacity:.7" id="aud-mcount">0 shops</span></div>
-          </div>
-        </div>
-        <div class="nfi"><label>Title</label><input type="text" id="bc-title" placeholder="e.g. New feature update!" maxlength="60"></div>
-        <div class="nfi"><label>Message</label><textarea id="bc-body" placeholder="Tell your users about new features, promotions, important updates..."></textarea></div>
-        <div class="nfi"><label>Link (optional)</label><input type="url" id="bc-link" placeholder="https://..."></div>
-        <button onclick="sendBroadcast()" id="bc-btn" style="width:100%;padding:13px;background:var(--pu);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;border:none">📤 Send broadcast</button>
-        <div id="bc-ok" style="display:none;background:var(--gn2);color:var(--gn);padding:11px 14px;border-radius:var(--r);font-size:13px;font-weight:600;margin-top:8px">✅ Broadcast sent!</div>
+    <div style="background:#f9f9fb;border-radius:12px;padding:16px;">
+      <div class="modal-field">
+        <label class="modal-label">Target</label>
+        <select id="broadcast-target" class="modal-input">
+          <option value="all">All Customers</option>
+          <option value="merchants">All Merchants</option>
+          <option value="active">Active Only</option>
+        </select>
       </div>
-      <div class="card">
-        <div class="card-hd"><div class="card-title">Sent broadcasts</div></div>
-        <table><thead><tr><th>Date</th><th>Audience</th><th>Title</th><th>Message</th></tr></thead>
-        <tbody id="bc-hist"><tr class="empty-r"><td colspan="4">No broadcasts yet</td></tr></tbody></table>
+      <div class="modal-field">
+        <label class="modal-label">Title</label>
+        <input type="text" id="broadcast-title" class="modal-input" placeholder="e.g., New Rewards Available">
       </div>
+      <div class="modal-field">
+        <label class="modal-label">Message</label>
+        <textarea id="broadcast-message" class="modal-textarea" placeholder="Your message here..."></textarea>
+      </div>
+      <button class="modal-btn" onclick="sendBroadcast()">📤 Send</button>
     </div>
+  </div>
+
+  <div class="nav">
+    <div class="nav-item active" onclick="switchScreen('overview')">📊 Overview</div>
+    <div class="nav-item" onclick="switchScreen('merchants')">🏪 Merchants</div>
+    <div class="nav-item" onclick="switchScreen('customers')">👥 Customers</div>
+    <div class="nav-item" onclick="switchScreen('orders')">📋 Orders</div>
+    <div class="nav-item" onclick="switchScreen('broadcast')">📢 Broadcast</div>
   </div>
 </div>
-<div id="modal-bg" onclick="if(event.target===this)closeMod()">
-  <div class="modal">
-    <div class="modal-h"><div class="modal-title" id="mod-title">Add Product</div><div class="modal-x" onclick="closeMod()">✕</div></div>
-    <div class="fi"><label>Product name</label><input type="text" id="pm-nm" placeholder="e.g. Wireless Earbuds"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-      <div><label style="display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Price (£)</label><input type="number" id="pm-pr" placeholder="29.99" step="0.01" min="0" style="width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px"></div>
-      <div><label style="display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Emoji</label><input type="text" id="pm-em" placeholder="📱" maxlength="2" style="width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px"></div>
-    </div>
-    <div class="fi"><label>Category</label><select id="pm-cat" style="width:100%;padding:11px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px"><option value="electronics">📱 Electronics</option><option value="food">🍕 Food &amp; Drink</option><option value="fashion">👗 Fashion</option><option value="health">💊 Health &amp; Beauty</option><option value="home">🏠 Home</option><option value="other">📦 Other</option></select></div>
-    <div class="fi"><label>Description</label><input type="text" id="pm-desc" placeholder="Short product description"></div>
-    <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap">
-      <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer"><input type="checkbox" id="pm-co" checked> Click &amp; Collect</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer"><input type="checkbox" id="pm-de"> Home Delivery</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer"><input type="checkbox" id="pm-ac" checked> Active (visible)</label>
-    </div>
-    <button onclick="saveProd()" style="width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;border:none" id="pm-save-btn">Add product</button>
-  </div>
-</div>
-<div id="toast"></div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-// ===== SUPABASE BACKEND v1.0 =====
-var SURL='https://gcwevgaymahywqjorhnn.supabase.co';
-var SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
-var TOKEN=null,UID=null;
+const SURL = 'https://gcwevgaymahywqjorhnn.supabase.co';
+const SKEY = 'sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
 
-function SH(extra){var h={'apikey':SKEY,'Content-Type':'application/json','Authorization':'Bearer '+(TOKEN||SKEY)};if(extra)Object.assign(h,extra);return h;}
+let TOKEN = null, UID = null;
+let MERCHANTS = [], CUSTOMERS = [], ORDERS = [];
 
-// ── Auth ──────────────────────────────────────────────
-function doSignIn(email,pw){
-  return fetch(SURL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})}).then(function(r){return r.json();});
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const sess = JSON.parse(localStorage.getItem('admin_session') || 'null');
+    if (sess && sess.token && sess.uid && sess.expiry > Date.now()) {
+      TOKEN = sess.token;
+      UID = sess.uid;
+      showApp();
+    } else {
+      showAuth();
+    }
+  }, 1500);
+});
+
+function login() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errDiv = document.getElementById('auth-error');
+  
+  if (!email || !password) {
+    errDiv.textContent = 'Enter credentials';
+    errDiv.style.display = 'block';
+    return;
+  }
+
+  fetch(`${SURL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
+    body: JSON.stringify({email, password})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.access_token) {
+      errDiv.textContent = 'Invalid credentials';
+      errDiv.style.display = 'block';
+      return;
+    }
+    TOKEN = d.access_token;
+    UID = d.user.id;
+    localStorage.setItem('admin_session', JSON.stringify({token: TOKEN, uid: UID, expiry: Date.now() + 3600000}));
+    showApp();
+  })
+  .catch(e => {
+    errDiv.textContent = 'Login error';
+    errDiv.style.display = 'block';
+  });
 }
-function doSignUp(email,pw){
-  return fetch(SURL+'/auth/v1/signup',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})}).then(function(r){return r.json();});
-}
-function doResetPw(email){
-  return fetch(SURL+'/auth/v1/recover',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:email})}).then(function(r){return r.json();});
-}
 
-// ── Token refresh ────────────────────────────────────
-var _pR=null;
-function rToken(){
-  var k=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');
-  var s=JSON.parse(localStorage.getItem(k)||'null');
-  if(!s||!s.r)return Promise.resolve();
-  if(_pR)return _pR;
-  _pR=fetch(SURL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.r})}).then(function(r){return r.json();}).then(function(d){_pR=null;if(d.access_token){TOKEN=d.access_token;s.t=TOKEN;s.r=d.refresh_token;s.x=Date.now()+(d.expires_in||3600)*1000;localStorage.setItem(k,JSON.stringify(s));}}).catch(function(){_pR=null;});
-  return _pR;
-}
-function chkToken(){
-  var k=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');
-  var s=JSON.parse(localStorage.getItem(k)||'null');
-  if(!s)return Promise.resolve();
-  if(s.x<Date.now()){TOKEN=null;if(s.r)return rToken();return Promise.resolve();}
-  if(s.x<Date.now()+300000&&s.r)return rToken();
-  return Promise.resolve();
+function logout() {
+  localStorage.removeItem('admin_session');
+  TOKEN = null;
+  showAuth();
 }
 
-// Admin login/logout handlers
-window.doLogin=function(){
-  var e=document.getElementById('ae').value.trim();
-  var p=document.getElementById('ap').value.trim();
-  if(!e||!p){alert('Enter email and password');return;}
-  doSignIn(e,p).then(function(d){
-    if(d.error||!d.access_token){alert('Invalid credentials');return;}
-    TOKEN=d.access_token;UID=d.user.id;
-    localStorage.setItem('sl_a',JSON.stringify({t:TOKEN,r:d.refresh_token,x:Date.now()+(d.expires_in||3600)*1000}));
-    document.getElementById('adm-login').style.display='none';
-    document.getElementById('adm-app').style.display='flex';
-    document.getElementById('adm-email').textContent=e;
-    loadAdminData();
-  }).catch(function(){alert('Login failed');});
-};
-window.doLogout=function(){
-  if(!confirm('Logout?'))return;
-  localStorage.removeItem('sl_a');
-  TOKEN=null;UID=null;
-  document.getElementById('adm-app').style.display='none';
-  document.getElementById('adm-login').style.display='flex';
-  document.getElementById('ae').value='';
-  document.getElementById('ap').value='';
-};
+function showAuth() {
+  document.getElementById('splash').style.display = 'flex';
+  setTimeout(() => {
+    document.getElementById('splash').style.display = 'none';
+    document.getElementById('auth').style.display = 'flex';
+  }, 1200);
+}
 
+function showApp() {
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('auth').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  loadAllData();
+}
 
-// ── CRUD helpers ─────────────────────────────────────
-function sGet(t,f){return chkToken().then(function(){var u=SURL+'/rest/v1/'+t+'?select=*';if(f)u+='&'+f;return fetch(u,{headers:SH()}).then(function(r){return r.json();});});}
-function sAdd(t,d){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t,{method:'POST',headers:SH({'Prefer':'return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
-function sUpsert(t,d,c){return chkToken().then(function(){var u=SURL+'/rest/v1/'+t+(c?'?on_conflict='+c:'');return fetch(u,{method:'POST',headers:SH({'Prefer':'resolution=merge-duplicates,return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
-function sUpd(t,f,d){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t+'?'+f,{method:'PATCH',headers:SH({'Prefer':'return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
-function sDel(t,f){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t+'?'+f,{method:'DELETE',headers:SH()}).then(function(r){return r.ok?{ok:true}:r.json();});});}
-// ===== END SUPABASE =====
->
+function loadAllData() {
+  // Load users/customers
+  fetch(`${SURL}/rest/v1/users?limit=100`, {
+    headers: {'apikey': SKEY}
+  })
+  .then(r => r.json())
+  .then(d => {
+    CUSTOMERS = Array.isArray(d) ? d : [];
+    renderCustomers();
+    document.getElementById('stat-users').textContent = CUSTOMERS.length;
+  })
+  .catch(e => console.log('Load error'));
+  
+  // Load merchants
+  fetch(`${SURL}/rest/v1/users?role=eq.merchant&limit=100`, {
+    headers: {'apikey': SKEY}
+  })
+  .then(r => r.json())
+  .then(d => {
+    MERCHANTS = Array.isArray(d) ? d : [];
+    renderMerchants();
+    document.getElementById('stat-merchants').textContent = MERCHANTS.length;
+  })
+  .catch(e => console.log('Load error'));
+  
+  // Load orders
+  fetch(`${SURL}/rest/v1/orders?limit=100&order=createdAt.desc`, {
+    headers: {'apikey': SKEY}
+  })
+  .then(r => r.json())
+  .then(d => {
+    ORDERS = Array.isArray(d) ? d : [];
+    renderOrders();
+    document.getElementById('stat-orders').textContent = ORDERS.length;
+    const revenue = ORDERS.reduce((a, o) => a + (o.amount || 0), 0);
+    document.getElementById('stat-revenue').textContent = '£' + revenue.toFixed(2);
+  })
+  .catch(e => console.log('Load error'));
+}
+
+function renderMerchants() {
+  const list = document.getElementById('merchants-list');
+  if (MERCHANTS.length === 0) {
+    list.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87;">No merchants</td></tr>';
+  } else {
+    list.innerHTML = MERCHANTS.map(m => `
+      <tr>
+        <td>${m.name || 'N/A'}</td>
+        <td>${m.email || 'N/A'}</td>
+        <td><span class="badge badge-active">Active</span></td>
+        <td>${ORDERS.filter(o => o.merchant_id === m.id).length}</td>
+      </tr>
+    `).join('');
+  }
+}
+
+function renderCustomers() {
+  const list = document.getElementById('customers-list');
+  if (CUSTOMERS.length === 0) {
+    list.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87;">No customers</td></tr>';
+  } else {
+    list.innerHTML = CUSTOMERS.map(c => `
+      <tr>
+        <td>${c.name || 'N/A'}</td>
+        <td>${c.email || 'N/A'}</td>
+        <td>0</td>
+        <td>0</td>
+      </tr>
+    `).join('');
+  }
+}
+
+function renderOrders() {
+  const list = document.getElementById('orders-list');
+  if (ORDERS.length === 0) {
+    list.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#706f87;">No orders</td></tr>';
+  } else {
+    list.innerHTML = ORDERS.map(o => `
+      <tr>
+        <td>${o.customer_phone || 'Unknown'}</td>
+        <td>${o.merchant_id ? o.merchant_id.substring(0, 8) : 'N/A'}</td>
+        <td>£${o.amount.toFixed(2)}</td>
+        <td><span class="badge badge-active">${o.status || 'pending'}</span></td>
+        <td>${new Date(o.createdAt).toLocaleDateString()}</td>
+      </tr>
+    `).join('');
+  }
+}
+
+function filterMerchants() {
+  const search = document.getElementById('merchant-search').value.toLowerCase();
+  const filtered = MERCHANTS.filter(m => (m.email || '').toLowerCase().includes(search));
+  const list = document.getElementById('merchants-list');
+  list.innerHTML = filtered.map(m => `
+    <tr>
+      <td>${m.name || 'N/A'}</td>
+      <td>${m.email || 'N/A'}</td>
+      <td><span class="badge badge-active">Active</span></td>
+      <td>${ORDERS.filter(o => o.merchant_id === m.id).length}</td>
+    </tr>
+  `).join('');
+}
+
+function filterCustomers() {
+  const search = document.getElementById('customer-search').value.toLowerCase();
+  const filtered = CUSTOMERS.filter(c => (c.email || '').toLowerCase().includes(search));
+  const list = document.getElementById('customers-list');
+  list.innerHTML = filtered.map(c => `
+    <tr>
+      <td>${c.name || 'N/A'}</td>
+      <td>${c.email || 'N/A'}</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+  `).join('');
+}
+
+function sendBroadcast() {
+  const target = document.getElementById('broadcast-target').value;
+  const title = document.getElementById('broadcast-title').value.trim();
+  const message = document.getElementById('broadcast-message').value.trim();
+  
+  if (!title || !message) {
+    showToast('Fill all fields');
+    return;
+  }
+  
+  const recipients = target === 'all' ? CUSTOMERS.length : 
+                     target === 'merchants' ? MERCHANTS.length : 
+                     CUSTOMERS.filter(c => c.status === 'active').length;
+  
+  showToast(`📢 Sending to ${recipients} recipients...`);
+  
+  setTimeout(() => {
+    showToast('✅ Broadcast sent!');
+    document.getElementById('broadcast-title').value = '';
+    document.getElementById('broadcast-message').value = '';
+  }, 1500);
+}
+
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(name + '-screen').classList.add('active');
+  
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
