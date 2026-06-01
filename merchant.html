@@ -1,964 +1,477 @@
-<!DOCTYPE html><!-- Stashlo v5.1 -->
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0a0a14">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>Stashlo Merchant</title>
+<title>Stashlo - Merchant Portal</title>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
-:root{--bg:#f4f4f6;--wh:#fff;--dk:#0a0a14;--pu:#6C5CE7;--pu2:#ece9ff;--gn:#1b6b46;--gn2:#e6f9f1;--rd:#c62828;--rd2:#ffebee;--or:#d97706;--or2:#fef3c7;--tx:#1a1a2e;--mu:#706f87;--fn:system-ui,-apple-system,'Segoe UI',sans-serif;--r:12px;--sh:0 2px 12px rgba(0,0,0,.06)}
-*{box-sizing:border-box;margin:0;padding:0;font-family:var(--fn)}
-body{background:var(--bg);color:var(--tx);min-height:100vh}
-button{cursor:pointer;border:none;outline:none;font-family:var(--fn)}
-input,select{outline:none;font-family:var(--fn);-webkit-appearance:none}
-/* AUTH */
-#s-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--dk);padding:20px}
-.a-box{background:#fff;border-radius:20px;padding:34px 26px;width:100%;max-width:400px}
-.a-brand{display:flex;align-items:center;gap:10px;margin-bottom:26px}
-.a-ic{width:42px;height:42px;background:var(--pu);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;color:#fff}
-.a-nm{font-size:19px;font-weight:800}.a-tag{font-size:11px;font-weight:600;background:var(--pu2);color:var(--pu);padding:2px 8px;border-radius:20px;margin-left:4px}
-.a-tabs{display:flex;background:#f4f4f6;border-radius:10px;padding:4px;margin-bottom:20px;gap:4px}
-.a-tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:600;color:var(--mu);border-radius:8px;cursor:pointer;transition:all .2s}
-.a-tab.on{background:#fff;color:var(--pu);box-shadow:0 1px 4px rgba(0,0,0,.08)}
-.fhd{font-size:20px;font-weight:800;margin-bottom:5px}.fsb{font-size:13px;color:var(--mu);margin-bottom:18px;line-height:1.6}
-.fi{margin-bottom:11px}
-.fi label{display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
-.fi input{width:100%;padding:12px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:15px;transition:border-color .15s;background:#fff}
-.fi input:focus{border-color:var(--pu)}
-.btn-m{width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700}
-.btn-m:disabled{opacity:.6}
-.err-b{background:var(--rd2);color:var(--rd);font-size:13px;padding:10px 12px;border-radius:10px;margin-top:10px;display:none;line-height:1.5}
-/* APP */
-#s-app{display:none;min-height:100vh;flex-direction:column}
-.topbar{background:var(--dk);height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:100}
-.tb-l{display:flex;align-items:center;gap:8px}
-.tb-logo{font-size:17px;font-weight:800;color:#fff}
-.tb-tag{font-size:11px;font-weight:600;background:rgba(108,92,231,.35);color:#a29bfe;padding:2px 8px;border-radius:20px}
-.tb-r{display:flex;align-items:center;gap:10px}
-.tb-u{font-size:12px;color:rgba(255,255,255,.4)}
-.tb-out{font-size:12px;color:rgba(255,255,255,.4);cursor:pointer;padding:5px 10px;border-radius:6px}
-.tab-bar{background:#fff;border-bottom:1px solid #ebebef;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:54px;z-index:99}
-.tab-bar::-webkit-scrollbar{display:none}
-.tab-btn{padding:13px 16px;font-size:13px;font-weight:600;color:var(--mu);white-space:nowrap;border-bottom:2px solid transparent;cursor:pointer;transition:all .15s}
-.tab-btn.on{color:var(--pu);border-color:var(--pu)}
-.main{padding:18px;max-width:860px;margin:0 auto;width:100%}
-/* SCANNER */
-.scanner-wrap{background:var(--dk);border-radius:20px;padding:20px;margin-bottom:16px}
-.scanner-title{font-size:15px;font-weight:700;color:#fff;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.cam-box{width:100%;max-width:340px;margin:0 auto;position:relative;border-radius:14px;overflow:hidden;background:#000}
-video{width:100%;display:block;border-radius:14px}
-canvas{display:none}
-.cam-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
-.cam-frame{width:200px;height:200px;border:3px solid var(--pu);border-radius:16px;position:relative}
-.cam-frame::before,.cam-frame::after{content:'';position:absolute;width:24px;height:24px;border-color:var(--pu);border-style:solid}
-.cam-frame::before{top:-3px;left:-3px;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
-.cam-frame::after{bottom:-3px;right:-3px;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
-.scan-status{text-align:center;margin-top:12px;font-size:13px;color:rgba(255,255,255,.55)}
-.scan-btns{display:flex;gap:10px;margin-top:12px}
-.scan-btn{flex:1;padding:11px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer}
-.scan-btn.start{background:var(--pu);color:#fff}
-.scan-btn.stop{background:var(--rd2);color:var(--rd)}
-.manual-entry{margin-top:14px}
-.manual-entry input{width:100%;padding:12px 14px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);border-radius:var(--r);font-size:16px;color:#fff;font-family:monospace;letter-spacing:1px}
-.manual-entry input::placeholder{color:rgba(255,255,255,.35)}
-.manual-entry button{width:100%;margin-top:8px;padding:12px;background:var(--pu);color:#fff;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer}
-/* CUSTOMER RESULT */
-.cust-result{background:var(--wh);border-radius:20px;padding:0;margin-bottom:16px;overflow:hidden;display:none}
-.cr-header{padding:20px;border-bottom:1px solid #f4f4f6}
-.cr-name{font-size:20px;font-weight:800;margin-bottom:4px}
-.cr-phone{font-size:14px;color:var(--mu);margin-bottom:16px}
-.cr-pts-row{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
-.cr-pts{font-size:48px;font-weight:800;color:var(--pu);letter-spacing:-2px;line-height:1}
-.cr-pts-lbl{font-size:14px;color:var(--mu)}
-.cr-prog-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--mu);margin-bottom:6px}
-.cr-bar{height:10px;background:#f4f4f6;border-radius:100px;overflow:hidden}
-.cr-bar-fill{height:100%;background:var(--pu);border-radius:100px;transition:width .6s}
-/* REWARD READY BANNER */
-.reward-banner{background:linear-gradient(135deg,#004D40,#00897B);padding:16px 20px;display:none}
-.rb-title{font-size:18px;font-weight:800;color:#fff;margin-bottom:3px}
-.rb-sub{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:14px}
-.rb-btns{display:flex;gap:10px}
-.rb-btn{flex:1;padding:12px;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;text-align:center}
-.rb-apply{background:#fff;color:#004D40}
-.rb-skip{background:rgba(255,255,255,.15);color:#fff}
-/* ADD POINTS */
-.add-pts-section{padding:16px 20px}
-.aps-title{font-size:13px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
-.aps-row{display:flex;gap:10px}
-.aps-inp{flex:1;padding:12px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:16px;background:#fff}
-.aps-inp:focus{border-color:var(--pu)}
-.aps-btn{padding:12px 20px;background:var(--dk);color:#fff;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer}
-.pts-preview{font-size:13px;color:var(--mu);margin-top:8px}
-/* TILL */
-.till-card{background:var(--wh);border-radius:16px;padding:18px;box-shadow:var(--sh);margin-bottom:13px}
-.tc-t{font-size:15px;font-weight:700;margin-bottom:13px}
-.tc-inp{width:100%;padding:12px 13px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:16px;margin-bottom:10px;background:#fff}
-.tc-inp:focus{border-color:var(--pu)}
-.tc-row{display:flex;gap:10px}
-.tc-btn{flex:1;padding:12px;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer}
-.tc-btn.pri{background:var(--dk);color:#fff}.tc-btn.sec{background:var(--pu2);color:var(--pu)}
-.tc-res{background:#f9f9fb;border-radius:12px;padding:14px;margin-top:10px;display:none}
-.tr-nm{font-size:17px;font-weight:700;margin-bottom:3px}
-.tr-pt{font-size:24px;font-weight:800;color:var(--pu)}
-.tr-sb{font-size:13px;color:var(--mu)}
-.shop-id-box{background:var(--dk);border-radius:var(--r);padding:16px;margin-bottom:11px;display:flex;justify-content:space-between;align-items:center}
-.si-lb{font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px}
-.si-vl{font-size:24px;font-weight:800;color:#fff;font-family:monospace;letter-spacing:2px}
-.copy-btn{padding:8px 14px;background:var(--pu);color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-/* KPI */
-.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
-.kpi{background:var(--wh);border-radius:var(--r);padding:16px;box-shadow:var(--sh)}
-.kpi-v{font-size:26px;font-weight:800}.kpi-l{font-size:13px;color:var(--mu);margin-top:4px}
-/* TABLE */
-.tw{background:var(--wh);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);overflow-x:auto;margin-bottom:18px}
-table{width:100%;border-collapse:collapse;min-width:380px}
-th{padding:10px 13px;text-align:left;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;background:#f9f9fb;border-bottom:1px solid #ebebef}
-td{padding:11px 13px;font-size:14px;border-bottom:1px solid #f4f4f6}
-tr:last-child td{border:none}
-.bdg{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
-.bg{background:var(--gn2);color:var(--gn)}.bo{background:var(--or2);color:var(--or)}.bp{background:var(--pu2);color:var(--pu)}
-.empty-r td{text-align:center;padding:36px;color:var(--mu);font-size:14px}
-/* PRODUCTS */
-.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:18px}
-.pc{background:var(--wh);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
-.pc-img{width:100%;height:96px;background:linear-gradient(135deg,#ece9ff,#e0f2f1);display:flex;align-items:center;justify-content:center;font-size:38px}
-.pc-bd{padding:12px}.pc-nm{font-size:14px;font-weight:700;margin-bottom:4px}.pc-pr{font-size:15px;font-weight:800;color:var(--pu);margin-bottom:7px}
-.pc-acts{display:flex;gap:6px}
-.pc-edit{flex:1;padding:6px;background:var(--pu2);color:var(--pu);border-radius:6px;font-size:12px;font-weight:600;text-align:center;cursor:pointer}
-.pc-hide{padding:6px 9px;background:var(--rd2);color:var(--rd);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
-/* SECTION */
-.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.st{font-size:16px;font-weight:700}
-.btn-sm{padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;background:var(--pu);color:#fff;cursor:pointer}
-.btn-sm.out{background:var(--pu2);color:var(--pu)}
-/* SETTINGS */
-.sc{background:var(--wh);border-radius:var(--r);padding:18px;box-shadow:var(--sh);margin-bottom:13px}
-.sc-t{font-size:15px;font-weight:700;margin-bottom:13px}
-.srow{display:flex;gap:12px;flex-wrap:wrap}
-.sf{flex:1;min-width:120px}
-.sf label{display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
-.sf input,.sf select{width:100%;padding:10px 12px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px;background:#fff}
-.sf input:focus,.sf select:focus{border-color:var(--pu)}
-.reward-preview{background:var(--pu2);border-radius:var(--r);padding:14px;margin-top:12px}
-.rp-t{font-size:13px;font-weight:700;color:var(--pu);margin-bottom:4px}
-.rp-s{font-size:13px;color:var(--tx)}
-/* ORDERS */
-.ocard{background:var(--wh);border-radius:var(--r);padding:14px;box-shadow:var(--sh);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
-.oc-id{font-size:11px;font-weight:700;color:var(--mu);font-family:monospace;margin-bottom:3px}
-.oc-pn{font-size:14px;font-weight:700;margin-bottom:2px}.oc-mt{font-size:12px;color:var(--mu)}.oc-tot{font-size:17px;font-weight:800;color:var(--pu)}
-.btn-rdy{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;background:var(--gn2);color:var(--gn);cursor:pointer;margin-top:4px}
-/* MODAL */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
-.modal.show{display:flex}
-.mb{background:#fff;border-radius:20px;padding:22px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto}
-.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-.mt{font-size:18px;font-weight:800}
-.mx{width:30px;height:30px;border-radius:50%;background:#f4f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px}
-.ck{display:flex;gap:14px;margin-bottom:13px}
-.ck label{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer}
-.ck input[type=checkbox]{width:17px;height:17px}
-/* TOAST */
-#toast{position:fixed;bottom:20px;right:20px;background:var(--dk);color:#fff;padding:10px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s}
-#toast.on{opacity:1}
-.empty{text-align:center;padding:36px;color:var(--mu);font-size:14px}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:system-ui,-apple-system,'Segoe UI',sans-serif; background:#f0efff; color:#1a1a2e; }
+button { cursor:pointer; border:none; font-family:inherit; }
+input, select { font-family:inherit; border:none; }
+
+#splash { position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; display:flex; align-items:center; justify-content:center; gap:20px; flex-direction:column; z-index:9999; }
+#splash-text { color:#fff; font-size:40px; font-weight:800; }
+#splash-text b { color:#6C5CE7; }
+
+#auth { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; align-items:center; justify-content:center; padding:20px; }
+.auth-box { background:#fff; border-radius:24px; padding:32px 24px; width:100%; max-width:380px; }
+.auth-box h1 { font-size:20px; font-weight:800; margin-bottom:5px; }
+.auth-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; margin-bottom:12px; font-size:15px; }
+.auth-btn { width:100%; padding:13px; background:#0a0a14; color:#fff; border-radius:12px; font-weight:700; font-size:15px; margin-top:8px; }
+.auth-error { color:#c62828; font-size:12px; margin-top:10px; padding:10px; background:#ffebee; border-radius:8px; display:none; }
+
+#app { display:none; flex-direction:column; min-height:100vh; padding-bottom:80px; }
+.topbar { background:#0a0a14; color:#fff; padding:14px 18px; font-weight:800; font-size:16px; position:sticky; top:0; z-index:100; display:flex; justify-content:space-between; align-items:center; }
+.topbar b { color:#6C5CE7; }
+.topbar-action { cursor:pointer; font-size:18px; }
+
+.screen { display:none; padding:16px; }
+.screen.active { display:block; }
+
+.hero { background:#0a0a14; color:#fff; border-radius:20px; padding:20px 18px; margin-bottom:16px; }
+.stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.stat-card { background:rgba(255,255,255,0.1); border-radius:12px; padding:14px; }
+.stat-label { font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:4px; }
+.stat-value { font-size:24px; font-weight:800; color:#fff; }
+
+.section-header { display:flex; justify-content:space-between; align-items:center; margin:18px 0 12px; }
+.section-title { font-size:15px; font-weight:700; }
+.add-btn { width:36px; height:36px; background:#ece9ff; border-radius:10px; color:#6C5CE7; font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+
+.table-container { overflow-x:auto; margin-bottom:16px; }
+.data-table { width:100%; border-collapse:collapse; font-size:13px; }
+.data-table th { background:#f9f9fb; padding:10px; text-align:left; font-weight:700; color:#706f87; }
+.data-table td { padding:10px; border-bottom:1px solid #ebebef; }
+.data-table tr:hover { background:#f9f9fb; }
+
+.modal { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; padding:20px; z-index:200; }
+.modal-content { background:#fff; border-radius:20px; padding:24px; width:100%; max-width:500px; max-height:90vh; overflow-y:auto; }
+.modal-title { font-size:18px; font-weight:800; margin-bottom:16px; }
+.modal-field { margin-bottom:14px; }
+.modal-label { font-size:11px; font-weight:700; color:#706f87; text-transform:uppercase; margin-bottom:6px; display:block; }
+.modal-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; font-size:14px; }
+.modal-btn { width:100%; padding:12px; border-radius:12px; font-weight:700; font-size:14px; margin:10px 0; background:#0a0a14; color:#fff; }
+.modal-btn-secondary { background:#f0f0f0; color:#706f87; }
+
+.nav { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #ebebef; display:flex; z-index:100; }
+.nav-item { flex:1; padding:12px; text-align:center; font-size:11px; font-weight:600; color:#706f87; cursor:pointer; }
+.nav-item.active { color:#6C5CE7; }
+
+#video { width:100%; border-radius:12px; display:none; margin-bottom:16px; }
+.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#0a0a14; color:#fff; padding:10px 20px; border-radius:100px; font-size:13px; z-index:999; opacity:0; transition:opacity 0.3s; }
+.toast.show { opacity:1; }
 </style>
 </head>
 <body>
-<!-- AUTH -->
-<div id="s-auth">
-  <div class="a-box">
-    <div class="a-brand"><div class="a-ic">S</div><div class="a-nm">Stashlo <span class="a-tag">Merchant</span></div></div>
-    <div class="a-tabs">
-      <div class="a-tab on" id="tab-in" onclick="swTab('in')">Sign in</div>
-      <div class="a-tab" id="tab-up" onclick="swTab('up')">Register shop</div>
-    </div>
-    <div id="form-in">
-      <div class="fhd">Merchant login</div><div id="sess-msg" style="display:none;background:#fff3e0;color:#e65100;padding:10px 12px;border-radius:10px;margin-bottom:10px;font-size:13px">⏱️ Session expired — please sign in again</div>
-      <div class="fsb">Sign in to manage your loyalty programme.<br>Multiple staff can log in simultaneously.</div>
-      <div class="fi"><label>Email</label><input type="email" id="in-e" placeholder="shop@email.com" autocomplete="email" inputmode="email"></div>
-      <div class="fi"><label>Password</label><input type="password" id="in-p" placeholder="Password" autocomplete="current-password"></div>
-      <button class="btn-m" id="btn-in" onclick="handleMerchantSignIn()">Sign in</button>
-      <div class="err-b" id="in-err"></div>
-      <div style="text-align:center;margin-top:12px"><span onclick="doForgot()" style="font-size:13px;color:var(--pu);font-weight:600;cursor:pointer">Forgot password?</span></div>
-      <div id="fp-ok" style="display:none;background:#e0f2f1;color:#00897B;font-size:13px;padding:10px 12px;border-radius:10px;margin-top:10px;text-align:center">✅ Reset email sent — check your inbox</div>
-    </div>
-    <div id="form-up" style="display:none">
-      <div class="fhd">Register your shop</div>
-      <div class="fsb">Set up your Stashlo loyalty programme — free to start</div>
-      <div class="fi"><label>Shop name</label><input type="text" id="up-sh" placeholder="e.g. Srisam Coffee House" autocomplete="organization"></div>
-      <div class="fi"><label>Email</label><input type="email" id="up-e" placeholder="shop@email.com" autocomplete="email" inputmode="email"></div>
-      <div class="fi"><label>Password (6+ chars)</label><input type="password" id="up-p" placeholder="Choose a password" autocomplete="new-password"></div>
-      <button class="btn-m" id="btn-up" onclick="handleMerchantRegister()">Register shop</button>
-      <div class="err-b" id="up-err"></div>
-    </div>
+
+<div id="splash">
+  <div id="splash-text">Stash<b>lo</b> Merchant</div>
+</div>
+
+<div id="auth">
+  <div class="auth-box">
+    <h1>Merchant Portal</h1>
+    <p>Login to manage your loyalty program</p>
+    <input type="email" id="email" class="auth-input" placeholder="Email">
+    <input type="password" id="password" class="auth-input" placeholder="Password">
+    <button class="auth-btn" onclick="login()">Sign in</button>
+    <div class="auth-error" id="auth-error"></div>
   </div>
 </div>
 
-<!-- APP -->
-<div id="s-app">
-  <div class="topbar">
-    <div class="tb-l"><div class="tb-logo">Stashlo</div><div class="tb-tag">Merchant</div></div>
-    <div class="tb-r"><div class="tb-u" id="tb-u"></div><div class="tb-out" onclick="doOut()">Sign out</div></div>
+<div id="app">
+  <div class="topbar">Stash<b>lo</b> Merchant <div class="topbar-action" onclick="logout()">🚪</div></div>
+
+  <!-- OVERVIEW SCREEN -->
+  <div class="screen active" id="overview-screen">
+    <div class="hero">
+      <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:8px;">Merchant Dashboard</div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Active Customers</div>
+          <div class="stat-value" id="stat-customers">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Today Orders</div>
+          <div class="stat-value" id="stat-orders">0</div>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="tab-bar">
-    <div class="tab-btn on" onclick="showTab('scanner')">📷 Scanner</div>
-    <div class="tab-btn" onclick="showTab('till')">🏪 Till</div>
-    <div class="tab-btn" onclick="showTab('products')">📦 Products</div>
-    <div class="tab-btn" onclick="showTab('orders')">🛍️ Orders</div>
-    <div class="tab-btn" onclick="showTab('customers')">👥 Customers</div>
-    <div class="tab-btn" onclick="showTab('settings')">⚙️ Settings</div>
-    <div class="tab-btn" onclick="showTab('messages')">💬 Msgs</div>
-    <div class="tab-btn" onclick="showTab('notify')">🔔 Notify</div>
+
+  <!-- QR SCANNER SCREEN -->
+  <div class="screen" id="scanner-screen">
+    <div class="section-header">
+      <div class="section-title">QR Scanner</div>
+    </div>
+    <video id="video" autoplay playsinline></video>
+    <div id="scanner-result" style="display:none;padding:12px;background:#00897B;color:#fff;border-radius:12px;margin-bottom:16px;">
+      <div style="font-size:12px;opacity:0.7;">Scanned</div>
+      <div id="scanned-value" style="font-size:18px;font-weight:800;"></div>
+    </div>
   </div>
-  <div class="main">
 
-    <!-- SCANNER TAB -->
-    <div id="tab-scanner">
-      <div class="scanner-wrap">
-        <div class="scanner-title">📷 Scan customer loyalty card</div>
-        <div class="cam-box" id="cam-box">
-          <video id="cam-video" playsinline muted autoplay></video>
-          <canvas id="cam-canvas"></canvas>
-          <div class="cam-overlay"><div class="cam-frame"></div></div>
-        </div>
-        <div class="scan-status" id="scan-status">Tap Start Camera to scan a customer's QR code</div>
-        <div class="scan-btns">
-          <button class="scan-btn start" id="btn-start-cam" onclick="startCam()">▶ Start Camera</button>
-          <button class="scan-btn stop" id="btn-stop-cam" onclick="stopCam()" style="display:none">■ Stop</button>
-        </div>
-        <div class="manual-entry">
-          <input type="tel" id="manual-phone" placeholder="Or type customer phone number" inputmode="tel">
-          <button onclick="lookupByPhone()">Look up customer →</button>
-        </div>
-      </div>
-
-      <!-- CUSTOMER RESULT -->
-      <div class="cust-result" id="cust-result">
-        <div class="cr-header">
-          <div class="cr-name" id="cr-name">Customer</div>
-          <div class="cr-phone" id="cr-phone"></div>
-          <div class="cr-pts-row">
-            <div class="cr-pts" id="cr-pts">0</div>
-            <div class="cr-pts-lbl">loyalty points</div>
-          </div>
-          <div class="cr-prog-labels"><span id="cr-pl">0 pts</span><span id="cr-pr">Goal: 100 pts</span></div>
-          <div class="cr-bar"><div class="cr-bar-fill" id="cr-fill" style="width:0%"></div></div>
-        </div>
-        <!-- REWARD READY -->
-        <div class="reward-banner" id="reward-banner">
-          <div class="rb-title">🎁 Reward Ready!</div>
-          <div class="rb-sub" id="rb-sub">Customer has reached their reward threshold</div>
-          <div class="rb-btns">
-            <div class="rb-btn rb-apply" onclick="applyReward()">✓ Apply Reward</div>
-            <div class="rb-btn rb-skip" onclick="skipReward()">→ Skip (let accrue)</div>
-          </div>
-        </div>
-        <!-- ADD POINTS -->
-        <div class="add-pts-section">
-          <div class="aps-title">Add points for this visit</div>
-          <div class="aps-row">
-            <input class="aps-inp" type="number" id="aps-spend" placeholder="Amount spent £" step="0.01" min="0" oninput="updatePtsPreview()">
-            <button class="aps-btn" onclick="addPtsFromScan()">Add points</button>
-          </div>
-          <div class="pts-preview" id="pts-preview"></div>
-        </div>
-      </div>
+  <!-- TILL/POS SCREEN -->
+  <div class="screen" id="till-screen">
+    <div class="section-header">
+      <div class="section-title">Quick Sale</div>
     </div>
-
-    <!-- TILL TAB -->
-    <div id="tab-till" style="display:none">
-      <div class="till-card">
-        <div class="tc-t">Your Shop ID — share with customers</div>
-        <div class="shop-id-box">
-          <div><div class="si-lb">Customers search this in Stashlo app</div><div class="si-vl" id="shop-id-val">SL-XXXX</div></div>
-          <div class="copy-btn" onclick="copyId()">Copy ID</div>
-        </div>
-        <div style="font-size:13px;color:var(--mu)">Card link: <span id="card-link-val" style="color:var(--pu);word-break:break-all;font-size:12px"></span></div>
-      </div>
-      <div class="till-card">
-        <div class="tc-t">Add points manually</div>
-        <input class="tc-inp" type="tel" id="till-phone" placeholder="Customer phone number" inputmode="tel" oninput="tillLookup(this.value)">
-        <input class="tc-inp" type="number" id="till-spend" placeholder="Amount spent (£)" step="0.01" min="0">
-        <div class="tc-row">
-          <button class="tc-btn pri" onclick="tillAddPoints()">Add points</button>
-          <button class="tc-btn sec" onclick="tillRedeem()">Redeem reward</button>
-        </div>
-        <div class="tc-res" id="tc-res">
-          <div class="tr-nm" id="tr-nm">Customer</div>
-          <div class="tr-pt" id="tr-pt">0 pts</div>
-          <div class="tr-sb" id="tr-sb"></div>
-        </div>
-      </div>
+    <div style="background:#f9f9fb;border-radius:12px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:11px;color:#706f87;margin-bottom:6px;">CUSTOMER PHONE</div>
+      <input type="tel" id="till-phone" class="modal-input" placeholder="e.g., 07700000000" style="margin-bottom:14px;">
+      <div style="font-size:11px;color:#706f87;margin-bottom:6px;">AMOUNT (£)</div>
+      <input type="number" id="till-amount" class="modal-input" placeholder="0.00" step="0.01">
+      <button class="modal-btn" style="margin-top:14px;" onclick="processSale()">Process Sale</button>
     </div>
+  </div>
 
-    <!-- PRODUCTS TAB -->
-    <div id="tab-products" style="display:none">
-      <div class="sh"><div class="st">Your products</div><button class="btn-sm" onclick="oPM()">+ Add product</button></div>
-      <div style="background:var(--pu2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--pu);font-weight:600">
-        💡 Products appear in the Stashlo customer app for Click &amp; Collect and delivery orders.
-      </div>
-      <div class="pgrid" id="prod-g"><div class="empty">No products yet</div></div>
+  <!-- PRODUCTS SCREEN -->
+  <div class="screen" id="products-screen">
+    <div class="section-header">
+      <div class="section-title">Products</div>
+      <div class="add-btn" onclick="openProductModal()">+</div>
     </div>
+    <div id="products-list"></div>
+  </div>
 
-    <!-- ORDERS TAB -->
-    <div id="tab-orders" style="display:none">
-      <div class="sh"><div class="st">Customer orders</div><button class="btn-sm out" onclick="loadOrds()">Refresh</button></div>
-      <div id="ords-list"><div class="empty">Loading...</div></div>
+  <!-- ORDERS SCREEN -->
+  <div class="screen" id="orders-screen">
+    <div class="section-header">
+      <div class="section-title">Recent Orders</div>
     </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody id="orders-list">
+          <tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87;">No orders yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-    <!-- CUSTOMERS TAB -->
-    <div id="tab-customers" style="display:none">
-      <div class="sh">
-        <div class="st">Your customers</div>
-        <input type="text" placeholder="Search..." oninput="filterC(this.value)" style="padding:8px 12px;border:1.5px solid #e5e5ea;border-radius:8px;font-size:13px;background:#fff;min-width:150px">
-      </div>
-      <div class="kgrid">
-        <div class="kpi"><div class="kpi-v" id="kc">0</div><div class="kpi-l">Total customers</div></div>
-        <div class="kpi"><div class="kpi-v" id="kt">0</div><div class="kpi-l">Transactions</div></div>
-        <div class="kpi"><div class="kpi-v" id="kr">0</div><div class="kpi-l">Rewards given</div></div>
-      </div>
-      <div class="tw"><table><thead><tr><th>Name</th><th>Phone</th><th>Points</th><th>Visits</th><th>Joined</th></tr></thead>
-        <tbody id="custs-body"><tr class="empty-r"><td colspan="5">Loading...</td></tr></tbody>
-      </table></div>
-    </div>
-
-    <!-- SETTINGS TAB -->
-    <div id="tab-messages" style="display:none">
-  <div class="sh"><div class="st">Customer Messages</div></div>
-  <div id="msg-threads" style="padding:16px"></div>
-</div>
-<div id="tab-settings" style="display:none">
-      <div class="sc">
-        <div class="sc-t">Points rules</div>
-        <div class="srow">
-          <div class="sf"><label>Points per £1 spent</label><input type="number" id="s-ppp" value="1" min="1" oninput="updateRPrev()"></div>
-          <div class="sf"><label>Min spend (£)</label><input type="number" id="s-min" value="2" step="0.5" min="0"></div>
-          <div class="sf"><label>Reward threshold (pts)</label><input type="number" id="s-thresh" value="100" min="10" oninput="updateRPrev()"></div>
-        </div>
-      </div>
-      <div class="sc">
-        <div class="sc-t">Reward type</div>
-        <div class="srow">
-          <div class="sf"><label>Reward type</label>
-            <select id="s-rt" onchange="updateRPrev()">
-              <option value="pound">£ off bill</option>
-              <option value="percent">% discount</option>
-              <option value="free">Free item</option>
-            </select>
-          </div>
-          <div class="sf"><label>Value (£/% / item name)</label><input type="text" id="s-rv" value="5" placeholder="e.g. 5 or Coffee" oninput="updateRPrev()"></div>
-        </div>
-        <div class="reward-preview">
-          <div class="rp-t">Reward preview</div>
-          <div class="rp-s" id="rp-s">Loading...</div>
-        </div>
-      </div>
-      <div class="sc">
-        <div class="sc-t">Shop details</div>
-        <div class="srow">
-          <div class="sf" style="flex:2"><label>Shop name</label><input type="text" id="s-nm" placeholder="Your shop name"></div>
-          <div class="sf"><label>Phone</label><input type="tel" id="s-ph" placeholder="0800 000 000"></div>
-        </div>
-        <div class="sf" style="margin-top:10px"><label>Address</label><input type="text" id="s-ad" placeholder="Full shop address"></div>
-      </div>
-      <button onclick="saveSettings()" style="width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">Save settings</button>
-    </div>
+  <div class="nav">
+    <div class="nav-item active" onclick="switchScreen('overview')">📊 Overview</div>
+    <div class="nav-item" onclick="switchScreen('scanner')">📱 Scan</div>
+    <div class="nav-item" onclick="switchScreen('till')">💰 Till</div>
+    <div class="nav-item" onclick="switchScreen('products')">📦 Products</div>
+    <div class="nav-item" onclick="switchScreen('orders')">📋 Orders</div>
   </div>
 </div>
 
-
-    <!-- NOTIFY TAB -->
-    <div id="tab-notify" style="display:none">
-      <div class="sh"><div class="st">Message your customers</div></div>
-      <div style="background:var(--pu2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--pu);font-weight:600">
-        📢 Send a message to all <span id="notif-count">0</span> customers registered with your shop. They'll see it in their app next time they open it.
-      </div>
-      <div class="fi"><label>Message title</label><input type="text" id="notif-title" placeholder="e.g. Special Offer Today!" maxlength="60"></div>
-      <div class="fi"><label>Message body</label><textarea id="notif-body" placeholder="e.g. Get double points this weekend on all purchases over £10!" style="width:100%;padding:12px 14px;border:1.5px solid #e5e5ea;border-radius:var(--r);font-size:14px;resize:vertical;min-height:80px;font-family:inherit"></textarea></div>
-      <div class="fi">
-        <label>Link (optional)</label>
-        <input type="url" id="notif-link" placeholder="https://... or leave blank">
-      </div>
-      <button onclick="sendNotif()" style="width:100%;padding:13px;background:var(--pu);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;border:none;margin-bottom:8px" id="notif-btn">
-        📤 Send to all customers
-      </button>
-      <div id="notif-ok" style="display:none;background:#e0f2f1;color:#00897B;padding:12px 14px;border-radius:var(--r);font-size:13px;font-weight:600;text-align:center">
-        ✅ Message sent to all customers!
-      </div>
-      <div class="sh" style="margin-top:20px"><div class="st">Previous messages</div></div>
-      <div id="notif-hist"><div class="empty">No messages sent yet</div></div>
+<!-- MODALS -->
+<div id="product-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-title">Add Product</div>
+    <div class="modal-field">
+      <label class="modal-label">Product Name</label>
+      <input type="text" id="product-name" class="modal-input" placeholder="e.g., Premium Coffee">
     </div>
-<!-- PRODUCT MODAL -->
-<div class="modal" id="prod-modal">
-  <div class="mb">
-    <div class="mh"><div class="mt" id="pm-title">Add product</div><div class="mx" onclick="cPM()">✕</div></div>
-    <div class="fi"><label>Product name</label><input type="text" id="pm-nm" placeholder="e.g. Large Coffee"></div>
-    <div class="srow" style="margin-bottom:11px">
-      <div class="sf"><label>Price (£)</label><input type="number" id="pm-pr" placeholder="0.00" step="0.01" min="0"></div>
-      <div class="sf"><label>Emoji</label><input type="text" id="pm-em" placeholder="☕" maxlength="2"></div>
+    <div class="modal-field">
+      <label class="modal-label">Price (£)</label>
+      <input type="number" id="product-price" class="modal-input" placeholder="0.00" step="0.01">
     </div>
-    <div class="fi"><label>Category</label><select id="pm-cat"><option value="food">🍕 Food &amp; Drink</option><option value="electronics">📱 Electronics</option><option value="fashion">👗 Fashion</option><option value="health">💊 Health</option><option value="other">📦 Other</option></select></div>
-    <div class="fi"><label>Description</label><input type="text" id="pm-desc" placeholder="Short description"></div>
-    <div class="ck">
-      <label><input type="checkbox" id="pm-co" checked> Click &amp; Collect</label>
-      <label><input type="checkbox" id="pm-de"> Home Delivery</label>
+    <div class="modal-field">
+      <label class="modal-label">Points Reward</label>
+      <input type="number" id="product-points" class="modal-input" placeholder="10" value="10">
     </div>
-    <button onclick="saveProd()" style="width:100%;padding:13px;background:var(--dk);color:#fff;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer" id="pm-btn">Add product</button>
+    <button class="modal-btn" onclick="saveProduct()">Save Product</button>
+    <button class="modal-btn modal-btn-secondary" onclick="closeProductModal()">Cancel</button>
   </div>
 </div>
 
-<div id="toast"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<div class="toast" id="toast"></div>
+
 <script>
-// ===== SUPABASE BACKEND v1.0 =====
-var SURL='https://gcwevgaymahywqjorhnn.supabase.co';
-var SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
-var TOKEN=null,UID=null;
+const SURL = 'https://gcwevgaymahywqjorhnn.supabase.co';
+const SKEY = 'sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
 
-function SH(extra){var h={'apikey':SKEY,'Content-Type':'application/json','Authorization':'Bearer '+(TOKEN||SKEY)};if(extra)Object.assign(h,extra);return h;}
+let TOKEN = null, UID = null, MERCHANT_ID = null, PRODUCTS = [], ORDERS = [];
 
-// ── Auth ──────────────────────────────────────────────
-function doSignIn(email,pw){
-  return fetch(SURL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})}).then(function(r){return r.json();});
-}
-function doSignUp(email,pw){
-  return fetch(SURL+'/auth/v1/signup',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pw})}).then(function(r){return r.json();});
-}
-function doResetPw(email){
-  return fetch(SURL+'/auth/v1/recover',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:email})}).then(function(r){return r.json();});
-}
-
-// ── Token refresh ────────────────────────────────────
-var _pR=null;
-function rToken(){
-  var k=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');
-  var s=JSON.parse(localStorage.getItem(k)||'null');
-  if(!s||!s.r)return Promise.resolve();
-  if(_pR)return _pR;
-  _pR=fetch(SURL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.r})}).then(function(r){return r.json();}).then(function(d){_pR=null;if(d.access_token){TOKEN=d.access_token;s.t=TOKEN;s.r=d.refresh_token;s.x=Date.now()+(d.expires_in||3600)*1000;localStorage.setItem(k,JSON.stringify(s));}}).catch(function(){_pR=null;});
-  return _pR;
-}
-function chkToken(){
-  var k=localStorage.getItem('sl_m')?'sl_m':(localStorage.getItem('sl_a')?'sl_a':'sl_s');
-  var s=JSON.parse(localStorage.getItem(k)||'null');
-  if(!s)return Promise.resolve();
-  if(s.x<Date.now()){TOKEN=null;if(s.r)return rToken();return Promise.resolve();}
-  if(s.x<Date.now()+300000&&s.r)return rToken();
-  return Promise.resolve();
-}
-
-// ── CRUD helpers ─────────────────────────────────────
-function sGet(t,f){return chkToken().then(function(){var u=SURL+'/rest/v1/'+t+'?select=*';if(f)u+='&'+f;return fetch(u,{headers:SH()}).then(function(r){return r.json();});});}
-function sAdd(t,d){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t,{method:'POST',headers:SH({'Prefer':'return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
-function sUpsert(t,d,c){return chkToken().then(function(){var u=SURL+'/rest/v1/'+t+(c?'?on_conflict='+c:'');return fetch(u,{method:'POST',headers:SH({'Prefer':'resolution=merge-duplicates,return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
-function sUpd(t,f,d){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t+'?'+f,{method:'PATCH',headers:SH({'Prefer':'return=representation'}),body:JSON.stringify(d)}).then(function(r){return r.json();});});}
-function sDel(t,f){return chkToken().then(function(){return fetch(SURL+'/rest/v1/'+t+'?'+f,{method:'DELETE',headers:SH()}).then(function(r){return r.ok?{ok:true}:r.json();});});}
-// ===== END SUPABASE =====
-// BOOT
-if(checkSess()){hide('s-auth');show('s-app','flex');loadMerchant();}
-
-// AUTH
-window.handleMerchantSignIn=function(){doIn();};
-window.handleMerchantRegister=function(){doUp();};
-window.swTab=function(t){$('tab-in').classList.toggle('on',t==='in');$('tab-up').classList.toggle('on',t==='up');$('form-in').style.display=t==='in'?'block':'none';$('form-up').style.display=t==='up'?'block':'none';};
-window.doIn=function(){
-  var e=$('in-e').value.trim(),p=$('in-p').value,err=$('in-err');err.style.display='none';
-  if(!e||!p){showE(err,'Enter email and password');return;}
-  $('btn-in').disabled=true;$('btn-in').textContent='Signing in...';
-  doSignIn(e,p).then(function(d){
-    $('btn-in').disabled=false;$('btn-in').textContent='Sign in';
-    if(d.error){var m={EMAIL_NOT_FOUND:'No account — register your shop',INVALID_PASSWORD:'Wrong password',INVALID_EMAIL:'Invalid email',INVALID_LOGIN_CREDENTIALS:'Wrong email or password',TOO_MANY_ATTEMPTS_TRY_LATER:'Too many attempts'};showE(err,m[d.error.message]||'Sign in failed: '+d.error.message);return;}
-    if(!d.access_token||!d.user){var errMsg=d.msg||d.error_description||(d.error&&d.error.message)||'Sign up failed';
-      if(d.error_code==='user_already_exists'||errMsg.includes('already'))errMsg='Account exists — sign in';
-      showE($('up-err'),errMsg);return;
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const sess = JSON.parse(localStorage.getItem('merchant_session') || 'null');
+    if (sess && sess.token && sess.uid && sess.expiry > Date.now()) {
+      TOKEN = sess.token;
+      UID = sess.uid;
+      MERCHANT_ID = sess.mid;
+      showApp();
+    } else {
+      showAuth();
     }
-    TOKEN=d.access_token;UID=d.user.id;MID=d.user.id;
-    saveSess(d.access_token,d.user.id,d.user.email,d.expires_in,d.refresh_token);
-    document.getElementById('tb-u').textContent=d.email;
-    // Check if merchant doc exists - if not, they need to register shop
-    sGet('merchants','id=eq.'+d.localId).then(function(md){
-      var mdData=Array.isArray(md)?md[0]:null;if(!mdData){
-        // No merchant doc - clear session and ask them to register
-        clearSess();
-        showE(err,'No shop registered with this email. Please use "Register shop" tab to create your shop first.');
-      } else {
-        hide('s-auth');show('s-app','flex');loadMerchant();
-      }
-    }).catch(function(){
-      // Can't verify - just proceed
-      hide('s-auth');show('s-app','flex');loadMerchant();
-    });
-  }).catch(function(){$('btn-in').disabled=false;$('btn-in').textContent='Sign in';showE(err,'Connection error');});
-};
-window.doUp=function(){
-  var sh=$('up-sh').value.trim(),e=$('up-e').value.trim(),p=$('up-p').value,err=$('up-err');err.style.display='none';
-  if(!sh){showE(err,'Enter your shop name');return;}
-  if(!e){showE(err,'Enter your email');return;}
-  if(!p||p.length<6){showE(err,'Password must be at least 6 characters');return;}
-  $('btn-up').disabled=true;$('btn-up').textContent='Registering...';
-  doSignUp(e,p)
-  .then(function(r){return r.json();}).then(function(d){
-    $('btn-up').disabled=false;$('btn-up').textContent='Register shop';
-    if(d.error){var m={EMAIL_EXISTS:'Email already registered — sign in',INVALID_EMAIL:'Invalid email',WEAK_PASSWORD:'Password too weak'};showE(err,m[d.error.message]||'Registration failed: '+d.error.message);return;}
-    saveSess(d.idToken,d.localId,e,d.expiresIn);
-    document.getElementById('tb-u').textContent=e;
-    var shopId='SL-'+d.localId.slice(0,4).toUpperCase();
-    sUpsert('merchants',{id:d.access_token?d.user.id:d.localId,
-      name:sh,email:e,shopId:shopId,subscription:'trial',createdAt:Date.now(),
-      rules:{pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'5'}
-    }).then(function(){hide('s-auth');show('s-app','flex');loadMerchant();});
-  }).catch(function(){$('btn-up').disabled=false;$('btn-up').textContent='Register shop';showE(err,'Connection error');});
-};
-window.doOut=function(){stopCam();clearSess();hide('s-app');show('s-auth','flex');};
-window.doForgot=function(){
-  var e=$('in-e').value.trim();
-  var err=$('in-err');err.style.display='none';$('fp-ok').style.display='none';
-  if(!e){showE(err,'Enter your email address first');return;}
-  doResetPw(e)
-  .then(function(r){return r.json();}).then(function(d){
-    if(d.error){var m={EMAIL_NOT_FOUND:'No account found with this email',INVALID_EMAIL:'Invalid email address'};showE(err,m[d.error.message]||'Error: '+d.error.message);return;}
-    $('fp-ok').style.display='block';
-  }).catch(function(){showE(err,'Connection error');});
-};
+  }, 1500);
+});
 
-// LOAD MERCHANT
-function loadMerchant(){
-  sGet('merchants','id=eq.'+MID).then(function(d){
-    var mdData=Array.isArray(d)?d[0]:null;if(!mdData){
-      // No merchant doc - create a default one
-      var sessEmail=JSON.parse(localStorage.getItem('sl_m')||'{}').e||'';
-      var shopId='SL-'+MID.slice(0,4).toUpperCase();
-      var defaultDoc={name:'My Shop',email:sessEmail,shopId:shopId,subscription:'trial',createdAt:Date.now(),rules:{pointsPerPound:1,minSpend:2,threshold:100,rewardType:'pound',rewardValue:'5'}};
-      sUpsert('merchants',Object.assign({id:MID},defaultDoc),'id').then(function(){MDATA=defaultDoc;renderMerch();}).catch(function(){});
+function login() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errDiv = document.getElementById('auth-error');
+  
+  if (!email || !password) {
+    errDiv.textContent = 'Enter email and password';
+    errDiv.style.display = 'block';
+    return;
+  }
+
+  fetch(`${SURL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
+    body: JSON.stringify({email, password})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.access_token) {
+      errDiv.textContent = 'Wrong email or password';
+      errDiv.style.display = 'block';
       return;
     }
-    var m=(Array.isArray(d)?d[0]:d)||{};MDATA=m;
-    // Parse nested rules
-    if(d.fields&&d.fields.rules&&d.fields.rules.mapValue){
-      var rf=d.fields.rules.mapValue.fields||{};
-      RULES={
-        pointsPerPound:parseInt(rf.pointsPerPound?(rf.pointsPerPound.integerValue||rf.pointsPerPound.doubleValue||1):1),
-        minSpend:parseFloat(rf.minSpend?(rf.minSpend.doubleValue||rf.minSpend.integerValue||2):2),
-        threshold:parseInt(rf.threshold?(rf.threshold.integerValue||100):100),
-        rewardType:(rf.rewardType&&rf.rewardType.stringValue)||'pound',
-        rewardValue:(rf.rewardValue&&rf.rewardValue.stringValue)||'5'
-      };
-    }
-    var sid=m.shopId||('SL-'+MID.slice(0,4).toUpperCase());
-    t('shop-id-val',sid);
-    var cardLink='skyfliessolar.github.io/stashlo/customer.html?m='+MID;
-    t('card-link-val',cardLink);
-    if(m.name)$('s-nm').value=m.name;
-    if(m.phone)$('s-ph').value=m.phone;
-    if(m.address)$('s-ad').value=m.address;
-    $('s-ppp').value=RULES.pointsPerPound;
-    $('s-min').value=RULES.minSpend;
-    $('s-thresh').value=RULES.threshold;
-    $('s-rt').value=RULES.rewardType;
-    $('s-rv').value=RULES.rewardValue;
-    updateRPrev();
-    loadCusts();loadProds();loadOrds();
-  }).catch(function(e){console.error(e);});
-}
-
-// =====================
-// SCANNER
-// =====================
-window.startCam=function(){
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    t('scan-status','Camera not available — use manual entry below');return;
-  }
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false}).then(function(stream){
-    camStream=stream;
-    var vid=$('cam-video');
-    vid.srcObject=stream;
-    vid.play();
-    $('btn-start-cam').style.display='none';
-    $('btn-stop-cam').style.display='block';
-    t('scan-status','Hold customer QR code in front of camera...');
-    camInterval=setInterval(scanFrame,300);
-  }).catch(function(e){
-    t('scan-status','Camera error: '+e.message+' — use manual entry below');
+    TOKEN = d.access_token;
+    UID = d.user.id;
+    MERCHANT_ID = UID;
+    localStorage.setItem('merchant_session', JSON.stringify({token: TOKEN, uid: UID, mid: MERCHANT_ID, expiry: Date.now() + 3600000}));
+    showApp();
+  })
+  .catch(e => {
+    errDiv.textContent = 'Login error';
+    errDiv.style.display = 'block';
   });
-};
+}
 
-window.stopCam=function(){
-  if(camStream){camStream.getTracks().forEach(function(t){t.stop();});camStream=null;}
-  clearInterval(camInterval);camInterval=null;
-  $('btn-start-cam').style.display='block';
-  $('btn-stop-cam').style.display='none';
-  t('scan-status','Camera stopped');
-};
+function logout() {
+  localStorage.removeItem('merchant_session');
+  TOKEN = null;
+  UID = null;
+  showAuth();
+}
 
-function scanFrame(){
-  var vid=$('cam-video');
-  var canvas=$('cam-canvas');
-  if(!vid||vid.readyState<2)return;
-  canvas.width=vid.videoWidth;canvas.height=vid.videoHeight;
-  var ctx=canvas.getContext('2d');
-  ctx.drawImage(vid,0,0,canvas.width,canvas.height);
-  var imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
-  if(typeof jsQR==='undefined')return;
-  var code=jsQR(imageData.data,imageData.width,imageData.height,{inversionAttempts:'dontInvert'});
-  if(code&&code.data){
-    var phone=code.data.trim().replace(/\s/g,'');
-    if(phone&&phone!==SCAN_PHONE){
-      stopCam();
-      t('scan-status','✅ QR scanned: '+phone);
-      lookupCustomer(phone);
-    }
+function showAuth() {
+  document.getElementById('splash').style.display = 'flex';
+  setTimeout(() => {
+    document.getElementById('splash').style.display = 'none';
+    document.getElementById('auth').style.display = 'flex';
+  }, 1200);
+}
+
+function showApp() {
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('auth').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  loadData();
+  startQRScanner();
+}
+
+function loadData() {
+  if (!MERCHANT_ID) return;
+  
+  // Load products
+  fetch(`${SURL}/rest/v1/products?merchant_id=eq.${MERCHANT_ID}`, {
+    headers: {'apikey': SKEY}
+  })
+  .then(r => r.json())
+  .then(d => {
+    PRODUCTS = Array.isArray(d) ? d : [];
+    renderProducts();
+  })
+  .catch(e => console.log('Products load error'));
+  
+  // Load orders
+  fetch(`${SURL}/rest/v1/orders?merchant_id=eq.${MERCHANT_ID}&limit=20&order=createdAt.desc`, {
+    headers: {'apikey': SKEY}
+  })
+  .then(r => r.json())
+  .then(d => {
+    ORDERS = Array.isArray(d) ? d : [];
+    renderOrders();
+    updateStats();
+  })
+  .catch(e => console.log('Orders load error'));
+}
+
+function renderProducts() {
+  const list = document.getElementById('products-list');
+  if (PRODUCTS.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#706f87;">No products yet</div>';
+  } else {
+    list.innerHTML = PRODUCTS.map(p => `
+      <div style="background:#f9f9fb;border-radius:12px;padding:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:700;">${p.name}</div>
+          <div style="font-size:12px;color:#706f87;">£${p.price} | +${p.points_reward} pts</div>
+        </div>
+        <div style="font-size:18px;cursor:pointer;" onclick="deleteProduct('${p.id}')">×</div>
+      </div>
+    `).join('');
   }
 }
 
-window.lookupByPhone=function(){
-  var phone=$('manual-phone').value.replace(/\s/g,'');
-  if(!phone||phone.length<10){toast('Enter a valid phone number');return;}
-  lookupCustomer(phone);
-};
-
-function lookupCustomer(phone){
-  SCAN_PHONE=phone;SCAN_CUST=null;
-  t('scan-status','Looking up...');
-  // Try merchant customers first, then look up real name from users collection
-  sGet('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(function(d){
-    var c=(Array.isArray(d)?d[0]:d)||{};
-    var isNew=!c.phone&&!c.points;
-    // Always try to find real name from users collection by phone
-    return sGet('users','phone=eq.'+encodeURIComponent(SCAN_PHONE)+'&limit=1').then(function(ud){
-      var users=(Array.isArray(ud)?ud:[]).map(function(doc){return Object.assign({_uid:doc.name.split('/').pop()},frFS(doc));});
-      var match=users.find(function(u){return(u.phone||'').replace(/\s/g,'')===(phone||'').replace(/\s/g,'');});
-      var realName=match?match.name:null;
-      if(isNew){
-        c={phone:phone,name:realName||'Customer',points:0,visitCount:0,totalSpend:0,joinedAt:Date.now(),rewardsRedeemed:0};
-        sUpsert('merchant_customers',Object.assign({merchant_id:MID,phone:phone},c,{points:(c.points||0)+pts,visit_count:(c.visit_count||0)+1,last_updated:Date.now()}),'merchant_id,phone').catch(function(){});
-        toast(realName?realName+' registered!':'New customer registered!');
-      } else if(realName&&c.name==='New customer'){
-        // Update name if we can now get real name
-        c.name=realName;
-        sUpsert('merchant_customers',Object.assign({merchant_id:MID,phone:phone},c,{points:(c.points||0)+pts,visit_count:(c.visit_count||0)+1,last_updated:Date.now()}),'merchant_id,phone').catch(function(){});
-      } else if(realName){ c.name=realName; }
-      SCAN_CUST=Object.assign({},c,{phone:phone});
-      showScanResult();
-    }).catch(function(){
-      if(isNew){
-        c={phone:phone,name:'Customer',points:0,visitCount:0,totalSpend:0,joinedAt:Date.now(),rewardsRedeemed:0};
-        sUpsert('merchant_customers',Object.assign({merchant_id:MID,phone:phone},c,{points:(c.points||0)+pts,visit_count:(c.visit_count||0)+1,last_updated:Date.now()}),'merchant_id,phone').catch(function(){});
-      }
-      SCAN_CUST=Object.assign({},c,{phone:phone});
-      showScanResult();
-    });
-  }).catch(function(){toast('Error looking up customer');});
+function renderOrders() {
+  const list = document.getElementById('orders-list');
+  if (ORDERS.length === 0) {
+    list.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87;">No orders yet</td></tr>';
+  } else {
+    list.innerHTML = ORDERS.map(o => `
+      <tr>
+        <td>${o.customer_phone || 'Unknown'}</td>
+        <td>£${o.amount.toFixed(2)}</td>
+        <td><span style="background:#e8f5e9;color:#00897B;padding:3px 8px;border-radius:4px;font-size:11px;">${o.status || 'pending'}</span></td>
+        <td>${new Date(o.createdAt).toLocaleTimeString()}</td>
+      </tr>
+    `).join('');
+  }
 }
 
-function showScanResult(){
-  var c=SCAN_CUST;if(!c)return;
-  var el=$('cust-result');el.style.display='block';
-  t('cr-name',c.name||'Customer');
-  t('cr-phone',c.phone||SCAN_PHONE);
-  var pts=c.points||0,thresh=RULES.threshold||100;
-  t('cr-pts',pts);t('cr-pl',pts+' pts');t('cr-pr','Goal: '+thresh+' pts');
-  $('cr-fill').style.width=Math.min(100,Math.round(pts/thresh*100))+'%';
-  // Show reward banner if threshold reached
-  var rb=$('reward-banner');
-  if(pts>=thresh){
-    rb.style.display='block';
-    var rt=RULES.rewardType,rv=RULES.rewardValue;
-    var rl=rt==='pound'?'£'+rv+' off':rt==='percent'?rv+'% discount':'Free '+rv;
-    t('rb-sub','Customer has earned: '+rl+' — Apply or let them keep accumulating');
-  } else rb.style.display='none';
-  $('aps-spend').value='';t('pts-preview','');
-  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+function updateStats() {
+  document.getElementById('stat-orders').textContent = ORDERS.length;
+  // Count unique customers
+  const uniqueCustomers = new Set(ORDERS.map(o => o.customer_phone)).size;
+  document.getElementById('stat-customers').textContent = uniqueCustomers;
 }
 
-function updatePtsPreview(){
-  var spend=parseFloat($('aps-spend').value)||0;
-  if(!spend){t('pts-preview','');return;}
-  var pts=Math.floor(spend*(RULES.pointsPerPound||1));
-  t('pts-preview','Will add: +'+pts+' points for £'+spend.toFixed(2)+' spend');
+function startQRScanner() {
+  const video = document.getElementById('video');
+  navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}})
+    .then(stream => {
+      video.srcObject = stream;
+      scanQR(video);
+    })
+    .catch(err => console.log('Camera access denied'));
 }
 
-window.addPtsFromScan=function(){
-  if(!SCAN_PHONE||!SCAN_CUST){toast('No customer selected');return;}
-  var spend=parseFloat($('aps-spend').value);
-  if(!spend||spend<=0){toast('Enter spend amount');return;}
-  if(spend<(RULES.minSpend||0)){toast('Min spend is £'+(RULES.minSpend||0).toFixed(2));return;}
-  var pts=Math.floor(spend*(RULES.pointsPerPound||1));
-  var newPts=(SCAN_CUST.points||0)+pts;
-  sUpsert('merchant_customers',Object.assign({merchant_id:MID,phone:SCAN_PHONE},SCAN_CUST,{
-    points:newPts,visitCount:(SCAN_CUST.visit_count||0)+1,
-    totalSpend:(SCAN_CUST.total_spend||0)+spend,lastVisit:Date.now()
-  })).then(function(){
-    sAdd('transactions',{merchant_id:MID,phone:SCAN_PHONE,amount:spend,points_added:pts,timestamp:Date.now(),type:'purchase'});
-    SCAN_CUST.points=newPts;SCAN_CUST.visitCount=(SCAN_CUST.visit_count||0)+1;SCAN_CUST.totalSpend=(SCAN_CUST.total_spend||0)+spend;
-    showScanResult();
-    toast('+'+pts+' points added! Total: '+newPts+' pts');
-    $('aps-spend').value='';t('pts-preview','');
-    loadCusts();
-  }).catch(function(){toast('Error adding points');});
-};
-
-window.applyReward=function(){
-  if(!SCAN_PHONE||!SCAN_CUST){return;}
-  var thresh=RULES.threshold||100;
-  var newPts=(SCAN_CUST.points||0)-thresh;
-  var rt=RULES.rewardType,rv=RULES.rewardValue;
-  var rl=rt==='pound'?'£'+rv+' off':rt==='percent'?rv+'% discount':'Free '+rv;
-  sUpsert('merchant_customers',Object.assign({merchant_id:MID,phone:SCAN_PHONE},SCAN_CUST,{
-    points:newPts<0?0:newPts,rewardsRedeemed:(SCAN_CUST.rewardsRedeemed||0)+1
-  })).then(function(){
-    sAdd('transactions',{merchant_id:MID,phone:SCAN_PHONE,points_added:-thresh,timestamp:Date.now(),type:'redeem',reason:rl});
-    SCAN_CUST.points=newPts<0?0:newPts;SCAN_CUST.rewardsRedeemed=(SCAN_CUST.rewardsRedeemed||0)+1;
-    showScanResult();
-    toast('🎁 Reward applied: '+rl+' | Points reset to '+SCAN_CUST.points);
-    loadCusts();
-  }).catch(function(){toast('Error applying reward');});
-};
-
-window.skipReward=function(){
-  toast('Reward skipped — customer keeps accumulating points');
-  $('reward-banner').style.display='none';
-};
-
-// =====================
-// TILL (manual)
-// =====================
-window.tillLookup=function(phone){
-  phone=phone.replace(/\s/g,'');if(phone.length<10){$('tc-res').style.display='none';return;}
-  sGet('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(function(d){
-    var c=(Array.isArray(d)?d[0]:d)||{};var el=$('tc-res');el.style.display='block';
-    // Also look up real name from users collection
-    sGet('users','phone=eq.'+encodeURIComponent(SCAN_PHONE)+'&limit=1').then(function(ud){
-      var users=(Array.isArray(ud)?ud:[]).map(function(doc){return Object.assign({},frFS(doc));});
-      var match=users.find(function(u){return(u.phone||'').replace(/\s/g,'')===(phone||'').replace(/\s/g,'');});
-      var realName=match?match.name:null;
-      var nm=realName||(c&&c.name&&c.name!=='Customer'?c.name:'');
-      if(c&&c.phone){
-        t('tr-nm',nm||c.name||'Customer');
-        t('tr-pt',(c.points||0)+' pts');
-        t('tr-sb','Visits: '+(c.visit_count||c.visit_count||0));
-      } else {
-        t('tr-nm',nm||(realName?realName:'New customer'));
-        t('tr-pt','0 pts');
-        t('tr-sb',nm?nm+' — first visit':'Will be auto-registered');
-      }
-    }).catch(function(){
-      if(c&&c.phone){t('tr-nm',c.name||'Customer');t('tr-pt',(c.points||0)+' pts');t('tr-sb','Visits: '+(c.visit_count||c.visit_count||0));}
-      else{t('tr-nm','New customer');t('tr-pt','0 pts');t('tr-sb','Will be auto-registered');}
-    });
-  }).catch(function(){});
-};
-window.tillAddPoints=function(){
-  var phone=$('till-phone').value.replace(/\s/g,'');
-  var spend=parseFloat($('till-spend').value);
-  if(!phone||phone.length<10){toast('Enter customer phone');return;}
-  if(!spend||spend<=0){toast('Enter spend amount');return;}
-  if(spend<(RULES.minSpend||0)){toast('Min spend is £'+(RULES.minSpend||0).toFixed(2));return;}
-  var pts=Math.floor(spend*(RULES.pointsPerPound||1));
-  sGet('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(function(d){
-    var cu=(Array.isArray(d)?d[0]:null)||{points:0,visit_count:0,total_spend:0,name:'Customer'};
-    var newPts=(cu.points||0)+pts;
-    sUpsert('merchant_customers',{merchant_id:MID,phone:phone,name:cu.name||'Customer',points:newPts,visit_count:(cu.visit_count||0)+1,total_spend:(cu.total_spend||0)+spend,joined_at:cu.joined_at||Date.now(),last_updated:Date.now()},'merchant_id,phone');
-    sAdd('transactions',{merchant_id:MID,phone:phone,amount:spend,points_added:pts,timestamp:Date.now(),type:'purchase'});
-    t('tr-pt',newPts+' pts (+'+pts+')');t('tr-sb','✅ Points added!');$('till-spend').value='';
-    toast('+'+pts+' points! Customer total: '+newPts+' pts');loadCusts();
-  }).catch(function(){toast('Error adding points');});
-};
-window.tillRedeem=function(){
-  var phone=$('till-phone').value.replace(/\s/g,'');
-  if(!phone||phone.length<10){toast('Enter customer phone');return;}
-  sGet('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(function(d){
-    var cu=(Array.isArray(d)?d[0]:null)||{};if(!cu.phone){toast('Customer not found');return;}
-    var thresh=RULES.threshold||100;
-    if((cu.points||0)<thresh){toast('Not enough points ('+cu.points+'/'+thresh+')');return;}
-    var newPts=Math.max(0,(cu.points||0)-thresh);
-    sUpsert('merchant_customers',Object.assign({},cu,{merchant_id:MID,phone:phone,points:newPts,last_updated:Date.now()}),'merchant_id,phone');
-    sAdd('transactions',{merchant_id:MID,phone:phone,points_added:-thresh,timestamp:Date.now(),type:'redeem'});
-    toast('🎁 Reward redeemed! Points: '+newPts);loadCusts();
-  }).catch(function(){toast('Error redeeming');});
-};
-window.copyId=function(){var sid=MDATA&&MDATA.shop_id||MDATA&&MDATA.shopId||'';if(sid){navigator.clipboard.writeText(sid).catch(function(){});toast('Shop ID copied: '+sid);}}
-function t2(id){var e=$(id);return e?e.textContent:'';}
-
-// PRODUCTS
-function loadProds(){
-  sGet('products','merchant_id=eq.'+MID+'&order=created_at.desc').then(function(d){
-    allProds=(Array.isArray(d)?d:[]);
-    renderProds();
-  }).catch(function(){});
-}
-function renderProds(){
-  var el=$('prod-g');
-  if(!allProds.length){el.innerHTML='<div class="empty">No products yet — add your first above</div>';return;}
-  el.innerHTML=allProds.map(function(p){
-    var tags='';
-    if(p.collect!==false)tags+='<span class="bdg bp">Collect</span> ';
-    if(p.delivery)tags+='<span class="bdg bg">Delivery</span> ';
-    if(p.active===false)tags+='<span class="bdg bo">Hidden</span>';
-    return '<div class="pc"><div class="pc-img">'+(p.emoji||'🛍️')+'</div>' +
-      '<div class="pc-bd"><div class="pc-nm">'+esc(p.name)+'</div>' +
-      '<div style="margin-bottom:4px">'+tags+'</div>' +
-      '<div class="pc-pr">£'+Number(p.price).toFixed(2)+'</div>' +
-      '<div class="pc-acts"><div class="pc-edit" onclick="editProd(\''+p.id+'\')">Edit</div>' +
-      '<div class="pc-hide" onclick="togProd(\''+p.id+'\','+( p.active!==false)+')">'+( p.active===false?'Show':'Hide')+'</div></div></div></div>';
-  }).join('');
-}
-window.oPM=function(){editProdId=null;$('pm-title').textContent='Add product';$('pm-btn').textContent='Add product';['pm-nm','pm-pr','pm-em','pm-desc'].forEach(function(i){$(i).value='';});$('pm-co').checked=true;$('pm-de').checked=false;$('prod-modal').classList.add('show');};
-window.cPM=function(){$('prod-modal').classList.remove('show');};
-window.editProd=function(id){var p=allProds.find(function(x){return x.id===id;});if(!p)return;editProdId=id;$('pm-title').textContent='Edit product';$('pm-btn').textContent='Save changes';$('pm-nm').value=p.name||'';$('pm-pr').value=p.price||'';$('pm-em').value=p.emoji||'';$('pm-cat').value=p.category||'other';$('pm-desc').value=p.description||'';$('pm-co').checked=p.collect!==false;$('pm-de').checked=p.delivery||false;$('prod-modal').classList.add('show');};
-window.togProd=function(id,cur){sUpd('products','id=eq.'+id,{active:!cur}).then(function(){loadProds();toast(cur?'Product hidden':'Product visible');});};
-window.saveProd=function(){
-  var name=$('pm-nm').value.trim(),price=parseFloat($('pm-pr').value);
-  if(!name){toast('Enter product name');return;}if(!price||price<=0){toast('Enter valid price');return;}
-  if(!MID){toast('Not logged in — please refresh');return;}
-  var shopNm=MDATA&&MDATA.name?MDATA.name:($('s-nm')?$('s-nm').value.trim():'My Shop');
-  var data={name:name,price:price,emoji:$('pm-em').value.trim()||'🛍️',category:$('pm-cat').value,description:$('pm-desc').value.trim(),collect:$('pm-co').checked,delivery:$('pm-de').checked,active:true,merchantId:MID,shopName:shopNm,createdAt:editProdId?undefined:Date.now(),updatedAt:Date.now()};
-  if(data.createdAt===undefined)delete data.createdAt;
-  var p=editProdId?sUpd('products','id=eq.'+editProdId,data):sAdd('products',Object.assign({merchant_id:MID},data));
-  p.then(function(res){
-    if(res.error){toast('Error: '+res.error.message);return;}
-    window.cPM();loadProds();toast(editProdId?'Product updated!':'✅ Product added!');
-  }).catch(function(e){toast('Error: '+e.message+'. Try signing out and back in.');console.error(e);});
-};
-
-// ORDERS
-function loadOrds(){
-  sGet('orders','merchant_id=eq.'+MID+'&order=created_at.desc&limit=30').then(function(d){
-    allOrds=(Array.isArray(d)?d:[]).sort(function(a,b){return(b.createdAt||0)-(a.createdAt||0);});
-    var el=$('ords-list');
-    if(!allOrds.length){el.innerHTML='<div class="empty">No orders yet</div>';return;}
-    el.innerHTML=allOrds.map(function(o){
-      var sc=(o.status==='delivered'||o.status==='collected')?'bg':o.status==='ready'?'bp':'bo';
-      var sl=o.status==='collected'?'Collected':o.status==='delivered'?'Delivered':o.status==='ready'?'Ready':'Pending';
-      return '<div class="ocard"><div><div class="oc-id">'+(o.orderId||o.id.slice(0,8).toUpperCase())+'</div>' +
-        '<div class="oc-pn">'+(o.emoji||'🛍️')+' '+esc(o.productName)+' × '+(o.qty||1)+'</div>' +
-        '<div class="oc-mt">'+(o.type==='collect'?'🏪 Collect':'🚚 Delivery')+(o.address?' · '+esc(o.address):'')+'</div></div>' +
-        '<div style="text-align:right"><div class="oc-tot">£'+Number(o.total).toFixed(2)+'</div>' +
-        '<span class="bdg '+sc+'">'+sl+'</span>' +
-        (o.status==='pending'?'<div class="btn-rdy" onclick="markRdy(\''+o.id+'\')">Mark ready</div>':'')+
-        '</div></div>';
-    }).join('');
-  }).catch(function(){});
-}
-window.markRdy=function(id){sUpd('orders','id=eq.'+id,{status:'ready'}).then(function(){loadOrds();toast('Order marked ready!');});};
-
-// CUSTOMERS
-function loadCusts(){
-  sGet('merchant_customers','merchant_id=eq.'+MID).then(function(d){
-    allCusts=(Array.isArray(d)?d:[]).sort(function(a,b){return(b.points||0)-(a.points||0);});
-    renderCusts(allCusts);
-    t('kc',allCusts.length);
-    var totalRew=allCusts.reduce(function(a,c){return a+(c.rewardsRedeemed||0);},0);
-    t('kr',totalRew);
-    loadTxCount();
-  }).catch(function(){});
-}
-function loadTxCount(){sGet('transactions','merchant_id=eq.'+MID+'&order=timestamp.desc&limit=100').then(function(d){t('kt',(Array.isArray(d)?d:[]).length);}).catch(function(){});}
-function renderCusts(list){
-  var b=$('custs-body');
-  if(!list.length){b.innerHTML='<tr class="empty-r"><td colspan="5">No customers yet</td></tr>';return;}
-  b.innerHTML=list.map(function(c){return '<tr><td><strong>'+esc(c.name||'Customer')+'</strong></td><td>'+esc(c.phone||c.id)+'</td>' +
-    '<td><span class="bdg bp">'+(c.points||0)+' pts</span></td><td>'+(c.visit_count||c.visit_count||0)+'</td>' +
-    '<td>'+(c.joinedAt?tAgo(c.joinedAt):'-')+'</td></tr>';}).join('');
-}
-window.filterC=function(q){renderCusts(q.trim()?allCusts.filter(function(c){return(c.name||'').toLowerCase().includes(q.toLowerCase())||(c.phone||'').includes(q);}):allCusts);};
-
-// SETTINGS
-window.updateRPrev=function(){
-  var ppp=parseInt($('s-ppp').value)||1,thresh=parseInt($('s-thresh').value)||100;
-  var rt=$('s-rt').value,rv=$('s-rv').value||'5';
-  var rl=rt==='pound'?'£'+rv+' off':rt==='percent'?rv+'% discount':'Free '+rv;
-  t('rp-s','Earn '+ppp+' point'+(ppp>1?'s':'')+' per £1 spent. Reach '+thresh+' points → get '+rl+'.');
-};
-window.saveSettings=function(){
-  var r={pointsPerPound:parseInt($('s-ppp').value)||1,minSpend:parseFloat($('s-min').value)||0,threshold:parseInt($('s-thresh').value)||100,rewardType:$('s-rt').value,rewardValue:$('s-rv').value};
-  RULES=r;
-  sUpsert('merchants',{id:MID,rules_json:JSON.stringify(r),name:$('s-nm').value.trim()||MDATA.name||'',phone:$('s-ph').value.trim(),address:$('s-ad').value.trim(),shopId:MDATA.shopId||('SL-'+MID.slice(0,4).toUpperCase()),subscription:MDATA.subscription||'trial',createdAt:MDATA.createdAt||Date.now(),email:MDATA.email||''})
-    .then(function(){toast('Settings saved!');loadMerchant();}).catch(function(){toast('Error saving');});
-};
-
-// TABS
-var TABS=['scanner','till','products','orders','customers','messages','settings','notify'];
-window.showTab=function(tab){
-  if(tab==='notify'){t('notif-count',allCusts.length);loadNotifHist();}if(tab==='messages'){loadMsgThreads();}
-  TABS.forEach(function(t2){var el=$('tab-'+t2);if(el)el.style.display=t2===tab?'block':'none';});
-  document.querySelectorAll('.tab-btn').forEach(function(b,i){b.classList.toggle('on',TABS[i]===tab);});
-  if(tab==='orders')loadOrds();
-  if(tab==='customers'){loadCusts();clearInterval(window._custPoll);window._custPoll=setInterval(function(){if(document.getElementById('tab-customers')&&document.getElementById('tab-customers').style.display!=='none'){loadCusts();}else{clearInterval(window._custPoll);}},15000);}
-  if(tab==='products')loadProds();
-  if(tab!=='scanner')stopCam();
-};
-
-// UTILS
-function $(id){return document.getElementById(id);}
-function t(id,v){var e=$(id);if(e)e.textContent=v;}
-function show(id,d){var e=$(id);if(e)e.style.display=d||'block';}
-function hide(id){var e=$(id);if(e)e.style.display='none';}
-function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function showE(el,msg){el.textContent=msg;el.style.display='block';}
-function tAgo(ts){if(!ts)return'';var d=Date.now()-ts,m=Math.floor(d/60000),h=Math.floor(d/3600000),dy=Math.floor(d/86400000);if(m<1)return'Just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';return dy+'d ago';}
-var TT;function toast(msg){var t2=$('toast');t2.textContent=msg;t2.classList.add('on');clearTimeout(TT);TT=setTimeout(function(){t2.classList.remove('on');},2800);}
-
-// =====================
-// NOTIFICATIONS
-// =====================
-window.sendNotif=function(){
-  var title=($('notif-title').value||'').trim();
-  var body=($('notif-body').value||'').trim();
-  var link=($('notif-link').value||'').trim();
-  if(!title){toast('Enter a message title');return;}
-  if(!body){toast('Enter a message body');return;}
-  if(!MID){toast('Not logged in');return;}
-  $('notif-btn').disabled=true;
-  $('notif-btn').textContent='Sending...';
-  $('notif-ok').style.display='none';
-  var msg={title:title,body:body,link:link,sentAt:Date.now(),merchantId:MID,shopName:(MDATA&&MDATA.name)||'Shop',recipients:allCusts.length};
-  // Save notification to Firestore under merchant
-  sAdd('notifications',Object.assign({merchant_id:MID},msg)).then(function(){
-    // Also save a copy to each customer's notifications
-    var promises=allCusts.slice(0,100).map(function(c){
-      return sAdd('notifications',{merchant_id:MID,title:title,body:body,link:link,read:false,sentAt:Date.now()}).catch(function(){});
-    });
-    return Promise.all(promises);
-  }).then(function(){
-    $('notif-btn').disabled=false;
-    $('notif-btn').textContent='📤 Send to all customers';
-    $('notif-ok').style.display='block';
-    $('notif-title').value='';
-    $('notif-body').value='';
-    $('notif-link').value='';
-    t('notif-count',allCusts.length);
-    loadNotifHist();
-    toast('✅ Message sent to '+allCusts.length+' customers!');
-  }).catch(function(){
-    $('notif-btn').disabled=false;
-    $('notif-btn').textContent='📤 Send to all customers';
-    toast('Error sending notification');
-  });
-};
-
-function loadNotifHist(){
-  // Load messages sent by this merchant + admin broadcasts to merchants
-  Promise.all([
-    sGet('notifications','merchant_id=eq.'+MID+'&order=sent_at.desc&limit=20').then(function(d){return(d.documents||[]).map(function(doc){return Object.assign({_type:'sent'},frFS(doc));});}).catch(function(){return[];}),
-    sGet('broadcasts','audience=eq.merchants&order=sent_at.desc&limit=10').then(function(d){return(d.documents||[]).map(function(doc){return Object.assign({_type:'admin'},frFS(doc));});}).catch(function(){return[];})
-  ]).then(function(res){
-    var sent=res[0],adminBc=res[1];
-    var el=$('notif-hist');
-    if(!el)return;
-    // Show admin broadcasts at top as info boxes
-    var adminHtml=adminBc.length?'<div style="background:var(--pu2);border-radius:var(--r);padding:11px 13px;margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:var(--pu);margin-bottom:4px">📣 FROM STASHLO ADMIN</div>'+adminBc.slice(0,3).map(function(m){return'<div style="font-size:13px;font-weight:600;margin-bottom:2px">'+esc(m.title)+'</div><div style="font-size:12px;color:var(--mu)">'+esc(m.body)+'</div>';}).join('<hr style="border:none;border-top:1px solid #ddd;margin:6px 0">')+'</div>':'';
-    if(!sent.length){el.innerHTML=adminHtml+'<div class="empty">No messages sent yet</div>';return;}
-    el.innerHTML=adminHtml+sent.map(function(m){
-      return '<div style="background:var(--wh);border-radius:var(--r);padding:13px 14px;margin-bottom:8px">'
-        +'<div style="font-weight:700;font-size:14px;margin-bottom:3px">'+esc(m.title)+'</div>'
-        +'<div style="font-size:13px;color:var(--mu);margin-bottom:4px">'+esc(m.body)+'</div>'
-        +'<div style="font-size:11px;color:var(--mu)">'+tAgo(m.sentAt)+' · '+(m.recipients||0)+' customers</div>'
-        +'</div>';
-    }).join('');
-  }).catch(function(){});
+function scanQR(video) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  
+  setInterval(() => {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    if (code) {
+      showScannedResult(code.data);
+    }
+  }, 100);
 }
 
+function showScannedResult(data) {
+  const resultDiv = document.getElementById('scanner-result');
+  document.getElementById('scanned-value').textContent = data;
+  resultDiv.style.display = 'block';
+  setTimeout(() => resultDiv.style.display = 'none', 3000);
+  showToast(`Scanned: ${data.substring(0, 20)}...`);
+}
+
+function processSale() {
+  const phone = document.getElementById('till-phone').value.trim();
+  const amount = parseFloat(document.getElementById('till-amount').value);
+  
+  if (!phone || !amount || amount <= 0) {
+    showToast('Enter valid phone and amount');
+    return;
+  }
+  
+  const payload = {
+    merchant_id: MERCHANT_ID,
+    customer_phone: phone,
+    amount: amount,
+    status: 'completed',
+    createdAt: new Date().toISOString()
+  };
+  
+  fetch(`${SURL}/rest/v1/orders`, {
+    method: 'POST',
+    headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(d => {
+    showToast(`✅ Sale processed!`);
+    document.getElementById('till-phone').value = '';
+    document.getElementById('till-amount').value = '';
+    loadData();
+  })
+  .catch(e => showToast('Sale failed'));
+}
+
+function openProductModal() {
+  document.getElementById('product-modal').style.display = 'flex';
+}
+
+function closeProductModal() {
+  document.getElementById('product-modal').style.display = 'none';
+}
+
+function saveProduct() {
+  const name = document.getElementById('product-name').value.trim();
+  const price = parseFloat(document.getElementById('product-price').value);
+  const points = parseInt(document.getElementById('product-points').value);
+  
+  if (!name || !price || price < 0) {
+    showToast('Fill all fields correctly');
+    return;
+  }
+  
+  const payload = {
+    merchant_id: MERCHANT_ID,
+    name: name,
+    price: price,
+    points_reward: points || 10
+  };
+  
+  fetch(`${SURL}/rest/v1/products`, {
+    method: 'POST',
+    headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(d => {
+    showToast(`✅ ${name} added!`);
+    closeProductModal();
+    document.getElementById('product-name').value = '';
+    document.getElementById('product-price').value = '';
+    document.getElementById('product-points').value = '10';
+    loadData();
+  })
+  .catch(e => showToast('Save failed'));
+}
+
+function deleteProduct(id) {
+  if (!confirm('Delete this product?')) return;
+  
+  fetch(`${SURL}/rest/v1/products?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: {'apikey': SKEY}
+  })
+  .then(() => {
+    showToast('✅ Deleted');
+    loadData();
+  })
+  .catch(e => showToast('Delete failed'));
+}
+
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(name + '-screen').classList.add('active');
+  
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2800);
+}
 </script>
 </body>
 </html>
