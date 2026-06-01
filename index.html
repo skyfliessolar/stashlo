@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0a0a14">
-<title>Stashlo</title>
+<title>Stashlo - Customer Wallet</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:system-ui,-apple-system,'Segoe UI',sans-serif; background:#f0efff; color:#1a1a2e; }
@@ -20,17 +20,20 @@ input { font-family:inherit; border:none; }
 #splash-loader div:nth-child(3) { animation-delay:0.4s; }
 @keyframes bounce { 0%,100% { opacity:0.3; } 50% { opacity:1; } }
 
-#auth { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; align-items:center; justify-content:center; padding:20px; }
+#auth { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
 .auth-box { background:#fff; border-radius:24px; padding:32px 24px; width:100%; max-width:380px; }
 .auth-box h1 { font-size:20px; font-weight:800; margin-bottom:5px; }
 .auth-box p { font-size:13px; color:#706f87; margin-bottom:20px; line-height:1.5; }
 .auth-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; margin-bottom:12px; font-size:15px; }
 .auth-btn { width:100%; padding:13px; background:#0a0a14; color:#fff; border-radius:12px; font-weight:700; font-size:15px; margin-top:8px; }
+.auth-toggle { text-align:center; margin-top:16px; font-size:13px; color:#706f87; }
+.auth-toggle a { color:#6C5CE7; cursor:pointer; }
 .auth-error { color:#c62828; font-size:12px; margin-top:10px; padding:10px; background:#ffebee; border-radius:8px; display:none; }
 
 #app { display:none; flex-direction:column; min-height:100vh; padding-bottom:80px; }
-.topbar { background:#0a0a14; color:#fff; padding:14px 18px; font-weight:800; font-size:16px; position:sticky; top:0; z-index:100; }
+.topbar { background:#0a0a14; color:#fff; padding:14px 18px; font-weight:800; font-size:16px; position:sticky; top:0; z-index:100; display:flex; justify-content:space-between; align-items:center; }
 .topbar b { color:#6C5CE7; }
+.topbar-action { cursor:pointer; font-size:18px; }
 
 .screen { display:none; padding:16px; }
 .screen.active { display:block; }
@@ -92,7 +95,7 @@ input { font-family:inherit; border:none; }
 .detail-body { background:#fff; border-radius:24px 24px 0 0; flex:1; padding:20px; color:#1a1a2e; }
 .detail-row { background:#f9f9fb; border-radius:12px; padding:14px; margin-bottom:12px; }
 .detail-row-label { font-size:11px; font-weight:700; color:#706f87; text-transform:uppercase; margin-bottom:6px; }
-.detail-row-value { font-size:14px; font-weight:700; color:#1a1a2e; }
+.detail-row-value { font-size:14px; font-weight:700; color:#1a1a2e; word-break:break-all; }
 
 .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#0a0a14; color:#fff; padding:10px 20px; border-radius:100px; font-size:13px; z-index:999; opacity:0; transition:opacity 0.3s; }
 .toast.show { opacity:1; }
@@ -109,15 +112,26 @@ input { font-family:inherit; border:none; }
   <div class="auth-box">
     <h1>Stashlo</h1>
     <p>Smart Loyalty Wallet</p>
-    <input type="email" id="email" class="auth-input" placeholder="Email" value="arumugams2019@gmail.com">
-    <input type="password" id="password" class="auth-input" placeholder="Password" value="test@123">
-    <button class="auth-btn" onclick="login()">Sign in</button>
-    <div class="auth-error" id="auth-error"></div>
+    <div id="auth-login">
+      <input type="email" id="email" class="auth-input" placeholder="Email">
+      <input type="password" id="password" class="auth-input" placeholder="Password">
+      <button class="auth-btn" onclick="login()">Sign in</button>
+      <div class="auth-toggle">New user? <a onclick="showSignup()">Create account</a></div>
+      <div class="auth-error" id="auth-error"></div>
+    </div>
+    <div id="auth-signup" style="display:none;">
+      <input type="email" id="signup-email" class="auth-input" placeholder="Email">
+      <input type="password" id="signup-password" class="auth-input" placeholder="Password (6+ chars)">
+      <input type="text" id="signup-name" class="auth-input" placeholder="Full name">
+      <button class="auth-btn" onclick="signup()">Create account</button>
+      <div class="auth-toggle">Have account? <a onclick="showLogin()">Sign in</a></div>
+      <div class="auth-error" id="signup-error"></div>
+    </div>
   </div>
 </div>
 
 <div id="app">
-  <div class="topbar">Stash<b>lo</b></div>
+  <div class="topbar">Stash<b>lo</b> <div class="topbar-action" onclick="logout()">🚪</div></div>
 
   <div class="screen active" id="home-screen">
     <div class="hero">
@@ -250,11 +264,11 @@ input { font-family:inherit; border:none; }
 const SURL = 'https://gcwevgaymahywqjorhnn.supabase.co';
 const SKEY = 'sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
 
-let TOKEN = null, UID = null, CARDS = [], CURRENT_BRAND = null, TEMP_LAT = null, TEMP_LNG = null;
+let TOKEN = null, UID = null, USER_EMAIL = null, CARDS = [], CURRENT_BRAND = null, TEMP_LAT = null, TEMP_LNG = null;
 
 const BRANDS = [
   {id: 'tesco', name: 'Tesco Clubcard', emoji: '🛒', color: '#00539B'},
-  {id: 'nectar', name: 'Nectar', emoji: '🎯', color: '#FF6600'},
+  {id: 'nectar', name: 'Nectar', emoji: '🏵️', color: '#FF6600'},
   {id: 'boots', name: 'Boots Advantage', emoji: '💊', color: '#00A3AD'},
   {id: 'costa', name: 'Costa Coffee', emoji: '☕', color: '#622F22'},
   {id: 'bp', name: 'BP Rewards', emoji: '⛽', color: '#009A44'},
@@ -264,7 +278,7 @@ const BRANDS = [
   {id: 'waterstones', name: 'Waterstones', emoji: '📚', color: '#1B365D'},
   {id: 'johnlewis', name: 'John Lewis', emoji: '🏬', color: '#3D3D3D'},
   {id: 'ikea', name: 'IKEA Family', emoji: '🛋️', color: '#0058A3'},
-  {id: 'lidl', name: 'Lidl Plus', emoji: '🛍️', color: '#0050AA'},
+  {id: 'lidl', name: 'Lidl Plus', emoji: '🛒', color: '#0050AA'},
   {id: 'asda', name: 'Asda', emoji: '🛒', color: '#78BE20'},
   {id: 'morrisons', name: 'Morrisons', emoji: '🛒', color: '#F5A623'},
   {id: 'waitrose', name: 'myWaitrose', emoji: '🥬', color: '#2d2d2d'},
@@ -281,12 +295,25 @@ window.addEventListener('load', () => {
     if (sess && sess.token && sess.uid && sess.expiry > Date.now()) {
       TOKEN = sess.token;
       UID = sess.uid;
+      USER_EMAIL = sess.email;
       showApp();
     } else {
       showAuth();
     }
   }, 1500);
 });
+
+function showLogin() {
+  document.getElementById('auth-login').style.display = 'block';
+  document.getElementById('auth-signup').style.display = 'none';
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+function showSignup() {
+  document.getElementById('auth-login').style.display = 'none';
+  document.getElementById('auth-signup').style.display = 'block';
+  document.getElementById('signup-error').style.display = 'none';
+}
 
 function login() {
   const email = document.getElementById('email').value.trim();
@@ -307,19 +334,61 @@ function login() {
   .then(r => r.json())
   .then(d => {
     if (!d.access_token) {
-      errDiv.textContent = 'Wrong email or password';
+      errDiv.textContent = d.error_description || 'Login failed';
       errDiv.style.display = 'block';
       return;
     }
     TOKEN = d.access_token;
     UID = d.user.id;
-    localStorage.setItem('sl_session', JSON.stringify({token: TOKEN, uid: UID, expiry: Date.now() + 3600000}));
+    USER_EMAIL = d.user.email;
+    localStorage.setItem('sl_session', JSON.stringify({token: TOKEN, uid: UID, email: USER_EMAIL, expiry: Date.now() + 3600000}));
     showApp();
   })
   .catch(e => {
-    errDiv.textContent = 'Login error';
+    errDiv.textContent = 'Connection error';
     errDiv.style.display = 'block';
   });
+}
+
+function signup() {
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const name = document.getElementById('signup-name').value.trim();
+  const errDiv = document.getElementById('signup-error');
+  
+  if (!email || !password || password.length < 6 || !name) {
+    errDiv.textContent = 'All fields required, password 6+ chars';
+    errDiv.style.display = 'block';
+    return;
+  }
+
+  fetch(`${SURL}/auth/v1/signup`, {
+    method: 'POST',
+    headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
+    body: JSON.stringify({email, password, data: {name}})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.user) {
+      showToast('✅ Account created! Signing in...');
+      setTimeout(() => login(), 1500);
+    } else {
+      errDiv.textContent = d.error_description || 'Signup failed';
+      errDiv.style.display = 'block';
+    }
+  })
+  .catch(e => {
+    errDiv.textContent = 'Connection error';
+    errDiv.style.display = 'block';
+  });
+}
+
+function logout() {
+  localStorage.removeItem('sl_session');
+  TOKEN = null;
+  UID = null;
+  showAuth();
+  showLogin();
 }
 
 function showAuth() {
@@ -458,7 +527,7 @@ function saveCard() {
   
   const payload = {
     user_id: UID,
-    id: CURRENT_BRAND.id,
+    id: CURRENT_BRAND.id + '_' + Date.now(),
     name: CURRENT_BRAND.name,
     shopName: CURRENT_BRAND.name,
     emoji: CURRENT_BRAND.emoji,
