@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0a0a14">
 <link rel="manifest" href="manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <title>Stashlo - Customer Wallet</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -159,6 +160,7 @@ a{text-decoration:none;color:inherit}
 .toast.show{opacity:1}
 
 /* Empty */
+.item-card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
 .empty{text-align:center;padding:48px 20px;color:#706f87}
 .empty-ico{font-size:48px;margin-bottom:14px}
 .empty-txt{font-size:14px;line-height:1.7}
@@ -260,6 +262,7 @@ a{text-decoration:none;color:inherit}
       <button onclick="searchShops()">Go</button>
     </div>
     <div id="shop-results"></div>
+    <div id="stashlo-prods-section" style="display:none;margin-bottom:20px"></div>
     <div id="my-shops-section">
       <div class="sec-head"><span class="sec-title">My local shops</span></div>
       <div id="my-shops-list"></div>
@@ -270,6 +273,12 @@ a{text-decoration:none;color:inherit}
   <div class="screen" id="orders-screen">
     <div class="sec-head"><span class="sec-title">My orders</span></div>
     <div id="orders-list"></div>
+  </div>
+
+  <!-- INBOX -->
+  <div class="screen" id="inbox-screen">
+    <div class="sec-head"><span class="sec-title">Notifications</span><span class="sec-action" onclick="markAllRead()">Mark all read</span></div>
+    <div id="inbox-list"></div>
   </div>
 
   <!-- PROFILE -->
@@ -294,9 +303,45 @@ a{text-decoration:none;color:inherit}
     <div class="nav-btn" id="nav-cards" onclick="switchTab('cards')"><span class="nav-icon">💳</span><span class="nav-label">Cards</span></div>
     <div class="nav-btn" id="nav-shop" onclick="switchTab('shop')"><span class="nav-icon">🛍️</span><span class="nav-label">Shop</span></div>
     <div class="nav-btn" id="nav-orders" onclick="switchTab('orders')"><span class="nav-icon">📦</span><span class="nav-label">Orders</span></div>
+    <div class="nav-btn" id="nav-inbox" onclick="switchTab('inbox')"><span class="nav-icon">🔔</span><span class="nav-label" id="inbox-badge">Inbox</span></div>
     <div class="nav-btn" id="nav-profile" onclick="switchTab('profile')"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></div>
   </div>
 </div>
+
+<!-- Barcode Modal -->
+<div class="modal-overlay" id="barcodeModal" onclick="if(event.target===this)closeModal('barcodeModal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="bc-modal-title">Your Card</div>
+    <div style="text-align:center;padding:16px 0">
+      <div style="font-size:40px;margin-bottom:6px" id="bc-emoji"></div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px" id="bc-name"></div>
+      <div style="font-size:13px;color:#706f87;margin-bottom:20px" id="bc-holder"></div>
+      <div style="background:#fff;border-radius:16px;padding:16px;display:inline-block;box-shadow:0 2px 12px rgba(0,0,0,.1)">
+        <svg id="barcode-svg"></svg>
+      </div>
+      <div style="font-size:13px;color:#706f87;margin-top:12px" id="bc-card-num"></div>
+    </div>
+    <button class="mbtn mbtn-gray" onclick="closeModal('barcodeModal')">Close</button>
+  </div>
+</div>
+
+<!-- Location Nearby Popup -->
+<div id="nearby-popup" style="display:none;position:fixed;top:80px;left:16px;right:16px;background:#fff;border-radius:20px;padding:16px 18px;z-index:300;box-shadow:0 8px 32px rgba(108,92,231,.25);border:2px solid #ece9ff;animation:slideDown .3s">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:700;color:#6C5CE7;margin-bottom:4px">📍 YOU'RE NEARBY</div>
+      <div style="font-size:15px;font-weight:800" id="nearby-shop-name">—</div>
+      <div style="font-size:13px;color:#706f87;margin-top:3px" id="nearby-shop-pts">—</div>
+    </div>
+    <button onclick="dismissNearby()" style="background:none;color:#a0a0b5;font-size:18px;padding:0 4px">✕</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button onclick="viewNearbyShop()" style="flex:1;padding:10px;background:#6C5CE7;color:#fff;border-radius:12px;font-weight:700;font-size:13px">View Shop</button>
+    <button onclick="dismissNearby()" style="flex:1;padding:10px;background:#f0f0f5;color:#706f87;border-radius:12px;font-weight:700;font-size:13px">Dismiss</button>
+  </div>
+</div>
+@keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 
 <!-- Add national card modal -->
 <div class="modal-overlay" id="addCardModal" onclick="if(event.target===this)closeModal('addCardModal')">
@@ -818,6 +863,235 @@ function loadMyShops(){
       <div class="shop-action">View →</div>
     </div>`).join(''):'<div class="empty" style="padding:20px"><div class="empty-txt">Find shops to add them here</div></div>';
 }
+
+// ── Barcode display ──────────────────────────────────────
+function showBarcode(card) {
+  const num = card.card_number || card.cardNumber || card.card_id || card.id || '0000000000';
+  document.getElementById('bc-emoji').textContent = card.emoji || '🛍️';
+  document.getElementById('bc-name').textContent = card.shopName || card.name;
+  document.getElementById('bc-holder').textContent = card.card_holder || card.cardHolder || '';
+  document.getElementById('bc-card-num').textContent = num;
+  document.getElementById('bc-modal-title').textContent = card.shopName || card.name;
+  // Generate barcode
+  try {
+    JsBarcode('#barcode-svg', String(num), {
+      format: 'CODE128', width: 2, height: 80, displayValue: true,
+      fontSize: 14, margin: 8, background: '#ffffff', lineColor: '#0a0a14'
+    });
+  } catch(e) {
+    // Fallback: show number as large text
+    document.getElementById('barcode-svg').outerHTML = '<div style="font-size:28px;font-weight:900;letter-spacing:4px;padding:20px">' + num + '</div>';
+  }
+  openModal('barcodeModal');
+}
+
+// ── Location & Nearby ─────────────────────────────────────
+let USER_LAT = null, USER_LNG = null, NEARBY_SHOP = null;
+let LOC_SHOPS = []; // local shops with coordinates
+
+function startLocationTracking() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    USER_LAT = pos.coords.latitude;
+    USER_LNG = pos.coords.longitude;
+    checkNearbyShops();
+  }, () => {}, { enableHighAccuracy: true });
+  // Re-check every 3 minutes when app is open
+  setInterval(() => {
+    navigator.geolocation.getCurrentPosition(pos => {
+      USER_LAT = pos.coords.latitude;
+      USER_LNG = pos.coords.longitude;
+      checkNearbyShops();
+    }, () => {});
+  }, 180000);
+}
+
+function checkNearbyShops() {
+  if (!USER_LAT || !USER_LNG) return;
+  // Check local shop cards that have saved coordinates
+  const localCards = CARDS.filter(c => c.type === 'local' && c.merchant_id);
+  if (localCards.length === 0) return;
+  // Get merchant locations
+  get('merchants', 'id=in.(' + localCards.map(c => c.merchant_id).join(',') + ')').then(d => {
+    const merchants = Array.isArray(d) ? d : [];
+    merchants.forEach(m => {
+      if (m.lat && m.lng) {
+        const dist = getDistance(USER_LAT, USER_LNG, parseFloat(m.lat), parseFloat(m.lng));
+        if (dist < 500) { // within 500 metres
+          const myCard = localCards.find(c => c.merchant_id === m.id);
+          showNearbyPopup(m, myCard);
+        }
+      }
+    });
+  }).catch(() => {});
+}
+
+function getDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function showNearbyPopup(shop, card) {
+  NEARBY_SHOP = shop;
+  txt('nearby-shop-name', (shop.logo_emoji || '🏪') + ' ' + shop.name);
+  txt('nearby-shop-pts', card ? (card.points || 0) + ' points accumulated' : 'Loyalty card available');
+  document.getElementById('nearby-popup').style.display = 'block';
+  setTimeout(dismissNearby, 8000);
+}
+function dismissNearby() { document.getElementById('nearby-popup').style.display = 'none'; }
+function viewNearbyShop() { dismissNearby(); if (NEARBY_SHOP) loadShopById(NEARBY_SHOP.id); }
+
+function captureShopLocation(mid) {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    // Save to merchant record
+    patch('merchants', 'id=eq.' + mid, { lat: lat, lng: lng }).catch(() => {});
+    toast('📍 Shop location saved!');
+  }, () => toast('Location not available'));
+}
+
+// ── Inbox / Broadcasts ────────────────────────────────────
+let INBOX_MSGS = [], READ_IDS = JSON.parse(localStorage.getItem('sl_read') || '[]');
+
+function loadInbox() {
+  // Get broadcasts for customers + broadcasts from shops user has cards for
+  const promises = [
+    get('broadcasts', 'audience=in.(all,customers)&order=sent_at.desc&limit=30')
+  ];
+  const localCards = CARDS.filter(c => c.type === 'local' && c.merchant_id);
+  if (localCards.length > 0) {
+    promises.push(get('notifications', 'merchant_id=in.(' + localCards.map(c => c.merchant_id).join(',') + ')&order=sent_at.desc&limit=20'));
+  }
+  Promise.all(promises).then(([broadcasts, notifications]) => {
+    const bcast = Array.isArray(broadcasts) ? broadcasts.map(b => ({...b, _type: 'broadcast', _from: 'Stashlo'})) : [];
+    const notifs = Array.isArray(notifications) ? notifications.map(n => ({...n, _type: 'notification', _from: n.merchant_id, title: n.title || 'New message', body: n.body || '', sent_at: n.sent_at})) : [];
+    INBOX_MSGS = [...bcast, ...notifs].sort((a,b) => (b.sent_at||0)-(a.sent_at||0));
+    renderInbox();
+    updateInboxBadge();
+  }).catch(() => {});
+}
+
+function renderInbox() {
+  const el = document.getElementById('inbox-list'); if (!el) return;
+  if (INBOX_MSGS.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">🔔</div><div class="empty-txt">No notifications yet</div></div>';
+    return;
+  }
+  el.innerHTML = INBOX_MSGS.map(m => {
+    const isRead = READ_IDS.includes(m.id);
+    return `<div class="item-card" style="margin-bottom:10px;border-left:3px solid ${isRead?'#e0e0e0':'#6C5CE7'}" onclick="markRead('${m.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:#6C5CE7;margin-bottom:3px">${m._type==='broadcast'?'📢 Stashlo':'🏪 '+m._from}</div>
+          <div style="font-size:15px;font-weight:700">${m.title||'Notification'}</div>
+          <div style="font-size:13px;color:#706f87;margin-top:4px">${m.body||''}</div>
+          <div style="font-size:11px;color:#a0a0b5;margin-top:6px">${m.sent_at?new Date(m.sent_at).toLocaleString().slice(0,14):'—'}</div>
+        </div>
+        ${!isRead?'<div style="width:8px;height:8px;background:#6C5CE7;border-radius:50%;flex-shrink:0;margin-top:4px"></div>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function markRead(id) {
+  if (id && !READ_IDS.includes(id)) { READ_IDS.push(id); localStorage.setItem('sl_read', JSON.stringify(READ_IDS)); updateInboxBadge(); renderInbox(); }
+}
+function markAllRead() {
+  READ_IDS = INBOX_MSGS.map(m => m.id); localStorage.setItem('sl_read', JSON.stringify(READ_IDS)); updateInboxBadge(); renderInbox();
+}
+function updateInboxBadge() {
+  const unread = INBOX_MSGS.filter(m => !READ_IDS.includes(m.id)).length;
+  txt('inbox-badge', unread > 0 ? 'Inbox (' + unread + ')' : 'Inbox');
+}
+
+// ── Stashlo products in shop tab ─────────────────────────
+function loadStashloProducts() {
+  get('stashlo_products', 'active=eq.true&order=created_at.desc').then(d => {
+    const prods = Array.isArray(d) ? d : [];
+    const el = document.getElementById('stashlo-prods-section');
+    if (!el) return;
+    if (prods.length === 0) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    el.innerHTML = '<div class="sec-head"><span class="sec-title">🛍️ Stashlo Store</span></div>' +
+      '<div class="prods-grid">' + prods.map(p => `
+        <div class="prod-card" onclick="openOrder(${JSON.stringify({...p,shopName:'Stashlo Store',merchant_id:'stashlo'}).replace(/"/g,'&quot;')})">
+          <div class="prod-emoji">${p.emoji||'📦'}</div>
+          <div class="prod-name">${p.name}</div>
+          <div class="prod-price">£${parseFloat(p.price||0).toFixed(2)}</div>
+          <div class="prod-badges">${p.collect!==false?'<span class="prod-badge badge-collect">Collect</span>':''} ${p.delivery?'<span class="prod-badge badge-delivery">Delivery</span>':''}</div>
+        </div>`).join('') + '</div>';
+  }).catch(() => {});
+}
+
+// ── Add card with location ────────────────────────────────
+// Override addLocalCard to also capture GPS
+const _origAddLocalCard = addLocalCard;
+function addLocalCard() {
+  if (!CUR_SHOP) return;
+  const mid = CUR_SHOP.id;
+  post('cards', {
+    user_id: UID, card_id: 'local-' + mid, merchant_id: mid,
+    name: CUR_SHOP.name, shop_name: CUR_SHOP.name,
+    emoji: CUR_SHOP.logo_emoji || '🏪', color: '#2d2d2d', type: 'local',
+    points: 0, threshold: CUR_SHOP.loyalty_threshold || 100,
+    added_at: Date.now(), visit_count: 0, total_spend: 0, rewards_redeemed: 0
+  }, 'user_id,card_id')
+  .then(() => {
+    toast('✅ ' + CUR_SHOP.name + ' card added!');
+    // Capture location to help with proximity detection
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        captureShopLocation(mid);
+      }, () => {});
+    }
+    loadCards(); openShopDetail(CUR_SHOP);
+  }).catch(() => toast('Error adding card'));
+}
+
+// ── Open card with barcode option ─────────────────────────
+// Patch openCardDetail to add barcode button
+const _origOpenCardDetail = openCardDetail;
+function openCardDetail(cardId) {
+  _origOpenCardDetail(cardId);
+  // Add barcode button to detail view
+  setTimeout(() => {
+    const body = document.getElementById('cd-stats');
+    if (body && CUR_CARD && !document.getElementById('show-barcode-btn')) {
+      const btn = document.createElement('button');
+      btn.id = 'show-barcode-btn';
+      btn.className = 'mbtn mbtn-purple';
+      btn.style.marginBottom = '10px';
+      btn.textContent = '📲 Show Barcode / QR';
+      btn.onclick = () => showBarcode(CUR_CARD);
+      body.parentElement.insertBefore(btn, body);
+    }
+  }, 100);
+}
+
+// ── Start location on app load ────────────────────────────
+const _origStartApp = startApp;
+function startApp() {
+  _origStartApp();
+  // Ask for location permission
+  setTimeout(() => {
+    startLocationTracking();
+    loadInbox();
+    loadStashloProducts();
+  }, 2000);
+}
+
+// ── Patch switchTab to load inbox ──────────────────────────
+const _origSwitchTab = switchTab;
+function switchTab(name) {
+  _origSwitchTab(name);
+  if (name === 'inbox') loadInbox();
+  if (name === 'shop') { loadMyShops(); loadStashloProducts(); }
+}
+
 </script>
 </body>
 </html>
