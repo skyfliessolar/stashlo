@@ -4,456 +4,852 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0a0a14">
-<title>Stashlo - Merchant Portal</title>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<title>Stashlo Merchant</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:system-ui,-apple-system,'Segoe UI',sans-serif; background:#f0efff; color:#1a1a2e; }
-button { cursor:pointer; border:none; font-family:inherit; }
-input, select { font-family:inherit; border:none; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f0efff;color:#1a1a2e;min-height:100vh}
+button{cursor:pointer;border:none;font-family:inherit}
+input,select,textarea{font-family:inherit;border:none;outline:none}
 
-#splash { position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; display:flex; align-items:center; justify-content:center; gap:20px; flex-direction:column; z-index:9999; }
-#splash-text { color:#fff; font-size:40px; font-weight:800; }
-#splash-text b { color:#6C5CE7; }
+/* Splash */
+#splash{position:fixed;inset:0;background:#0a0a14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999}
+.sp-logo{font-size:44px;font-weight:900;color:#fff}.sp-logo b{color:#6C5CE7}
+.sp-sub{color:rgba(255,255,255,.4);font-size:14px}
+.sp-dots{display:flex;gap:8px}.sp-dots div{width:8px;height:8px;background:#6C5CE7;border-radius:50%;animation:pulse 1.2s infinite}
+.sp-dots div:nth-child(2){animation-delay:.2s}.sp-dots div:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
 
-#auth { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; align-items:center; justify-content:center; padding:20px; }
-.auth-box { background:#fff; border-radius:24px; padding:32px 24px; width:100%; max-width:380px; }
-.auth-box h1 { font-size:20px; font-weight:800; margin-bottom:5px; }
-.auth-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; margin-bottom:12px; font-size:15px; }
-.auth-btn { width:100%; padding:13px; background:#0a0a14; color:#fff; border-radius:12px; font-weight:700; font-size:15px; margin-top:8px; }
-.auth-error { color:#c62828; font-size:12px; margin-top:10px; padding:10px; background:#ffebee; border-radius:8px; display:none; }
+/* Auth */
+#auth{display:none;position:fixed;inset:0;background:#0a0a14;align-items:center;justify-content:center;padding:20px;z-index:100}
+.auth-card{background:#fff;border-radius:28px;padding:32px 24px;width:100%;max-width:380px}
+.auth-logo{font-size:26px;font-weight:900;margin-bottom:4px}.auth-logo b{color:#6C5CE7}
+.auth-sub{color:#706f87;font-size:13px;margin-bottom:24px}
+.auth-inp{width:100%;padding:14px;border:2px solid #f0f0f5;border-radius:14px;font-size:15px;margin-bottom:12px;transition:border-color .2s;background:#fafafa}
+.auth-inp:focus{border-color:#6C5CE7;background:#fff}
+.auth-btn{width:100%;padding:15px;background:#0a0a14;color:#fff;border-radius:14px;font-weight:700;font-size:16px}
+.auth-link{text-align:center;margin-top:14px;font-size:13px;color:#706f87}
+.auth-link span{color:#6C5CE7;cursor:pointer;font-weight:600}
+.auth-err{color:#c62828;font-size:12px;padding:10px 14px;background:#ffebee;border-radius:10px;margin-top:10px;display:none}
 
-#app { display:none; flex-direction:column; min-height:100vh; padding-bottom:80px; }
-.topbar { background:#0a0a14; color:#fff; padding:14px 18px; font-weight:800; font-size:16px; position:sticky; top:0; z-index:100; display:flex; justify-content:space-between; align-items:center; }
-.topbar b { color:#6C5CE7; }
-.topbar-action { cursor:pointer; font-size:18px; }
+/* App */
+#app{display:none;flex-direction:column;min-height:100vh;padding-bottom:76px}
+.topbar{background:#0a0a14;color:#fff;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99}
+.tb-left{display:flex;flex-direction:column}
+.tb-brand{font-size:18px;font-weight:900}.tb-brand b{color:#6C5CE7}
+.tb-shop{font-size:12px;color:rgba(255,255,255,.5);margin-top:1px}
+.tb-right{display:flex;gap:10px}
+.tb-btn{background:rgba(255,255,255,.1);color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600}
 
-.screen { display:none; padding:16px; }
-.screen.active { display:block; }
+.bottomnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1.5px solid #ececf3;display:flex;z-index:99}
+.nav-btn{flex:1;padding:11px 4px 8px;text-align:center;cursor:pointer;color:#a0a0b5;transition:color .15s}
+.nav-btn.on{color:#6C5CE7}
+.nav-icon{font-size:20px;display:block}
+.nav-label{font-size:10px;font-weight:600;margin-top:2px;display:block}
 
-.hero { background:#0a0a14; color:#fff; border-radius:20px; padding:20px 18px; margin-bottom:16px; }
-.stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.stat-card { background:rgba(255,255,255,0.1); border-radius:12px; padding:14px; }
-.stat-label { font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:4px; }
-.stat-value { font-size:24px; font-weight:800; color:#fff; }
+.screen{display:none;padding:16px;animation:fi .2s}
+.screen.on{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
-.section-header { display:flex; justify-content:space-between; align-items:center; margin:18px 0 12px; }
-.section-title { font-size:15px; font-weight:700; }
-.add-btn { width:36px; height:36px; background:#ece9ff; border-radius:10px; color:#6C5CE7; font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+/* Dashboard cards */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.dash-card{background:#fff;border-radius:18px;padding:18px;box-shadow:0 2px 12px rgba(0,0,0,.06);cursor:pointer;transition:transform .15s,box-shadow .15s}
+.dash-card:active{transform:scale(.97)}
+.dash-card-ico{font-size:28px;margin-bottom:8px}
+.dash-card-val{font-size:32px;font-weight:900}
+.dash-card-lab{font-size:12px;color:#706f87;margin-top:4px;font-weight:600}
+.dash-card.purple{background:linear-gradient(135deg,#6C5CE7,#a29bfe);color:#fff}
+.dash-card.purple .dash-card-lab{color:rgba(255,255,255,.7)}
+.dash-card.green{background:linear-gradient(135deg,#00b894,#55efc4);color:#fff}
+.dash-card.green .dash-card-lab{color:rgba(255,255,255,.7)}
 
-.table-container { overflow-x:auto; margin-bottom:16px; }
-.data-table { width:100%; border-collapse:collapse; font-size:13px; }
-.data-table th { background:#f9f9fb; padding:10px; text-align:left; font-weight:700; color:#706f87; }
-.data-table td { padding:10px; border-bottom:1px solid #ebebef; }
-.data-table tr:hover { background:#f9f9fb; }
+/* Section */
+.sec-head{display:flex;justify-content:space-between;align-items:center;margin:20px 0 12px}
+.sec-title{font-size:16px;font-weight:800}
+.sec-btn{background:#ece9ff;color:#6C5CE7;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:700}
+.sec-link{font-size:13px;color:#6C5CE7;font-weight:600;cursor:pointer}
 
-.modal { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; padding:20px; z-index:200; }
-.modal-content { background:#fff; border-radius:20px; padding:24px; width:100%; max-width:500px; max-height:90vh; overflow-y:auto; }
-.modal-title { font-size:18px; font-weight:800; margin-bottom:16px; }
-.modal-field { margin-bottom:14px; }
-.modal-label { font-size:11px; font-weight:700; color:#706f87; text-transform:uppercase; margin-bottom:6px; display:block; }
-.modal-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; font-size:14px; }
-.modal-btn { width:100%; padding:12px; border-radius:12px; font-weight:700; font-size:14px; margin:10px 0; background:#0a0a14; color:#fff; }
-.modal-btn-secondary { background:#f0f0f0; color:#706f87; }
+/* Cards list */
+.item-card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.item-row{display:flex;justify-content:space-between;align-items:center}
+.item-name{font-size:15px;font-weight:700}
+.item-sub{font-size:12px;color:#706f87;margin-top:3px}
+.item-actions{display:flex;gap:8px}
+.btn-sm{padding:7px 12px;border-radius:10px;font-size:12px;font-weight:700}
+.btn-red{background:#ffebee;color:#c62828}
+.btn-gray{background:#f0f0f5;color:#706f87}
+.btn-green{background:#e8f5e9;color:#2e7d32}
+.btn-blue{background:#e3f2fd;color:#1565c0}
 
-.nav { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #ebebef; display:flex; z-index:100; }
-.nav-item { flex:1; padding:12px; text-align:center; font-size:11px; font-weight:600; color:#706f87; cursor:pointer; }
-.nav-item.active { color:#6C5CE7; }
+/* Till */
+.till-card{background:#fff;border-radius:20px;padding:22px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.till-label{font-size:12px;font-weight:700;color:#706f87;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.till-input{width:100%;padding:16px;border:2px solid #f0f0f5;border-radius:14px;font-size:18px;font-weight:700;background:#fafafa;transition:border-color .2s;margin-bottom:14px}
+.till-input:focus{border-color:#6C5CE7;background:#fff}
+.till-btn{width:100%;padding:16px;background:#6C5CE7;color:#fff;border-radius:14px;font-weight:700;font-size:16px;margin-bottom:10px}
+.till-rules{background:#f4f2ff;border-radius:14px;padding:14px;margin-bottom:16px}
+.till-rules-title{font-size:12px;font-weight:700;color:#6C5CE7;margin-bottom:4px}
+.till-rules-text{font-size:13px;color:#1a1a2e}
 
-#video { width:100%; border-radius:12px; display:none; margin-bottom:16px; }
-.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#0a0a14; color:#fff; padding:10px 20px; border-radius:100px; font-size:13px; z-index:999; opacity:0; transition:opacity 0.3s; }
-.toast.show { opacity:1; }
+/* Loyalty type selector */
+.loyalty-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.loyalty-opt{background:#f9f9fb;border-radius:14px;padding:14px;text-align:center;cursor:pointer;border:2px solid transparent;transition:all .2s}
+.loyalty-opt.sel{background:#ece9ff;border-color:#6C5CE7}
+.loyalty-opt-ico{font-size:24px;margin-bottom:6px}
+.loyalty-opt-name{font-size:13px;font-weight:700}
+.loyalty-opt-desc{font-size:11px;color:#706f87;margin-top:3px}
+
+/* Table */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{font-size:11px;font-weight:700;color:#706f87;text-transform:uppercase;padding:10px 12px;text-align:left;background:#f9f9fb;border-radius:8px}
+.data-table td{padding:12px;border-bottom:1px solid #f5f5f5;font-size:14px}
+.data-table tr:last-child td{border-bottom:none}
+.status-badge{padding:4px 10px;border-radius:10px;font-size:11px;font-weight:700;display:inline-block}
+.st-pending{background:#fff3e0;color:#e65100}
+.st-ready{background:#e8f5e9;color:#2e7d32}
+.st-completed{background:#e3f2fd;color:#1565c0}
+.st-rejected{background:#ffebee;color:#c62828}
+
+/* Orders */
+.order-card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.order-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.order-id{font-size:12px;font-weight:700;color:#706f87}
+.order-body{font-size:14px;font-weight:600;margin-bottom:6px}
+.order-detail{font-size:12px;color:#706f87;margin-bottom:10px}
+.order-actions{display:flex;gap:8px}
+
+/* Scan */
+.scan-box{background:#0a0a14;border-radius:20px;aspect-ratio:1;max-width:280px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+#video{width:100%;height:100%;object-fit:cover;border-radius:20px}
+.scan-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.scan-frame{width:180px;height:180px;border:3px solid #6C5CE7;border-radius:16px}
+.scan-corner{position:absolute;width:30px;height:30px;border-color:#6C5CE7;border-style:solid}
+.scan-corner.tl{top:0;left:0;border-width:4px 0 0 4px;border-radius:8px 0 0 0}
+.scan-corner.tr{top:0;right:0;border-width:4px 4px 0 0;border-radius:0 8px 0 0}
+.scan-corner.bl{bottom:0;left:0;border-width:0 0 4px 4px;border-radius:0 0 0 8px}
+.scan-corner.br{bottom:0;right:0;border-width:0 4px 4px 0;border-radius:0 0 8px 0}
+.scan-result{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;display:none}
+
+/* Modals */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;z-index:200}
+.modal-overlay.show{display:flex}
+.modal-sheet{background:#fff;width:100%;border-radius:28px 28px 0 0;padding:24px 18px 36px;max-height:92vh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:18px;font-weight:800;margin-bottom:18px}
+.mfield{margin-bottom:14px}
+.mlabel{display:block;font-size:11px;font-weight:700;color:#706f87;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.minput{width:100%;padding:13px 14px;border:2px solid #f0f0f5;border-radius:14px;font-size:14px;transition:border-color .2s;background:#fafafa}
+.minput:focus{border-color:#6C5CE7;background:#fff}
+.mselect{width:100%;padding:13px 14px;border:2px solid #f0f0f5;border-radius:14px;font-size:14px;background:#fafafa;-webkit-appearance:none}
+.mbtn{width:100%;padding:14px;border-radius:14px;font-weight:700;font-size:15px;margin:6px 0;transition:opacity .2s}
+.mbtn:active{opacity:.8}
+.mbtn-primary{background:#0a0a14;color:#fff}
+.mbtn-purple{background:#6C5CE7;color:#fff}
+.mbtn-gray{background:#f0f0f5;color:#706f87}
+.mbtn-red{background:#ffebee;color:#c62828}
+.merr{color:#c62828;font-size:12px;padding:10px 14px;background:#ffebee;border-radius:10px;margin-top:8px;display:none}
+.mcheck-row{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f9f9fb;border-radius:12px;margin-bottom:8px;cursor:pointer}
+.mcheck-row input{width:18px;height:18px;cursor:pointer}
+
+/* Settings */
+.setting-card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.setting-title{font-size:14px;font-weight:700;margin-bottom:6px}
+.setting-sub{font-size:12px;color:#706f87;margin-bottom:12px}
+
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:#0a0a14;color:#fff;padding:11px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;white-space:nowrap;max-width:90vw}
+.toast.show{opacity:1}
+.empty{text-align:center;padding:40px 20px;color:#706f87}
+.empty-ico{font-size:40px;margin-bottom:12px}
+.empty-txt{font-size:14px;line-height:1.7}
 </style>
 </head>
 <body>
 
 <div id="splash">
-  <div id="splash-text">Stash<b>lo</b> Merchant</div>
+  <div class="sp-logo">Stash<b>lo</b></div>
+  <div class="sp-sub">Merchant Portal</div>
+  <div class="sp-dots"><div></div><div></div><div></div></div>
 </div>
 
 <div id="auth">
-  <div class="auth-box">
-    <h1>Merchant Portal</h1>
-    <p>Login to manage your loyalty program</p>
-    <input type="email" id="email" class="auth-input" placeholder="Email">
-    <input type="password" id="password" class="auth-input" placeholder="Password">
+  <div class="auth-card">
+    <div class="auth-logo">Stash<b>lo</b> Merchant</div>
+    <p class="auth-sub">Manage your loyalty programme</p>
+    <input type="email" id="email" class="auth-inp" placeholder="Email address">
+    <input type="password" id="password" class="auth-inp" placeholder="Password">
     <button class="auth-btn" onclick="login()">Sign in</button>
-    <div class="auth-error" id="auth-error"></div>
+    <p class="auth-link" style="margin-top:12px">New merchant? <span onclick="showReg()">Register shop</span></p>
+    <div class="auth-err" id="auth-error"></div>
+    <div id="reg-section" style="display:none;margin-top:16px;border-top:1px solid #f0f0f5;padding-top:16px">
+      <p style="font-size:14px;font-weight:700;margin-bottom:12px">Register your shop</p>
+      <input type="text" id="r-name" class="auth-inp" placeholder="Shop name">
+      <input type="email" id="r-email" class="auth-inp" placeholder="Email address">
+      <input type="password" id="r-pw" class="auth-inp" placeholder="Password (6+ chars)">
+      <button class="auth-btn" onclick="register()">Register</button>
+      <div class="auth-err" id="reg-error"></div>
+    </div>
   </div>
 </div>
 
 <div id="app">
-  <div class="topbar">Stash<b>lo</b> Merchant <div class="topbar-action" onclick="logout()">🚪</div></div>
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tb-brand">Stash<b>lo</b></div>
+      <div class="tb-shop" id="shop-name-top">Loading...</div>
+    </div>
+    <div class="tb-right">
+      <button class="tb-btn" id="shop-id-btn" onclick="copyShopId()">📋 Shop ID</button>
+      <button class="tb-btn" onclick="logout()">🚪</button>
+    </div>
+  </div>
 
-  <!-- OVERVIEW SCREEN -->
-  <div class="screen active" id="overview-screen">
-    <div class="hero">
-      <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:8px;">Merchant Dashboard</div>
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="stat-label">Active Customers</div>
-          <div class="stat-value" id="stat-customers">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Today Orders</div>
-          <div class="stat-value" id="stat-orders">0</div>
+  <!-- OVERVIEW -->
+  <div class="screen on" id="overview-screen">
+    <div class="dash-grid">
+      <div class="dash-card purple" onclick="switchTab('customers')">
+        <div class="dash-card-ico">👥</div>
+        <div class="dash-card-val" id="d-customers">0</div>
+        <div class="dash-card-lab">Customers</div>
+      </div>
+      <div class="dash-card green" onclick="switchTab('orders')">
+        <div class="dash-card-ico">📦</div>
+        <div class="dash-card-val" id="d-orders">0</div>
+        <div class="dash-card-lab">Orders</div>
+      </div>
+      <div class="dash-card" onclick="switchTab('till')">
+        <div class="dash-card-ico">💰</div>
+        <div class="dash-card-val" id="d-revenue">£0</div>
+        <div class="dash-card-lab">Revenue</div>
+      </div>
+      <div class="dash-card" onclick="switchTab('products')">
+        <div class="dash-card-ico">🛍️</div>
+        <div class="dash-card-val" id="d-products">0</div>
+        <div class="dash-card-lab">Products</div>
+      </div>
+    </div>
+    <div class="sec-head"><span class="sec-title">Recent sales</span><span class="sec-link" onclick="switchTab('till')">See all →</span></div>
+    <div id="recent-txns"></div>
+    <div class="sec-head" style="margin-top:20px"><span class="sec-title">Pending orders</span><span class="sec-link" onclick="switchTab('orders')">See all →</span></div>
+    <div id="pending-orders"></div>
+  </div>
+
+  <!-- SCAN -->
+  <div class="screen" id="scan-screen">
+    <div class="sec-head"><span class="sec-title">Scan Customer QR</span></div>
+    <div class="scan-box">
+      <video id="video" autoplay muted playsinline></video>
+      <div class="scan-overlay">
+        <div style="position:relative;width:180px;height:180px">
+          <div class="scan-corner tl"></div><div class="scan-corner tr"></div>
+          <div class="scan-corner bl"></div><div class="scan-corner br"></div>
         </div>
       </div>
     </div>
+    <div class="scan-result" id="scan-result">
+      <div style="font-weight:700;margin-bottom:8px">Scanned:</div>
+      <div id="scan-value" style="font-size:16px;color:#6C5CE7;font-weight:800;margin-bottom:12px"></div>
+      <div id="scan-customer-info"></div>
+      <button class="mbtn mbtn-purple" id="scan-add-pts-btn" style="display:none" onclick="addPointsFromScan()">+ Add Points</button>
+    </div>
+    <div style="text-align:center;margin-top:12px">
+      <p style="font-size:13px;color:#706f87;margin-bottom:12px">Or enter phone number manually:</p>
+      <div style="display:flex;gap:10px">
+        <input id="manual-phone" class="minput" placeholder="Customer phone" style="flex:1">
+        <button class="mbtn mbtn-purple" style="width:auto;padding:12px 18px" onclick="lookupCustomer()">Look up</button>
+      </div>
+    </div>
+    <div id="customer-lookup-result" style="margin-top:12px"></div>
   </div>
 
-  <!-- QR SCANNER SCREEN -->
-  <div class="screen" id="scanner-screen">
-    <div class="section-header">
-      <div class="section-title">QR Scanner</div>
-    </div>
-    <video id="video" autoplay playsinline></video>
-    <div id="scanner-result" style="display:none;padding:12px;background:#00897B;color:#fff;border-radius:12px;margin-bottom:16px;">
-      <div style="font-size:12px;opacity:0.7;">Scanned</div>
-      <div id="scanned-value" style="font-size:18px;font-weight:800;"></div>
-    </div>
-  </div>
-
-  <!-- TILL/POS SCREEN -->
+  <!-- TILL -->
   <div class="screen" id="till-screen">
-    <div class="section-header">
-      <div class="section-title">Quick Sale</div>
+    <div class="till-rules" id="loyalty-rules-display">
+      <div class="till-rules-title">Current Loyalty Rule</div>
+      <div class="till-rules-text" id="loyalty-rule-text">Loading...</div>
     </div>
-    <div style="background:#f9f9fb;border-radius:12px;padding:14px;margin-bottom:16px;">
-      <div style="font-size:11px;color:#706f87;margin-bottom:6px;">CUSTOMER PHONE</div>
-      <input type="tel" id="till-phone" class="modal-input" placeholder="e.g., 07700000000" style="margin-bottom:14px;">
-      <div style="font-size:11px;color:#706f87;margin-bottom:6px;">AMOUNT (£)</div>
-      <input type="number" id="till-amount" class="modal-input" placeholder="0.00" step="0.01">
-      <button class="modal-btn" style="margin-top:14px;" onclick="processSale()">Process Sale</button>
+    <div class="till-card">
+      <div class="till-label">Customer Phone / Card ID</div>
+      <input id="till-phone" class="till-input" type="tel" placeholder="07700 900000">
+      <div class="till-label">Sale Amount (£)</div>
+      <input id="till-amount" class="till-input" type="number" step="0.01" min="0" placeholder="0.00">
+      <button class="till-btn" onclick="processSale()">💰 Process Sale & Award Loyalty</button>
+      <button class="mbtn mbtn-gray" onclick="openRedeemModal()">🎁 Redeem Reward</button>
     </div>
-  </div>
-
-  <!-- PRODUCTS SCREEN -->
-  <div class="screen" id="products-screen">
-    <div class="section-header">
-      <div class="section-title">Products</div>
-      <div class="add-btn" onclick="openProductModal()">+</div>
-    </div>
-    <div id="products-list"></div>
-  </div>
-
-  <!-- ORDERS SCREEN -->
-  <div class="screen" id="orders-screen">
-    <div class="section-header">
-      <div class="section-title">Recent Orders</div>
-    </div>
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Customer</th>
-            <th>Amount</th>
-            <th>Status</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-        <tbody id="orders-list">
-          <tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87;">No orders yet</td></tr>
-        </tbody>
+    <div class="sec-head" style="margin-top:20px"><span class="sec-title">Today's sales</span></div>
+    <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.06)">
+      <table class="data-table" id="till-txns-table">
+        <thead><tr><th>Phone</th><th>Amount</th><th>Reward</th><th>Time</th></tr></thead>
+        <tbody id="till-txns"></tbody>
       </table>
     </div>
   </div>
 
-  <div class="nav">
-    <div class="nav-item active" onclick="switchScreen('overview')">📊 Overview</div>
-    <div class="nav-item" onclick="switchScreen('scanner')">📱 Scan</div>
-    <div class="nav-item" onclick="switchScreen('till')">💰 Till</div>
-    <div class="nav-item" onclick="switchScreen('products')">📦 Products</div>
-    <div class="nav-item" onclick="switchScreen('orders')">📋 Orders</div>
+  <!-- PRODUCTS -->
+  <div class="screen" id="products-screen">
+    <div class="sec-head">
+      <span class="sec-title">Products</span>
+      <button class="sec-btn" onclick="openAddProduct()">+ Add Product</button>
+    </div>
+    <div id="products-list"></div>
+  </div>
+
+  <!-- ORDERS -->
+  <div class="screen" id="orders-screen">
+    <div class="sec-head"><span class="sec-title">Customer Orders</span><button class="sec-btn" onclick="loadOrders()">🔄 Refresh</button></div>
+    <div id="orders-list"></div>
+  </div>
+
+  <!-- CUSTOMERS -->
+  <div class="screen" id="customers-screen">
+    <div class="sec-head"><span class="sec-title">Loyalty Customers</span></div>
+    <div id="customers-list"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="screen" id="settings-screen">
+    <div class="sec-head"><span class="sec-title">Shop Settings</span></div>
+    <div class="setting-card">
+      <div class="setting-title">Shop Details</div>
+      <div class="setting-sub">Update your shop information</div>
+      <div class="mfield"><label class="mlabel">Shop Name</label><input id="s-name" class="minput" placeholder="Your shop name"></div>
+      <div class="mfield"><label class="mlabel">Category</label>
+        <select id="s-cat" class="mselect"><option value="food">Food & Drink</option><option value="retail">Retail</option><option value="beauty">Beauty & Health</option><option value="services">Services</option><option value="other">Other</option></select>
+      </div>
+      <div class="mfield"><label class="mlabel">Address</label><input id="s-addr" class="minput" placeholder="Shop address"></div>
+      <div class="mfield"><label class="mlabel">Opening Hours</label><input id="s-hours" class="minput" placeholder="e.g. Mon-Sat 9am-6pm"></div>
+      <div class="mfield"><label class="mlabel">Shop Icon (emoji)</label><input id="s-emoji" class="minput" placeholder="🏪" maxlength="4"></div>
+    </div>
+    <div class="setting-card">
+      <div class="setting-title">Loyalty Programme</div>
+      <div class="setting-sub">Choose how customers earn and redeem rewards</div>
+      <div class="loyalty-opts">
+        <div class="loyalty-opt" id="lopt-points" onclick="selectLoyalty('points')">
+          <div class="loyalty-opt-ico">⭐</div>
+          <div class="loyalty-opt-name">Points</div>
+          <div class="loyalty-opt-desc">Earn points per £1</div>
+        </div>
+        <div class="loyalty-opt" id="lopt-percentage" onclick="selectLoyalty('percentage')">
+          <div class="loyalty-opt-ico">💸</div>
+          <div class="loyalty-opt-name">Cashback %</div>
+          <div class="loyalty-opt-desc">% back on purchases</div>
+        </div>
+        <div class="loyalty-opt" id="lopt-discount" onclick="selectLoyalty('discount')">
+          <div class="loyalty-opt-ico">💷</div>
+          <div class="loyalty-opt-name">Pound Discount</div>
+          <div class="loyalty-opt-desc">£X off when spend £Y</div>
+        </div>
+        <div class="loyalty-opt" id="lopt-stamp" onclick="selectLoyalty('stamp')">
+          <div class="loyalty-opt-ico">🎫</div>
+          <div class="loyalty-opt-name">Stamp Card</div>
+          <div class="loyalty-opt-desc">Reward every N visits</div>
+        </div>
+      </div>
+      <div id="loyalty-val-section" style="display:none">
+        <div id="loyalty-val-fields"></div>
+      </div>
+    </div>
+    <div class="setting-card" id="shop-id-card">
+      <div class="setting-title">Your Shop ID</div>
+      <div class="setting-sub">Share this with customers so they can find your shop</div>
+      <div style="background:#f4f2ff;border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:28px;font-weight:900;color:#6C5CE7;letter-spacing:2px" id="s-shopid-display">—</div>
+        <button class="mbtn mbtn-purple" style="width:auto;padding:10px 20px;margin-top:10px" onclick="copyShopId()">📋 Copy ID</button>
+      </div>
+    </div>
+    <div class="setting-card">
+      <div class="setting-title">Login Details</div>
+      <div class="setting-sub">Your merchant account credentials</div>
+      <div style="background:#f9f9fb;border-radius:12px;padding:14px">
+        <div style="font-size:12px;color:#706f87;margin-bottom:4px">Email</div>
+        <div style="font-size:15px;font-weight:700" id="s-email-display">—</div>
+        <div style="font-size:12px;color:#706f87;margin-top:10px;margin-bottom:4px">Account UID</div>
+        <div style="font-size:12px;color:#706f87;word-break:break-all" id="s-uid-display">—</div>
+      </div>
+    </div>
+    <button class="mbtn mbtn-purple" onclick="saveSettings()">💾 Save All Settings</button>
+  </div>
+
+  <div class="bottomnav">
+    <div class="nav-btn on" id="nav-overview" onclick="switchTab('overview')"><span class="nav-icon">📊</span><span class="nav-label">Overview</span></div>
+    <div class="nav-btn" id="nav-scan" onclick="switchTab('scan')"><span class="nav-icon">📷</span><span class="nav-label">Scan</span></div>
+    <div class="nav-btn" id="nav-till" onclick="switchTab('till')"><span class="nav-icon">💰</span><span class="nav-label">Till</span></div>
+    <div class="nav-btn" id="nav-products" onclick="switchTab('products')"><span class="nav-icon">🛍️</span><span class="nav-label">Products</span></div>
+    <div class="nav-btn" id="nav-orders" onclick="switchTab('orders')"><span class="nav-icon">📦</span><span class="nav-label">Orders</span></div>
+    <div class="nav-btn" id="nav-customers" onclick="switchTab('customers')"><span class="nav-icon">👥</span><span class="nav-label">Customers</span></div>
+    <div class="nav-btn" id="nav-settings" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span></div>
   </div>
 </div>
 
-<!-- MODALS -->
-<div id="product-modal" class="modal">
-  <div class="modal-content">
-    <div class="modal-title">Add Product</div>
-    <div class="modal-field">
-      <label class="modal-label">Product Name</label>
-      <input type="text" id="product-name" class="modal-input" placeholder="e.g., Premium Coffee">
+<!-- Add Product Modal -->
+<div class="modal-overlay" id="addProductModal" onclick="if(event.target===this)closeModal('addProductModal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="prod-modal-title">Add Product</div>
+    <input type="hidden" id="edit-prod-id">
+    <div class="mfield"><label class="mlabel">Product Name ★</label><input id="p-name" class="minput" placeholder="e.g. Large Oat Latte"></div>
+    <div class="mfield"><label class="mlabel">Price (£) ★</label><input id="p-price" class="minput" type="number" step="0.01" min="0" placeholder="0.00"></div>
+    <div class="mfield"><label class="mlabel">Emoji Icon</label><input id="p-emoji" class="minput" placeholder="☕" maxlength="4"></div>
+    <div class="mfield"><label class="mlabel">Category</label>
+      <select id="p-cat" class="mselect"><option value="drinks">Drinks</option><option value="food">Food</option><option value="snacks">Snacks</option><option value="retail">Retail</option><option value="service">Service</option><option value="other">Other</option></select>
     </div>
-    <div class="modal-field">
-      <label class="modal-label">Price (£)</label>
-      <input type="number" id="product-price" class="modal-input" placeholder="0.00" step="0.01">
+    <div class="mfield"><label class="mlabel">Description</label><input id="p-desc" class="minput" placeholder="Optional description"></div>
+    <label class="mcheck-row"><input type="checkbox" id="p-collect" checked> <div><div style="font-weight:700">Click & Collect</div><div style="font-size:12px;color:#706f87">Customers can order and collect in-store</div></div></label>
+    <label class="mcheck-row"><input type="checkbox" id="p-delivery"> <div><div style="font-weight:700">Delivery</div><div style="font-size:12px;color:#706f87">Customers can order for delivery</div></div></label>
+    <label class="mcheck-row"><input type="checkbox" id="p-active" checked> <div><div style="font-weight:700">Active / Visible</div><div style="font-size:12px;color:#706f87">Show this product to customers</div></div></label>
+    <button class="mbtn mbtn-primary" onclick="saveProduct()">Save Product</button>
+    <button class="mbtn mbtn-gray" onclick="closeModal('addProductModal')">Cancel</button>
+    <div class="merr" id="p-err"></div>
+  </div>
+</div>
+
+<!-- Redeem Modal -->
+<div class="modal-overlay" id="redeemModal" onclick="if(event.target===this)closeModal('redeemModal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Redeem Reward</div>
+    <div class="mfield"><label class="mlabel">Customer Phone</label><input id="r-phone" class="minput" placeholder="07700 900000"></div>
+    <div id="r-cust-info" style="background:#f4f2ff;border-radius:12px;padding:14px;margin-bottom:12px;display:none"></div>
+    <button class="mbtn mbtn-purple" onclick="lookupForRedeem()">🔍 Check Points</button>
+    <button class="mbtn mbtn-green" id="r-confirm-btn" onclick="confirmRedeem()" style="display:none">✅ Confirm Redemption</button>
+    <button class="mbtn mbtn-gray" onclick="closeModal('redeemModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Order detail modal -->
+<div class="modal-overlay" id="orderDetailModal" onclick="if(event.target===this)closeModal('orderDetailModal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Order Details</div>
+    <div id="order-detail-body"></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="mbtn mbtn-green" style="flex:1" onclick="updateOrderStatus('ready')">✅ Mark Ready</button>
+      <button class="mbtn mbtn-primary" style="flex:1" onclick="updateOrderStatus('completed')">✓ Complete</button>
     </div>
-    <div class="modal-field">
-      <label class="modal-label">Points Reward</label>
-      <input type="number" id="product-points" class="modal-input" placeholder="10" value="10">
-    </div>
-    <button class="modal-btn" onclick="saveProduct()">Save Product</button>
-    <button class="modal-btn modal-btn-secondary" onclick="closeProductModal()">Cancel</button>
+    <button class="mbtn mbtn-red" onclick="updateOrderStatus('rejected')">✗ Reject Order</button>
+    <button class="mbtn mbtn-gray" onclick="closeModal('orderDetailModal')">Close</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
+const SURL='https://gcwevgaymahywqjorhnn.supabase.co',SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
+let TOKEN=null,UID=null,MID=null,MDATA={},PRODUCTS=[],ORDERS=[],CUSTOMERS=[],TRANSACTIONS=[],LOYALTY_TYPE='points',CUR_ORDER=null,SCAN_PHONE=null;
 
-const SURL = 'https://gcwevgaymahywqjorhnn.supabase.co';
-const SKEY = 'sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
+function H(){return{'apikey':SKEY,'Authorization':'Bearer '+(TOKEN||SKEY),'Content-Type':'application/json','Prefer':'return=representation'}}
+function get(t,q){return fetch(`${SURL}/rest/v1/${t}?select=*${q?'&'+q:''}`,{headers:H()}).then(r=>r.json())}
+function post(t,d,c){const u=`${SURL}/rest/v1/${t}${c?'?on_conflict='+c:''}`;return fetch(u,{method:'POST',headers:{...H(),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json())}
+function patch(t,q,d){return fetch(`${SURL}/rest/v1/${t}?${q}`,{method:'PATCH',headers:H(),body:JSON.stringify(d)}).then(r=>r.json())}
+function del(t,q){return fetch(`${SURL}/rest/v1/${t}?${q}`,{method:'DELETE',headers:H()})}
+function toast(m,d=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d)}
+function txt(id,v){const e=document.getElementById(id);if(e)e.textContent=v}
+function val(id){const e=document.getElementById(id);return e?e.value.trim():''}
+function err(id,m){const e=document.getElementById(id);if(e){e.textContent=m;e.style.display=m?'block':'none'}}
+function openModal(id){document.getElementById(id).classList.add('show')}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
 
-let TOKEN = null, UID = null, MERCHANT_ID = null, PRODUCTS = [], ORDERS = [], CUSTOMERS = [], MDATA = {};
-
-function H() {
-  return {'apikey': SKEY, 'Authorization': 'Bearer ' + (TOKEN || SKEY), 'Content-Type': 'application/json', 'Prefer': 'return=representation'};
+function calcLoyalty(amount,mdata){
+  const t=(mdata||MDATA).loyalty_type||'points',v=(mdata||MDATA).loyalty_value||1,th=(mdata||MDATA).loyalty_threshold||100;
+  if(t==='points')return{pts:Math.floor(amount*v),desc:`+${Math.floor(amount*v)} pts`};
+  if(t==='percentage')return{pts:Math.floor(amount*v),cashback:(amount*v/100).toFixed(2),desc:`+${v}% (£${(amount*v/100).toFixed(2)} cashback)`};
+  if(t==='stamp')return{pts:1,desc:'+1 stamp'};
+  if(t==='discount')return{pts:Math.floor(amount),desc:`+${Math.floor(amount)} pts (redeem £${v} off at ${th} pts)`};
+  return{pts:Math.floor(amount),desc:`+${Math.floor(amount)} pts`};
 }
+function fmtRule(){
+  const t=MDATA.loyalty_type||'points',v=MDATA.loyalty_value||1,th=MDATA.loyalty_threshold||100;
+  if(t==='points')return`Earn ${v} point per £1 • Redeem reward at ${th} points`;
+  if(t==='percentage')return`Earn ${v}% cashback on every purchase`;
+  if(t==='stamp')return`Collect a stamp per visit • Free reward every ${th} visits`;
+  if(t==='discount')return`Earn £${v} discount when spending £${th}`;
+  return'Earn points on every visit';}
 
-function supaGet(table, filter) {
-  return fetch(`${SURL}/rest/v1/${table}?select=*${filter ? '&' + filter : ''}`, {headers: H()}).then(r => r.json());
-}
-
-function supaPost(table, data, conflict) {
-  let url = `${SURL}/rest/v1/${table}${conflict ? '?on_conflict=' + conflict : ''}`;
-  return fetch(url, {
-    method: 'POST',
-    headers: {...H(), 'Prefer': conflict ? 'resolution=merge-duplicates,return=representation' : 'return=representation'},
-    body: JSON.stringify(data)
-  }).then(r => r.json());
-}
-
-function supaPatch(table, filter, data) {
-  return fetch(`${SURL}/rest/v1/${table}?${filter}`, {
-    method: 'PATCH', headers: H(), body: JSON.stringify(data)
-  }).then(r => r.json());
-}
-
-function supaDel(table, filter) {
-  return fetch(`${SURL}/rest/v1/${table}?${filter}`, {method: 'DELETE', headers: H()});
-}
-
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    const sess = JSON.parse(localStorage.getItem('merchant_session') || 'null');
-    if (sess && sess.token && sess.uid && sess.expiry > Date.now()) {
-      TOKEN = sess.token; UID = sess.uid; MERCHANT_ID = sess.mid || sess.uid;
-      showApp();
-    } else showAuth();
-  }, 800);
+// ── Session ──────────────────────────────────────────────
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    const s=JSON.parse(localStorage.getItem('ms_sess')||'null');
+    if(s&&s.tok&&s.uid&&s.exp>Date.now()){TOKEN=s.tok;UID=s.uid;MID=s.uid;showApp();}
+    else{document.getElementById('auth').style.display='flex';document.getElementById('splash').style.display='none';}
+  },900);
 });
+function saveSession(tok,uid,exp){TOKEN=tok;UID=uid;MID=uid;localStorage.setItem('ms_sess',JSON.stringify({tok,uid,exp:Date.now()+(exp||3600)*1000}))}
+function logout(){localStorage.removeItem('ms_sess');TOKEN=null;UID=null;location.reload()}
+function showReg(){document.getElementById('reg-section').style.display=document.getElementById('reg-section').style.display==='none'?'block':'none'}
 
-function login() {
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  const errDiv = document.getElementById('auth-error');
-  if (!email || !password) { errDiv.textContent = 'Enter email and password'; errDiv.style.display = 'block'; return; }
-
-  const btn = document.querySelector('#auth button[onclick="login()"]');
-  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
-
-  fetch(`${SURL}/auth/v1/token?grant_type=password`, {
-    method: 'POST', headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
-    body: JSON.stringify({email, password})
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
-    if (!d.access_token) {
-      errDiv.textContent = d.error_code === 'invalid_credentials' ? 'Wrong email or password' : (d.error_description || d.msg || 'Sign in failed');
-      errDiv.style.display = 'block'; return;
-    }
-    TOKEN = d.access_token; UID = d.user.id; MERCHANT_ID = d.user.id;
-    localStorage.setItem('merchant_session', JSON.stringify({
-      token: TOKEN, uid: UID, mid: MERCHANT_ID, expiry: Date.now() + (d.expires_in || 3600) * 1000
-    }));
-    showApp();
-  })
-  .catch(() => {
-    if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
-    errDiv.textContent = 'Connection error'; errDiv.style.display = 'block';
-  });
+// ── Auth ─────────────────────────────────────────────────
+function login(){
+  const e=val('email'),p=document.getElementById('password').value;
+  if(!e||!p){err('auth-error','Enter email and password');return}
+  const btn=document.querySelector('#auth .auth-btn');btn.textContent='Signing in...';btn.disabled=true;
+  fetch(`${SURL}/auth/v1/token?grant_type=password`,{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})})
+  .then(r=>r.json()).then(d=>{
+    btn.textContent='Sign in';btn.disabled=false;
+    if(!d.access_token){err('auth-error',d.error_code==='invalid_credentials'?'Wrong email or password':d.error_description||d.msg||'Sign in failed');return}
+    saveSession(d.access_token,d.user.id,d.expires_in);showApp();
+  }).catch(()=>{btn.textContent='Sign in';btn.disabled=false;err('auth-error','Connection error')})
+}
+function register(){
+  const name=val('r-name'),email=val('r-email'),pw=document.getElementById('r-pw').value;
+  if(!name||!email||pw.length<6){err('reg-error','All fields required, password 6+ chars');return}
+  fetch(`${SURL}/auth/v1/signup`,{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})})
+  .then(r=>r.json()).then(d=>{
+    if(d.access_token&&d.user){
+      saveSession(d.access_token,d.user.id,d.expires_in);
+      const shopId='SL-'+Math.random().toString(36).toUpperCase().slice(2,6);
+      post('merchants',{id:d.user.id,email,name,shop_id:shopId,loyalty_type:'points',loyalty_value:1,loyalty_threshold:100,logo_emoji:'🏪',created_at:Date.now()},'id').catch(()=>{});
+      showApp();
+    } else if(d.user){
+      document.getElementById('email').value=email;document.getElementById('password').value=pw;login();
+    } else err('reg-error',d.error_description||d.msg||'Registration failed')
+  }).catch(()=>err('reg-error','Connection error'))
 }
 
-function logout() {
-  localStorage.removeItem('merchant_session');
-  TOKEN = null; UID = null;
-  showAuth();
+// ── App ──────────────────────────────────────────────────
+function showApp(){
+  document.getElementById('splash').style.display='none';
+  document.getElementById('auth').style.display='none';
+  document.getElementById('app').style.display='flex';
+  loadAll();
+}
+function loadAll(){
+  loadMerchant();loadProducts();loadOrders();loadCustomers();loadTransactions();
+}
+function loadMerchant(){
+  get('merchants','id=eq.'+MID).then(d=>{
+    MDATA=Array.isArray(d)&&d[0]?d[0]:{};
+    const name=MDATA.name||'My Shop';
+    txt('shop-name-top',name);
+    txt('s-shopid-display',MDATA.shop_id||'—');
+    document.getElementById('shop-id-btn').textContent='📋 '+( MDATA.shop_id||'—');
+    if(document.getElementById('s-name'))document.getElementById('s-name').value=MDATA.name||'';
+    if(document.getElementById('s-addr'))document.getElementById('s-addr').value=MDATA.address||'';
+    if(document.getElementById('s-hours'))document.getElementById('s-hours').value=MDATA.open_hours||'';
+    if(document.getElementById('s-emoji'))document.getElementById('s-emoji').value=MDATA.logo_emoji||'🏪';
+    if(document.getElementById('s-email-display'))txt('s-email-display',MDATA.email||'—');
+    if(document.getElementById('s-uid-display'))txt('s-uid-display',MID||'—');
+    if(document.getElementById('s-cat')){const el=document.getElementById('s-cat');if(MDATA.category)el.value=MDATA.category;}
+    LOYALTY_TYPE=MDATA.loyalty_type||'points';
+    selectLoyalty(LOYALTY_TYPE,true);
+    txt('loyalty-rule-text',fmtRule());
+  }).catch(()=>{})
+}
+function loadProducts(){
+  get('products','merchant_id=eq.'+MID+'&order=created_at.desc').then(d=>{
+    PRODUCTS=Array.isArray(d)?d:[];
+    renderProducts();
+    txt('d-products',PRODUCTS.filter(p=>p.active!==false).length);
+  }).catch(()=>{})
+}
+function loadOrders(){
+  get('orders','merchant_id=eq.'+MID+'&order=created_at.desc&limit=50').then(d=>{
+    ORDERS=Array.isArray(d)?d:[];
+    renderOrders();
+    txt('d-orders',ORDERS.filter(o=>o.status==='pending').length);
+    renderPendingOrders();
+  }).catch(()=>{})
+}
+function loadCustomers(){
+  get('merchant_customers','merchant_id=eq.'+MID+'&order=last_updated.desc&limit=100').then(d=>{
+    CUSTOMERS=Array.isArray(d)?d:[];
+    renderCustomers();
+    txt('d-customers',CUSTOMERS.length);
+  }).catch(()=>{})
+}
+function loadTransactions(){
+  get('transactions','merchant_id=eq.'+MID+'&order=timestamp.desc&limit=50').then(d=>{
+    TRANSACTIONS=Array.isArray(d)?d:[];
+    const rev=TRANSACTIONS.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
+    txt('d-revenue','£'+rev.toFixed(0));
+    renderTillTxns();
+    renderRecentTxns();
+  }).catch(()=>{})
 }
 
-function showAuth() {
-  document.getElementById('splash').style.display = 'flex';
-  setTimeout(() => {
-    document.getElementById('splash').style.display = 'none';
-    document.getElementById('auth').style.display = 'flex';
-  }, 1200);
-}
-
-function showApp() {
-  document.getElementById('splash').style.display = 'none';
-  document.getElementById('auth').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  loadData();
-}
-
-function loadData() {
-  if (!MERCHANT_ID) return;
-
-  // Merchant profile
-  supaGet('merchants', `id=eq.${MERCHANT_ID}`)
-  .then(d => {
-    MDATA = (Array.isArray(d) && d[0]) ? d[0] : {};
-    const nameEl = document.getElementById('merchant-name');
-    if (nameEl) nameEl.textContent = MDATA.name || 'My Shop';
-  })
-  .catch(() => {});
-
-  // Products
-  supaGet('products', `merchant_id=eq.${MERCHANT_ID}&order=created_at.desc`)
-  .then(d => { PRODUCTS = Array.isArray(d) ? d : []; renderProducts(); })
-  .catch(() => {});
-
-  // Orders (using transactions table as the till record)
-  supaGet('transactions', `merchant_id=eq.${MERCHANT_ID}&order=timestamp.desc&limit=50`)
-  .then(d => { ORDERS = Array.isArray(d) ? d : []; renderOrders(); updateStats(); })
-  .catch(() => {});
-
-  // Customers
-  supaGet('merchant_customers', `merchant_id=eq.${MERCHANT_ID}&order=last_updated.desc&limit=100`)
-  .then(d => { CUSTOMERS = Array.isArray(d) ? d : []; renderCustomers(); })
-  .catch(() => {});
-}
-
-function renderProducts() {
-  const list = document.getElementById('products-list');
-  if (!list) return;
-  if (PRODUCTS.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#706f87">No products yet — tap + to add</div>';
-  } else {
-    list.innerHTML = PRODUCTS.map(p => `
-      <div style="background:#f9f9fb;border-radius:12px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div style="font-weight:700;font-size:15px">${p.emoji || '🛍️'} ${p.name}</div>
-          <div style="font-size:12px;color:#706f87;margin-top:3px">£${parseFloat(p.price||0).toFixed(2)} | ${p.category || 'other'}</div>
+// ── Render ────────────────────────────────────────────────
+function renderProducts(){
+  const el=document.getElementById('products-list');if(!el)return;
+  el.innerHTML=PRODUCTS.length?PRODUCTS.map(p=>`
+    <div class="item-card">
+      <div class="item-row">
+        <div><div class="item-name">${p.emoji||'🛍️'} ${p.name}</div><div class="item-sub">£${parseFloat(p.price||0).toFixed(2)} • ${p.category||'other'} ${p.active===false?'<span style="color:#c62828">• Hidden</span>':''}</div>
+          <div style="display:flex;gap:6px;margin-top:6px">${p.collect!==false?'<span style="font-size:11px;background:#e8f5e9;color:#2e7d32;padding:3px 8px;border-radius:8px;font-weight:700">Collect</span>':''}${p.delivery?'<span style="font-size:11px;background:#e3f2fd;color:#1565c0;padding:3px 8px;border-radius:8px;font-weight:700">Delivery</span>':''}</div>
         </div>
-        <div onclick="deleteProduct('${p.id}')" style="font-size:20px;cursor:pointer;color:#ccc;padding:0 6px">×</div>
-      </div>`).join('');
-  }
+        <div class="item-actions">
+          <button class="btn-sm btn-gray" onclick="editProduct('${p.id}')">✏️</button>
+          <button class="btn-sm btn-red" onclick="deleteProduct('${p.id}')">🗑</button>
+        </div>
+      </div>
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">🛍️</div><div class="empty-txt">No products yet<br>Tap + Add Product to start</div></div>';
+}
+function renderOrders(){
+  const el=document.getElementById('orders-list');if(!el)return;
+  const stCls={pending:'st-pending',ready:'st-ready',completed:'st-completed',rejected:'st-rejected'};
+  el.innerHTML=ORDERS.length?ORDERS.map(o=>`
+    <div class="order-card" onclick="openOrderDetail('${o.id}')">
+      <div class="order-header">
+        <div class="order-id">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div>
+        <div class="status-badge ${stCls[o.status]||'st-pending'}">${o.status||'pending'}</div>
+      </div>
+      <div class="order-body">${o.product_name||'Order'} × ${o.quantity||1}</div>
+      <div class="order-detail">${o.type==='collect'?'🏪 Click & Collect':'🚚 Delivery'}${o.collect_time?' at '+o.collect_time:''}${o.delivery_address?' • '+o.delivery_address.slice(0,30):''}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:18px;font-weight:800;color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</div>
+        <div style="font-size:12px;color:#706f87">${o.created_at?new Date(o.created_at).toLocaleString().slice(0,14):'—'}</div>
+      </div>
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">📦</div><div class="empty-txt">No orders yet</div></div>';
+}
+function renderPendingOrders(){
+  const el=document.getElementById('pending-orders');if(!el)return;
+  const pending=ORDERS.filter(o=>o.status==='pending').slice(0,3);
+  el.innerHTML=pending.length?pending.map(o=>`
+    <div class="order-card" onclick="openOrderDetail('${o.id}')">
+      <div class="order-header"><div class="order-id">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div><div class="status-badge st-pending">pending</div></div>
+      <div class="order-body">${o.product_name||'Order'} × ${o.quantity||1}</div>
+      <div class="order-footer" style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:15px;font-weight:800;color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</div><div style="font-size:12px;color:#706f87">${o.type}</div></div>
+    </div>`).join(''):'<div style="padding:16px;text-align:center;color:#706f87;font-size:13px">No pending orders</div>';
+}
+function renderCustomers(){
+  const el=document.getElementById('customers-list');if(!el)return;
+  el.innerHTML=CUSTOMERS.length?CUSTOMERS.map(c=>`
+    <div class="item-card">
+      <div class="item-row">
+        <div><div class="item-name">👤 ${c.name||'Customer'}</div><div class="item-sub">${c.phone} • ${c.points||0} pts • ${c.visit_count||0} visits</div></div>
+        <div class="item-actions">
+          <button class="btn-sm btn-blue" onclick="addBonusPoints('${c.phone}')">+pts</button>
+        </div>
+      </div>
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">👥</div><div class="empty-txt">No loyalty customers yet</div></div>';
+}
+function renderTillTxns(){
+  const el=document.getElementById('till-txns');if(!el)return;
+  const today=Date.now()-86400000;
+  const txns=TRANSACTIONS.filter(t=>t.timestamp>today);
+  el.innerHTML=txns.length?txns.map(t=>`
+    <tr><td>${t.phone||'—'}</td><td>£${parseFloat(t.amount||0).toFixed(2)}</td>
+    <td style="color:#6C5CE7;font-weight:700">${t.points_added||0} pts</td>
+    <td style="font-size:12px;color:#706f87">${t.timestamp?new Date(t.timestamp).toLocaleTimeString().slice(0,5):'—'}</td></tr>`).join('')
+    :'<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87">No sales today</td></tr>';
+}
+function renderRecentTxns(){
+  const el=document.getElementById('recent-txns');if(!el)return;
+  el.innerHTML=TRANSACTIONS.slice(0,3).map(t=>`
+    <div class="item-card" style="margin-bottom:8px">
+      <div class="item-row"><div><div class="item-name">${t.phone||'Customer'}</div><div class="item-sub">£${parseFloat(t.amount||0).toFixed(2)} • +${t.points_added||0} pts</div></div>
+      <div style="font-size:12px;color:#706f87">${t.timestamp?new Date(t.timestamp).toLocaleString().slice(0,14):'—'}</div></div>
+    </div>`).join('')||'<div style="padding:16px;text-align:center;color:#706f87;font-size:13px">No recent sales</div>';
 }
 
-function renderOrders() {
-  const list = document.getElementById('orders-list');
-  if (!list) return;
-  if (ORDERS.length === 0) {
-    list.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87">No sales yet</td></tr>';
-  } else {
-    list.innerHTML = ORDERS.map(o => `
-      <tr>
-        <td>${o.phone || 'Unknown'}</td>
-        <td>£${parseFloat(o.amount||0).toFixed(2)}</td>
-        <td>+${o.points_added || 0} pts</td>
-        <td>${o.timestamp ? new Date(o.timestamp).toLocaleTimeString() : '—'}</td>
-      </tr>`).join('');
-  }
-}
-
-function renderCustomers() {
-  const list = document.getElementById('customers-list');
-  if (!list) return;
-  if (CUSTOMERS.length === 0) {
-    list.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87">No customers yet</td></tr>';
-  } else {
-    list.innerHTML = CUSTOMERS.map(c => `
-      <tr>
-        <td>${c.name || 'Customer'}</td>
-        <td>${c.phone}</td>
-        <td>${c.points || 0}</td>
-        <td>${c.visit_count || 0}</td>
-      </tr>`).join('');
-  }
-}
-
-function updateStats() {
-  const so = document.getElementById('stat-orders'); if(so) so.textContent = ORDERS.length;
-  const uc = new Set(ORDERS.map(o => o.phone)).size;
-  const sc = document.getElementById('stat-customers'); if(sc) sc.textContent = uc;
-  const rev = ORDERS.reduce((a, o) => a + (parseFloat(o.amount) || 0), 0);
-  const sr = document.getElementById('stat-revenue'); if(sr) sr.textContent = '£' + rev.toFixed(2);
-}
-
-function processSale() {
-  const phoneEl = document.getElementById('till-phone');
-  const amountEl = document.getElementById('till-amount');
-  const phone = phoneEl ? phoneEl.value.trim() : '';
-  const amount = amountEl ? parseFloat(amountEl.value) : 0;
-
-  if (!phone || !amount || amount <= 0) { showToast('Enter valid phone and amount'); return; }
-
-  const pts = Math.floor(amount);  // 1 point per £1
-
-  // Upsert customer record
-  supaPost('merchant_customers', {
-    merchant_id: MERCHANT_ID, phone, points: pts, visit_count: 1,
-    total_spend: amount, last_updated: Date.now()
-  }, 'merchant_id,phone').catch(() => {});
-
+// ── Till ──────────────────────────────────────────────────
+function processSale(){
+  const phone=val('till-phone'),amount=parseFloat(document.getElementById('till-amount').value||0);
+  if(!phone||!amount||amount<=0){toast('Enter valid phone and amount');return}
+  const loyalty=calcLoyalty(amount,MDATA);
+  // Upsert customer
+  get('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(d=>{
+    const cu=(Array.isArray(d)&&d[0])||{points:0,visit_count:0,total_spend:0,name:'Customer'};
+    const newPts=(cu.points||0)+loyalty.pts;
+    post('merchant_customers',{merchant_id:MID,phone,name:cu.name||'Customer',points:newPts,visit_count:(cu.visit_count||0)+1,total_spend:(cu.total_spend||0)+amount,last_updated:Date.now()},'merchant_id,phone');
+    // Update customer card points
+    patch('cards','user_id=eq.not.null&merchant_id=eq.'+MID+'&card_id=eq.local-'+MID,{points:newPts}).catch(()=>{});
+  }).catch(()=>{});
   // Log transaction
-  supaPost('transactions', {
-    merchant_id: MERCHANT_ID, phone, amount, points_added: pts,
-    type: 'purchase', timestamp: Date.now()
+  post('transactions',{merchant_id:MID,phone,amount,points_added:loyalty.pts,type:'purchase',timestamp:Date.now()})
+  .then(()=>{
+    toast(`✅ Sale recorded! ${loyalty.desc}`);
+    document.getElementById('till-phone').value='';document.getElementById('till-amount').value='';
+    loadAll();
+  }).catch(()=>toast('Sale failed'))
+}
+
+// ── Redeem ────────────────────────────────────────────────
+let REDEEM_CUST=null;
+function openRedeemModal(){document.getElementById('r-phone').value='';document.getElementById('r-cust-info').style.display='none';document.getElementById('r-confirm-btn').style.display='none';openModal('redeemModal')}
+function lookupForRedeem(){
+  const phone=val('r-phone');if(!phone){return}
+  get('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(d=>{
+    REDEEM_CUST=Array.isArray(d)&&d[0]?d[0]:null;
+    const ci=document.getElementById('r-cust-info');
+    const th=MDATA.loyalty_threshold||100;
+    if(REDEEM_CUST){
+      ci.innerHTML=`<div style="font-weight:700">${REDEEM_CUST.name||'Customer'}</div><div style="font-size:15px;color:#6C5CE7;font-weight:800;margin:8px 0">${REDEEM_CUST.points||0} points</div><div style="font-size:13px;color:#706f87">${REDEEM_CUST.points>=th?'✅ Can redeem reward! (needs '+th+' pts)':'Needs '+(th-(REDEEM_CUST.points||0))+' more points for reward'}</div>`;
+      ci.style.display='block';
+      document.getElementById('r-confirm-btn').style.display=REDEEM_CUST.points>=th?'block':'none';
+    } else {ci.innerHTML='<div style="color:#c62828">Customer not found</div>';ci.style.display='block'}
   })
-  .then(() => {
-    showToast(`✅ Sale recorded! +${pts} points for ${phone}`);
-    if(phoneEl) phoneEl.value = '';
-    if(amountEl) amountEl.value = '';
-    loadData();
+}
+function confirmRedeem(){
+  if(!REDEEM_CUST)return;
+  const th=MDATA.loyalty_threshold||100;
+  const newPts=(REDEEM_CUST.points||0)-th;
+  post('merchant_customers',{merchant_id:MID,phone:REDEEM_CUST.phone,name:REDEEM_CUST.name,points:Math.max(0,newPts),visit_count:REDEEM_CUST.visit_count||0,rewards_redeemed:(REDEEM_CUST.rewards_redeemed||0)+1,last_updated:Date.now()},'merchant_id,phone')
+  .then(()=>{toast('🎁 Reward redeemed! '+REDEEM_CUST.name+' now has '+Math.max(0,newPts)+' pts');closeModal('redeemModal');loadAll()})
+}
+function addBonusPoints(phone){
+  const pts=parseInt(prompt('Add bonus points to '+phone+':'));
+  if(!pts||pts<=0)return;
+  get('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(d=>{
+    const cu=Array.isArray(d)&&d[0]?d[0]:{points:0,visit_count:0,total_spend:0};
+    post('merchant_customers',{merchant_id:MID,phone,points:(cu.points||0)+pts,visit_count:cu.visit_count||0,total_spend:cu.total_spend||0,last_updated:Date.now()},'merchant_id,phone')
+    .then(()=>{toast(`+${pts} bonus points added!`);loadAll()})
   })
-  .catch(() => showToast('Sale failed — try again'));
 }
 
-function openProductModal() {
-  const m = document.getElementById('product-modal'); if(m) m.style.display = 'flex';
+// ── Products ─────────────────────────────────────────────
+function openAddProduct(){
+  document.getElementById('edit-prod-id').value='';
+  document.getElementById('prod-modal-title').textContent='Add Product';
+  ['p-name','p-desc'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  document.getElementById('p-price').value='';document.getElementById('p-emoji').value='';
+  document.getElementById('p-collect').checked=true;document.getElementById('p-delivery').checked=false;document.getElementById('p-active').checked=true;
+  err('p-err','');openModal('addProductModal');
+}
+function editProduct(id){
+  const p=PRODUCTS.find(x=>x.id===id);if(!p)return;
+  document.getElementById('edit-prod-id').value=id;
+  document.getElementById('prod-modal-title').textContent='Edit Product';
+  document.getElementById('p-name').value=p.name||'';document.getElementById('p-price').value=p.price||'';
+  document.getElementById('p-emoji').value=p.emoji||'';document.getElementById('p-desc').value=p.description||'';
+  if(document.getElementById('p-cat'))document.getElementById('p-cat').value=p.category||'other';
+  document.getElementById('p-collect').checked=p.collect!==false;document.getElementById('p-delivery').checked=p.delivery===true;document.getElementById('p-active').checked=p.active!==false;
+  openModal('addProductModal');
+}
+function saveProduct(){
+  const name=val('p-name'),price=parseFloat(document.getElementById('p-price').value||0),editId=val('edit-prod-id');
+  if(!name||price<=0){err('p-err','Name and price required');return}
+  const data={merchant_id:MID,name,price,emoji:val('p-emoji')||'🛍️',category:document.getElementById('p-cat')?document.getElementById('p-cat').value:'other',description:val('p-desc'),collect:document.getElementById('p-collect').checked,delivery:document.getElementById('p-delivery').checked,active:document.getElementById('p-active').checked,shop_name:MDATA.name||''};
+  const action=editId?patch('products','id=eq.'+editId,data):post('products',{...data,created_at:Date.now()});
+  action.then(()=>{toast(`✅ ${name} saved!`);closeModal('addProductModal');loadProducts()}).catch(()=>err('p-err','Save failed'))
+}
+function deleteProduct(id){
+  if(!confirm('Delete this product?'))return;
+  del('products','id=eq.'+id).then(()=>{toast('✅ Deleted');loadProducts()})
 }
 
-function closeProductModal() {
-  const m = document.getElementById('product-modal'); if(m) m.style.display = 'none';
+// ── Orders ────────────────────────────────────────────────
+function openOrderDetail(id){
+  const o=ORDERS.find(x=>x.id===id);if(!o)return;
+  CUR_ORDER=o;
+  const stCls={pending:'st-pending',ready:'st-ready',completed:'st-completed',rejected:'st-rejected'};
+  document.getElementById('order-detail-body').innerHTML=`
+    <div style="background:#f4f2ff;border-radius:14px;padding:16px;margin-bottom:16px">
+      <div style="font-size:12px;color:#706f87;margin-bottom:6px">ORDER #${o.id?o.id.slice(0,8).toUpperCase():'—'}</div>
+      <div style="font-size:18px;font-weight:800;margin-bottom:4px">${o.product_name||'Order'}</div>
+      <div style="font-size:14px;color:#706f87">Quantity: ${o.quantity||1} • Total: <strong style="color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</strong></div>
+    </div>
+    <div class="item-card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between"><div style="font-size:12px;font-weight:700;color:#706f87">Status</div><div class="status-badge ${stCls[o.status]||'st-pending'}">${o.status||'pending'}</div></div>
+    </div>
+    <div class="item-card" style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#706f87;margin-bottom:6px">Order Type</div>
+      <div style="font-size:15px;font-weight:700">${o.type==='collect'?'🏪 Click & Collect':'🚚 Delivery'}</div>
+      ${o.collect_time?'<div style="font-size:13px;color:#706f87;margin-top:4px">Collect time: '+o.collect_time+'</div>':''}
+      ${o.delivery_address?'<div style="font-size:13px;color:#706f87;margin-top:4px">Address: '+o.delivery_address+'</div>':''}
+    </div>
+    ${o.note?'<div class="item-card" style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:#706f87;margin-bottom:6px">Note</div><div style="font-size:14px">'+o.note+'</div></div>':''}
+    <div class="item-card"><div style="font-size:12px;font-weight:700;color:#706f87;margin-bottom:6px">Ordered</div><div style="font-size:13px">${o.created_at?new Date(o.created_at).toLocaleString():'—'}</div></div>`;
+  openModal('orderDetailModal');
+}
+function updateOrderStatus(status){
+  if(!CUR_ORDER)return;
+  patch('orders','id=eq.'+CUR_ORDER.id,{status}).then(()=>{toast('✅ Order marked '+status);closeModal('orderDetailModal');loadOrders()})
 }
 
-function saveProduct() {
-  const name = document.getElementById('product-name')?.value.trim();
-  const price = parseFloat(document.getElementById('product-price')?.value || 0);
-  const cat = document.getElementById('product-category')?.value || 'other';
-  const emoji = document.getElementById('product-emoji')?.value.trim() || '🛍️';
-
-  if (!name || !price || price <= 0) { showToast('Product name and price required'); return; }
-
-  supaPost('products', {
-    merchant_id: MERCHANT_ID, name, price, emoji, category: cat,
-    collect: true, delivery: false, active: true, created_at: Date.now()
+// ── Scan ─────────────────────────────────────────────────
+let scanActive=false;
+function startScan(){
+  if(scanActive)return;scanActive=true;
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(stream=>{
+    const v=document.getElementById('video');v.srcObject=stream;
+    // Load jsQR
+    const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+    s.onload=()=>scanLoop(v);document.head.appendChild(s);
+  }).catch(()=>{toast('Camera not available — use manual entry')});
+}
+function scanLoop(video){
+  const canvas=document.createElement('canvas');const ctx=canvas.getContext('2d');
+  function tick(){
+    if(video.readyState===video.HAVE_ENOUGH_DATA){
+      canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+      ctx.drawImage(video,0,0);
+      const img=ctx.getImageData(0,0,canvas.width,canvas.height);
+      const code=window.jsQR&&window.jsQR(img.data,img.width,img.height);
+      if(code){handleScan(code.data);return;}
+    }
+    if(scanActive)requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+function handleScan(data){
+  SCAN_PHONE=data;
+  txt('scan-value',data);
+  document.getElementById('scan-result').style.display='block';
+  document.getElementById('manual-phone').value=data;
+  lookupCustomer();
+}
+function lookupCustomer(){
+  const phone=val('manual-phone')||SCAN_PHONE;if(!phone)return;
+  SCAN_PHONE=phone;
+  get('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(d=>{
+    const cu=Array.isArray(d)&&d[0]?d[0]:null;
+    const el=document.getElementById('customer-lookup-result');
+    const scBtn=document.getElementById('scan-add-pts-btn');
+    if(cu){
+      el.innerHTML='<div class="item-card"><div class="item-name">👤 '+( cu.name||'Customer')+'</div><div class="item-sub">'+cu.phone+' • '+( cu.points||0)+' pts • '+(cu.visit_count||0)+' visits</div></div>';
+      if(scBtn)scBtn.style.display='block';
+    } else {
+      el.innerHTML='<div class="item-card" style="color:#706f87">No loyalty record for '+phone+'.<br>Process a sale to create one.</div>';
+      if(scBtn)scBtn.style.display='none';
+    }
   })
-  .then(() => {
-    showToast(`✅ ${name} added!`);
-    closeProductModal();
-    ['product-name','product-price'].forEach(i => { const el=document.getElementById(i); if(el) el.value=''; });
-    loadData();
-  })
-  .catch(() => showToast('Save failed'));
+}
+function addPointsFromScan(){
+  if(!SCAN_PHONE){return}
+  const amount=parseFloat(prompt('Enter sale amount for '+SCAN_PHONE+':'));
+  if(!amount||amount<=0)return;
+  document.getElementById('till-phone').value=SCAN_PHONE;
+  document.getElementById('till-amount').value=amount;
+  switchTab('till');processSale();
 }
 
-function deleteProduct(id) {
-  if (!confirm('Delete this product?')) return;
-  supaDel('products', `id=eq.${id}`)
-  .then(() => { showToast('✅ Deleted'); loadData(); })
-  .catch(() => showToast('Delete failed'));
+// ── Settings ─────────────────────────────────────────────
+function selectLoyalty(type,noSave){
+  LOYALTY_TYPE=type;
+  ['points','percentage','discount','stamp'].forEach(t=>{
+    const el=document.getElementById('lopt-'+t);
+    if(el)el.classList.toggle('sel',t===type);
+  });
+  const vs=document.getElementById('loyalty-val-section');
+  const vf=document.getElementById('loyalty-val-fields');
+  if(!vs||!vf)return;
+  vs.style.display='block';
+  if(type==='points')vf.innerHTML='<div class="mfield"><label class="mlabel">Points per £1 spent</label><input id="lv-val" class="minput" type="number" step="0.5" min="0.5" value="'+(MDATA.loyalty_value||1)+'"></div><div class="mfield"><label class="mlabel">Points needed for reward</label><input id="lv-thresh" class="minput" type="number" min="1" value="'+(MDATA.loyalty_threshold||100)+'"></div>';
+  else if(type==='percentage')vf.innerHTML='<div class="mfield"><label class="mlabel">Cashback % per purchase</label><input id="lv-val" class="minput" type="number" step="0.5" min="0.5" max="50" value="'+(MDATA.loyalty_value||5)+'"></div>';
+  else if(type==='discount')vf.innerHTML='<div class="mfield"><label class="mlabel">Discount £ amount</label><input id="lv-val" class="minput" type="number" step="0.5" min="0.5" value="'+(MDATA.loyalty_value||5)+'"></div><div class="mfield"><label class="mlabel">Minimum spend to trigger (£)</label><input id="lv-thresh" class="minput" type="number" min="1" value="'+(MDATA.loyalty_threshold||50)+'"></div>';
+  else if(type==='stamp')vf.innerHTML='<div class="mfield"><label class="mlabel">Visits needed for reward</label><input id="lv-thresh" class="minput" type="number" min="2" max="20" value="'+(MDATA.loyalty_threshold||10)+'"></div>';
+}
+function saveSettings(){
+  const lv=document.getElementById('lv-val'),lt=document.getElementById('lv-thresh');
+  const updates={name:val('s-name'),category:document.getElementById('s-cat')?document.getElementById('s-cat').value:'other',address:val('s-addr'),open_hours:val('s-hours'),logo_emoji:val('s-emoji')||'🏪',loyalty_type:LOYALTY_TYPE,loyalty_value:lv?parseFloat(lv.value)||1:1,loyalty_threshold:lt?parseFloat(lt.value)||100:100};
+  patch('merchants','id=eq.'+MID,updates).then(d=>{
+    toast('✅ Settings saved!');loadMerchant();
+  }).catch(()=>toast('Save failed'))
+}
+function copyShopId(){
+  const id=MDATA.shop_id||'—';
+  navigator.clipboard.writeText(id).then(()=>toast('📋 Shop ID copied: '+id)).catch(()=>toast('Shop ID: '+id));
 }
 
-function switchScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const sc = document.getElementById(name + '-screen'); if(sc) sc.classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  if(event && event.target) event.target.classList.add('active');
+// ── Navigation ────────────────────────────────────────────
+function switchTab(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById(name+'-screen').classList.add('on');
+  const nb=document.getElementById('nav-'+name);if(nb)nb.classList.add('on');
+  if(name==='scan'){startScan();}
+  if(name==='orders')loadOrders();
+  if(name==='customers')loadCustomers();
+  if(name==='till'){loadTransactions();}
 }
-
-function showToast(msg) {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2800);
-}
-
+function showToast(m){toast(m)}
 </script>
 </body>
 </html>

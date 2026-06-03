@@ -4,620 +4,820 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0a0a14">
+<link rel="manifest" href="manifest.json">
 <title>Stashlo - Customer Wallet</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:system-ui,-apple-system,'Segoe UI',sans-serif; background:#f0efff; color:#1a1a2e; }
-button { cursor:pointer; border:none; font-family:inherit; }
-input { font-family:inherit; border:none; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#f0efff;color:#1a1a2e;min-height:100vh}
+button{cursor:pointer;border:none;font-family:inherit;outline:none}
+input,select,textarea{font-family:inherit;border:none;outline:none}
+a{text-decoration:none;color:inherit}
 
-#splash { position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; z-index:9999; }
-#splash-text { color:#fff; font-size:40px; font-weight:800; }
-#splash-text b { color:#6C5CE7; }
-#splash-loader { display:flex; gap:8px; }
-#splash-loader div { width:8px; height:8px; background:#6C5CE7; border-radius:50%; animation:bounce 1.2s infinite; }
-#splash-loader div:nth-child(2) { animation-delay:0.2s; }
-#splash-loader div:nth-child(3) { animation-delay:0.4s; }
-@keyframes bounce { 0%,100% { opacity:0.3; } 50% { opacity:1; } }
+/* Splash */
+#splash{position:fixed;inset:0;background:#0a0a14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:9999}
+.splash-logo{font-size:48px;font-weight:900;color:#fff}.splash-logo b{color:#6C5CE7}
+.splash-dots{display:flex;gap:8px}
+.splash-dots div{width:8px;height:8px;background:#6C5CE7;border-radius:50%;animation:pulse 1.2s infinite}
+.splash-dots div:nth-child(2){animation-delay:.2s}
+.splash-dots div:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
 
-#auth { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
-.auth-box { background:#fff; border-radius:24px; padding:32px 24px; width:100%; max-width:380px; }
-.auth-box h1 { font-size:20px; font-weight:800; margin-bottom:5px; }
-.auth-box p { font-size:13px; color:#706f87; margin-bottom:20px; line-height:1.5; }
-.auth-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; margin-bottom:12px; font-size:15px; }
-.auth-btn { width:100%; padding:13px; background:#0a0a14; color:#fff; border-radius:12px; font-weight:700; font-size:15px; margin-top:8px; }
-.auth-toggle { text-align:center; margin-top:16px; font-size:13px; color:#706f87; }
-.auth-toggle a { color:#6C5CE7; cursor:pointer; }
-.auth-error { color:#c62828; font-size:12px; margin-top:10px; padding:10px; background:#ffebee; border-radius:8px; display:none; }
+/* Auth */
+#auth{display:none;position:fixed;inset:0;background:#0a0a14;align-items:center;justify-content:center;padding:20px;z-index:100;overflow-y:auto}
+.auth-card{background:#fff;border-radius:28px;padding:32px 24px;width:100%;max-width:380px;box-shadow:0 24px 64px rgba(108,92,231,.25)}
+.auth-logo{font-size:28px;font-weight:900;margin-bottom:4px}.auth-logo b{color:#6C5CE7}
+.auth-sub{color:#706f87;font-size:13px;margin-bottom:24px}
+.auth-field{margin-bottom:12px}
+.auth-input{width:100%;padding:14px;border:2px solid #f0f0f5;border-radius:14px;font-size:15px;transition:border-color .2s;background:#fafafa}
+.auth-input:focus{border-color:#6C5CE7;background:#fff}
+.auth-btn{width:100%;padding:15px;background:#0a0a14;color:#fff;border-radius:14px;font-weight:700;font-size:16px;margin-top:4px;transition:opacity .2s}
+.auth-btn:active{opacity:.8}
+.auth-link{text-align:center;margin-top:16px;font-size:13px;color:#706f87}
+.auth-link span{color:#6C5CE7;cursor:pointer;font-weight:600}
+.auth-err{color:#c62828;font-size:12px;margin-top:10px;padding:10px 14px;background:#ffebee;border-radius:10px;display:none}
 
-#app { display:none; flex-direction:column; min-height:100vh; padding-bottom:80px; }
-.topbar { background:#0a0a14; color:#fff; padding:14px 18px; font-weight:800; font-size:16px; position:sticky; top:0; z-index:100; display:flex; justify-content:space-between; align-items:center; }
-.topbar b { color:#6C5CE7; }
-.topbar-action { cursor:pointer; font-size:18px; }
+/* App shell */
+#app{display:none;flex-direction:column;min-height:100vh;padding-bottom:72px}
+.topbar{background:#0a0a14;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99}
+.topbar-brand{font-size:20px;font-weight:900}.topbar-brand b{color:#6C5CE7}
+.topbar-right{display:flex;gap:12px;align-items:center}
+.topbar-btn{background:rgba(255,255,255,.1);color:#fff;padding:7px 12px;border-radius:8px;font-size:13px;font-weight:600}
 
-.screen { display:none; padding:16px; }
-.screen.active { display:block; }
+/* Bottom nav */
+.bottomnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1.5px solid #ececf3;display:flex;z-index:99;padding-bottom:env(safe-area-inset-bottom)}
+.nav-btn{flex:1;padding:12px 4px 8px;text-align:center;cursor:pointer;transition:color .15s;color:#a0a0b5}
+.nav-btn.on{color:#6C5CE7}
+.nav-icon{font-size:22px;display:block;line-height:1}
+.nav-label{font-size:10px;font-weight:600;margin-top:2px;display:block}
 
-.hero { background:#0a0a14; color:#fff; border-radius:20px; padding:20px 18px; margin-bottom:16px; }
-.hero-greeting { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:8px; }
-.hero-name { font-size:18px; font-weight:800; margin-bottom:14px; }
-.hero-stats { display:flex; gap:10px; }
-.stat { background:rgba(255,255,255,0.08); border-radius:10px; padding:12px; flex:1; }
-.stat-value { font-size:20px; font-weight:800; color:#fff; }
-.stat-label { font-size:11px; color:rgba(255,255,255,0.4); margin-top:4px; }
+/* Screens */
+.screen{display:none;padding:16px;animation:fadeIn .2s}
+.screen.on{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
-.section-header { display:flex; justify-content:space-between; align-items:center; margin:18px 0 12px; }
-.section-title { font-size:15px; font-weight:700; }
-.add-btn { width:36px; height:36px; background:#ece9ff; border-radius:10px; color:#6C5CE7; font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+/* Hero card */
+.hero{background:linear-gradient(135deg,#0a0a14 0%,#1a1040 100%);color:#fff;border-radius:22px;padding:22px 20px;margin-bottom:18px}
+.hero-greeting{font-size:12px;color:rgba(255,255,255,.5);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.hero-name{font-size:22px;font-weight:800;margin-bottom:16px}
+.hero-stats{display:flex;gap:10px}
+.stat-box{flex:1;background:rgba(255,255,255,.08);border-radius:12px;padding:12px}
+.stat-val{font-size:24px;font-weight:800;color:#fff}
+.stat-lab{font-size:11px;color:rgba(255,255,255,.4);margin-top:3px}
 
-.cards-container { display:flex; flex-direction:column; gap:12px; }
-.card { border-radius:16px; padding:16px; cursor:pointer; color:#fff; transform:perspective(1000px) rotateY(-3deg); transition:transform 0.3s; }
-.card:active { transform:perspective(1000px) rotateY(-1deg); }
-.card-brand { font-size:12px; opacity:0.6; margin-bottom:8px; }
-.card-points { font-size:32px; font-weight:800; }
-.card-label { font-size:11px; opacity:0.5; }
+.sec-head{display:flex;justify-content:space-between;align-items:center;margin:20px 0 12px}
+.sec-title{font-size:16px;font-weight:800}
+.sec-action{font-size:13px;color:#6C5CE7;font-weight:600;cursor:pointer}
+.add-fab{width:38px;height:38px;background:#ece9ff;border-radius:12px;color:#6C5CE7;font-size:20px;display:flex;align-items:center;justify-content:center}
 
-.empty { text-align:center; padding:40px 20px; color:#706f87; }
-.empty-icon { font-size:40px; margin-bottom:12px; }
-.empty-text { font-size:14px; line-height:1.6; }
+/* Loyalty cards */
+.lcard{border-radius:18px;padding:18px;cursor:pointer;color:#fff;margin-bottom:12px;position:relative;overflow:hidden;min-height:110px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .2s,box-shadow .2s}
+.lcard:active{transform:scale(.98)}
+.lcard::after{content:'';position:absolute;top:-30%;right:-10%;width:120px;height:120px;background:rgba(255,255,255,.06);border-radius:50%}
+.lcard-top{display:flex;justify-content:space-between;align-items:flex-start}
+.lcard-name{font-size:14px;font-weight:700;opacity:.9}
+.lcard-badge{font-size:10px;background:rgba(255,255,255,.2);padding:3px 8px;border-radius:10px;font-weight:600}
+.lcard-pts{font-size:36px;font-weight:900;line-height:1;margin:8px 0 2px}
+.lcard-sub{font-size:11px;opacity:.5}
 
-.nav { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #ebebef; display:flex; z-index:100; }
-.nav-item { flex:1; padding:12px; text-align:center; font-size:11px; font-weight:600; color:#706f87; cursor:pointer; }
-.nav-item.active { color:#6C5CE7; }
+/* Shops */
+.shop-search-box{display:flex;gap:10px;margin-bottom:16px}
+.shop-search-box input{flex:1;padding:12px 14px;background:#fff;border-radius:14px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.shop-search-box button{padding:12px 16px;background:#6C5CE7;color:#fff;border-radius:14px;font-weight:700}
+.shop-card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);cursor:pointer;transition:transform .15s}
+.shop-card:active{transform:scale(.98)}
+.shop-emoji{font-size:36px;width:56px;height:56px;background:#f4f2ff;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.shop-info{flex:1}
+.shop-name{font-size:15px;font-weight:700}
+.shop-cat{font-size:12px;color:#706f87;margin-top:2px}
+.shop-action{background:#ece9ff;color:#6C5CE7;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700}
 
-#add-modal { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:none; align-items:flex-end; z-index:200; }
-.modal-content { background:#fff; width:100%; border-radius:24px 24px 0 0; padding:24px 18px; max-height:90vh; overflow-y:auto; }
-.modal-title { font-size:18px; font-weight:800; margin-bottom:16px; }
-.modal-field { margin-bottom:14px; }
-.modal-label { font-size:11px; font-weight:700; color:#706f87; text-transform:uppercase; margin-bottom:6px; display:block; }
-.modal-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; font-size:14px; }
-.modal-btn { width:100%; padding:12px; border-radius:12px; font-weight:700; font-size:14px; margin:10px 0; }
-.modal-btn-primary { background:#0a0a14; color:#fff; }
-.modal-btn-secondary { background:#f0f0f0; color:#706f87; }
-.modal-btn-location { background:#00897B; color:#fff; }
-.modal-error { color:#c62828; font-size:12px; margin-top:10px; padding:10px; background:#ffebee; border-radius:8px; display:none; }
+/* Products grid */
+.prods-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.prod-card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);cursor:pointer;transition:transform .15s}
+.prod-card:active{transform:scale(.97)}
+.prod-emoji{font-size:32px;margin-bottom:8px}
+.prod-name{font-size:13px;font-weight:700;margin-bottom:4px}
+.prod-price{font-size:16px;font-weight:800;color:#6C5CE7}
+.prod-sub{font-size:11px;color:#706f87;margin-top:3px}
+.prod-badges{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.prod-badge{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600}
+.badge-collect{background:#e8f5e9;color:#2e7d32}
+.badge-delivery{background:#e3f2fd;color:#1565c0}
 
-.brands-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
-.brand-item { background:#f9f9fb; border-radius:12px; padding:12px; text-align:center; cursor:pointer; }
-.brand-emoji { font-size:28px; margin-bottom:6px; }
-.brand-name { font-size:12px; font-weight:600; }
+/* Orders */
+.order-card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.order-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.order-id{font-size:12px;font-weight:700;color:#706f87}
+.order-status{font-size:11px;font-weight:700;padding:4px 10px;border-radius:10px}
+.st-pending{background:#fff3e0;color:#e65100}
+.st-ready{background:#e8f5e9;color:#2e7d32}
+.st-completed{background:#e3f2fd;color:#1565c0}
+.st-rejected{background:#ffebee;color:#c62828}
+.order-shop{font-size:14px;font-weight:700;margin-bottom:4px}
+.order-items{font-size:12px;color:#706f87;margin-bottom:8px}
+.order-footer{display:flex;justify-content:space-between;align-items:center}
+.order-total{font-size:16px;font-weight:800;color:#6C5CE7}
+.order-type{font-size:11px;color:#706f87;font-weight:600}
 
-.card-preview { background:#f9f9fb; border-radius:12px; padding:14px; margin-bottom:14px; }
-.card-preview-emoji { font-size:32px; margin-bottom:6px; }
-.card-preview-name { font-size:14px; font-weight:700; color:#1a1a2e; }
+/* Modals */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;z-index:200}
+.modal-overlay.show{display:flex}
+.modal-sheet{background:#fff;width:100%;border-radius:28px 28px 0 0;padding:24px 18px 36px;max-height:92vh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:18px;font-weight:800;margin-bottom:18px}
+.mfield{margin-bottom:14px}
+.mlabel{display:block;font-size:11px;font-weight:700;color:#706f87;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.minput{width:100%;padding:13px 14px;border:2px solid #f0f0f5;border-radius:14px;font-size:14px;transition:border-color .2s;background:#fafafa}
+.minput:focus{border-color:#6C5CE7;background:#fff}
+.mbtn{width:100%;padding:14px;border-radius:14px;font-weight:700;font-size:15px;margin:6px 0;transition:opacity .2s}
+.mbtn:active{opacity:.8}
+.mbtn-primary{background:#0a0a14;color:#fff}
+.mbtn-purple{background:#6C5CE7;color:#fff}
+.mbtn-green{background:#00897B;color:#fff}
+.mbtn-gray{background:#f0f0f5;color:#706f87}
+.mbtn-red{background:#ffebee;color:#c62828}
+.merr{color:#c62828;font-size:12px;padding:10px 14px;background:#ffebee;border-radius:10px;display:none;margin-top:8px}
 
-#detail-modal { position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; display:none; flex-direction:column; color:#fff; z-index:150; overflow-y:auto; }
-.detail-header { padding:20px; flex-shrink:0; }
-.detail-back { background:rgba(255,255,255,0.1); color:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; margin-bottom:14px; display:inline-block; font-size:13px; }
-.detail-shop { font-size:13px; opacity:0.5; margin-bottom:4px; }
-.detail-points { font-size:56px; font-weight:800; margin:10px 0; line-height:1; }
-.detail-label { font-size:13px; opacity:0.5; }
-.detail-body { background:#fff; border-radius:24px 24px 0 0; flex:1; padding:20px; color:#1a1a2e; }
-.detail-row { background:#f9f9fb; border-radius:12px; padding:14px; margin-bottom:12px; }
-.detail-row-label { font-size:11px; font-weight:700; color:#706f87; text-transform:uppercase; margin-bottom:6px; }
-.detail-row-value { font-size:14px; font-weight:700; color:#1a1a2e; word-break:break-all; }
+/* Detail */
+.detail-overlay{position:fixed;inset:0;background:#0a0a14;display:none;flex-direction:column;z-index:150;overflow-y:auto}
+.detail-overlay.show{display:flex}
+.detail-top{padding:20px;flex-shrink:0}
+.detail-back{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:18px}
+.detail-shop-name{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:6px}
+.detail-pts{font-size:64px;font-weight:900;color:#fff;line-height:1}
+.detail-pts-lab{font-size:14px;color:rgba(255,255,255,.4);margin-top:4px;margin-bottom:4px}
+.detail-reward-info{background:rgba(108,92,231,.3);border:1px solid rgba(108,92,231,.5);border-radius:12px;padding:12px;margin-top:10px;color:#fff;font-size:13px}
+.detail-body{background:#fff;flex:1;border-radius:28px 28px 0 0;padding:22px 18px}
+.detail-row{background:#f9f9fb;border-radius:14px;padding:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.detail-row-lab{font-size:12px;font-weight:700;color:#706f87;text-transform:uppercase}
+.detail-row-val{font-size:15px;font-weight:800}
+.shop-prods-section{margin-top:6px}
+.shop-prods-title{font-size:15px;font-weight:700;margin-bottom:12px}
 
-.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#0a0a14; color:#fff; padding:10px 20px; border-radius:100px; font-size:13px; z-index:999; opacity:0; transition:opacity 0.3s; }
-.toast.show { opacity:1; }
+/* Toasts */
+.toast{position:fixed;bottom:86px;left:50%;transform:translateX(-50%);background:#0a0a14;color:#fff;padding:11px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;white-space:nowrap;max-width:90vw;text-overflow:ellipsis;overflow:hidden}
+.toast.show{opacity:1}
+
+/* Empty */
+.empty{text-align:center;padding:48px 20px;color:#706f87}
+.empty-ico{font-size:48px;margin-bottom:14px}
+.empty-txt{font-size:14px;line-height:1.7}
+
+/* Chips */
+.chip-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.chip{padding:7px 14px;border-radius:100px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid transparent;transition:all .2s}
+.chip.active{background:#ece9ff;color:#6C5CE7;border-color:#6C5CE7}
+.chip:not(.active){background:#f0f0f5;color:#706f87}
+
+/* Profile */
+.profile-hero{background:linear-gradient(135deg,#6C5CE7,#a29bfe);border-radius:20px;padding:24px 20px;text-align:center;margin-bottom:16px;color:#fff}
+.profile-avatar{width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.2);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:28px}
+.profile-name{font-size:20px;font-weight:800}
+.profile-email{font-size:13px;opacity:.7;margin-top:4px}
+.profile-row{background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.profile-row-ico{font-size:22px;width:44px;height:44px;background:#f4f2ff;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.profile-row-txt{font-size:14px;font-weight:600}
+.profile-row-sub{font-size:12px;color:#706f87;margin-top:2px}
 </style>
 </head>
 <body>
 
 <div id="splash">
-  <div id="splash-text">Stash<b>lo</b></div>
-  <div id="splash-loader"><div></div><div></div><div></div></div>
+  <div class="splash-logo">Stash<b>lo</b></div>
+  <div class="splash-dots"><div></div><div></div><div></div></div>
 </div>
 
 <div id="auth">
-  <div class="auth-box">
-    <h1>Stashlo</h1>
-    <p>Smart Loyalty Wallet</p>
+  <div class="auth-card">
+    <div class="auth-logo">Stash<b>lo</b></div>
+    <p class="auth-sub">Smart Loyalty Wallet</p>
     <div id="auth-login">
-      <input type="email" id="email" class="auth-input" placeholder="Email">
-      <input type="password" id="password" class="auth-input" placeholder="Password">
+      <div class="auth-field"><input type="email" id="email" class="auth-input" placeholder="Email address"></div>
+      <div class="auth-field"><input type="password" id="password" class="auth-input" placeholder="Password"></div>
       <button class="auth-btn" onclick="login()">Sign in</button>
-      <div class="auth-toggle">New user? <a onclick="showSignup()">Create account</a></div>
-      <div class="auth-error" id="auth-error"></div>
+      <p class="auth-link">New user? <span onclick="showSignup()">Create account</span></p>
+      <div class="auth-err" id="auth-error"></div>
     </div>
-    <div id="auth-signup" style="display:none;">
-      <input type="email" id="signup-email" class="auth-input" placeholder="Email">
-      <input type="password" id="signup-password" class="auth-input" placeholder="Password (6+ chars)">
-      <input type="text" id="signup-name" class="auth-input" placeholder="Full name">
+    <div id="auth-signup" style="display:none">
+      <div class="auth-field"><input type="text" id="su-name" class="auth-input" placeholder="Full name"></div>
+      <div class="auth-field"><input type="email" id="su-email" class="auth-input" placeholder="Email address"></div>
+      <div class="auth-field"><input type="password" id="su-pw" class="auth-input" placeholder="Password (6+ chars)"></div>
+      <div class="auth-field"><input type="tel" id="su-phone" class="auth-input" placeholder="Phone number (optional)"></div>
       <button class="auth-btn" onclick="signup()">Create account</button>
-      <div class="auth-toggle">Have account? <a onclick="showLogin()">Sign in</a></div>
-      <div class="auth-error" id="signup-error"></div>
+      <p class="auth-link">Have account? <span onclick="showLogin()">Sign in</span></p>
+      <div class="auth-err" id="su-error"></div>
     </div>
   </div>
 </div>
 
 <div id="app">
-  <div class="topbar">Stash<b>lo</b> <div class="topbar-action" onclick="logout()">🚪</div></div>
+  <div class="topbar">
+    <div class="topbar-brand">Stash<b>lo</b></div>
+    <div class="topbar-right">
+      <button class="topbar-btn" onclick="openShopSearch()">🔍 Find Shop</button>
+      <button class="topbar-btn" onclick="logout()">🚪</button>
+    </div>
+  </div>
 
-  <div class="screen active" id="home-screen">
+  <!-- HOME -->
+  <div class="screen on" id="home-screen">
     <div class="hero">
-      <div class="hero-greeting">Good morning</div>
+      <div class="hero-greeting" id="greeting-time">Good morning</div>
       <div class="hero-name" id="greeting-name">Your wallet</div>
       <div class="hero-stats">
-        <div class="stat">
-          <div class="stat-value" id="stat-cards">0</div>
-          <div class="stat-label">Cards</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value" id="stat-points">0</div>
-          <div class="stat-label">Points</div>
-        </div>
+        <div class="stat-box"><div class="stat-val" id="s-cards">0</div><div class="stat-lab">Cards</div></div>
+        <div class="stat-box"><div class="stat-val" id="s-pts">0</div><div class="stat-lab">Total pts</div></div>
+        <div class="stat-box"><div class="stat-val" id="s-orders">0</div><div class="stat-lab">Orders</div></div>
       </div>
     </div>
-    <div class="section-header">
-      <div class="section-title">My loyalty cards</div>
-    </div>
-    <div class="cards-container" id="home-cards">
-      <div class="empty">
-        <div class="empty-icon">💳</div>
-        <div class="empty-text">No cards yet<br>Tap + in Cards to add</div>
-      </div>
-    </div>
+    <div class="sec-head"><span class="sec-title">My loyalty cards</span><span class="sec-action" onclick="switchTab('cards')">See all →</span></div>
+    <div id="home-cards"><div class="empty"><div class="empty-ico">💳</div><div class="empty-txt">No cards yet<br>Go to Cards tab to add</div></div></div>
+
+    <div class="sec-head" style="margin-top:24px"><span class="sec-title">Recent orders</span><span class="sec-action" onclick="switchTab('orders')">See all →</span></div>
+    <div id="home-orders"><div class="empty" style="padding:20px"><div class="empty-txt">No orders yet</div></div></div>
   </div>
 
+  <!-- CARDS -->
   <div class="screen" id="cards-screen">
-    <div class="section-header">
-      <div class="section-title">My loyalty cards</div>
-      <div class="add-btn" onclick="openAddModal()">+</div>
+    <div class="chip-row">
+      <div class="chip active" id="chip-national" onclick="filterCards('national')">🇬🇧 National</div>
+      <div class="chip" id="chip-local" onclick="filterCards('local')">🏪 Local Shops</div>
     </div>
-    <div class="cards-container" id="cards-list">
-      <div class="empty">
-        <div class="empty-icon">💳</div>
-        <div class="empty-text">No cards yet<br>Tap + to add</div>
-      </div>
+    <div id="national-section">
+      <div class="sec-head"><span class="sec-title">National brands</span><div class="add-fab" onclick="openAddModal()">+</div></div>
+      <div id="national-list"></div>
+    </div>
+    <div id="local-section" style="display:none">
+      <div class="sec-head"><span class="sec-title">Local shops</span><div class="add-fab" onclick="openShopSearch()">+</div></div>
+      <div id="local-list"></div>
     </div>
   </div>
 
-  <div class="nav">
-    <div class="nav-item active" onclick="switchScreen('home')">🏠 Home</div>
-    <div class="nav-item" onclick="switchScreen('cards')">💳 Cards</div>
+  <!-- SHOP -->
+  <div class="screen" id="shop-screen">
+    <div class="shop-search-box">
+      <input id="shop-search-inp" placeholder="Enter Shop ID (e.g. SL-1234) or name" oninput="searchShops()">
+      <button onclick="searchShops()">Go</button>
+    </div>
+    <div id="shop-results"></div>
+    <div id="my-shops-section">
+      <div class="sec-head"><span class="sec-title">My local shops</span></div>
+      <div id="my-shops-list"></div>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div class="screen" id="orders-screen">
+    <div class="sec-head"><span class="sec-title">My orders</span></div>
+    <div id="orders-list"></div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="screen" id="profile-screen">
+    <div class="profile-hero">
+      <div class="profile-avatar">👤</div>
+      <div class="profile-name" id="prof-name">Loading...</div>
+      <div class="profile-email" id="prof-email"></div>
+    </div>
+    <div class="profile-row" onclick="openEditProfile()">
+      <div class="profile-row-ico">✏️</div>
+      <div><div class="profile-row-txt">Edit Profile</div><div class="profile-row-sub">Update name, phone</div></div>
+    </div>
+    <div class="profile-row" onclick="logout()">
+      <div class="profile-row-ico">🚪</div>
+      <div><div class="profile-row-txt">Sign out</div><div class="profile-row-sub" id="prof-email2"></div></div>
+    </div>
+  </div>
+
+  <div class="bottomnav">
+    <div class="nav-btn on" id="nav-home" onclick="switchTab('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></div>
+    <div class="nav-btn" id="nav-cards" onclick="switchTab('cards')"><span class="nav-icon">💳</span><span class="nav-label">Cards</span></div>
+    <div class="nav-btn" id="nav-shop" onclick="switchTab('shop')"><span class="nav-icon">🛍️</span><span class="nav-label">Shop</span></div>
+    <div class="nav-btn" id="nav-orders" onclick="switchTab('orders')"><span class="nav-icon">📦</span><span class="nav-label">Orders</span></div>
+    <div class="nav-btn" id="nav-profile" onclick="switchTab('profile')"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></div>
   </div>
 </div>
 
-<div id="add-modal" onclick="if(event.target===this)closeAddModal()">
-  <div class="modal-content">
+<!-- Add national card modal -->
+<div class="modal-overlay" id="addCardModal" onclick="if(event.target===this)closeModal('addCardModal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
     <div class="modal-title">Add loyalty card</div>
-    
-    <div id="step-brands" style="display:block">
-      <div class="brands-grid" id="brands-grid"></div>
-      <button class="modal-btn modal-btn-secondary" onclick="closeAddModal()">Cancel</button>
+    <div id="brands-step">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px" id="brands-grid"></div>
+      <button class="mbtn mbtn-gray" onclick="closeModal('addCardModal')">Cancel</button>
     </div>
-
-    <div id="step-form" style="display:none">
-      <div class="card-preview">
-        <div class="card-preview-emoji" id="preview-emoji"></div>
-        <div class="card-preview-name" id="preview-name"></div>
+    <div id="card-form-step" style="display:none">
+      <div style="background:#f4f2ff;border-radius:14px;padding:14px;margin-bottom:16px;text-align:center">
+        <div style="font-size:32px" id="fp-emoji"></div>
+        <div style="font-size:15px;font-weight:700;margin-top:6px" id="fp-name"></div>
       </div>
-
-      <div class="modal-field">
-        <label class="modal-label">Card number ★</label>
-        <input type="text" id="card-number" class="modal-input" placeholder="e.g., 1234567890">
-      </div>
-
-      <div class="modal-field">
-        <label class="modal-label">Order reference</label>
-        <input type="text" id="order-ref" class="modal-input" placeholder="e.g., ORDER-12345">
-      </div>
-
-      <div class="modal-field">
-        <label class="modal-label">Store location</label>
-        <input type="text" id="store-loc" class="modal-input" placeholder="e.g., London Branch">
-      </div>
-
-      <div class="modal-field">
-        <label class="modal-label">Name</label>
-        <input type="text" id="card-name" class="modal-input" placeholder="Your name">
-      </div>
-
-      <button class="modal-btn modal-btn-location" onclick="captureLocation()">📍 Capture Location</button>
-      <div id="location-status" style="text-align:center; font-size:11px; color:#706f87; height:18px; margin-bottom:8px;"></div>
-
-      <button class="modal-btn modal-btn-primary" onclick="saveCard()">✓ Save card</button>
-      <button class="modal-btn modal-btn-secondary" onclick="backTobrands()">← Back</button>
-      <div class="modal-error" id="form-error"></div>
+      <div class="mfield"><label class="mlabel">Card Number ★</label><input id="fc-num" class="minput" placeholder="Your loyalty card number"></div>
+      <div class="mfield"><label class="mlabel">Cardholder name</label><input id="fc-holder" class="minput" placeholder="Name on card"></div>
+      <div class="mfield"><label class="mlabel">Store / Branch</label><input id="fc-store" class="minput" placeholder="e.g. Bristol Broadmead"></div>
+      <button class="mbtn mbtn-primary" onclick="saveNationalCard()">✓ Save card</button>
+      <button class="mbtn mbtn-gray" onclick="backToBrands()">← Back</button>
+      <div class="merr" id="fc-err"></div>
     </div>
   </div>
 </div>
 
-<div id="detail-modal" onclick="if(event.target===this)closeDetail()">
-  <div class="detail-header">
-    <div class="detail-back" onclick="closeDetail()">← Back</div>
-    <div class="detail-shop" id="detail-shop"></div>
-    <div class="detail-points" id="detail-points">0</div>
-    <div class="detail-label">loyalty points</div>
+<!-- Shop search modal -->
+<div class="modal-overlay" id="shopSearchModal" onclick="if(event.target===this)closeModal('shopSearchModal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Find a local shop</div>
+    <div class="mfield"><label class="mlabel">Shop ID (from receipt or sign)</label><input id="ms-shopid" class="minput" placeholder="e.g. SL-SKY1" oninput="modalSearchShop()"></div>
+    <div id="ms-results"></div>
+    <button class="mbtn mbtn-gray" onclick="closeModal('shopSearchModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Shop detail + products -->
+<div class="detail-overlay" id="shopDetail">
+  <div class="detail-top">
+    <div class="detail-back" onclick="closeShopDetail()">← Back</div>
+    <div id="sd-emoji" style="font-size:40px;margin-bottom:10px"></div>
+    <div class="detail-pts" id="sd-name" style="font-size:28px;margin-bottom:4px"></div>
+    <div style="color:rgba(255,255,255,.5);font-size:13px" id="sd-cat"></div>
+    <div id="sd-loyalty-info" style="background:rgba(108,92,231,.3);border:1px solid rgba(108,92,231,.5);border-radius:12px;padding:12px;margin-top:14px;color:#fff;font-size:13px"></div>
   </div>
   <div class="detail-body">
-    <div class="detail-row">
-      <div class="detail-row-label">Visits</div>
-      <div class="detail-row-value" id="detail-visits">0</div>
+    <div id="sd-card-section" style="margin-bottom:18px;display:none">
+      <div class="detail-row">
+        <div><div class="detail-row-lab">Your points</div><div class="detail-row-val" id="sd-mypts">0</div></div>
+        <button id="sd-add-card-btn" class="shop-action" onclick="addLocalCard()">+ Add card</button>
+      </div>
     </div>
-    <div class="detail-row">
-      <div class="detail-row-label">Total spent</div>
-      <div class="detail-row-value" id="detail-spent">£0</div>
+    <div class="shop-prods-section">
+      <div class="shop-prods-title">Menu / Products</div>
+      <div id="sd-products"></div>
     </div>
-    <div class="detail-row">
-      <div class="detail-row-label">Rewards</div>
-      <div class="detail-row-value" id="detail-rewards">0</div>
+  </div>
+</div>
+
+<!-- Cart / Order modal -->
+<div class="modal-overlay" id="orderModal" onclick="if(event.target===this)closeModal('orderModal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Place Order</div>
+    <div id="order-prod-info" style="background:#f4f2ff;border-radius:14px;padding:14px;margin-bottom:16px"></div>
+    <div class="mfield">
+      <label class="mlabel">Order type</label>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <label style="flex:1;background:#f0f0f5;border-radius:12px;padding:12px;text-align:center;cursor:pointer;border:2px solid transparent" id="collect-opt">
+          <input type="radio" name="order-type" value="collect" checked style="display:none" onchange="toggleOrderType()">
+          <div style="font-size:20px">🏪</div><div style="font-size:13px;font-weight:700;margin-top:4px">Click & Collect</div>
+        </label>
+        <label style="flex:1;background:#f0f0f5;border-radius:12px;padding:12px;text-align:center;cursor:pointer;border:2px solid transparent" id="delivery-opt">
+          <input type="radio" name="order-type" value="delivery" style="display:none" onchange="toggleOrderType()">
+          <div style="font-size:20px">🚚</div><div style="font-size:13px;font-weight:700;margin-top:4px">Delivery</div>
+        </label>
+      </div>
     </div>
-    <div class="detail-row">
-      <div class="detail-row-label">Card Number</div>
-      <div class="detail-row-value" id="detail-cardnum">****</div>
-    </div>
-    <div class="detail-row">
-      <div class="detail-row-label">Store Location</div>
-      <div class="detail-row-value" id="detail-store">—</div>
-    </div>
-    <div class="detail-row">
-      <div class="detail-row-label">Order Reference</div>
-      <div class="detail-row-value" id="detail-order">—</div>
-    </div>
+    <div class="mfield"><label class="mlabel">Quantity</label><input id="o-qty" class="minput" type="number" value="1" min="1" max="10"></div>
+    <div class="mfield" id="collect-time-field"><label class="mlabel">Preferred collect time</label><input id="o-collect-time" class="minput" placeholder="e.g. 2:30pm today"></div>
+    <div class="mfield" id="delivery-addr-field" style="display:none"><label class="mlabel">Delivery address</label><textarea id="o-addr" class="minput" rows="2" placeholder="Full delivery address"></textarea></div>
+    <div class="mfield"><label class="mlabel">Note (optional)</label><input id="o-note" class="minput" placeholder="Any special instructions?"></div>
+    <div id="o-loyalty-info" style="background:#e8f5e9;border-radius:12px;padding:12px;font-size:13px;color:#2e7d32;margin-bottom:12px;display:none"></div>
+    <button class="mbtn mbtn-purple" onclick="placeOrder()">🛒 Place Order</button>
+    <button class="mbtn mbtn-gray" onclick="closeModal('orderModal')">Cancel</button>
+    <div class="merr" id="o-err"></div>
+  </div>
+</div>
+
+<!-- Card detail -->
+<div class="detail-overlay" id="cardDetail">
+  <div class="detail-top">
+    <div class="detail-back" onclick="closeCardDetail()">← Back</div>
+    <div class="detail-shop-name" id="cd-shop"></div>
+    <div class="detail-pts" id="cd-pts">0</div>
+    <div class="detail-pts-lab">loyalty points</div>
+    <div id="cd-reward-info" class="detail-reward-info" style="display:none"></div>
+  </div>
+  <div class="detail-body">
+    <div id="cd-stats"></div>
+    <div id="cd-products-section"></div>
+    <button class="mbtn mbtn-red" onclick="deleteCard()" style="margin-top:10px">🗑 Remove card</button>
+  </div>
+</div>
+
+<!-- Profile edit -->
+<div class="modal-overlay" id="editProfileModal" onclick="if(event.target===this)closeModal('editProfileModal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Edit Profile</div>
+    <div class="mfield"><label class="mlabel">Name</label><input id="ep-name" class="minput" placeholder="Your name"></div>
+    <div class="mfield"><label class="mlabel">Phone</label><input id="ep-phone" class="minput" placeholder="07700 900000"></div>
+    <button class="mbtn mbtn-primary" onclick="saveProfile()">Save changes</button>
+    <button class="mbtn mbtn-gray" onclick="closeModal('editProfileModal')">Cancel</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
+const SURL='https://gcwevgaymahywqjorhnn.supabase.co',SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
+let TOKEN=null,UID=null,EMAIL=null,CARDS=[],ORDERS=[],PROF={},CUR_SHOP=null,CUR_CARD=null,CUR_BRAND=null;
 
-const SURL = 'https://gcwevgaymahywqjorhnn.supabase.co';
-const SKEY = 'sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
-
-let TOKEN = null, UID = null, USER_EMAIL = null, CARDS = [], CURRENT_BRAND = null, TEMP_LAT = null, TEMP_LNG = null;
-
-const BRANDS = [
-  {id:'tesco',name:'Tesco Clubcard',emoji:'🛒',color:'#00539B'},
-  {id:'nectar',name:'Nectar',emoji:'🏵️',color:'#FF6600'},
-  {id:'boots',name:'Boots Advantage',emoji:'💊',color:'#00A3AD'},
-  {id:'costa',name:'Costa Coffee',emoji:'☕',color:'#622F22'},
-  {id:'bp',name:'BP Rewards',emoji:'⛽',color:'#009A44'},
-  {id:'greggs',name:'Greggs',emoji:'🥐',color:'#002E5B'},
-  {id:'mcdonalds',name:"McDonald's",emoji:'🍟',color:'#DA291C'},
-  {id:'starbucks',name:'Starbucks',emoji:'☕',color:'#00704A'},
-  {id:'waterstones',name:'Waterstones',emoji:'📚',color:'#1B365D'},
-  {id:'johnlewis',name:'John Lewis',emoji:'🏬',color:'#3D3D3D'},
-  {id:'ikea',name:'IKEA Family',emoji:'🛋️',color:'#0058A3'},
-  {id:'lidl',name:'Lidl Plus',emoji:'🛒',color:'#0050AA'},
-  {id:'asda',name:'Asda',emoji:'🛒',color:'#78BE20'},
-  {id:'morrisons',name:'Morrisons',emoji:'🛒',color:'#F5A623'},
-  {id:'waitrose',name:'myWaitrose',emoji:'🥬',color:'#2d2d2d'},
-  {id:'nandos',name:"Nando's",emoji:'🍗',color:'#BE0000'},
-  {id:'pizza',name:'Pizza Express',emoji:'🍕',color:'#D72027'},
-  {id:'odeon',name:'ODEON',emoji:'🎬',color:'#E20714'},
-  {id:'vue',name:'Vue Cinemas',emoji:'🎭',color:'#1B1464'},
-  {id:'cineworld',name:'Cineworld',emoji:'🎬',color:'#C41230'}
+const BRANDS=[
+  {id:'tesco',name:'Tesco Clubcard',e:'🛒',c:'#00539B'},{id:'nectar',name:'Nectar',e:'🏵️',c:'#FF6600'},
+  {id:'boots',name:'Boots Advantage',e:'💊',c:'#00A3AD'},{id:'costa',name:'Costa Coffee',e:'☕',c:'#622F22'},
+  {id:'bp',name:'BP Rewards',e:'⛽',c:'#009A44'},{id:'greggs',name:'Greggs',e:'🥐',c:'#002E5B'},
+  {id:'mcdonalds',name:"McDonald's",e:'🍟',c:'#DA291C'},{id:'starbucks',name:'Starbucks',e:'☕',c:'#00704A'},
+  {id:'waterstones',name:'Waterstones',e:'📚',c:'#1B365D'},{id:'johnlewis',name:'John Lewis',e:'🏬',c:'#3D3D3D'},
+  {id:'ikea',name:'IKEA Family',e:'🛋️',c:'#0058A3'},{id:'lidl',name:'Lidl Plus',e:'🛒',c:'#0050AA'},
+  {id:'asda',name:'Asda Rewards',e:'🛒',c:'#78BE20'},{id:'morrisons',name:'Morrisons More',e:'🛒',c:'#F5A623'},
+  {id:'waitrose',name:'myWaitrose',e:'🥬',c:'#2d2d2d'},{id:'nandos',name:"Nando's",e:'🍗',c:'#BE0000'},
+  {id:'pizza',name:'Pizza Express',e:'🍕',c:'#D72027'},{id:'odeon',name:'ODEON',e:'🎬',c:'#E20714'},
+  {id:'vue',name:'Vue Cinemas',e:'🎭',c:'#1B1464'},{id:'cineworld',name:'Cineworld',e:'🎬',c:'#C41230'}
 ];
 
 // ── Helpers ──────────────────────────────────────────────
-function H(tok) {
-  return {'apikey': SKEY, 'Authorization': 'Bearer ' + (tok || TOKEN || SKEY), 'Content-Type': 'application/json', 'Prefer': 'return=representation'};
-}
-
-function supaGet(table, filter) {
-  const url = `${SURL}/rest/v1/${table}?select=*${filter ? '&' + filter : ''}`;
-  return fetch(url, {headers: H()}).then(r => r.json());
-}
-
-function supaPost(table, data, conflict) {
-  let url = `${SURL}/rest/v1/${table}`;
-  if (conflict) url += `?on_conflict=${conflict}`;
-  return fetch(url, {
-    method: 'POST',
-    headers: {...H(), 'Prefer': conflict ? 'resolution=merge-duplicates,return=representation' : 'return=representation'},
-    body: JSON.stringify(data)
-  }).then(r => r.json());
-}
-
-function supaDel(table, filter) {
-  return fetch(`${SURL}/rest/v1/${table}?${filter}`, {method: 'DELETE', headers: H()});
-}
+function H(t){return{'apikey':SKEY,'Authorization':'Bearer '+(t||TOKEN||SKEY),'Content-Type':'application/json','Prefer':'return=representation'}}
+function get(table,q){return fetch(`${SURL}/rest/v1/${table}?select=*${q?'&'+q:''}`,{headers:H()}).then(r=>r.json())}
+function post(table,data,conflict){const u=`${SURL}/rest/v1/${table}${conflict?'?on_conflict='+conflict:''}`;return fetch(u,{method:'POST',headers:{...H(),Prefer:conflict?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(data)}).then(r=>r.json())}
+function patch(table,q,data){return fetch(`${SURL}/rest/v1/${table}?${q}`,{method:'PATCH',headers:H(),body:JSON.stringify(data)}).then(r=>r.json())}
+function del(table,q){return fetch(`${SURL}/rest/v1/${table}?${q}`,{method:'DELETE',headers:H()})}
+function toast(m,d=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d)}
+function show(id){document.getElementById(id).style.display='flex'}
+function hide(id){document.getElementById(id).style.display='none'}
+function val(id){const e=document.getElementById(id);return e?e.value.trim():''}
+function txt(id,v){const e=document.getElementById(id);if(e)e.textContent=v}
+function err(id,m){const e=document.getElementById(id);if(e){e.textContent=m;e.style.display=m?'block':'none'}}
+function openModal(id){document.getElementById(id).classList.add('show')}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
+function greet(){const h=new Date().getHours();return h<12?'Good morning':h<17?'Good afternoon':'Good evening'}
+function fmtLoyalty(m){
+  if(!m)return'Earn points on every visit';
+  const t=m.loyalty_type||'points',v=m.loyalty_value||1,th=m.loyalty_threshold||100;
+  if(t==='points')return`Earn ${v} point per £1 spent • Redeem at ${th} points`;
+  if(t==='percentage')return`Earn ${v}% cashback on every purchase`;
+  if(t==='stamp')return`Get a reward every ${th} visits`;
+  if(t==='discount')return`£${v} off when you spend £${th}`;
+  return'Earn points on every visit';}
 
 // ── Session ───────────────────────────────────────────────
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    const sess = JSON.parse(localStorage.getItem('sl_session') || 'null');
-    if (sess && sess.token && sess.uid && sess.expiry > Date.now()) {
-      TOKEN = sess.token; UID = sess.uid; USER_EMAIL = sess.email;
-      showApp();
-    } else {
-      showAuth();
-    }
-  }, 800);
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    const s=JSON.parse(localStorage.getItem('sl_sess')||'null');
+    if(s&&s.tok&&s.uid&&s.exp>Date.now()){TOKEN=s.tok;UID=s.uid;EMAIL=s.email;startApp();}
+    else{document.getElementById('auth').style.display='flex';document.getElementById('splash').style.display='none';}
+  },900);
 });
-
-function saveSession(token, uid, email, expiresIn) {
-  TOKEN = token; UID = uid; USER_EMAIL = email;
-  localStorage.setItem('sl_session', JSON.stringify({
-    token, uid, email, expiry: Date.now() + (expiresIn || 3600) * 1000
-  }));
-}
+function saveSession(tok,uid,email,exp){TOKEN=tok;UID=uid;EMAIL=email;localStorage.setItem('sl_sess',JSON.stringify({tok,uid,email,exp:Date.now()+(exp||3600)*1000}))}
+function logout(){localStorage.removeItem('sl_sess');TOKEN=null;UID=null;location.reload()}
+function showLogin(){document.getElementById('auth-login').style.display='block';document.getElementById('auth-signup').style.display='none'}
+function showSignup(){document.getElementById('auth-login').style.display='none';document.getElementById('auth-signup').style.display='block'}
 
 // ── Auth ─────────────────────────────────────────────────
-function showLogin() {
-  document.getElementById('auth-login').style.display = 'block';
-  document.getElementById('auth-signup').style.display = 'none';
-  document.getElementById('auth-error').style.display = 'none';
+function login(){
+  const e=val('email'),p=document.getElementById('password').value,er=document.getElementById('auth-error');
+  if(!e||!p){err('auth-error','Enter email and password');return}
+  const btn=document.querySelector('#auth-login .auth-btn');btn.textContent='Signing in...';btn.disabled=true;
+  fetch(`${SURL}/auth/v1/token?grant_type=password`,{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})})
+  .then(r=>r.json()).then(d=>{
+    btn.textContent='Sign in';btn.disabled=false;
+    if(!d.access_token){err('auth-error',d.error_code==='invalid_credentials'?'Incorrect email or password':d.error_description||d.msg||'Sign in failed');return}
+    saveSession(d.access_token,d.user.id,d.user.email,d.expires_in);
+    post('users',{id:d.user.id,email:d.user.email,created_at:Date.now(),total_points:0},'id').catch(()=>{});
+    startApp();
+  }).catch(()=>{btn.textContent='Sign in';btn.disabled=false;err('auth-error','Connection error')})
+}
+function signup(){
+  const name=val('su-name'),email=val('su-email'),pw=document.getElementById('su-pw').value,phone=val('su-phone');
+  if(!name||!email||pw.length<6){err('su-error','Name, email and password (6+ chars) required');return}
+  const btn=document.querySelector('#auth-signup .auth-btn');btn.textContent='Creating...';btn.disabled=true;
+  fetch(`${SURL}/auth/v1/signup`,{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email,password:pw,data:{name}})})
+  .then(r=>r.json()).then(d=>{
+    btn.textContent='Create account';btn.disabled=false;
+    if(d.access_token&&d.user){
+      saveSession(d.access_token,d.user.id,d.user.email,d.expires_in);
+      post('users',{id:d.user.id,email,name,phone:phone||null,created_at:Date.now(),total_points:0},'id').catch(()=>{});
+      startApp();
+    } else if(d.user){
+      document.getElementById('email').value=email;document.getElementById('password').value=pw;showLogin();login();
+    } else {err('su-error',(d.error_code==='user_already_exists'?'Account exists — sign in':d.error_description||d.msg||'Sign up failed'))}
+  }).catch(()=>{btn.textContent='Create account';btn.disabled=false;err('su-error','Connection error')})
 }
 
-function showSignup() {
-  document.getElementById('auth-login').style.display = 'none';
-  document.getElementById('auth-signup').style.display = 'block';
-  document.getElementById('signup-error').style.display = 'none';
+// ── App start ─────────────────────────────────────────────
+function startApp(){
+  document.getElementById('splash').style.display='none';
+  document.getElementById('auth').style.display='none';
+  document.getElementById('app').style.display='flex';
+  txt('greeting-time',greet());
+  loadProfile();loadCards();loadOrders();buildBrands();
 }
-
-function login() {
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  const errDiv = document.getElementById('auth-error');
-  if (!email || !password) { errDiv.textContent = 'Enter email and password'; errDiv.style.display = 'block'; return; }
-
-  const btn = document.querySelector('#auth-login button[onclick="login()"]');
-  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
-
-  fetch(`${SURL}/auth/v1/token?grant_type=password`, {
-    method: 'POST',
-    headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
-    body: JSON.stringify({email, password})
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
-    if (!d.access_token) {
-      const msg = d.error_code === 'invalid_credentials' ? 'Incorrect email or password' : (d.error_description || d.msg || 'Sign in failed');
-      errDiv.textContent = msg; errDiv.style.display = 'block'; return;
-    }
-    saveSession(d.access_token, d.user.id, d.user.email, d.expires_in);
-    // Save user profile
-    supaPost('users', {id: d.user.id, email: d.user.email, created_at: Date.now(), total_points: 0}, 'id').catch(() => {});
-    showApp();
-  })
-  .catch(() => {
-    if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
-    errDiv.textContent = 'Connection error — check internet'; errDiv.style.display = 'block';
-  });
-}
-
-function signup() {
-  const email = document.getElementById('signup-email').value.trim();
-  const password = document.getElementById('signup-password').value;
-  const name = document.getElementById('signup-name').value.trim();
-  const phone = document.getElementById('signup-phone') ? document.getElementById('signup-phone').value.trim() : '';
-  const errDiv = document.getElementById('signup-error');
-
-  if (!email || !password || password.length < 6 || !name) {
-    errDiv.textContent = 'All fields required, password min 6 chars'; errDiv.style.display = 'block'; return;
-  }
-
-  const btn = document.querySelector('#auth-signup button[onclick="signup()"]');
-  if (btn) { btn.disabled = true; btn.textContent = 'Creating account...'; }
-
-  fetch(`${SURL}/auth/v1/signup`, {
-    method: 'POST',
-    headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
-    body: JSON.stringify({email, password, data: {name}})
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (btn) { btn.disabled = false; btn.textContent = 'Join free'; }
-    if (d.access_token && d.user) {
-      // Signed up and auto-confirmed — save profile and go in
-      saveSession(d.access_token, d.user.id, d.user.email, d.expires_in);
-      supaPost('users', {id: d.user.id, email, name, phone: phone || null, created_at: Date.now(), total_points: 0}, 'id').catch(() => {});
-      showApp();
-    } else if (d.user && d.user.id) {
-      // User created but needs to login (confirmation disabled but no token returned)
-      document.getElementById('email').value = email;
-      document.getElementById('password').value = password;
-      showLogin();
-      login();
-    } else {
-      const msg = (d.error_code === 'user_already_exists') ? 'Account already exists — sign in instead' : (d.error_description || d.msg || 'Sign up failed');
-      errDiv.textContent = msg; errDiv.style.display = 'block';
-    }
-  })
-  .catch(() => {
-    if (btn) { btn.disabled = false; btn.textContent = 'Join free'; }
-    errDiv.textContent = 'Connection error'; errDiv.style.display = 'block';
-  });
-}
-
-function logout() {
-  localStorage.removeItem('sl_session');
-  TOKEN = null; UID = null; CARDS = [];
-  showAuth(); showLogin();
-}
-
-function showAuth() {
-  document.getElementById('splash').style.display = 'none';
-  document.getElementById('auth').style.display = 'flex';
-}
-
-function showApp() {
-  document.getElementById('splash').style.display = 'none';
-  document.getElementById('auth').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  loadCards();
+function loadProfile(){
+  get('users','id=eq.'+UID).then(d=>{
+    PROF=Array.isArray(d)&&d[0]?d[0]:{};
+    const n=PROF.name||EMAIL||'User';
+    txt('greeting-name',n+"'s wallet");txt('prof-name',n);
+    txt('prof-email',EMAIL||'');txt('prof-email2',EMAIL||'');
+  }).catch(()=>{})
 }
 
 // ── Cards ─────────────────────────────────────────────────
-function loadCards() {
-  if (!UID) return;
-  supaGet('cards', `user_id=eq.${UID}&order=added_at.desc`)
-  .then(d => {
-    CARDS = (Array.isArray(d) ? d : []).map(c => ({
-      id: c.card_id, card_id: c.card_id,
-      shopName: c.shop_name, name: c.name,
-      emoji: c.emoji || '🛍️', color: c.color || '#6C5CE7',
-      type: c.type || 'national',
-      points: c.points || 0, threshold: c.threshold || 500,
-      visitCount: c.visit_count || 0, totalSpend: c.total_spend || 0,
-      rewardsRedeemed: c.rewards_redeemed || 0,
-      addedAt: c.added_at, merchant_id: c.merchant_id,
-      card_number: c.card_number || null, store_location: c.store_location || null
+function loadCards(){
+  get('cards',`user_id=eq.${UID}&order=added_at.desc`).then(d=>{
+    CARDS=(Array.isArray(d)?d:[]).map(c=>({
+      ...c, id:c.card_id, shopName:c.shop_name, addedAt:c.added_at,
+      visitCount:c.visit_count||0, totalSpend:c.total_spend||0, rewardsRedeemed:c.rewards_redeemed||0
     }));
     renderCards();
-    document.getElementById('stat-cards').textContent = CARDS.length;
-    document.getElementById('stat-points').textContent = CARDS.reduce((a, c) => a + c.points, 0);
-  })
-  .catch(e => { console.error('loadCards:', e); renderCards(); });
+    txt('s-cards',CARDS.length);
+    txt('s-pts',CARDS.reduce((a,c)=>a+(c.points||0),0));
+  }).catch(()=>{})
 }
-
-function renderCards() {
-  const homeCards = document.getElementById('home-cards');
-  const cardsList = document.getElementById('cards-list');
-  if (!homeCards || !cardsList) return;
-
-  if (CARDS.length === 0) {
-    const empty = '<div class="empty"><div class="empty-icon">💳</div><div class="empty-text">No cards yet<br>Tap + to add</div></div>';
-    homeCards.innerHTML = empty; cardsList.innerHTML = empty;
+function renderCards(){
+  const nat=CARDS.filter(c=>c.type==='national');
+  const loc=CARDS.filter(c=>c.type==='local');
+  // Home
+  const homeEl=document.getElementById('home-cards');
+  if(CARDS.length===0){homeEl.innerHTML='<div class="empty"><div class="empty-ico">💳</div><div class="empty-txt">No cards yet<br>Go to Cards tab to add</div></div>';return}
+  homeEl.innerHTML=CARDS.slice(0,3).map(c=>`
+    <div class="lcard" style="background:${c.color||'#6C5CE7'}" onclick="openCardDetail('${c.card_id}')">
+      <div class="lcard-top"><div class="lcard-name">${c.emoji||'🛍️'} ${c.shopName||c.name}</div><div class="lcard-badge">${c.type==='national'?'🇬🇧':'🏪'}</div></div>
+      <div><div class="lcard-pts">${c.points||0}</div><div class="lcard-sub">points${c.threshold?' • threshold: '+c.threshold:''}</div></div>
+    </div>`).join('');
+  // National list
+  document.getElementById('national-list').innerHTML=nat.length?nat.map(c=>`
+    <div class="lcard" style="background:${c.color||'#6C5CE7'}" onclick="openCardDetail('${c.card_id}')">
+      <div class="lcard-top"><div class="lcard-name">${c.emoji||'🛍️'} ${c.shopName||c.name}</div><div class="lcard-badge">🇬🇧</div></div>
+      <div><div class="lcard-pts">${c.points||0}</div><div class="lcard-sub">points</div></div>
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">🇬🇧</div><div class="empty-txt">No national cards<br>Tap + to add</div></div>';
+  // Local list
+  document.getElementById('local-list').innerHTML=loc.length?loc.map(c=>`
+    <div class="lcard" style="background:${c.color||'#2d2d2d'}" onclick="openCardDetail('${c.card_id}')">
+      <div class="lcard-top"><div class="lcard-name">${c.shopName||c.name}</div><div class="lcard-badge">🏪</div></div>
+      <div><div class="lcard-pts">${c.points||0}</div><div class="lcard-sub">points${c.threshold?' • threshold: '+c.threshold:''}</div></div>
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">🏪</div><div class="empty-txt">No local shop cards<br>Find a shop to add</div></div>';
+  // My shops in shop tab
+  document.getElementById('my-shops-list').innerHTML=loc.length?loc.map(c=>`
+    <div class="shop-card" onclick="loadShopById('${c.merchant_id}')">
+      <div class="shop-emoji">🏪</div>
+      <div class="shop-info"><div class="shop-name">${c.shopName||c.name}</div><div class="shop-cat">${c.points||0} points</div></div>
+      <div class="shop-action">View →</div>
+    </div>`).join(''):'<div class="empty" style="padding:20px"><div class="empty-txt">Add local shops to see them here</div></div>';
+}
+function filterCards(type){
+  if(type==='national'){
+    document.getElementById('national-section').style.display='block';
+    document.getElementById('local-section').style.display='none';
+    document.getElementById('chip-national').classList.add('active');
+    document.getElementById('chip-local').classList.remove('active');
   } else {
-    const cardHtml = c => `
-      <div class="card" style="background:${c.color}" onclick="openDetail('${c.id}')">
-        <div class="card-brand">${c.emoji} ${c.shopName || c.name}</div>
-        <div class="card-points">${c.points}</div>
-        <div class="card-label">points</div>
-      </div>`;
-    homeCards.innerHTML = CARDS.slice(0, 4).map(cardHtml).join('');
-    cardsList.innerHTML = CARDS.map(c => `
-      <div class="card" style="background:${c.color}" onclick="openDetail('${c.id}')">
-        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-          <div class="card-brand">${c.emoji} ${c.shopName || c.name}</div>
-          <div style="font-size:10px;background:rgba(255,255,255,0.2);padding:3px 6px;border-radius:12px">${c.type === 'national' ? '🇬🇧 National' : '🏪 Local'}</div>
-        </div>
-        <div class="card-points">${c.points}</div>
-        <div class="card-label">points | threshold: ${c.threshold}</div>
-      </div>`).join('');
+    document.getElementById('national-section').style.display='none';
+    document.getElementById('local-section').style.display='block';
+    document.getElementById('chip-local').classList.add('active');
+    document.getElementById('chip-national').classList.remove('active');
   }
 }
 
-function openAddModal() {
-  const grid = document.getElementById('brands-grid');
-  if (grid) {
-    grid.innerHTML = BRANDS.map(b => `
-      <div class="brand-item" onclick="selectBrand('${b.id}','${b.name}','${b.emoji}','${b.color}')">
-        <div class="brand-emoji">${b.emoji}</div>
-        <div class="brand-name">${b.name}</div>
-      </div>`).join('');
-  }
-  document.getElementById('step-brands').style.display = 'block';
-  document.getElementById('step-form').style.display = 'none';
-  document.getElementById('add-modal').style.display = 'flex';
+// ── Add national card ──────────────────────────────────────
+function buildBrands(){
+  document.getElementById('brands-grid').innerHTML=BRANDS.map(b=>`
+    <div style="background:#f9f9fb;border-radius:14px;padding:14px;text-align:center;cursor:pointer" onclick="selectBrand('${b.id}','${b.name}','${b.e}','${b.c}')">
+      <div style="font-size:28px">${b.e}</div><div style="font-size:12px;font-weight:600;margin-top:6px">${b.name}</div>
+    </div>`).join('')
+}
+function openAddModal(){openModal('addCardModal');document.getElementById('brands-step').style.display='block';document.getElementById('card-form-step').style.display='none'}
+function selectBrand(id,name,e,c){
+  CUR_BRAND={id,name,e,c};
+  document.getElementById('fp-emoji').textContent=e;document.getElementById('fp-name').textContent=name;
+  document.getElementById('fc-num').value='';document.getElementById('fc-holder').value='';document.getElementById('fc-store').value='';
+  document.getElementById('brands-step').style.display='none';document.getElementById('card-form-step').style.display='block';
+}
+function backToBrands(){document.getElementById('brands-step').style.display='block';document.getElementById('card-form-step').style.display='none'}
+function saveNationalCard(){
+  const num=val('fc-num');if(!num||num.length<4){err('fc-err','Card number required (4+ digits)');return}
+  if(!CUR_BRAND||!UID){toast('Error – please try again');return}
+  post('cards',{user_id:UID,card_id:CUR_BRAND.id,name:CUR_BRAND.name,shop_name:CUR_BRAND.name,emoji:CUR_BRAND.e,color:CUR_BRAND.c,type:'national',points:0,threshold:500,added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0,card_number:num,card_holder:val('fc-holder')||null,store_location:val('fc-store')||null},'user_id,card_id')
+  .then(d=>{if(d&&d.code){err('fc-err',d.message||'Save failed');return}toast(`✅ ${CUR_BRAND.name} added!`);closeModal('addCardModal');loadCards()})
+  .catch(()=>err('fc-err','Save failed'))
 }
 
-function closeAddModal() {
-  document.getElementById('add-modal').style.display = 'none';
-  resetForm();
+// ── Shop search ───────────────────────────────────────────
+function openShopSearch(){openModal('shopSearchModal');document.getElementById('ms-shopid').value='';document.getElementById('ms-results').innerHTML='';switchTab('shop')}
+function searchShops(){
+  const q=val('shop-search-inp').trim();
+  if(!q){document.getElementById('shop-results').innerHTML='';return}
+  get('merchants',`shop_id=eq.${q}&limit=1`).then(d=>{
+    if(!Array.isArray(d)||d.length===0){
+      get('merchants',`name=ilike.*${q}*&limit=5`).then(d2=>renderShopResults(d2,'shop-results')).catch(()=>{})
+    } else renderShopResults(d,'shop-results')
+  }).catch(()=>{})
 }
-
-function selectBrand(id, name, emoji, color) {
-  CURRENT_BRAND = {id, name, emoji, color};
-  document.getElementById('preview-emoji').textContent = emoji;
-  document.getElementById('preview-name').textContent = name;
-  ['card-number','order-ref','store-loc','card-name'].forEach(i => { const el = document.getElementById(i); if(el) el.value = ''; });
-  const ls = document.getElementById('location-status'); if(ls) ls.textContent = '';
-  const fe = document.getElementById('form-error'); if(fe) fe.style.display = 'none';
-  TEMP_LAT = null; TEMP_LNG = null;
-  document.getElementById('step-brands').style.display = 'none';
-  document.getElementById('step-form').style.display = 'block';
-}
-
-function backTobrands() {
-  document.getElementById('step-brands').style.display = 'block';
-  document.getElementById('step-form').style.display = 'none';
-}
-
-function captureLocation() {
-  if (!navigator.geolocation) { document.getElementById('location-status').textContent = '📍 Not supported'; return; }
-  document.getElementById('location-status').textContent = '📍 Locating...';
-  navigator.geolocation.getCurrentPosition(
-    pos => { TEMP_LAT = pos.coords.latitude; TEMP_LNG = pos.coords.longitude; document.getElementById('location-status').textContent = `✓ ${TEMP_LAT.toFixed(4)}, ${TEMP_LNG.toFixed(4)}`; },
-    err => { document.getElementById('location-status').textContent = `✗ ${err.message}`; }
-  );
-}
-
-function saveCard() {
-  const numEl = document.getElementById('card-number');
-  const num = numEl ? numEl.value.trim() : '';
-  const errDiv = document.getElementById('form-error');
-  if (errDiv) errDiv.style.display = 'none';
-  if (!num || num.length < 4) { if(errDiv) { errDiv.textContent = 'Card number required (4+ digits)'; errDiv.style.display = 'block'; } return; }
-  if (!CURRENT_BRAND || !UID) { showToast('Error — please sign in again'); return; }
-
-  const payload = {
-    user_id: UID,
-    card_id: CURRENT_BRAND.id,
-    name: CURRENT_BRAND.name,
-    shop_name: CURRENT_BRAND.name,
-    emoji: CURRENT_BRAND.emoji,
-    color: CURRENT_BRAND.color,
-    type: 'national',
-    points: 0,
-    threshold: 500,
-    added_at: Date.now(),
-    visit_count: 0,
-    total_spend: 0,
-    rewards_redeemed: 0,
-    card_number: num,
-    card_holder: document.getElementById('card-name') ? document.getElementById('card-name').value.trim() || null : null,
-    order_ref: document.getElementById('order-ref') ? document.getElementById('order-ref').value.trim() || null : null,
-    store_location: document.getElementById('store-loc') ? document.getElementById('store-loc').value.trim() || null : null,
-    latitude: TEMP_LAT,
-    longitude: TEMP_LNG
-  };
-
-  supaPost('cards', payload, 'user_id,card_id')
-  .then(d => {
-    if (d && d.error) { if(errDiv) { errDiv.textContent = d.message || 'Save failed'; errDiv.style.display = 'block'; } return; }
-    showToast(`✅ ${CURRENT_BRAND.name} added!`);
-    closeAddModal();
-    loadCards();
+function modalSearchShop(){
+  const q=val('ms-shopid').trim();
+  if(!q){document.getElementById('ms-results').innerHTML='';return}
+  get('merchants',`shop_id=eq.${q}`).then(d=>{
+    if(Array.isArray(d)&&d.length>0)renderShopResults(d,'ms-results');
+    else renderShopResults([],'ms-results',q);
   })
-  .catch(e => { if(errDiv) { errDiv.textContent = 'Save failed — try again'; errDiv.style.display = 'block'; } });
+}
+function renderShopResults(shops,containerId,q=''){
+  const el=document.getElementById(containerId);
+  if(!shops||shops.length===0){el.innerHTML=q?`<div class="empty" style="padding:20px"><div class="empty-txt">No shop found with ID "${q}"<br>Check the ID and try again</div></div>`:'';return}
+  el.innerHTML=shops.map(s=>`
+    <div class="shop-card" onclick="loadShopFromResult('${containerId}','${s.id}')">
+      <div class="shop-emoji">${s.logo_emoji||'🏪'}</div>
+      <div class="shop-info"><div class="shop-name">${s.name}</div><div class="shop-cat">ID: ${s.shop_id||'—'} • ${fmtLoyalty(s).slice(0,40)}</div></div>
+      <div class="shop-action">View →</div>
+    </div>`).join('')
+}
+function loadShopFromResult(containerId,mid){closeModal('shopSearchModal');loadShopById(mid)}
+function loadShopById(mid){
+  get('merchants','id=eq.'+mid).then(d=>{
+    const shop=Array.isArray(d)&&d[0]?d[0]:null;
+    if(!shop){toast('Shop not found');return}
+    CUR_SHOP=shop;openShopDetail(shop);
+  })
+}
+function openShopDetail(shop){
+  txt('sd-name',shop.name);txt('sd-emoji',shop.logo_emoji||'🏪');txt('sd-cat',(shop.category||'').toUpperCase()+' • '+shop.address||'');
+  txt('sd-loyalty-info','💳 '+fmtLoyalty(shop));
+  // Check if user has card
+  const myCard=CARDS.find(c=>c.merchant_id===shop.id||c.card_id==='local-'+shop.id);
+  const sdCard=document.getElementById('sd-card-section');
+  sdCard.style.display='block';
+  txt('sd-mypts',myCard?myCard.points||0:'—');
+  const addBtn=document.getElementById('sd-add-card-btn');
+  if(myCard){addBtn.textContent='View card';addBtn.onclick=()=>openCardDetail('local-'+shop.id);}
+  else{addBtn.textContent='+ Add card';addBtn.onclick=addLocalCard;}
+  // Load products
+  get('products','merchant_id=eq.'+shop.id+'&active=eq.true&order=created_at.asc').then(d=>{
+    const prods=Array.isArray(d)?d:[];
+    document.getElementById('sd-products').innerHTML=prods.length?
+      '<div class="prods-grid">'+prods.map(p=>`
+        <div class="prod-card" onclick="openOrder('${JSON.stringify({...p,shopName:shop.name}).replace(/'/g,"\\'")}')">
+          <div class="prod-emoji">${p.emoji||'🛍️'}</div>
+          <div class="prod-name">${p.name}</div>
+          <div class="prod-price">£${parseFloat(p.price||0).toFixed(2)}</div>
+          <div class="prod-badges">${p.collect!==false?'<span class="prod-badge badge-collect">Collect</span>':''} ${p.delivery?'<span class="prod-badge badge-delivery">Delivery</span>':''}</div>
+        </div>`).join('')+'</div>':
+      '<div class="empty" style="padding:20px"><div class="empty-txt">No products listed yet</div></div>';
+  });
+  document.getElementById('shopDetail').classList.add('show');
+}
+function closeShopDetail(){document.getElementById('shopDetail').classList.remove('show')}
+function addLocalCard(){
+  if(!CUR_SHOP){return}
+  post('cards',{user_id:UID,card_id:'local-'+CUR_SHOP.id,merchant_id:CUR_SHOP.id,name:CUR_SHOP.name,shop_name:CUR_SHOP.name,emoji:CUR_SHOP.logo_emoji||'🏪',color:'#2d2d2d',type:'local',points:0,threshold:CUR_SHOP.loyalty_threshold||100,added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0},'user_id,card_id')
+  .then(()=>{toast('✅ '+CUR_SHOP.name+' card added!');loadCards();openShopDetail(CUR_SHOP)}).catch(()=>toast('Error adding card'))
 }
 
-function resetForm() {
-  ['card-number','order-ref','store-loc','card-name'].forEach(i => { const el = document.getElementById(i); if(el) el.value = ''; });
-  const ls = document.getElementById('location-status'); if(ls) ls.textContent = '';
-  const fe = document.getElementById('form-error'); if(fe) fe.style.display = 'none';
-  TEMP_LAT = null; TEMP_LNG = null; CURRENT_BRAND = null;
+// ── Order ─────────────────────────────────────────────────
+let CUR_PROD=null;
+function openOrder(prodJson){
+  const p=typeof prodJson==='string'?JSON.parse(prodJson):prodJson;
+  CUR_PROD=p;
+  document.getElementById('order-prod-info').innerHTML=`<div style="font-size:24px">${p.emoji||'🛍️'}</div><div style="font-weight:700;margin-top:6px">${p.name}</div><div style="color:#6C5CE7;font-size:18px;font-weight:800">£${parseFloat(p.price||0).toFixed(2)}</div>${p.shopName?'<div style="font-size:12px;color:#706f87;margin-top:4px">'+p.shopName+'</div>':''}`;
+  // Setup collect/delivery options
+  const collectOpt=document.getElementById('collect-opt');
+  const deliveryOpt=document.getElementById('delivery-opt');
+  const canCollect=p.collect!==false;
+  const canDeliver=p.delivery===true;
+  collectOpt.style.opacity=canCollect?'1':'0.4';
+  deliveryOpt.style.opacity=canDeliver?'1':'0.4';
+  document.getElementById('o-qty').value='1';
+  document.getElementById('o-collect-time').value='';
+  document.getElementById('o-addr').value='';
+  document.getElementById('o-note').value='';
+  err('o-err','');
+  // Loyalty info
+  if(CUR_SHOP){
+    const lo=document.getElementById('o-loyalty-info');
+    lo.textContent='🎁 '+fmtLoyalty(CUR_SHOP);lo.style.display='block';
+  }
+  toggleOrderType();
+  openModal('orderModal');
+}
+function toggleOrderType(){
+  const type=document.querySelector('input[name="order-type"]:checked')?.value||'collect';
+  const co=document.getElementById('collect-opt'),deo=document.getElementById('delivery-opt');
+  co.style.border=type==='collect'?'2px solid #6C5CE7':'2px solid transparent';
+  deo.style.border=type==='delivery'?'2px solid #6C5CE7':'2px solid transparent';
+  document.getElementById('collect-time-field').style.display=type==='collect'?'block':'none';
+  document.getElementById('delivery-addr-field').style.display=type==='delivery'?'block':'none';
+}
+function placeOrder(){
+  if(!CUR_PROD||!UID){err('o-err','Error — please try again');return}
+  const type=document.querySelector('input[name="order-type"]:checked')?.value||'collect';
+  const qty=Math.max(1,parseInt(document.getElementById('o-qty').value)||1);
+  const total=parseFloat(CUR_PROD.price||0)*qty;
+  const mid=CUR_PROD.merchant_id||CUR_SHOP?.id;
+  if(!mid){err('o-err','Shop not found');return}
+  if(type==='delivery'&&!val('o-addr')){err('o-err','Delivery address required');return}
+  post('orders',{user_id:UID,merchant_id:mid,product_id:CUR_PROD.id,product_name:CUR_PROD.name,quantity:qty,total,type,status:'pending',delivery_address:val('o-addr'),collect_time:val('o-collect-time'),note:val('o-note'),created_at:Date.now()})
+  .then(d=>{
+    if(d&&d.code){err('o-err',d.message||'Order failed');return}
+    closeModal('orderModal');closeShopDetail();
+    toast('✅ Order placed! '+CUR_PROD.name+' × '+qty,3000);
+    loadOrders();switchTab('orders');
+  }).catch(()=>err('o-err','Failed — try again'))
 }
 
-function openDetail(id) {
-  const card = CARDS.find(c => c.id === id || c.card_id === id);
-  if (!card) return;
-  const safe = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
-  safe('detail-shop', card.shopName || card.name);
-  safe('detail-points', card.points || 0);
-  safe('detail-visits', card.visitCount || 0);
-  safe('detail-spent', '£' + ((card.totalSpend || 0)).toFixed(2));
-  safe('detail-rewards', card.rewardsRedeemed || 0);
-  safe('detail-cardnum', card.card_number ? '****' + String(card.card_number).slice(-4) : '****');
-  safe('detail-store', card.store_location || '—');
-  safe('detail-order', card.order_ref || '—');
-  const modal = document.getElementById('detail-modal'); if(modal) modal.style.display = 'flex';
+// ── Orders ────────────────────────────────────────────────
+function loadOrders(){
+  get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=30').then(d=>{
+    ORDERS=Array.isArray(d)?d:[];
+    txt('s-orders',ORDERS.length);
+    renderOrders();
+  }).catch(()=>{})
+}
+function renderOrders(){
+  const stCls={pending:'st-pending',ready:'st-ready',completed:'st-completed',rejected:'st-rejected'};
+  const html=ORDERS.length?ORDERS.map(o=>`
+    <div class="order-card">
+      <div class="order-header">
+        <div class="order-id">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div>
+        <div class="order-status ${stCls[o.status]||'st-pending'}">${o.status||'pending'}</div>
+      </div>
+      <div class="order-shop">${o.product_name||'Order'}</div>
+      <div class="order-items">Qty: ${o.quantity||1} • ${o.type==='collect'?'Click & Collect':'Delivery'}${o.collect_time?' at '+o.collect_time:''}</div>
+      <div class="order-footer">
+        <div class="order-total">£${parseFloat(o.total||0).toFixed(2)}</div>
+        <div class="order-type">${new Date(o.created_at||Date.now()).toLocaleDateString()}</div>
+      </div>
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">📦</div><div class="empty-txt">No orders yet<br>Browse shops to order</div></div>';
+  document.getElementById('orders-list').innerHTML=html;
+  document.getElementById('home-orders').innerHTML=ORDERS.length?ORDERS.slice(0,2).map(o=>`
+    <div class="order-card">
+      <div class="order-header"><div class="order-id">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div><div class="order-status ${stCls[o.status]||'st-pending'}">${o.status||'pending'}</div></div>
+      <div class="order-shop">${o.product_name||'Order'}</div>
+      <div class="order-footer"><div class="order-total">£${parseFloat(o.total||0).toFixed(2)}</div><div class="order-type">${o.type}</div></div>
+    </div>`).join(''):'<div class="empty" style="padding:20px"><div class="empty-txt">No orders yet</div></div>';
 }
 
-function closeDetail() {
-  const modal = document.getElementById('detail-modal'); if(modal) modal.style.display = 'none';
+// ── Card detail ───────────────────────────────────────────
+function openCardDetail(cardId){
+  const c=CARDS.find(x=>x.card_id===cardId||x.id===cardId);
+  if(!c)return;
+  CUR_CARD=c;
+  txt('cd-shop',c.shopName||c.name);txt('cd-pts',c.points||0);
+  const ri=document.getElementById('cd-reward-info');
+  if(c.threshold&&c.points>=c.threshold){ri.textContent=`🎉 You've reached ${c.threshold} points! You can redeem a reward.`;ri.style.display='block'}
+  else if(c.threshold){ri.textContent=`${c.threshold-(c.points||0)} more points to next reward (${c.threshold} needed)`;ri.style.display='block'}
+  else ri.style.display='none';
+  document.getElementById('cd-stats').innerHTML=`
+    <div class="detail-row"><div><div class="detail-row-lab">Visits</div><div class="detail-row-val">${c.visitCount||0}</div></div></div>
+    <div class="detail-row"><div><div class="detail-row-lab">Total spent</div><div class="detail-row-val">£${parseFloat(c.totalSpend||0).toFixed(2)}</div></div></div>
+    <div class="detail-row"><div><div class="detail-row-lab">Rewards redeemed</div><div class="detail-row-val">${c.rewardsRedeemed||0}</div></div></div>
+    ${c.card_number?`<div class="detail-row"><div><div class="detail-row-lab">Card number</div><div class="detail-row-val">****${String(c.card_number).slice(-4)}</div></div></div>`:''}
+    ${c.store_location?`<div class="detail-row"><div><div class="detail-row-lab">Store</div><div class="detail-row-val">${c.store_location}</div></div></div>`:''}`;
+  // Load shop products if local
+  const ps=document.getElementById('cd-products-section');
+  if(c.type==='local'&&c.merchant_id){
+    get('products','merchant_id=eq.'+c.merchant_id+'&active=eq.true&order=created_at.asc').then(d=>{
+      const prods=Array.isArray(d)?d:[];
+      if(prods.length){
+        ps.innerHTML='<div style="font-size:15px;font-weight:700;margin:16px 0 10px">Shop Products</div><div class="prods-grid">'+prods.map(p=>`
+          <div class="prod-card" onclick="CUR_SHOP={id:'${c.merchant_id}',name:'${c.shopName||c.name}',loyalty_threshold:${c.threshold||100}};openOrder('${JSON.stringify({...p,shopName:c.shopName||c.name,merchant_id:c.merchant_id}).replace(/'/g,"\\'")}')">
+            <div class="prod-emoji">${p.emoji||'🛍️'}</div>
+            <div class="prod-name">${p.name}</div>
+            <div class="prod-price">£${parseFloat(p.price||0).toFixed(2)}</div>
+            <div class="prod-badges">${p.collect!==false?'<span class="prod-badge badge-collect">Collect</span>':''} ${p.delivery?'<span class="prod-badge badge-delivery">Delivery</span>':''}</div>
+          </div>`).join('')+'</div>';
+      } else ps.innerHTML='';
+    });
+  } else ps.innerHTML='';
+  document.getElementById('cardDetail').classList.add('show');
+}
+function closeCardDetail(){document.getElementById('cardDetail').classList.remove('show')}
+function deleteCard(){
+  if(!CUR_CARD){return}
+  if(!confirm('Remove this loyalty card?'))return;
+  del('cards',`user_id=eq.${UID}&card_id=eq.${CUR_CARD.card_id||CUR_CARD.id}`)
+  .then(()=>{toast('Card removed');closeCardDetail();loadCards()}).catch(()=>toast('Error removing card'))
 }
 
-function switchScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const sc = document.getElementById(name + '-screen'); if(sc) sc.classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  if(event && event.target) event.target.classList.add('active');
+// ── Profile ───────────────────────────────────────────────
+function openEditProfile(){document.getElementById('ep-name').value=PROF.name||'';document.getElementById('ep-phone').value=PROF.phone||'';openModal('editProfileModal')}
+function saveProfile(){
+  const name=val('ep-name'),phone=val('ep-phone');
+  patch('users','id=eq.'+UID,{name,phone}).then(()=>{toast('✅ Profile saved');closeModal('editProfileModal');loadProfile()}).catch(()=>toast('Save failed'))
 }
 
-function showToast(msg) {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2800);
+// ── Navigation ────────────────────────────────────────────
+function switchTab(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById(name+'-screen').classList.add('on');
+  document.getElementById('nav-'+name).classList.add('on');
+  if(name==='orders')loadOrders();
+  if(name==='shop')loadMyShops();
 }
-
+function loadMyShops(){
+  const loc=CARDS.filter(c=>c.type==='local');
+  document.getElementById('my-shops-list').innerHTML=loc.length?loc.map(c=>`
+    <div class="shop-card" onclick="loadShopById('${c.merchant_id}')">
+      <div class="shop-emoji">${c.emoji||'🏪'}</div>
+      <div class="shop-info"><div class="shop-name">${c.shopName||c.name}</div><div class="shop-cat">${c.points||0} points accumulated</div></div>
+      <div class="shop-action">View →</div>
+    </div>`).join(''):'<div class="empty" style="padding:20px"><div class="empty-txt">Find shops to add them here</div></div>';
+}
 </script>
 </body>
 </html>

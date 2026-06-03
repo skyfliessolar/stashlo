@@ -3,450 +3,471 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<meta name="theme-color" content="#0a0a14">
-<title>Stashlo - Admin Portal</title>
+<title>Stashlo Admin</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:system-ui,-apple-system,'Segoe UI',sans-serif; background:#f0efff; color:#1a1a2e; }
-button { cursor:pointer; border:none; font-family:inherit; }
-input, select { font-family:inherit; border:none; }
-
-#splash { position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; display:flex; align-items:center; justify-content:center; gap:20px; flex-direction:column; z-index:9999; }
-#splash-text { color:#fff; font-size:40px; font-weight:800; }
-#splash-text b { color:#6C5CE7; }
-
-#auth { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:#0a0a14; align-items:center; justify-content:center; padding:20px; }
-.auth-box { background:#fff; border-radius:24px; padding:32px 24px; width:100%; max-width:380px; }
-.auth-box h1 { font-size:20px; font-weight:800; margin-bottom:5px; }
-.auth-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; margin-bottom:12px; font-size:15px; }
-.auth-btn { width:100%; padding:13px; background:#0a0a14; color:#fff; border-radius:12px; font-weight:700; font-size:15px; margin-top:8px; }
-.auth-error { color:#c62828; font-size:12px; margin-top:10px; padding:10px; background:#ffebee; border-radius:8px; display:none; }
-
-#app { display:none; flex-direction:column; min-height:100vh; padding-bottom:80px; }
-.topbar { background:#0a0a14; color:#fff; padding:14px 18px; font-weight:800; font-size:16px; position:sticky; top:0; z-index:100; display:flex; justify-content:space-between; align-items:center; }
-.topbar b { color:#6C5CE7; }
-.topbar-action { cursor:pointer; font-size:18px; }
-
-.screen { display:none; padding:16px; }
-.screen.active { display:block; }
-
-.dashboard-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
-.stat-card { background:linear-gradient(135deg, #6C5CE7 0%, #a890d6 100%); color:#fff; border-radius:16px; padding:18px; }
-.stat-card.alt { background:linear-gradient(135deg, #00897B 0%, #4db8a8 100%); }
-.stat-card.alt2 { background:linear-gradient(135deg, #E91E63 0%, #f06292 100%); }
-.stat-label { font-size:11px; opacity:0.8; margin-bottom:6px; }
-.stat-value { font-size:28px; font-weight:800; }
-
-.section-header { display:flex; justify-content:space-between; align-items:center; margin:18px 0 12px; }
-.section-title { font-size:15px; font-weight:700; }
-
-.table-container { overflow-x:auto; margin-bottom:16px; }
-.data-table { width:100%; border-collapse:collapse; font-size:13px; }
-.data-table th { background:#f9f9fb; padding:10px; text-align:left; font-weight:700; color:#706f87; }
-.data-table td { padding:10px; border-bottom:1px solid #ebebef; }
-.data-table tr:hover { background:#f9f9fb; }
-
-.badge { display:inline-block; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600; }
-.badge-active { background:#e8f5e9; color:#00897B; }
-.badge-pending { background:#fff3e0; color:#f57c00; }
-.badge-inactive { background:#f3e5f5; color:#7b1fa2; }
-
-.modal { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; padding:20px; z-index:200; }
-.modal-content { background:#fff; border-radius:20px; padding:24px; width:100%; max-width:500px; max-height:90vh; overflow-y:auto; }
-.modal-title { font-size:18px; font-weight:800; margin-bottom:16px; }
-.modal-field { margin-bottom:14px; }
-.modal-label { font-size:11px; font-weight:700; color:#706f87; text-transform:uppercase; margin-bottom:6px; display:block; }
-.modal-input { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; font-size:14px; }
-.modal-textarea { width:100%; padding:12px 14px; border:1.5px solid #e5e5ea; border-radius:12px; font-size:14px; min-height:100px; resize:vertical; }
-.modal-btn { width:100%; padding:12px; border-radius:12px; font-weight:700; font-size:14px; margin:10px 0; background:#0a0a14; color:#fff; }
-.modal-btn-secondary { background:#f0f0f0; color:#706f87; }
-
-.nav { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #ebebef; display:flex; z-index:100; overflow-x:auto; }
-.nav-item { flex:0 1 auto; padding:12px 14px; text-align:center; font-size:11px; font-weight:600; color:#706f87; cursor:pointer; white-space:nowrap; }
-.nav-item.active { color:#6C5CE7; }
-
-.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#0a0a14; color:#fff; padding:10px 20px; border-radius:100px; font-size:13px; z-index:999; opacity:0; transition:opacity 0.3s; }
-.toast.show { opacity:1; }
-
-.search-box { width:100%; padding:10px 12px; border:1.5px solid #e5e5ea; border-radius:12px; margin-bottom:16px; font-size:14px; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f0efff;color:#1a1a2e;min-height:100vh}
+button{cursor:pointer;border:none;font-family:inherit}
+input,select,textarea{font-family:inherit;border:none;outline:none}
+#splash{position:fixed;inset:0;background:#0a0a14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999}
+.sp-logo{font-size:44px;font-weight:900;color:#fff}.sp-logo b{color:#6C5CE7}
+.sp-sub{color:rgba(255,255,255,.4);font-size:14px}
+.sp-dots{display:flex;gap:8px}.sp-dots div{width:8px;height:8px;background:#6C5CE7;border-radius:50%;animation:pulse 1.2s infinite}
+.sp-dots div:nth-child(2){animation-delay:.2s}.sp-dots div:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+#auth{display:none;position:fixed;inset:0;background:#0a0a14;align-items:center;justify-content:center;padding:20px;z-index:100}
+.auth-card{background:#fff;border-radius:28px;padding:32px 24px;width:100%;max-width:380px}
+.auth-logo{font-size:24px;font-weight:900;margin-bottom:4px}.auth-logo b{color:#6C5CE7}
+.auth-sub{color:#706f87;font-size:13px;margin-bottom:24px}
+.auth-inp{width:100%;padding:14px;border:2px solid #f0f0f5;border-radius:14px;font-size:15px;margin-bottom:12px;background:#fafafa}
+.auth-inp:focus{border-color:#6C5CE7}
+.auth-btn{width:100%;padding:15px;background:#0a0a14;color:#fff;border-radius:14px;font-weight:700;font-size:16px}
+.auth-err{color:#c62828;font-size:12px;padding:10px 14px;background:#ffebee;border-radius:10px;margin-top:10px;display:none}
+#app{display:none;flex-direction:column;min-height:100vh;padding-bottom:76px}
+.topbar{background:#0a0a14;color:#fff;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99}
+.tb-brand{font-size:18px;font-weight:900}.tb-brand b{color:#6C5CE7}
+.tb-btn{background:rgba(255,255,255,.1);color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600}
+.bottomnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1.5px solid #ececf3;display:flex;z-index:99}
+.nav-btn{flex:1;padding:11px 4px 8px;text-align:center;cursor:pointer;color:#a0a0b5}
+.nav-btn.on{color:#6C5CE7}
+.nav-icon{font-size:20px;display:block}
+.nav-label{font-size:10px;font-weight:600;margin-top:2px;display:block}
+.screen{display:none;padding:16px;animation:fi .2s}
+.screen.on{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.dash-card{background:#fff;border-radius:18px;padding:18px;box-shadow:0 2px 12px rgba(0,0,0,.06);cursor:pointer;transition:transform .15s}
+.dash-card:active{transform:scale(.97)}
+.dash-card-ico{font-size:28px;margin-bottom:8px}
+.dash-card-val{font-size:32px;font-weight:900}
+.dash-card-lab{font-size:12px;color:#706f87;margin-top:4px;font-weight:600}
+.dash-card.purple{background:linear-gradient(135deg,#6C5CE7,#a29bfe);color:#fff}.dash-card.purple .dash-card-lab{color:rgba(255,255,255,.7)}
+.dash-card.green{background:linear-gradient(135deg,#00b894,#55efc4);color:#fff}.dash-card.green .dash-card-lab{color:rgba(255,255,255,.7)}
+.dash-card.red{background:linear-gradient(135deg,#e17055,#fab1a0);color:#fff}.dash-card.red .dash-card-lab{color:rgba(255,255,255,.7)}
+.sec-head{display:flex;justify-content:space-between;align-items:center;margin:20px 0 12px}
+.sec-title{font-size:16px;font-weight:800}
+.sec-btn{background:#ece9ff;color:#6C5CE7;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer}
+.item-card{background:#fff;border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.item-row{display:flex;justify-content:space-between;align-items:center}
+.item-name{font-size:15px;font-weight:700}
+.item-sub{font-size:12px;color:#706f87;margin-top:3px}
+.item-actions{display:flex;gap:8px}
+.btn-sm{padding:7px 12px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:none}
+.btn-red{background:#ffebee;color:#c62828}
+.btn-blue{background:#e3f2fd;color:#1565c0}
+.btn-gray{background:#f0f0f5;color:#706f87}
+.search-box{display:flex;gap:10px;margin-bottom:14px}
+.search-box input{flex:1;padding:12px 14px;background:#fff;border-radius:14px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;z-index:200}
+.modal-overlay.show{display:flex}
+.modal-sheet{background:#fff;width:100%;border-radius:28px 28px 0 0;padding:24px 18px 36px;max-height:92vh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:18px;font-weight:800;margin-bottom:18px}
+.mfield{margin-bottom:14px}
+.mlabel{display:block;font-size:11px;font-weight:700;color:#706f87;text-transform:uppercase;margin-bottom:6px}
+.minput{width:100%;padding:13px 14px;border:2px solid #f0f0f5;border-radius:14px;font-size:14px;background:#fafafa}
+.minput:focus{border-color:#6C5CE7}
+.mselect{width:100%;padding:13px 14px;border:2px solid #f0f0f5;border-radius:14px;font-size:14px;background:#fafafa}
+.mtextarea{width:100%;padding:13px 14px;border:2px solid #f0f0f5;border-radius:14px;font-size:14px;background:#fafafa;resize:vertical;min-height:80px}
+.mbtn{width:100%;padding:14px;border-radius:14px;font-weight:700;font-size:15px;margin:6px 0;cursor:pointer}
+.mbtn-primary{background:#0a0a14;color:#fff}
+.mbtn-purple{background:#6C5CE7;color:#fff}
+.mbtn-gray{background:#f0f0f5;color:#706f87}
+.mbtn-red{background:#ffebee;color:#c62828}
+.merr{color:#c62828;font-size:12px;padding:10px 14px;background:#ffebee;border-radius:10px;margin-top:8px;display:none}
+.badge{padding:4px 10px;border-radius:10px;font-size:11px;font-weight:700;display:inline-block}
+.badge-active{background:#e8f5e9;color:#2e7d32}
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:#0a0a14;color:#fff;padding:11px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;white-space:nowrap;max-width:90vw}
+.toast.show{opacity:1}
+.empty{text-align:center;padding:40px 20px;color:#706f87}
+.empty-ico{font-size:40px;margin-bottom:12px}
+.empty-txt{font-size:14px;line-height:1.7}
+.broadcast-form{background:#fff;border-radius:20px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
 </style>
 </head>
 <body>
-
 <div id="splash">
-  <div id="splash-text">Stash<b>lo</b> Admin</div>
+  <div class="sp-logo">Stash<b>lo</b></div>
+  <div class="sp-sub">Admin Console</div>
+  <div class="sp-dots"><div></div><div></div><div></div></div>
 </div>
-
 <div id="auth">
-  <div class="auth-box">
-    <h1>Admin Portal</h1>
-    <p>System administration & analytics</p>
-    <input type="email" id="email" class="auth-input" placeholder="Email">
-    <input type="password" id="password" class="auth-input" placeholder="Password">
+  <div class="auth-card">
+    <div class="auth-logo">Stash<b>lo</b> Admin</div>
+    <p class="auth-sub">System administration</p>
+    <input type="email" id="email" class="auth-inp" placeholder="Admin email">
+    <input type="password" id="password" class="auth-inp" placeholder="Password">
     <button class="auth-btn" onclick="login()">Sign in</button>
-    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-err" id="auth-error"></div>
   </div>
 </div>
-
 <div id="app">
-  <div class="topbar">Stash<b>lo</b> Admin <div class="topbar-action" onclick="logout()">🚪</div></div>
-
-  <!-- OVERVIEW SCREEN -->
-  <div class="screen active" id="overview-screen">
-    <div class="dashboard-grid">
-      <div class="stat-card">
-        <div class="stat-label">Total Users</div>
-        <div class="stat-value" id="stat-users">0</div>
-      </div>
-      <div class="stat-card alt">
-        <div class="stat-label">Merchants</div>
-        <div class="stat-value" id="stat-merchants">0</div>
-      </div>
-    </div>
-    <div class="dashboard-grid">
-      <div class="stat-card alt2">
-        <div class="stat-label">Orders</div>
-        <div class="stat-value" id="stat-orders">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Revenue</div>
-        <div class="stat-value" id="stat-revenue">£0</div>
-      </div>
-    </div>
+  <div class="topbar">
+    <div class="tb-brand">Stash<b>lo</b> <span style="font-size:12px;color:rgba(255,255,255,.5)">Admin</span></div>
+    <button class="tb-btn" onclick="logout()">🚪 Sign out</button>
   </div>
-
-  <!-- MERCHANTS SCREEN -->
+  <!-- OVERVIEW -->
+  <div class="screen on" id="overview-screen">
+    <div class="dash-grid">
+      <div class="dash-card purple" onclick="switchTab('merchants')">
+        <div class="dash-card-ico">🏪</div><div class="dash-card-val" id="d-merchants">0</div><div class="dash-card-lab">Merchants</div>
+      </div>
+      <div class="dash-card green" onclick="switchTab('customers')">
+        <div class="dash-card-ico">👥</div><div class="dash-card-val" id="d-customers">0</div><div class="dash-card-lab">Customers</div>
+      </div>
+      <div class="dash-card" onclick="switchTab('orders')">
+        <div class="dash-card-ico">📦</div><div class="dash-card-val" id="d-orders">0</div><div class="dash-card-lab">Total Orders</div>
+      </div>
+      <div class="dash-card red" onclick="switchTab('broadcast')">
+        <div class="dash-card-ico">📢</div><div class="dash-card-val" id="d-broadcasts">0</div><div class="dash-card-lab">Broadcasts</div>
+      </div>
+    </div>
+    <div class="sec-head"><span class="sec-title">Recent activity</span></div>
+    <div id="recent-activity"></div>
+  </div>
+  <!-- MERCHANTS -->
   <div class="screen" id="merchants-screen">
-    <div class="section-header">
-      <div class="section-title">Merchants</div>
-    </div>
-    <input type="text" class="search-box" id="merchant-search" placeholder="Search merchants..." onkeyup="filterMerchants()">
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Status</th>
-            <th>Orders</th>
-          </tr>
-        </thead>
-        <tbody id="merchants-list">
-          <tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87;">Loading...</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <div class="search-box"><input id="m-search" placeholder="Search by name or email" oninput="filterMerchants()"></div>
+    <div id="merchants-list"></div>
   </div>
-
-  <!-- CUSTOMERS SCREEN -->
+  <!-- CUSTOMERS -->
   <div class="screen" id="customers-screen">
-    <div class="section-header">
-      <div class="section-title">Customers</div>
-    </div>
-    <input type="text" class="search-box" id="customer-search" placeholder="Search customers..." onkeyup="filterCustomers()">
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Cards</th>
-            <th>Points</th>
-          </tr>
-        </thead>
-        <tbody id="customers-list">
-          <tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87;">Loading...</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <div class="search-box"><input id="c-search" placeholder="Search by name or email" oninput="filterCustomers()"></div>
+    <div id="customers-list"></div>
   </div>
-
-  <!-- ORDERS SCREEN -->
+  <!-- ORDERS -->
   <div class="screen" id="orders-screen">
-    <div class="section-header">
-      <div class="section-title">All Orders</div>
-    </div>
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Customer</th>
-            <th>Merchant</th>
-            <th>Amount</th>
-            <th>Status</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody id="orders-list">
-          <tr><td colspan="5" style="text-align:center;padding:20px;color:#706f87;">Loading...</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <div class="sec-head"><span class="sec-title">All Orders</span><button class="sec-btn" onclick="loadOrders()">🔄</button></div>
+    <div id="orders-list"></div>
   </div>
-
-  <!-- BROADCAST SCREEN -->
+  <!-- STASHLO PRODUCTS -->
+  <div class="screen" id="products-screen">
+    <div class="sec-head"><span class="sec-title">Stashlo Products</span><button class="sec-btn" onclick="openAddStashProd()">+ Add</button></div>
+    <div id="stashlo-products-list"></div>
+  </div>
+  <!-- BROADCAST -->
   <div class="screen" id="broadcast-screen">
-    <div class="section-header">
-      <div class="section-title">Send Broadcast</div>
-    </div>
-    <div style="background:#f9f9fb;border-radius:12px;padding:16px;">
-      <div class="modal-field">
-        <label class="modal-label">Target</label>
-        <select id="broadcast-target" class="modal-input">
-          <option value="all">All Customers</option>
-          <option value="merchants">All Merchants</option>
-          <option value="active">Active Only</option>
+    <div class="sec-head"><span class="sec-title">Send Broadcast</span></div>
+    <div class="broadcast-form">
+      <div class="mfield"><label class="mlabel">Audience</label>
+        <select id="bc-target" class="mselect">
+          <option value="all">All users (customers + merchants)</option>
+          <option value="customers">Customers only</option>
+          <option value="merchants">Merchants only</option>
         </select>
       </div>
-      <div class="modal-field">
-        <label class="modal-label">Title</label>
-        <input type="text" id="broadcast-title" class="modal-input" placeholder="e.g., New Rewards Available">
-      </div>
-      <div class="modal-field">
-        <label class="modal-label">Message</label>
-        <textarea id="broadcast-message" class="modal-textarea" placeholder="Your message here..."></textarea>
-      </div>
-      <button class="modal-btn" onclick="sendBroadcast()">📤 Send</button>
+      <div class="mfield"><label class="mlabel">Title</label><input id="bc-title" class="minput" placeholder="Broadcast title"></div>
+      <div class="mfield"><label class="mlabel">Message</label><textarea id="bc-body" class="mtextarea" placeholder="Your message..."></textarea></div>
+      <button class="mbtn mbtn-purple" onclick="sendBroadcast()">📢 Send Broadcast</button>
     </div>
+    <div class="sec-head" style="margin-top:24px"><span class="sec-title">Sent Broadcasts</span></div>
+    <div id="broadcasts-list"></div>
   </div>
+  <div class="bottomnav">
+    <div class="nav-btn on" id="nav-overview" onclick="switchTab('overview')"><span class="nav-icon">📊</span><span class="nav-label">Overview</span></div>
+    <div class="nav-btn" id="nav-merchants" onclick="switchTab('merchants')"><span class="nav-icon">🏪</span><span class="nav-label">Merchants</span></div>
+    <div class="nav-btn" id="nav-customers" onclick="switchTab('customers')"><span class="nav-icon">👥</span><span class="nav-label">Customers</span></div>
+    <div class="nav-btn" id="nav-orders" onclick="switchTab('orders')"><span class="nav-icon">📦</span><span class="nav-label">Orders</span></div>
+    <div class="nav-btn" id="nav-products" onclick="switchTab('products')"><span class="nav-icon">🛍️</span><span class="nav-label">Products</span></div>
+    <div class="nav-btn" id="nav-broadcast" onclick="switchTab('broadcast')"><span class="nav-icon">📢</span><span class="nav-label">Broadcast</span></div>
+  </div>
+</div>
 
-  <div class="nav">
-    <div class="nav-item active" onclick="switchScreen('overview')">📊 Overview</div>
-    <div class="nav-item" onclick="switchScreen('merchants')">🏪 Merchants</div>
-    <div class="nav-item" onclick="switchScreen('customers')">👥 Customers</div>
-    <div class="nav-item" onclick="switchScreen('orders')">📋 Orders</div>
-    <div class="nav-item" onclick="switchScreen('broadcast')">📢 Broadcast</div>
+<!-- Merchant detail modal -->
+<div class="modal-overlay" id="merchantModal" onclick="if(event.target===this)closeModal('merchantModal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Merchant Details</div>
+    <div id="merchant-detail-body"></div>
+    <button class="mbtn mbtn-red" id="delete-merchant-btn" onclick="deleteMerchant()">🗑 Delete Merchant</button>
+    <button class="mbtn mbtn-gray" onclick="closeModal('merchantModal')">Close</button>
+  </div>
+</div>
+
+<!-- Customer detail modal -->
+<div class="modal-overlay" id="customerModal" onclick="if(event.target===this)closeModal('customerModal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Customer Details</div>
+    <div id="customer-detail-body"></div>
+    <button class="mbtn mbtn-red" id="delete-customer-btn" onclick="deleteCustomer()">🗑 Delete Customer</button>
+    <button class="mbtn mbtn-gray" onclick="closeModal('customerModal')">Close</button>
+  </div>
+</div>
+
+<!-- Add Stashlo Product Modal -->
+<div class="modal-overlay" id="stashProdModal" onclick="if(event.target===this)closeModal('stashProdModal')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="sp-modal-title">Add Stashlo Product</div>
+    <input type="hidden" id="sp-edit-id">
+    <div class="mfield"><label class="mlabel">Product Name ★</label><input id="sp-name" class="minput" placeholder="Product name"></div>
+    <div class="mfield"><label class="mlabel">Price (£) ★</label><input id="sp-price" class="minput" type="number" step="0.01" placeholder="0.00"></div>
+    <div class="mfield"><label class="mlabel">Emoji</label><input id="sp-emoji" class="minput" placeholder="📦" maxlength="4"></div>
+    <div class="mfield"><label class="mlabel">Category</label><input id="sp-cat" class="minput" placeholder="e.g. electronics"></div>
+    <div class="mfield"><label class="mlabel">Description</label><input id="sp-desc" class="minput" placeholder="Optional"></div>
+    <button class="mbtn mbtn-primary" onclick="saveStashProd()">Save Product</button>
+    <button class="mbtn mbtn-gray" onclick="closeModal('stashProdModal')">Cancel</button>
+    <div class="merr" id="sp-err"></div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
-
 <script>
+const SURL='https://gcwevgaymahywqjorhnn.supabase.co',SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_',SR='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2V2Z2F5bWFoeXdxam9yaG5uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTIzNjA2NywiZXhwIjoyMDk0ODEyMDY3fQ.w72URBw7g0TCP5y-TLcqLfiZNfjmaIAZ4M430Qb77E4';
+let TOKEN=null,UID=null,MERCHANTS=[],CUSTOMERS=[],ORDERS=[],STASH_PRODS=[],BROADCASTS=[],CUR_MERCHANT=null,CUR_CUSTOMER=null;
 
-const SURL = 'https://gcwevgaymahywqjorhnn.supabase.co';
-const SKEY = 'sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
-const SR   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2V2Z2F5bWFoeXdxam9yaG5uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTIzNjA2NywiZXhwIjoyMDk0ODEyMDY3fQ.w72URBw7g0TCP5y-TLcqLfiZNfjmaIAZ4M430Qb77E4';
+function HS(){return{'apikey':SR,'Authorization':'Bearer '+SR,'Content-Type':'application/json','Prefer':'return=representation'}}
+function H(){return{'apikey':SKEY,'Authorization':'Bearer '+(TOKEN||SKEY),'Content-Type':'application/json','Prefer':'return=representation'}}
+function sget(t,q){return fetch(`${SURL}/rest/v1/${t}?select=*${q?'&'+q:''}`,{headers:HS()}).then(r=>r.json())}
+function spost(t,d,c){const u=`${SURL}/rest/v1/${t}${c?'?on_conflict='+c:''}`;return fetch(u,{method:'POST',headers:{...HS(),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json())}
+function sdel(t,q){return fetch(`${SURL}/rest/v1/${t}?${q}`,{method:'DELETE',headers:HS()})}
+function toast(m,d=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d)}
+function txt(id,v){const e=document.getElementById(id);if(e)e.textContent=v}
+function val(id){const e=document.getElementById(id);return e?e.value.trim():''}
+function err(id,m){const e=document.getElementById(id);if(e){e.textContent=m;e.style.display=m?'block':'none'}}
+function openModal(id){document.getElementById(id).classList.add('show')}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
 
-let TOKEN = null, UID = null;
-let MERCHANTS = [], CUSTOMERS = [], ORDERS = [], TRANSACTIONS = [];
-
-function H(useServiceRole) {
-  const key = useServiceRole ? SR : (TOKEN || SKEY);
-  return {'apikey': key, 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'};
-}
-
-function supaGet(table, filter, useServiceRole) {
-  return fetch(`${SURL}/rest/v1/${table}?select=*${filter ? '&' + filter : ''}`, {headers: H(useServiceRole)}).then(r => r.json());
-}
-
-function supaPost(table, data, conflict, useServiceRole) {
-  let url = `${SURL}/rest/v1/${table}${conflict ? '?on_conflict=' + conflict : ''}`;
-  return fetch(url, {
-    method: 'POST',
-    headers: {...H(useServiceRole), 'Prefer': conflict ? 'resolution=merge-duplicates,return=representation' : 'return=representation'},
-    body: JSON.stringify(data)
-  }).then(r => r.json());
-}
-
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    const sess = JSON.parse(localStorage.getItem('admin_session') || 'null');
-    if (sess && sess.token && sess.uid && sess.expiry > Date.now()) {
-      TOKEN = sess.token; UID = sess.uid; showApp();
-    } else showAuth();
-  }, 800);
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    const s=JSON.parse(localStorage.getItem('admin_sess')||'null');
+    if(s&&s.tok&&s.uid&&s.exp>Date.now()){TOKEN=s.tok;UID=s.uid;showApp();}
+    else{document.getElementById('auth').style.display='flex';document.getElementById('splash').style.display='none';}
+  },900);
 });
+function logout(){localStorage.removeItem('admin_sess');TOKEN=null;location.reload()}
 
-function login() {
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  const errDiv = document.getElementById('auth-error');
-  if (!email || !password) { errDiv.textContent = 'Enter credentials'; errDiv.style.display = 'block'; return; }
-
-  const btn = document.querySelector('#auth button[onclick="login()"]');
-  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
-
-  fetch(`${SURL}/auth/v1/token?grant_type=password`, {
-    method: 'POST', headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
-    body: JSON.stringify({email, password})
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
-    if (!d.access_token) {
-      errDiv.textContent = d.error_description || d.msg || 'Invalid credentials';
-      errDiv.style.display = 'block'; return;
-    }
-    TOKEN = d.access_token; UID = d.user.id;
-    localStorage.setItem('admin_session', JSON.stringify({
-      token: TOKEN, uid: UID, expiry: Date.now() + (d.expires_in || 3600) * 1000
-    }));
+function login(){
+  const e=val('email'),p=document.getElementById('password').value;
+  if(!e||!p){err('auth-error','Enter credentials');return}
+  const btn=document.querySelector('#auth .auth-btn');btn.textContent='Signing in...';btn.disabled=true;
+  fetch(`${SURL}/auth/v1/token?grant_type=password`,{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})})
+  .then(r=>r.json()).then(d=>{
+    btn.textContent='Sign in';btn.disabled=false;
+    if(!d.access_token){err('auth-error',d.error_description||d.msg||'Invalid credentials');return}
+    TOKEN=d.access_token;UID=d.user.id;
+    localStorage.setItem('admin_sess',JSON.stringify({tok:TOKEN,uid:UID,exp:Date.now()+(d.expires_in||3600)*1000}));
     showApp();
-  })
-  .catch(() => {
-    if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
-    errDiv.textContent = 'Connection error'; errDiv.style.display = 'block';
-  });
+  }).catch(()=>{btn.textContent='Sign in';btn.disabled=false;err('auth-error','Connection error')})
 }
 
-function logout() {
-  localStorage.removeItem('admin_session');
-  TOKEN = null; showAuth();
+function showApp(){
+  document.getElementById('splash').style.display='none';
+  document.getElementById('auth').style.display='none';
+  document.getElementById('app').style.display='flex';
+  loadAll();
 }
-
-function showAuth() {
-  document.getElementById('splash').style.display = 'flex';
-  setTimeout(() => {
-    document.getElementById('splash').style.display = 'none';
-    document.getElementById('auth').style.display = 'flex';
-  }, 1200);
+function loadAll(){loadMerchants();loadCustomers();loadOrders();loadStashProds();loadBroadcasts();}
+function loadMerchants(){
+  sget('merchants','order=created_at.desc&limit=200').then(d=>{
+    MERCHANTS=Array.isArray(d)?d:[];
+    txt('d-merchants',MERCHANTS.length);
+    renderMerchants(MERCHANTS);
+    renderActivity();
+  }).catch(()=>{})
 }
-
-function showApp() {
-  document.getElementById('splash').style.display = 'none';
-  document.getElementById('auth').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  loadAllData();
+function loadCustomers(){
+  sget('users','order=created_at.desc&limit=200').then(d=>{
+    CUSTOMERS=Array.isArray(d)?d:[];
+    txt('d-customers',CUSTOMERS.length);
+    renderCustomers(CUSTOMERS);
+  }).catch(()=>{})
 }
-
-function loadAllData() {
-  // Users (customers) from the users table
-  supaGet('users', 'order=created_at.desc&limit=200', true)
-  .then(d => {
-    CUSTOMERS = Array.isArray(d) ? d : [];
-    renderCustomers();
-    const el = document.getElementById('stat-users'); if(el) el.textContent = CUSTOMERS.length;
-  }).catch(() => {});
-
-  // Merchants from the merchants table
-  supaGet('merchants', 'order=created_at.desc&limit=200', true)
-  .then(d => {
-    MERCHANTS = Array.isArray(d) ? d : [];
-    renderMerchants();
-    const el = document.getElementById('stat-merchants'); if(el) el.textContent = MERCHANTS.length;
-  }).catch(() => {});
-
-  // Orders from the orders table
-  supaGet('orders', 'order=created_at.desc&limit=200', true)
-  .then(d => {
-    ORDERS = Array.isArray(d) ? d : [];
+function loadOrders(){
+  sget('orders','order=created_at.desc&limit=100').then(d=>{
+    ORDERS=Array.isArray(d)?d:[];
+    txt('d-orders',ORDERS.length);
     renderOrders();
-    const el = document.getElementById('stat-orders'); if(el) el.textContent = ORDERS.length;
-    const rev = ORDERS.reduce((a, o) => a + (parseFloat(o.total || 0)), 0);
-    const re = document.getElementById('stat-revenue'); if(re) re.textContent = '£' + rev.toFixed(2);
-  }).catch(() => {});
-
-  // Transactions (till sales)
-  supaGet('transactions', 'order=timestamp.desc&limit=200', true)
-  .then(d => {
-    TRANSACTIONS = Array.isArray(d) ? d : [];
-    const pts = TRANSACTIONS.reduce((a, t) => a + (t.points_added || 0), 0);
-    const ep = document.getElementById('stat-points'); if(ep) ep.textContent = pts;
-  }).catch(() => {});
+  }).catch(()=>{})
+}
+function loadStashProds(){
+  sget('stashlo_products','order=created_at.desc').then(d=>{
+    STASH_PRODS=Array.isArray(d)?d:[];
+    renderStashProds();
+  }).catch(()=>{})
+}
+function loadBroadcasts(){
+  sget('broadcasts','order=sent_at.desc&limit=20').then(d=>{
+    BROADCASTS=Array.isArray(d)?d:[];
+    txt('d-broadcasts',BROADCASTS.length);
+    renderBroadcasts();
+  }).catch(()=>{})
 }
 
-function renderMerchants() {
-  const list = document.getElementById('merchants-list');
-  if (!list) return;
-  if (MERCHANTS.length === 0) {
-    list.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87">No merchants registered</td></tr>'; return;
-  }
-  list.innerHTML = MERCHANTS.map(m => `
-    <tr>
-      <td>${m.name || 'Unnamed'}</td>
-      <td>${m.email || '—'}</td>
-      <td><span class="badge badge-active">Active</span></td>
-      <td>${ORDERS.filter(o => o.merchant_id === m.id).length}</td>
-    </tr>`).join('');
+function renderMerchants(list){
+  const el=document.getElementById('merchants-list');if(!el)return;
+  el.innerHTML=(list||MERCHANTS).length?(list||MERCHANTS).map(m=>`
+    <div class="item-card" onclick="openMerchant('${m.id}')">
+      <div class="item-row">
+        <div><div class="item-name">${m.logo_emoji||'🏪'} ${m.name||'Unnamed'}</div>
+          <div class="item-sub">ID: ${m.shop_id||'—'} • ${m.email||'—'}</div>
+          <div class="item-sub">${m.loyalty_type||'points'} • ${m.address||''}</div></div>
+        <div class="item-actions"><button class="btn-sm btn-red" onclick="event.stopPropagation();confirmDeleteMerchant('${m.id}')">🗑</button></div>
+      </div>
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">🏪</div><div class="empty-txt">No merchants yet</div></div>';
+}
+function renderCustomers(list){
+  const el=document.getElementById('customers-list');if(!el)return;
+  el.innerHTML=(list||CUSTOMERS).length?(list||CUSTOMERS).map(c=>`
+    <div class="item-card" onclick="openCustomer('${c.id}')">
+      <div class="item-row">
+        <div><div class="item-name">👤 ${c.name||'User'}</div>
+          <div class="item-sub">${c.email||'—'} • ${c.phone||'no phone'}</div></div>
+        <div class="item-actions"><button class="btn-sm btn-red" onclick="event.stopPropagation();confirmDeleteCustomer('${c.id}')">🗑</button></div>
+      </div>
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">👥</div><div class="empty-txt">No customers yet</div></div>';
+}
+function renderOrders(){
+  const el=document.getElementById('orders-list');if(!el)return;
+  const stCls={pending:'badge-active',ready:'badge-active',completed:'badge-active',rejected:'badge-active'};
+  el.innerHTML=ORDERS.length?ORDERS.map(o=>`
+    <div class="item-card">
+      <div class="item-row">
+        <div><div class="item-name">${o.product_name||'Order'} × ${o.quantity||1}</div>
+          <div class="item-sub">£${parseFloat(o.total||0).toFixed(2)} • ${o.type||'collect'} • <span style="font-weight:700">${o.status||'pending'}</span></div>
+          <div class="item-sub">${o.created_at?new Date(o.created_at).toLocaleString().slice(0,14):'—'}</div></div>
+        <div style="font-size:16px;font-weight:800;color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</div>
+      </div>
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">📦</div><div class="empty-txt">No orders yet</div></div>';
+}
+function renderStashProds(){
+  const el=document.getElementById('stashlo-products-list');if(!el)return;
+  el.innerHTML=STASH_PRODS.length?STASH_PRODS.map(p=>`
+    <div class="item-card">
+      <div class="item-row">
+        <div><div class="item-name">${p.emoji||'📦'} ${p.name}</div>
+          <div class="item-sub">£${parseFloat(p.price||0).toFixed(2)} • ${p.category||'—'}</div></div>
+        <div class="item-actions">
+          <button class="btn-sm btn-blue" onclick="editStashProd('${p.id}')">✏️</button>
+          <button class="btn-sm btn-red" onclick="deleteStashProd('${p.id}')">🗑</button>
+        </div>
+      </div>
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">📦</div><div class="empty-txt">No products yet<br>Tap + Add to create</div></div>';
+}
+function renderBroadcasts(){
+  const el=document.getElementById('broadcasts-list');if(!el)return;
+  el.innerHTML=BROADCASTS.length?BROADCASTS.map(b=>`
+    <div class="item-card">
+      <div class="item-name">${b.title||'Broadcast'}</div>
+      <div class="item-sub" style="margin-top:4px">${b.body||''}</div>
+      <div class="item-sub" style="margin-top:6px">To: ${b.audience||'all'} • ${b.sent_at?new Date(b.sent_at).toLocaleString().slice(0,14):'—'}</div>
+    </div>`).join(''):'<div style="padding:16px;text-align:center;color:#706f87;font-size:13px">No broadcasts sent yet</div>';
+}
+function renderActivity(){
+  const el=document.getElementById('recent-activity');if(!el)return;
+  el.innerHTML=MERCHANTS.slice(0,3).map(m=>`
+    <div class="item-card" style="margin-bottom:8px">
+      <div class="item-row"><div><div class="item-name">${m.logo_emoji||'🏪'} ${m.name||'Unnamed'}</div><div class="item-sub">Merchant • ${m.email||'—'}</div></div></div>
+    </div>`).join('')||'<div style="padding:16px;text-align:center;color:#706f87;font-size:13px">No recent activity</div>';
 }
 
-function renderCustomers() {
-  const list = document.getElementById('customers-list');
-  if (!list) return;
-  if (CUSTOMERS.length === 0) {
-    list.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87">No customers yet</td></tr>'; return;
-  }
-  list.innerHTML = CUSTOMERS.map(c => `
-    <tr>
-      <td>${c.name || 'User'}</td>
-      <td>${c.email || '—'}</td>
-      <td>${c.phone || '—'}</td>
-      <td>${c.total_points || 0}</td>
-    </tr>`).join('');
+function filterMerchants(){
+  const q=val('m-search').toLowerCase();
+  renderMerchants(MERCHANTS.filter(m=>(m.name||'').toLowerCase().includes(q)||(m.email||'').toLowerCase().includes(q)||(m.shop_id||'').toLowerCase().includes(q)));
+}
+function filterCustomers(){
+  const q=val('c-search').toLowerCase();
+  renderCustomers(CUSTOMERS.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q)||(c.phone||'').includes(q)));
 }
 
-function renderOrders() {
-  const list = document.getElementById('orders-list');
-  if (!list) return;
-  if (ORDERS.length === 0) {
-    list.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#706f87">No orders yet</td></tr>'; return;
-  }
-  list.innerHTML = ORDERS.map(o => `
-    <tr>
-      <td>${o.user_id ? o.user_id.slice(0,8) + '...' : 'Unknown'}</td>
-      <td>${o.merchant_id ? o.merchant_id.slice(0,8) + '...' : '—'}</td>
-      <td>£${parseFloat(o.total || 0).toFixed(2)}</td>
-      <td><span class="badge badge-active">${o.status || 'pending'}</span></td>
-      <td>${o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'}</td>
-    </tr>`).join('');
+function openMerchant(id){
+  CUR_MERCHANT=MERCHANTS.find(m=>m.id===id);if(!CUR_MERCHANT)return;
+  const m=CUR_MERCHANT;
+  document.getElementById('merchant-detail-body').innerHTML=`
+    <div class="item-card" style="margin-bottom:12px">
+      <div style="font-size:32px;margin-bottom:8px">${m.logo_emoji||'🏪'}</div>
+      <div style="font-size:18px;font-weight:800">${m.name||'Unnamed'}</div>
+      <div style="font-size:13px;color:#706f87;margin-top:4px">${m.email||'—'}</div>
+    </div>
+    ${[['Shop ID',m.shop_id||'—'],['Category',m.category||'—'],['Address',m.address||'—'],['Loyalty',m.loyalty_type||'points'],['Open Hours',m.open_hours||'—']].map(([l,v])=>`
+    <div class="item-card" style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:#706f87;text-transform:uppercase;margin-bottom:4px">${l}</div><div style="font-size:15px;font-weight:700">${v}</div></div>`).join('')}`;
+  openModal('merchantModal');
+}
+function confirmDeleteMerchant(id){
+  CUR_MERCHANT=MERCHANTS.find(m=>m.id===id);openMerchant(id);
+}
+function deleteMerchant(){
+  if(!CUR_MERCHANT)return;
+  if(!confirm('Delete merchant '+CUR_MERCHANT.name+'? This cannot be undone.'))return;
+  sdel('merchants','id=eq.'+CUR_MERCHANT.id).then(()=>{
+    sdel('products','merchant_id=eq.'+CUR_MERCHANT.id).catch(()=>{});
+    toast('✅ Merchant deleted');closeModal('merchantModal');loadMerchants();
+  }).catch(()=>toast('Delete failed'))
+}
+function openCustomer(id){
+  CUR_CUSTOMER=CUSTOMERS.find(c=>c.id===id);if(!CUR_CUSTOMER)return;
+  const c=CUR_CUSTOMER;
+  document.getElementById('customer-detail-body').innerHTML=`
+    <div class="item-card" style="margin-bottom:12px">
+      <div style="font-size:18px;font-weight:800">👤 ${c.name||'User'}</div>
+      <div style="font-size:13px;color:#706f87;margin-top:4px">${c.email||'—'}</div>
+    </div>
+    ${[['Phone',c.phone||'—'],['Total Points',c.total_points||0],['Account ID',c.id.slice(0,20)+'...']].map(([l,v])=>`
+    <div class="item-card" style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:#706f87;text-transform:uppercase;margin-bottom:4px">${l}</div><div style="font-size:15px;font-weight:700">${v}</div></div>`).join('')}`;
+  openModal('customerModal');
+}
+function confirmDeleteCustomer(id){
+  CUR_CUSTOMER=CUSTOMERS.find(c=>c.id===id);openCustomer(id);
+}
+function deleteCustomer(){
+  if(!CUR_CUSTOMER)return;
+  if(!confirm('Delete customer '+( CUR_CUSTOMER.name||CUR_CUSTOMER.email)+'?'))return;
+  sdel('users','id=eq.'+CUR_CUSTOMER.id).then(()=>{
+    sdel('cards','user_id=eq.'+CUR_CUSTOMER.id).catch(()=>{});
+    sdel('orders','user_id=eq.'+CUR_CUSTOMER.id).catch(()=>{});
+    toast('✅ Customer deleted');closeModal('customerModal');loadCustomers();
+  }).catch(()=>toast('Delete failed'))
 }
 
-function filterMerchants() {
-  const q = (document.getElementById('merchant-search')?.value || '').toLowerCase();
-  const list = document.getElementById('merchants-list');
-  if (!list) return;
-  list.innerHTML = MERCHANTS.filter(m => (m.name + m.email).toLowerCase().includes(q)).map(m => `
-    <tr>
-      <td>${m.name || 'Unnamed'}</td>
-      <td>${m.email || '—'}</td>
-      <td><span class="badge badge-active">Active</span></td>
-      <td>${ORDERS.filter(o => o.merchant_id === m.id).length}</td>
-    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87">No results</td></tr>';
+function sendBroadcast(){
+  const title=val('bc-title'),body=document.getElementById('bc-body').value.trim(),audience=document.getElementById('bc-target').value;
+  if(!title||!body){toast('Fill title and message');return}
+  spost('broadcasts',{title,body,audience,sent_at:Date.now()}).then(()=>{
+    toast('✅ Broadcast sent to '+audience+'!');
+    document.getElementById('bc-title').value='';document.getElementById('bc-body').value='';
+    loadBroadcasts();
+  }).catch(()=>toast('Failed to send'))
 }
 
-function filterCustomers() {
-  const q = (document.getElementById('customer-search')?.value || '').toLowerCase();
-  const list = document.getElementById('customers-list');
-  if (!list) return;
-  list.innerHTML = CUSTOMERS.filter(c => (c.name + c.email + (c.phone||'')).toLowerCase().includes(q)).map(c => `
-    <tr>
-      <td>${c.name || 'User'}</td>
-      <td>${c.email || '—'}</td>
-      <td>${c.phone || '—'}</td>
-      <td>${c.total_points || 0}</td>
-    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87">No results</td></tr>';
+function openAddStashProd(){
+  document.getElementById('sp-edit-id').value='';
+  document.getElementById('sp-modal-title').textContent='Add Stashlo Product';
+  ['sp-name','sp-cat','sp-desc'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  document.getElementById('sp-price').value='';document.getElementById('sp-emoji').value='';
+  openModal('stashProdModal');
+}
+function editStashProd(id){
+  const p=STASH_PRODS.find(x=>x.id===id);if(!p)return;
+  document.getElementById('sp-edit-id').value=id;
+  document.getElementById('sp-modal-title').textContent='Edit Product';
+  document.getElementById('sp-name').value=p.name||'';document.getElementById('sp-price').value=p.price||'';
+  document.getElementById('sp-emoji').value=p.emoji||'';document.getElementById('sp-cat').value=p.category||'';
+  document.getElementById('sp-desc').value=p.description||'';
+  openModal('stashProdModal');
+}
+function saveStashProd(){
+  const name=val('sp-name'),price=parseFloat(document.getElementById('sp-price').value||0),editId=val('sp-edit-id');
+  if(!name||price<=0){err('sp-err','Name and price required');return}
+  const data={name,price,emoji:val('sp-emoji')||'📦',category:val('sp-cat')||'other',description:val('sp-desc'),active:true};
+  const action=editId?
+    fetch(`${SURL}/rest/v1/stashlo_products?id=eq.${editId}`,{method:'PATCH',headers:HS(),body:JSON.stringify(data)}).then(r=>r.json()):
+    spost('stashlo_products',{...data,collect:true,delivery:false,created_at:Date.now()});
+  action.then(()=>{toast('✅ Product saved');closeModal('stashProdModal');loadStashProds()}).catch(()=>err('sp-err','Save failed'))
+}
+function deleteStashProd(id){
+  if(!confirm('Delete this product?'))return;
+  sdel('stashlo_products','id=eq.'+id).then(()=>{toast('✅ Deleted');loadStashProds()})
 }
 
-function sendBroadcast() {
-  const target = document.getElementById('broadcast-target')?.value || 'all';
-  const title = document.getElementById('broadcast-title')?.value.trim();
-  const message = document.getElementById('broadcast-message')?.value.trim();
-  if (!title || !message) { showToast('Fill all fields'); return; }
-
-  supaPost('broadcasts', {title, body: message, audience: target, sent_at: Date.now()}, null, true)
-  .then(() => {
-    showToast('✅ Broadcast saved!');
-    const bt = document.getElementById('broadcast-title'); if(bt) bt.value = '';
-    const bm = document.getElementById('broadcast-message'); if(bm) bm.value = '';
-  })
-  .catch(() => showToast('Failed to send'));
+function switchTab(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById(name+'-screen').classList.add('on');
+  const nb=document.getElementById('nav-'+name);if(nb)nb.classList.add('on');
+  if(name==='orders')loadOrders();
+  if(name==='broadcast')loadBroadcasts();
 }
-
-function switchScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const sc = document.getElementById(name + '-screen'); if(sc) sc.classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  if(event && event.target) event.target.classList.add('active');
-}
-
-function showToast(msg) {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2800);
-}
-
 </script>
 </body>
 </html>
