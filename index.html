@@ -261,48 +261,80 @@ input { font-family:inherit; border:none; }
 <div class="toast" id="toast"></div>
 
 <script>
+
 const SURL = 'https://gcwevgaymahywqjorhnn.supabase.co';
 const SKEY = 'sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
 
 let TOKEN = null, UID = null, USER_EMAIL = null, CARDS = [], CURRENT_BRAND = null, TEMP_LAT = null, TEMP_LNG = null;
 
 const BRANDS = [
-  {id: 'tesco', name: 'Tesco Clubcard', emoji: '🛒', color: '#00539B'},
-  {id: 'nectar', name: 'Nectar', emoji: '🏵️', color: '#FF6600'},
-  {id: 'boots', name: 'Boots Advantage', emoji: '💊', color: '#00A3AD'},
-  {id: 'costa', name: 'Costa Coffee', emoji: '☕', color: '#622F22'},
-  {id: 'bp', name: 'BP Rewards', emoji: '⛽', color: '#009A44'},
-  {id: 'greggs', name: 'Greggs', emoji: '🥐', color: '#002E5B'},
-  {id: 'mcdonalds', name: "McDonald's", emoji: '🍟', color: '#DA291C'},
-  {id: 'starbucks', name: 'Starbucks', emoji: '☕', color: '#00704A'},
-  {id: 'waterstones', name: 'Waterstones', emoji: '📚', color: '#1B365D'},
-  {id: 'johnlewis', name: 'John Lewis', emoji: '🏬', color: '#3D3D3D'},
-  {id: 'ikea', name: 'IKEA Family', emoji: '🛋️', color: '#0058A3'},
-  {id: 'lidl', name: 'Lidl Plus', emoji: '🛒', color: '#0050AA'},
-  {id: 'asda', name: 'Asda', emoji: '🛒', color: '#78BE20'},
-  {id: 'morrisons', name: 'Morrisons', emoji: '🛒', color: '#F5A623'},
-  {id: 'waitrose', name: 'myWaitrose', emoji: '🥬', color: '#2d2d2d'},
-  {id: 'nandos', name: "Nando's", emoji: '🍗', color: '#BE0000'},
-  {id: 'pizza', name: 'Pizza Express', emoji: '🍕', color: '#D72027'},
-  {id: 'odeon', name: 'ODEON', emoji: '🎬', color: '#E20714'},
-  {id: 'vue', name: 'Vue Cinemas', emoji: '🎭', color: '#1B1464'},
-  {id: 'cineworld', name: 'Cineworld', emoji: '🎬', color: '#C41230'}
+  {id:'tesco',name:'Tesco Clubcard',emoji:'🛒',color:'#00539B'},
+  {id:'nectar',name:'Nectar',emoji:'🏵️',color:'#FF6600'},
+  {id:'boots',name:'Boots Advantage',emoji:'💊',color:'#00A3AD'},
+  {id:'costa',name:'Costa Coffee',emoji:'☕',color:'#622F22'},
+  {id:'bp',name:'BP Rewards',emoji:'⛽',color:'#009A44'},
+  {id:'greggs',name:'Greggs',emoji:'🥐',color:'#002E5B'},
+  {id:'mcdonalds',name:"McDonald's",emoji:'🍟',color:'#DA291C'},
+  {id:'starbucks',name:'Starbucks',emoji:'☕',color:'#00704A'},
+  {id:'waterstones',name:'Waterstones',emoji:'📚',color:'#1B365D'},
+  {id:'johnlewis',name:'John Lewis',emoji:'🏬',color:'#3D3D3D'},
+  {id:'ikea',name:'IKEA Family',emoji:'🛋️',color:'#0058A3'},
+  {id:'lidl',name:'Lidl Plus',emoji:'🛒',color:'#0050AA'},
+  {id:'asda',name:'Asda',emoji:'🛒',color:'#78BE20'},
+  {id:'morrisons',name:'Morrisons',emoji:'🛒',color:'#F5A623'},
+  {id:'waitrose',name:'myWaitrose',emoji:'🥬',color:'#2d2d2d'},
+  {id:'nandos',name:"Nando's",emoji:'🍗',color:'#BE0000'},
+  {id:'pizza',name:'Pizza Express',emoji:'🍕',color:'#D72027'},
+  {id:'odeon',name:'ODEON',emoji:'🎬',color:'#E20714'},
+  {id:'vue',name:'Vue Cinemas',emoji:'🎭',color:'#1B1464'},
+  {id:'cineworld',name:'Cineworld',emoji:'🎬',color:'#C41230'}
 ];
 
+// ── Helpers ──────────────────────────────────────────────
+function H(tok) {
+  return {'apikey': SKEY, 'Authorization': 'Bearer ' + (tok || TOKEN || SKEY), 'Content-Type': 'application/json', 'Prefer': 'return=representation'};
+}
+
+function supaGet(table, filter) {
+  const url = `${SURL}/rest/v1/${table}?select=*${filter ? '&' + filter : ''}`;
+  return fetch(url, {headers: H()}).then(r => r.json());
+}
+
+function supaPost(table, data, conflict) {
+  let url = `${SURL}/rest/v1/${table}`;
+  if (conflict) url += `?on_conflict=${conflict}`;
+  return fetch(url, {
+    method: 'POST',
+    headers: {...H(), 'Prefer': conflict ? 'resolution=merge-duplicates,return=representation' : 'return=representation'},
+    body: JSON.stringify(data)
+  }).then(r => r.json());
+}
+
+function supaDel(table, filter) {
+  return fetch(`${SURL}/rest/v1/${table}?${filter}`, {method: 'DELETE', headers: H()});
+}
+
+// ── Session ───────────────────────────────────────────────
 window.addEventListener('load', () => {
   setTimeout(() => {
     const sess = JSON.parse(localStorage.getItem('sl_session') || 'null');
     if (sess && sess.token && sess.uid && sess.expiry > Date.now()) {
-      TOKEN = sess.token;
-      UID = sess.uid;
-      USER_EMAIL = sess.email;
+      TOKEN = sess.token; UID = sess.uid; USER_EMAIL = sess.email;
       showApp();
     } else {
       showAuth();
     }
-  }, 1500);
+  }, 800);
 });
 
+function saveSession(token, uid, email, expiresIn) {
+  TOKEN = token; UID = uid; USER_EMAIL = email;
+  localStorage.setItem('sl_session', JSON.stringify({
+    token, uid, email, expiry: Date.now() + (expiresIn || 3600) * 1000
+  }));
+}
+
+// ── Auth ─────────────────────────────────────────────────
 function showLogin() {
   document.getElementById('auth-login').style.display = 'block';
   document.getElementById('auth-signup').style.display = 'none';
@@ -319,12 +351,10 @@ function login() {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   const errDiv = document.getElementById('auth-error');
-  
-  if (!email || !password) {
-    errDiv.textContent = 'Enter email and password';
-    errDiv.style.display = 'block';
-    return;
-  }
+  if (!email || !password) { errDiv.textContent = 'Enter email and password'; errDiv.style.display = 'block'; return; }
+
+  const btn = document.querySelector('#auth-login button[onclick="login()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
 
   fetch(`${SURL}/auth/v1/token?grant_type=password`, {
     method: 'POST',
@@ -333,20 +363,19 @@ function login() {
   })
   .then(r => r.json())
   .then(d => {
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
     if (!d.access_token) {
-      errDiv.textContent = d.error_description || 'Login failed';
-      errDiv.style.display = 'block';
-      return;
+      const msg = d.error_code === 'invalid_credentials' ? 'Incorrect email or password' : (d.error_description || d.msg || 'Sign in failed');
+      errDiv.textContent = msg; errDiv.style.display = 'block'; return;
     }
-    TOKEN = d.access_token;
-    UID = d.user.id;
-    USER_EMAIL = d.user.email;
-    localStorage.setItem('sl_session', JSON.stringify({token: TOKEN, uid: UID, email: USER_EMAIL, expiry: Date.now() + 3600000}));
+    saveSession(d.access_token, d.user.id, d.user.email, d.expires_in);
+    // Save user profile
+    supaPost('users', {id: d.user.id, email: d.user.email, created_at: Date.now(), total_points: 0}, 'id').catch(() => {});
     showApp();
   })
-  .catch(e => {
-    errDiv.textContent = 'Connection error';
-    errDiv.style.display = 'block';
+  .catch(() => {
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
+    errDiv.textContent = 'Connection error — check internet'; errDiv.style.display = 'block';
   });
 }
 
@@ -354,13 +383,15 @@ function signup() {
   const email = document.getElementById('signup-email').value.trim();
   const password = document.getElementById('signup-password').value;
   const name = document.getElementById('signup-name').value.trim();
+  const phone = document.getElementById('signup-phone') ? document.getElementById('signup-phone').value.trim() : '';
   const errDiv = document.getElementById('signup-error');
-  
+
   if (!email || !password || password.length < 6 || !name) {
-    errDiv.textContent = 'All fields required, password 6+ chars';
-    errDiv.style.display = 'block';
-    return;
+    errDiv.textContent = 'All fields required, password min 6 chars'; errDiv.style.display = 'block'; return;
   }
+
+  const btn = document.querySelector('#auth-signup button[onclick="signup()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating account...'; }
 
   fetch(`${SURL}/auth/v1/signup`, {
     method: 'POST',
@@ -369,26 +400,33 @@ function signup() {
   })
   .then(r => r.json())
   .then(d => {
-    if (d.user) {
-      showToast('✅ Account created! Signing in...');
-      setTimeout(() => login(), 1500);
+    if (btn) { btn.disabled = false; btn.textContent = 'Join free'; }
+    if (d.access_token && d.user) {
+      // Signed up and auto-confirmed — save profile and go in
+      saveSession(d.access_token, d.user.id, d.user.email, d.expires_in);
+      supaPost('users', {id: d.user.id, email, name, phone: phone || null, created_at: Date.now(), total_points: 0}, 'id').catch(() => {});
+      showApp();
+    } else if (d.user && d.user.id) {
+      // User created but needs to login (confirmation disabled but no token returned)
+      document.getElementById('email').value = email;
+      document.getElementById('password').value = password;
+      showLogin();
+      login();
     } else {
-      errDiv.textContent = d.error_description || 'Signup failed';
-      errDiv.style.display = 'block';
+      const msg = (d.error_code === 'user_already_exists') ? 'Account already exists — sign in instead' : (d.error_description || d.msg || 'Sign up failed');
+      errDiv.textContent = msg; errDiv.style.display = 'block';
     }
   })
-  .catch(e => {
-    errDiv.textContent = 'Connection error';
-    errDiv.style.display = 'block';
+  .catch(() => {
+    if (btn) { btn.disabled = false; btn.textContent = 'Join free'; }
+    errDiv.textContent = 'Connection error'; errDiv.style.display = 'block';
   });
 }
 
 function logout() {
   localStorage.removeItem('sl_session');
-  TOKEN = null;
-  UID = null;
-  showAuth();
-  showLogin();
+  TOKEN = null; UID = null; CARDS = [];
+  showAuth(); showLogin();
 }
 
 function showAuth() {
@@ -403,61 +441,66 @@ function showApp() {
   loadCards();
 }
 
+// ── Cards ─────────────────────────────────────────────────
 function loadCards() {
   if (!UID) return;
-  
-  fetch(`${SURL}/rest/v1/cards?user_id=eq.${UID}&order=addedAt.desc`, {
-    headers: {'apikey': SKEY}
-  })
-  .then(r => r.json())
+  supaGet('cards', `user_id=eq.${UID}&order=added_at.desc`)
   .then(d => {
-    CARDS = Array.isArray(d) ? d : [];
+    CARDS = (Array.isArray(d) ? d : []).map(c => ({
+      id: c.card_id, card_id: c.card_id,
+      shopName: c.shop_name, name: c.name,
+      emoji: c.emoji || '🛍️', color: c.color || '#6C5CE7',
+      type: c.type || 'national',
+      points: c.points || 0, threshold: c.threshold || 500,
+      visitCount: c.visit_count || 0, totalSpend: c.total_spend || 0,
+      rewardsRedeemed: c.rewards_redeemed || 0,
+      addedAt: c.added_at, merchant_id: c.merchant_id,
+      card_number: c.card_number || null, store_location: c.store_location || null
+    }));
     renderCards();
+    document.getElementById('stat-cards').textContent = CARDS.length;
+    document.getElementById('stat-points').textContent = CARDS.reduce((a, c) => a + c.points, 0);
   })
-  .catch(e => renderCards());
+  .catch(e => { console.error('loadCards:', e); renderCards(); });
 }
 
 function renderCards() {
   const homeCards = document.getElementById('home-cards');
   const cardsList = document.getElementById('cards-list');
-  
+  if (!homeCards || !cardsList) return;
+
   if (CARDS.length === 0) {
-    homeCards.innerHTML = '<div class="empty"><div class="empty-icon">💳</div><div class="empty-text">No cards yet<br>Tap + in Cards to add</div></div>';
-    cardsList.innerHTML = '<div class="empty"><div class="empty-icon">💳</div><div class="empty-text">No cards yet<br>Tap + to add</div></div>';
+    const empty = '<div class="empty"><div class="empty-icon">💳</div><div class="empty-text">No cards yet<br>Tap + to add</div></div>';
+    homeCards.innerHTML = empty; cardsList.innerHTML = empty;
   } else {
-    homeCards.innerHTML = CARDS.slice(0, 4).map(c => `
+    const cardHtml = c => `
       <div class="card" style="background:${c.color}" onclick="openDetail('${c.id}')">
-        <div class="card-brand">${c.shopName}</div>
-        <div class="card-points">${c.points || 0}</div>
+        <div class="card-brand">${c.emoji} ${c.shopName || c.name}</div>
+        <div class="card-points">${c.points}</div>
         <div class="card-label">points</div>
-      </div>
-    `).join('');
-    
+      </div>`;
+    homeCards.innerHTML = CARDS.slice(0, 4).map(cardHtml).join('');
     cardsList.innerHTML = CARDS.map(c => `
       <div class="card" style="background:${c.color}" onclick="openDetail('${c.id}')">
         <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-          <div class="card-brand">${c.shopName}</div>
-          <div style="font-size:10px;background:rgba(255,255,255,0.2);padding:3px 6px;border-radius:12px">${c.type === 'national' ? '🇬🇧' : '🏪'}</div>
+          <div class="card-brand">${c.emoji} ${c.shopName || c.name}</div>
+          <div style="font-size:10px;background:rgba(255,255,255,0.2);padding:3px 6px;border-radius:12px">${c.type === 'national' ? '🇬🇧 National' : '🏪 Local'}</div>
         </div>
-        <div class="card-points">${c.points || 0}</div>
-        <div class="card-label">points</div>
-      </div>
-    `).join('');
+        <div class="card-points">${c.points}</div>
+        <div class="card-label">points | threshold: ${c.threshold}</div>
+      </div>`).join('');
   }
-  
-  document.getElementById('stat-cards').textContent = CARDS.length;
-  document.getElementById('stat-points').textContent = CARDS.reduce((a, c) => a + (c.points || 0), 0);
 }
 
 function openAddModal() {
   const grid = document.getElementById('brands-grid');
-  grid.innerHTML = BRANDS.map(b => `
-    <div class="brand-item" onclick="selectBrand('${b.id}', '${b.name}', '${b.emoji}', '${b.color}')">
-      <div class="brand-emoji">${b.emoji}</div>
-      <div class="brand-name">${b.name}</div>
-    </div>
-  `).join('');
-  
+  if (grid) {
+    grid.innerHTML = BRANDS.map(b => `
+      <div class="brand-item" onclick="selectBrand('${b.id}','${b.name}','${b.emoji}','${b.color}')">
+        <div class="brand-emoji">${b.emoji}</div>
+        <div class="brand-name">${b.name}</div>
+      </div>`).join('');
+  }
   document.getElementById('step-brands').style.display = 'block';
   document.getElementById('step-form').style.display = 'none';
   document.getElementById('add-modal').style.display = 'flex';
@@ -470,18 +513,12 @@ function closeAddModal() {
 
 function selectBrand(id, name, emoji, color) {
   CURRENT_BRAND = {id, name, emoji, color};
-  
   document.getElementById('preview-emoji').textContent = emoji;
   document.getElementById('preview-name').textContent = name;
-  document.getElementById('card-number').value = '';
-  document.getElementById('order-ref').value = '';
-  document.getElementById('store-loc').value = '';
-  document.getElementById('card-name').value = '';
-  document.getElementById('location-status').textContent = '';
-  document.getElementById('form-error').style.display = 'none';
-  TEMP_LAT = null;
-  TEMP_LNG = null;
-  
+  ['card-number','order-ref','store-loc','card-name'].forEach(i => { const el = document.getElementById(i); if(el) el.value = ''; });
+  const ls = document.getElementById('location-status'); if(ls) ls.textContent = '';
+  const fe = document.getElementById('form-error'); if(fe) fe.style.display = 'none';
+  TEMP_LAT = null; TEMP_LNG = null;
   document.getElementById('step-brands').style.display = 'none';
   document.getElementById('step-form').style.display = 'block';
 }
@@ -492,123 +529,95 @@ function backTobrands() {
 }
 
 function captureLocation() {
-  if (!navigator.geolocation) {
-    document.getElementById('location-status').textContent = '📍 Not supported';
-    return;
-  }
-  
+  if (!navigator.geolocation) { document.getElementById('location-status').textContent = '📍 Not supported'; return; }
   document.getElementById('location-status').textContent = '📍 Locating...';
   navigator.geolocation.getCurrentPosition(
-    pos => {
-      TEMP_LAT = pos.coords.latitude;
-      TEMP_LNG = pos.coords.longitude;
-      document.getElementById('location-status').textContent = `✓ ${TEMP_LAT.toFixed(4)}, ${TEMP_LNG.toFixed(4)}`;
-    },
-    err => {
-      document.getElementById('location-status').textContent = `✗ ${err.message}`;
-    }
+    pos => { TEMP_LAT = pos.coords.latitude; TEMP_LNG = pos.coords.longitude; document.getElementById('location-status').textContent = `✓ ${TEMP_LAT.toFixed(4)}, ${TEMP_LNG.toFixed(4)}`; },
+    err => { document.getElementById('location-status').textContent = `✗ ${err.message}`; }
   );
 }
 
 function saveCard() {
-  const num = document.getElementById('card-number').value.trim();
-  const order = document.getElementById('order-ref').value.trim();
-  const store = document.getElementById('store-loc').value.trim();
-  const name = document.getElementById('card-name').value.trim();
+  const numEl = document.getElementById('card-number');
+  const num = numEl ? numEl.value.trim() : '';
   const errDiv = document.getElementById('form-error');
-  
-  errDiv.style.display = 'none';
-  
-  if (!num || num.length < 4) {
-    errDiv.textContent = 'Card number required (4+ digits)';
-    errDiv.style.display = 'block';
-    return;
-  }
-  
+  if (errDiv) errDiv.style.display = 'none';
+  if (!num || num.length < 4) { if(errDiv) { errDiv.textContent = 'Card number required (4+ digits)'; errDiv.style.display = 'block'; } return; }
+  if (!CURRENT_BRAND || !UID) { showToast('Error — please sign in again'); return; }
+
   const payload = {
     user_id: UID,
-    id: CURRENT_BRAND.id + '_' + Date.now(),
+    card_id: CURRENT_BRAND.id,
     name: CURRENT_BRAND.name,
-    shopName: CURRENT_BRAND.name,
+    shop_name: CURRENT_BRAND.name,
     emoji: CURRENT_BRAND.emoji,
     color: CURRENT_BRAND.color,
     type: 'national',
     points: 0,
     threshold: 500,
-    addedAt: Date.now(),
-    visitCount: 0,
-    totalSpend: 0,
-    rewardsRedeemed: 0,
-    cardNumber: num,
-    cardHolder: name || null,
-    orderRef: order || null,
-    storeLocation: store || null,
+    added_at: Date.now(),
+    visit_count: 0,
+    total_spend: 0,
+    rewards_redeemed: 0,
+    card_number: num,
+    card_holder: document.getElementById('card-name') ? document.getElementById('card-name').value.trim() || null : null,
+    order_ref: document.getElementById('order-ref') ? document.getElementById('order-ref').value.trim() || null : null,
+    store_location: document.getElementById('store-loc') ? document.getElementById('store-loc').value.trim() || null : null,
     latitude: TEMP_LAT,
     longitude: TEMP_LNG
   };
-  
-  fetch(`${SURL}/rest/v1/cards`, {
-    method: 'POST',
-    headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
-    body: JSON.stringify(payload)
-  })
-  .then(r => r.json())
+
+  supaPost('cards', payload, 'user_id,card_id')
   .then(d => {
+    if (d && d.error) { if(errDiv) { errDiv.textContent = d.message || 'Save failed'; errDiv.style.display = 'block'; } return; }
     showToast(`✅ ${CURRENT_BRAND.name} added!`);
     closeAddModal();
     loadCards();
   })
-  .catch(e => {
-    errDiv.textContent = `Error: ${e.message}`;
-    errDiv.style.display = 'block';
-  });
+  .catch(e => { if(errDiv) { errDiv.textContent = 'Save failed — try again'; errDiv.style.display = 'block'; } });
 }
 
 function resetForm() {
-  document.getElementById('card-number').value = '';
-  document.getElementById('order-ref').value = '';
-  document.getElementById('store-loc').value = '';
-  document.getElementById('card-name').value = '';
-  document.getElementById('location-status').textContent = '';
-  document.getElementById('form-error').style.display = 'none';
-  TEMP_LAT = null;
-  TEMP_LNG = null;
+  ['card-number','order-ref','store-loc','card-name'].forEach(i => { const el = document.getElementById(i); if(el) el.value = ''; });
+  const ls = document.getElementById('location-status'); if(ls) ls.textContent = '';
+  const fe = document.getElementById('form-error'); if(fe) fe.style.display = 'none';
+  TEMP_LAT = null; TEMP_LNG = null; CURRENT_BRAND = null;
 }
 
 function openDetail(id) {
-  const card = CARDS.find(c => c.id === id);
+  const card = CARDS.find(c => c.id === id || c.card_id === id);
   if (!card) return;
-  
-  document.getElementById('detail-shop').textContent = card.shopName;
-  document.getElementById('detail-points').textContent = card.points || 0;
-  document.getElementById('detail-visits').textContent = card.visitCount || 0;
-  document.getElementById('detail-spent').textContent = '£' + ((card.totalSpend || 0)).toFixed(0);
-  document.getElementById('detail-rewards').textContent = card.rewardsRedeemed || 0;
-  document.getElementById('detail-cardnum').textContent = card.cardNumber ? '****' + card.cardNumber.slice(-4) : '****';
-  document.getElementById('detail-store').textContent = card.storeLocation || '—';
-  document.getElementById('detail-order').textContent = card.orderRef || '—';
-  
-  document.getElementById('detail-modal').style.display = 'flex';
+  const safe = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  safe('detail-shop', card.shopName || card.name);
+  safe('detail-points', card.points || 0);
+  safe('detail-visits', card.visitCount || 0);
+  safe('detail-spent', '£' + ((card.totalSpend || 0)).toFixed(2));
+  safe('detail-rewards', card.rewardsRedeemed || 0);
+  safe('detail-cardnum', card.card_number ? '****' + String(card.card_number).slice(-4) : '****');
+  safe('detail-store', card.store_location || '—');
+  safe('detail-order', card.order_ref || '—');
+  const modal = document.getElementById('detail-modal'); if(modal) modal.style.display = 'flex';
 }
 
 function closeDetail() {
-  document.getElementById('detail-modal').style.display = 'none';
+  const modal = document.getElementById('detail-modal'); if(modal) modal.style.display = 'none';
 }
 
 function switchScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(name + '-screen').classList.add('active');
-  
+  const sc = document.getElementById(name + '-screen'); if(sc) sc.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  event.target.classList.add('active');
+  if(event && event.target) event.target.classList.add('active');
 }
 
 function showToast(msg) {
   const toast = document.getElementById('toast');
+  if (!toast) return;
   toast.textContent = msg;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2800);
 }
+
 </script>
 </body>
 </html>

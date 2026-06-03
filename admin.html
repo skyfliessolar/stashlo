@@ -222,63 +222,76 @@ input, select { font-family:inherit; border:none; }
 <div class="toast" id="toast"></div>
 
 <script>
+
 const SURL = 'https://gcwevgaymahywqjorhnn.supabase.co';
 const SKEY = 'sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
+const SR   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2V2Z2F5bWFoeXdxam9yaG5uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTIzNjA2NywiZXhwIjoyMDk0ODEyMDY3fQ.w72URBw7g0TCP5y-TLcqLfiZNfjmaIAZ4M430Qb77E4';
 
 let TOKEN = null, UID = null;
-let MERCHANTS = [], CUSTOMERS = [], ORDERS = [];
+let MERCHANTS = [], CUSTOMERS = [], ORDERS = [], TRANSACTIONS = [];
+
+function H(useServiceRole) {
+  const key = useServiceRole ? SR : (TOKEN || SKEY);
+  return {'apikey': key, 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'};
+}
+
+function supaGet(table, filter, useServiceRole) {
+  return fetch(`${SURL}/rest/v1/${table}?select=*${filter ? '&' + filter : ''}`, {headers: H(useServiceRole)}).then(r => r.json());
+}
+
+function supaPost(table, data, conflict, useServiceRole) {
+  let url = `${SURL}/rest/v1/${table}${conflict ? '?on_conflict=' + conflict : ''}`;
+  return fetch(url, {
+    method: 'POST',
+    headers: {...H(useServiceRole), 'Prefer': conflict ? 'resolution=merge-duplicates,return=representation' : 'return=representation'},
+    body: JSON.stringify(data)
+  }).then(r => r.json());
+}
 
 window.addEventListener('load', () => {
   setTimeout(() => {
     const sess = JSON.parse(localStorage.getItem('admin_session') || 'null');
     if (sess && sess.token && sess.uid && sess.expiry > Date.now()) {
-      TOKEN = sess.token;
-      UID = sess.uid;
-      showApp();
-    } else {
-      showAuth();
-    }
-  }, 1500);
+      TOKEN = sess.token; UID = sess.uid; showApp();
+    } else showAuth();
+  }, 800);
 });
 
 function login() {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   const errDiv = document.getElementById('auth-error');
-  
-  if (!email || !password) {
-    errDiv.textContent = 'Enter credentials';
-    errDiv.style.display = 'block';
-    return;
-  }
+  if (!email || !password) { errDiv.textContent = 'Enter credentials'; errDiv.style.display = 'block'; return; }
+
+  const btn = document.querySelector('#auth button[onclick="login()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
 
   fetch(`${SURL}/auth/v1/token?grant_type=password`, {
-    method: 'POST',
-    headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
+    method: 'POST', headers: {'apikey': SKEY, 'Content-Type': 'application/json'},
     body: JSON.stringify({email, password})
   })
   .then(r => r.json())
   .then(d => {
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
     if (!d.access_token) {
-      errDiv.textContent = 'Invalid credentials';
-      errDiv.style.display = 'block';
-      return;
+      errDiv.textContent = d.error_description || d.msg || 'Invalid credentials';
+      errDiv.style.display = 'block'; return;
     }
-    TOKEN = d.access_token;
-    UID = d.user.id;
-    localStorage.setItem('admin_session', JSON.stringify({token: TOKEN, uid: UID, expiry: Date.now() + 3600000}));
+    TOKEN = d.access_token; UID = d.user.id;
+    localStorage.setItem('admin_session', JSON.stringify({
+      token: TOKEN, uid: UID, expiry: Date.now() + (d.expires_in || 3600) * 1000
+    }));
     showApp();
   })
-  .catch(e => {
-    errDiv.textContent = 'Login error';
-    errDiv.style.display = 'block';
+  .catch(() => {
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
+    errDiv.textContent = 'Connection error'; errDiv.style.display = 'block';
   });
 }
 
 function logout() {
   localStorage.removeItem('admin_session');
-  TOKEN = null;
-  showAuth();
+  TOKEN = null; showAuth();
 }
 
 function showAuth() {
@@ -297,159 +310,143 @@ function showApp() {
 }
 
 function loadAllData() {
-  // Load users/customers
-  fetch(`${SURL}/rest/v1/users?limit=100`, {
-    headers: {'apikey': SKEY}
-  })
-  .then(r => r.json())
+  // Users (customers) from the users table
+  supaGet('users', 'order=created_at.desc&limit=200', true)
   .then(d => {
     CUSTOMERS = Array.isArray(d) ? d : [];
     renderCustomers();
-    document.getElementById('stat-users').textContent = CUSTOMERS.length;
-  })
-  .catch(e => console.log('Load error'));
-  
-  // Load merchants
-  fetch(`${SURL}/rest/v1/users?role=eq.merchant&limit=100`, {
-    headers: {'apikey': SKEY}
-  })
-  .then(r => r.json())
+    const el = document.getElementById('stat-users'); if(el) el.textContent = CUSTOMERS.length;
+  }).catch(() => {});
+
+  // Merchants from the merchants table
+  supaGet('merchants', 'order=created_at.desc&limit=200', true)
   .then(d => {
     MERCHANTS = Array.isArray(d) ? d : [];
     renderMerchants();
-    document.getElementById('stat-merchants').textContent = MERCHANTS.length;
-  })
-  .catch(e => console.log('Load error'));
-  
-  // Load orders
-  fetch(`${SURL}/rest/v1/orders?limit=100&order=createdAt.desc`, {
-    headers: {'apikey': SKEY}
-  })
-  .then(r => r.json())
+    const el = document.getElementById('stat-merchants'); if(el) el.textContent = MERCHANTS.length;
+  }).catch(() => {});
+
+  // Orders from the orders table
+  supaGet('orders', 'order=created_at.desc&limit=200', true)
   .then(d => {
     ORDERS = Array.isArray(d) ? d : [];
     renderOrders();
-    document.getElementById('stat-orders').textContent = ORDERS.length;
-    const revenue = ORDERS.reduce((a, o) => a + (o.amount || 0), 0);
-    document.getElementById('stat-revenue').textContent = '£' + revenue.toFixed(2);
-  })
-  .catch(e => console.log('Load error'));
+    const el = document.getElementById('stat-orders'); if(el) el.textContent = ORDERS.length;
+    const rev = ORDERS.reduce((a, o) => a + (parseFloat(o.total || 0)), 0);
+    const re = document.getElementById('stat-revenue'); if(re) re.textContent = '£' + rev.toFixed(2);
+  }).catch(() => {});
+
+  // Transactions (till sales)
+  supaGet('transactions', 'order=timestamp.desc&limit=200', true)
+  .then(d => {
+    TRANSACTIONS = Array.isArray(d) ? d : [];
+    const pts = TRANSACTIONS.reduce((a, t) => a + (t.points_added || 0), 0);
+    const ep = document.getElementById('stat-points'); if(ep) ep.textContent = pts;
+  }).catch(() => {});
 }
 
 function renderMerchants() {
   const list = document.getElementById('merchants-list');
+  if (!list) return;
   if (MERCHANTS.length === 0) {
-    list.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87;">No merchants</td></tr>';
-  } else {
-    list.innerHTML = MERCHANTS.map(m => `
-      <tr>
-        <td>${m.name || 'N/A'}</td>
-        <td>${m.email || 'N/A'}</td>
-        <td><span class="badge badge-active">Active</span></td>
-        <td>${ORDERS.filter(o => o.merchant_id === m.id).length}</td>
-      </tr>
-    `).join('');
+    list.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87">No merchants registered</td></tr>'; return;
   }
+  list.innerHTML = MERCHANTS.map(m => `
+    <tr>
+      <td>${m.name || 'Unnamed'}</td>
+      <td>${m.email || '—'}</td>
+      <td><span class="badge badge-active">Active</span></td>
+      <td>${ORDERS.filter(o => o.merchant_id === m.id).length}</td>
+    </tr>`).join('');
 }
 
 function renderCustomers() {
   const list = document.getElementById('customers-list');
+  if (!list) return;
   if (CUSTOMERS.length === 0) {
-    list.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87;">No customers</td></tr>';
-  } else {
-    list.innerHTML = CUSTOMERS.map(c => `
-      <tr>
-        <td>${c.name || 'N/A'}</td>
-        <td>${c.email || 'N/A'}</td>
-        <td>0</td>
-        <td>0</td>
-      </tr>
-    `).join('');
+    list.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87">No customers yet</td></tr>'; return;
   }
+  list.innerHTML = CUSTOMERS.map(c => `
+    <tr>
+      <td>${c.name || 'User'}</td>
+      <td>${c.email || '—'}</td>
+      <td>${c.phone || '—'}</td>
+      <td>${c.total_points || 0}</td>
+    </tr>`).join('');
 }
 
 function renderOrders() {
   const list = document.getElementById('orders-list');
+  if (!list) return;
   if (ORDERS.length === 0) {
-    list.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#706f87;">No orders</td></tr>';
-  } else {
-    list.innerHTML = ORDERS.map(o => `
-      <tr>
-        <td>${o.customer_phone || 'Unknown'}</td>
-        <td>${o.merchant_id ? o.merchant_id.substring(0, 8) : 'N/A'}</td>
-        <td>£${o.amount.toFixed(2)}</td>
-        <td><span class="badge badge-active">${o.status || 'pending'}</span></td>
-        <td>${new Date(o.createdAt).toLocaleDateString()}</td>
-      </tr>
-    `).join('');
+    list.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#706f87">No orders yet</td></tr>'; return;
   }
+  list.innerHTML = ORDERS.map(o => `
+    <tr>
+      <td>${o.user_id ? o.user_id.slice(0,8) + '...' : 'Unknown'}</td>
+      <td>${o.merchant_id ? o.merchant_id.slice(0,8) + '...' : '—'}</td>
+      <td>£${parseFloat(o.total || 0).toFixed(2)}</td>
+      <td><span class="badge badge-active">${o.status || 'pending'}</span></td>
+      <td>${o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'}</td>
+    </tr>`).join('');
 }
 
 function filterMerchants() {
-  const search = document.getElementById('merchant-search').value.toLowerCase();
-  const filtered = MERCHANTS.filter(m => (m.email || '').toLowerCase().includes(search));
+  const q = (document.getElementById('merchant-search')?.value || '').toLowerCase();
   const list = document.getElementById('merchants-list');
-  list.innerHTML = filtered.map(m => `
+  if (!list) return;
+  list.innerHTML = MERCHANTS.filter(m => (m.name + m.email).toLowerCase().includes(q)).map(m => `
     <tr>
-      <td>${m.name || 'N/A'}</td>
-      <td>${m.email || 'N/A'}</td>
+      <td>${m.name || 'Unnamed'}</td>
+      <td>${m.email || '—'}</td>
       <td><span class="badge badge-active">Active</span></td>
       <td>${ORDERS.filter(o => o.merchant_id === m.id).length}</td>
-    </tr>
-  `).join('');
+    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87">No results</td></tr>';
 }
 
 function filterCustomers() {
-  const search = document.getElementById('customer-search').value.toLowerCase();
-  const filtered = CUSTOMERS.filter(c => (c.email || '').toLowerCase().includes(search));
+  const q = (document.getElementById('customer-search')?.value || '').toLowerCase();
   const list = document.getElementById('customers-list');
-  list.innerHTML = filtered.map(c => `
+  if (!list) return;
+  list.innerHTML = CUSTOMERS.filter(c => (c.name + c.email + (c.phone||'')).toLowerCase().includes(q)).map(c => `
     <tr>
-      <td>${c.name || 'N/A'}</td>
-      <td>${c.email || 'N/A'}</td>
-      <td>0</td>
-      <td>0</td>
-    </tr>
-  `).join('');
+      <td>${c.name || 'User'}</td>
+      <td>${c.email || '—'}</td>
+      <td>${c.phone || '—'}</td>
+      <td>${c.total_points || 0}</td>
+    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87">No results</td></tr>';
 }
 
 function sendBroadcast() {
-  const target = document.getElementById('broadcast-target').value;
-  const title = document.getElementById('broadcast-title').value.trim();
-  const message = document.getElementById('broadcast-message').value.trim();
-  
-  if (!title || !message) {
-    showToast('Fill all fields');
-    return;
-  }
-  
-  const recipients = target === 'all' ? CUSTOMERS.length : 
-                     target === 'merchants' ? MERCHANTS.length : 
-                     CUSTOMERS.filter(c => c.status === 'active').length;
-  
-  showToast(`📢 Sending to ${recipients} recipients...`);
-  
-  setTimeout(() => {
-    showToast('✅ Broadcast sent!');
-    document.getElementById('broadcast-title').value = '';
-    document.getElementById('broadcast-message').value = '';
-  }, 1500);
+  const target = document.getElementById('broadcast-target')?.value || 'all';
+  const title = document.getElementById('broadcast-title')?.value.trim();
+  const message = document.getElementById('broadcast-message')?.value.trim();
+  if (!title || !message) { showToast('Fill all fields'); return; }
+
+  supaPost('broadcasts', {title, body: message, audience: target, sent_at: Date.now()}, null, true)
+  .then(() => {
+    showToast('✅ Broadcast saved!');
+    const bt = document.getElementById('broadcast-title'); if(bt) bt.value = '';
+    const bm = document.getElementById('broadcast-message'); if(bm) bm.value = '';
+  })
+  .catch(() => showToast('Failed to send'));
 }
 
 function switchScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(name + '-screen').classList.add('active');
-  
+  const sc = document.getElementById(name + '-screen'); if(sc) sc.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  event.target.classList.add('active');
+  if(event && event.target) event.target.classList.add('active');
 }
 
 function showToast(msg) {
   const toast = document.getElementById('toast');
+  if (!toast) return;
   toast.textContent = msg;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2800);
 }
+
 </script>
 </body>
 </html>
