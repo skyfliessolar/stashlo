@@ -553,6 +553,8 @@ function startApp(){
   document.getElementById('app').style.display='flex';
   txt('greeting-time',greet());
   loadProfile();loadCards();loadOrders();buildBrands();
+  // New: start location, load inbox, load stashlo products
+  setTimeout(function(){startLocationTracking();loadInbox();loadStashloProducts();},2000);
 }
 function loadProfile(){
   get('users','id=eq.'+UID).then(d=>{
@@ -710,7 +712,12 @@ function closeShopDetail(){document.getElementById('shopDetail').classList.remov
 function addLocalCard(){
   if(!CUR_SHOP){return}
   post('cards',{user_id:UID,card_id:'local-'+CUR_SHOP.id,merchant_id:CUR_SHOP.id,name:CUR_SHOP.name,shop_name:CUR_SHOP.name,emoji:CUR_SHOP.logo_emoji||'🏪',color:'#2d2d2d',type:'local',points:0,threshold:CUR_SHOP.loyalty_threshold||100,added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0},'user_id,card_id')
-  .then(()=>{toast('✅ '+CUR_SHOP.name+' card added!');loadCards();openShopDetail(CUR_SHOP)}).catch(()=>toast('Error adding card'))
+  .then(()=>{
+    toast('✅ '+CUR_SHOP.name+' card added!');
+    // Capture location for proximity detection
+    if(navigator.geolocation){navigator.geolocation.getCurrentPosition(function(pos){captureShopLocation(CUR_SHOP.id,pos.coords.latitude,pos.coords.longitude);},function(){});}
+    loadCards();openShopDetail(CUR_SHOP);
+  }).catch(()=>toast('Error adding card'))
 }
 
 // ── Order ─────────────────────────────────────────────────
@@ -812,6 +819,13 @@ function openCardDetail(cardId){
     <div class="detail-row"><div><div class="detail-row-lab">Rewards redeemed</div><div class="detail-row-val">${c.rewardsRedeemed||0}</div></div></div>
     ${c.card_number?`<div class="detail-row"><div><div class="detail-row-lab">Card number</div><div class="detail-row-val">****${String(c.card_number).slice(-4)}</div></div></div>`:''}
     ${c.store_location?`<div class="detail-row"><div><div class="detail-row-lab">Store</div><div class="detail-row-val">${c.store_location}</div></div></div>`:''}`;
+  // Add barcode button
+  const barcodeBtn=document.createElement('button');
+  barcodeBtn.id='show-barcode-btn';barcodeBtn.className='mbtn mbtn-purple';
+  barcodeBtn.style.marginBottom='10px';barcodeBtn.textContent='📲 Show Barcode / QR';
+  barcodeBtn.onclick=function(){showBarcode(CUR_CARD);};
+  const body=document.getElementById('cd-stats');
+  if(body)body.parentElement.insertBefore(barcodeBtn,body);
   // Load shop products if local
   const ps=document.getElementById('cd-products-section');
   if(c.type==='local'&&c.merchant_id){
@@ -944,14 +958,16 @@ function showNearbyPopup(shop, card) {
 function dismissNearby() { document.getElementById('nearby-popup').style.display = 'none'; }
 function viewNearbyShop() { dismissNearby(); if (NEARBY_SHOP) loadShopById(NEARBY_SHOP.id); }
 
-function captureShopLocation(mid) {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude, lng = pos.coords.longitude;
-    // Save to merchant record
+function captureShopLocation(mid, lat, lng) {
+  if (lat && lng) {
     patch('merchants', 'id=eq.' + mid, { lat: lat, lng: lng }).catch(() => {});
+    return;
+  }
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    patch('merchants', 'id=eq.' + mid, { lat: pos.coords.latitude, lng: pos.coords.longitude }).catch(() => {});
     toast('📍 Shop location saved!');
-  }, () => toast('Location not available'));
+  }, function() { toast('Location not available'); });
 }
 
 // ── Inbox / Broadcasts ────────────────────────────────────
@@ -1029,7 +1045,6 @@ function loadStashloProducts() {
 
 // ── Add card with location ────────────────────────────────
 // Override addLocalCard to also capture GPS
-const _origAddLocalCard = addLocalCard;
 function addLocalCard() {
   if (!CUR_SHOP) return;
   const mid = CUR_SHOP.id;
@@ -1054,7 +1069,6 @@ function addLocalCard() {
 
 // ── Open card with barcode option ─────────────────────────
 // Patch openCardDetail to add barcode button
-const _origOpenCardDetail = openCardDetail;
 function openCardDetail(cardId) {
   _origOpenCardDetail(cardId);
   // Add barcode button to detail view
@@ -1073,7 +1087,6 @@ function openCardDetail(cardId) {
 }
 
 // ── Start location on app load ────────────────────────────
-const _origStartApp = startApp;
 function startApp() {
   _origStartApp();
   // Ask for location permission
@@ -1085,7 +1098,6 @@ function startApp() {
 }
 
 // ── Patch switchTab to load inbox ──────────────────────────
-const _origSwitchTab = switchTab;
 function switchTab(name) {
   _origSwitchTab(name);
   if (name === 'inbox') loadInbox();
