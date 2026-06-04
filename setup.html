@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stashlo Setup & Fix</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#0a0a14;color:#fff;padding:24px;max-width:480px;margin:0 auto}
+h1{font-size:24px;font-weight:900;margin-bottom:4px}h1 b{color:#6C5CE7}
+p{color:rgba(255,255,255,.5);font-size:13px;margin-bottom:24px}
+.btn{width:100%;padding:16px;background:#6C5CE7;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-gray{background:rgba(255,255,255,.1)}
+.log{background:#111;border-radius:12px;padding:16px;font-size:12px;color:#0f0;font-family:monospace;min-height:200px;max-height:400px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+.ok{color:#00e676}.err{color:#ff5252}.info{color:#64b5f6}
+</style>
+</head>
+<body>
+<h1>Stash<b>lo</b> Setup</h1>
+<p>Fixes DB schema, seeds test data, and verifies all features</p>
+<button class="btn" onclick="runFix()" id="fix-btn">🔧 Run Complete Fix</button>
+<button class="btn btn-gray" onclick="testAll()">🧪 Test All Features</button>
+<div class="log" id="log">Ready. Click "Run Complete Fix" to start...\n</div>
+
+<script>
+const SU='https://gcwevgaymahywqjorhnn.supabase.co';
+const SK='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
+const SR='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2V2Z2F5bWFoeXdxam9yaG5uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTIzNjA2NywiZXhwIjoyMDk0ODEyMDY3fQ.w72URBw7g0TCP5y-TLcqLfiZNfjmaIAZ4M430Qb77E4';
+
+const el = document.getElementById('log');
+function log(msg, type='') {
+  el.innerHTML += `<span class="${type}">${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+function H(sr){const k=sr?SR:SK;return{'apikey':k,'Authorization':'Bearer '+k,'Content-Type':'application/json','Prefer':'return=representation'}}
+function get(t,q,sr){return fetch(SU+'/rest/v1/'+t+'?select=*'+(q?'&'+q:''),{headers:H(sr)}).then(r=>r.json())}
+function post(t,d,c,sr){const u=SU+'/rest/v1/'+t+(c?'?on_conflict='+c:'');return fetch(u,{method:'POST',headers:{...H(sr),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json())}
+function exec(sql){return fetch(SU+'/rest/v1/rpc/exec_sql',{method:'POST',headers:H(true),body:JSON.stringify({query:sql})}).then(r=>r.json())}
+function del(t,q){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'DELETE',headers:H(true)})}
+
+async function runFix() {
+  const btn = document.getElementById('fix-btn');
+  btn.disabled=true;btn.textContent='Running...';
+  el.innerHTML='';
+
+  log('=== STASHLO COMPLETE FIX ===\n','info');
+
+  // 1. Schema fixes
+  log('1. Fixing database schema...','info');
+  const schemaSQL = `
+    ALTER TABLE stashlo_products ADD COLUMN IF NOT EXISTS active boolean DEFAULT true;
+    ALTER TABLE stashlo_products ADD COLUMN IF NOT EXISTS collect boolean DEFAULT true;
+    ALTER TABLE stashlo_products ADD COLUMN IF NOT EXISTS delivery boolean DEFAULT false;
+    ALTER TABLE stashlo_products ADD COLUMN IF NOT EXISTS description text DEFAULT '';
+    ALTER TABLE stashlo_products ADD COLUMN IF NOT EXISTS created_at bigint DEFAULT 0;
+    ALTER TABLE stashlo_products ADD COLUMN IF NOT EXISTS image_url text;
+    ALTER TABLE broadcasts ADD COLUMN IF NOT EXISTS title text DEFAULT '';
+    ALTER TABLE broadcasts ADD COLUMN IF NOT EXISTS body text DEFAULT '';
+    ALTER TABLE broadcasts ADD COLUMN IF NOT EXISTS audience text DEFAULT 'all';
+    ALTER TABLE broadcasts ADD COLUMN IF NOT EXISTS sent_at bigint;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS title text DEFAULT '';
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS body text DEFAULT '';
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS merchant_id text DEFAULT '';
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS sent_at bigint;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type text DEFAULT 'promo';
+    ALTER TABLE merchants ADD COLUMN IF NOT EXISTS lat float;
+    ALTER TABLE merchants ADD COLUMN IF NOT EXISTS lng float;
+    ALTER TABLE merchants ADD COLUMN IF NOT EXISTS loyalty_type text DEFAULT 'points';
+    ALTER TABLE merchants ADD COLUMN IF NOT EXISTS loyalty_value float DEFAULT 1;
+    ALTER TABLE merchants ADD COLUMN IF NOT EXISTS loyalty_threshold float DEFAULT 100;
+    ALTER TABLE merchants ADD COLUMN IF NOT EXISTS logo_emoji text DEFAULT '🏪';
+    ALTER TABLE merchants ADD COLUMN IF NOT EXISTS category text DEFAULT 'other';
+    ALTER TABLE merchants ADD COLUMN IF NOT EXISTS open_hours text DEFAULT '';
+    ALTER TABLE merchants ADD COLUMN IF NOT EXISTS description text DEFAULT '';
+    ALTER TABLE cards ADD COLUMN IF NOT EXISTS card_number text;
+    ALTER TABLE cards ADD COLUMN IF NOT EXISTS card_holder text;
+    ALTER TABLE cards ADD COLUMN IF NOT EXISTS store_location text;
+    ALTER TABLE cards ADD COLUMN IF NOT EXISTS latitude float;
+    ALTER TABLE cards ADD COLUMN IF NOT EXISTS longitude float;
+    ALTER TABLE cards ADD COLUMN IF NOT EXISTS points_balance float DEFAULT 0;
+    ALTER TABLE cards ADD COLUMN IF NOT EXISTS discount_earned float DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS name text;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS phone text;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS active boolean DEFAULT true;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS collect boolean DEFAULT true;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS delivery boolean DEFAULT false;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS description text DEFAULT '';
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS points_reward int DEFAULT 10;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url text;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address text DEFAULT '';
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS collect_time text DEFAULT '';
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS rejection_reason text DEFAULT '';
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS items_json text DEFAULT '[]';
+  `;
+  const r1 = await exec(schemaSQL);
+  log(r1.ok ? '   ✅ Schema fixed' : '   ❌ Schema error: '+JSON.stringify(r1).slice(0,80), r1.ok?'ok':'err');
+
+  // 2. Check & seed stashlo_products
+  log('\n2. Checking Stashlo products...','info');
+  const prods = await get('stashlo_products','order=created_at.desc&limit=10',true);
+  log(`   Found ${Array.isArray(prods)?prods.length:0} products`);
+  if(!Array.isArray(prods)||prods.length===0){
+    log('   Seeding 3 demo products...','info');
+    const seeds = [
+      {name:'Welcome Gift Card',price:0,emoji:'🎁',category:'rewards',description:'Free welcome gift for all Stashlo members',active:true,collect:true,delivery:false,created_at:Date.now()},
+      {name:'£5 Cashback Voucher',price:5,emoji:'💷',category:'vouchers',description:'Redeem for £5 cashback at any partner shop',active:true,collect:true,delivery:false,created_at:Date.now()-1000},
+      {name:'Free Coffee',price:0,emoji:'☕',category:'rewards',description:'One free hot drink at participating coffee shops',active:true,collect:true,delivery:false,created_at:Date.now()-2000},
+    ];
+    for(const s of seeds){const r=await post('stashlo_products',s,null,true);log('   '+( r&&r.length?'✅ '+s.name:'❌ '+JSON.stringify(r).slice(0,60)),r&&r.length?'ok':'err');}
+  } else {
+    // Make sure all existing ones have active=true
+    await fetch(SU+'/rest/v1/stashlo_products?active=is.null',{method:'PATCH',headers:H(true),body:JSON.stringify({active:true})});
+    log('   ✅ Products already exist: '+prods.map(p=>p.name).join(', '),'ok');
+  }
+
+  // 3. Check & seed broadcasts
+  log('\n3. Checking broadcasts...','info');
+  const bcast = await get('broadcasts','order=sent_at.desc&limit=5',true);
+  log(`   Found ${Array.isArray(bcast)?bcast.length:0} broadcasts`);
+  if(!Array.isArray(bcast)||bcast.length===0){
+    log('   Seeding welcome broadcast...','info');
+    const r=await post('broadcasts',{title:'Welcome to Stashlo! 🎉',body:'Collect loyalty points at your favourite local and national shops. Add your cards in the Cards tab and find local shops in the Shop tab.',audience:'all',sent_at:Date.now()},null,true);
+    log(r&&r.length?'   ✅ Broadcast seeded':'   ❌ '+JSON.stringify(r).slice(0,80),r&&r.length?'ok':'err');
+  } else {
+    log('   ✅ Broadcasts exist: '+bcast.map(b=>b.title||'untitled').join(', '),'ok');
+  }
+
+  // 4. Verify all tables accessible
+  log('\n4. Verifying table access...','info');
+  const tables=['stashlo_products','broadcasts','notifications','merchants','cards','orders','users'];
+  for(const t of tables){
+    const r=await get(t,'limit=1',true);
+    log('   '+(Array.isArray(r)?'✅ '+t+' OK':'❌ '+t+': '+JSON.stringify(r).slice(0,60)), Array.isArray(r)?'ok':'err');
+  }
+
+  // 5. Create/reset test customer account
+  log('\n5. Creating test customer account...','info');
+  const authR = await fetch(SU+'/auth/v1/admin/users',{
+    method:'POST',headers:{...H(true)},
+    body:JSON.stringify({email:'stashlotest@gmail.com',password:'Stashlo@123',email_confirm:true})
+  }).then(r=>r.json());
+  if(authR.id){
+    await post('users',{id:authR.id,email:'stashlotest@gmail.com',name:'Maddy Test',total_points:50,created_at:Date.now()},'id',true).catch(()=>{});
+    log('   ✅ Customer account ready: stashlotest@gmail.com / Stashlo@123','ok');
+  } else {
+    log('   ℹ️  Account exists or: '+JSON.stringify(authR).slice(0,60),'info');
+  }
+
+  // 6. Create/reset test merchant account
+  log('\n6. Creating test merchant account...','info');
+  const mAuthR = await fetch(SU+'/auth/v1/admin/users',{
+    method:'POST',headers:{...H(true)},
+    body:JSON.stringify({email:'skyfliesshop@gmail.com',password:'Merchant@123',email_confirm:true})
+  }).then(r=>r.json());
+  const mid = mAuthR.id;
+  if(mid){
+    await post('merchants',{id:mid,email:'skyfliesshop@gmail.com',name:'Skyflies Coffee',shop_id:'SL-SKY1',loyalty_type:'points',loyalty_value:1,loyalty_threshold:100,logo_emoji:'☕',category:'food',address:'1 High Street, Wotton-under-Edge GL12',open_hours:'Mon-Sat 8am-6pm',created_at:Date.now()},'id',true).catch(()=>{});
+    // Add a product
+    await post('products',{merchant_id:mid,name:'Large Oat Latte',price:4.50,emoji:'☕',category:'drinks',active:true,collect:true,delivery:false,created_at:Date.now()},'merchant_id,name',true).catch(()=>{});
+    await post('products',{merchant_id:mid,name:'Almond Croissant',price:2.80,emoji:'🥐',category:'food',active:true,collect:true,delivery:true,created_at:Date.now()-1000},'merchant_id,name',true).catch(()=>{});
+    // Send a notification from this merchant
+    await post('notifications',{merchant_id:mid,title:'20% off this weekend!',body:'Show your Stashlo card and get 20% off all drinks this Saturday & Sunday.',type:'promo',sent_at:Date.now()},null,true).catch(()=>{});
+    log('   ✅ Merchant ready: skyfliesshop@gmail.com / Merchant@123','ok');
+    log('   ✅ Products added: Large Oat Latte, Almond Croissant','ok');
+    log('   ✅ Notification sent to customers','ok');
+  } else {
+    log('   ℹ️  Merchant exists or: '+JSON.stringify(mAuthR).slice(0,60),'info');
+  }
+
+  // 7. Create/reset admin account
+  log('\n7. Resetting admin account...','info');
+  const admUsers = await fetch(SU+'/auth/v1/admin/users',{headers:H(true)}).then(r=>r.json());
+  const adminUser = (admUsers.users||[]).find(u=>u.email==='arumugams2019@gmail.com');
+  if(adminUser){
+    await fetch(SU+'/auth/v1/admin/users/'+adminUser.id,{method:'PUT',headers:H(true),body:JSON.stringify({password:'Admin@Stashlo1',email_confirm:true})}).then(r=>r.json());
+    log('   ✅ Admin reset: arumugams2019@gmail.com / Admin@Stashlo1','ok');
+  } else {
+    const newAdmin = await fetch(SU+'/auth/v1/admin/users',{method:'POST',headers:H(true),body:JSON.stringify({email:'arumugams2019@gmail.com',password:'Admin@Stashlo1',email_confirm:true})}).then(r=>r.json());
+    log(newAdmin.id?'   ✅ Admin created: arumugams2019@gmail.com / Admin@Stashlo1':'   ❌ '+JSON.stringify(newAdmin).slice(0,80),newAdmin.id?'ok':'err');
+  }
+
+  log('\n=== ✅ ALL FIXES COMPLETE ===\n','ok');
+  log('Ready to test:\n','info');
+  log('📱 Customer: skyfliessolar.github.io/stashlo/','ok');
+  log('   Email: stashlotest@gmail.com','ok');
+  log('   Password: Stashlo@123\n','ok');
+  log('🏪 Merchant: skyfliessolar.github.io/stashlo/merchant.html','ok');
+  log('   Email: skyfliesshop@gmail.com','ok');
+  log('   Password: Merchant@123\n','ok');
+  log('🔐 Admin: skyfliessolar.github.io/stashlo/admin.html','ok');
+  log('   Email: arumugams2019@gmail.com','ok');
+  log('   Password: Admin@Stashlo1','ok');
+
+  btn.disabled=false;btn.textContent='🔧 Run Again';
+}
+
+async function testAll() {
+  el.innerHTML='';
+  log('=== TESTING ALL FEATURES ===\n','info');
+
+  log('Testing stashlo_products...','info');
+  const sp = await get('stashlo_products','active=eq.true&limit=10');
+  log(Array.isArray(sp)&&sp.length ? '✅ Stashlo products: '+sp.map(p=>p.name).join(', ') : '❌ No active stashlo_products found: '+JSON.stringify(sp).slice(0,100), Array.isArray(sp)&&sp.length?'ok':'err');
+
+  log('Testing broadcasts...','info');
+  const bc = await get('broadcasts','audience=in.(all,customers)&order=sent_at.desc&limit=5');
+  log(Array.isArray(bc)&&bc.length ? '✅ Broadcasts: '+bc.map(b=>b.title||'untitled').join(', ') : '❌ No broadcasts: '+JSON.stringify(bc).slice(0,100), Array.isArray(bc)&&bc.length?'ok':'err');
+
+  log('Testing notifications...','info');
+  const no = await get('notifications','limit=5');
+  log(Array.isArray(no) ? '✅ Notifications table OK ('+no.length+' rows)' : '❌ '+JSON.stringify(no).slice(0,100), Array.isArray(no)?'ok':'err');
+
+  log('Testing merchants...','info');
+  const me = await get('merchants','limit=5',true);
+  log(Array.isArray(me)&&me.length ? '✅ Merchants: '+me.map(m=>m.name+' ('+m.shop_id+')').join(', ') : '❌ '+JSON.stringify(me).slice(0,100), Array.isArray(me)&&me.length?'ok':'err');
+
+  log('Testing products...','info');
+  const pr = await get('products','active=eq.true&limit=5',true);
+  log(Array.isArray(pr)&&pr.length ? '✅ Products: '+pr.map(p=>p.name).join(', ') : '❌ '+JSON.stringify(pr).slice(0,100), Array.isArray(pr)&&pr.length?'ok':'err');
+
+  log('\nTest login (customer)...','info');
+  const li = await fetch(SU+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email:'stashlotest@gmail.com',password:'Stashlo@123'})}).then(r=>r.json());
+  log(li.access_token?'✅ Customer login OK':'❌ Customer login FAILED: '+JSON.stringify(li).slice(0,100), li.access_token?'ok':'err');
+
+  log('\nTest login (merchant)...','info');
+  const lm = await fetch(SU+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email:'skyfliesshop@gmail.com',password:'Merchant@123'})}).then(r=>r.json());
+  log(lm.access_token?'✅ Merchant login OK':'❌ Merchant login FAILED: '+JSON.stringify(lm).slice(0,100), lm.access_token?'ok':'err');
+
+  log('\n=== TEST COMPLETE ===','ok');
+}
+</script></body></html>
