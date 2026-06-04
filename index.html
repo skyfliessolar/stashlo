@@ -4,7 +4,122 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0a0a14"><link rel="manifest" href="manifest.json">
 <title>Stashlo</title>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js">
+// ===== CARD LOCATION MANAGEMENT =====
+function saveCardLocation(cardId){
+  if(!navigator.geolocation){T('Location not supported');return}
+  T('📍 Capturing location...');
+  navigator.geolocation.getCurrentPosition(p=>{
+    const lat=p.coords.latitude, lng=p.coords.longitude;
+    const label=prompt('Name this location (e.g. "Home Tesco"):')||'Saved location';
+    post('card_locations',{card_id:cardId,user_id:UID,latitude:lat,longitude:lng,label,radius:200,created_at:Date.now()})
+    .then(()=>{T('✅ Location saved! Will remind you near this spot');loadCardLocations(cardId);})
+    .catch(()=>T('Failed to save location'));
+  },()=>T('⚠️ Cannot access location — check browser settings'),{enableHighAccuracy:true,timeout:8000});
+}
+function loadCardLocations(cardId){
+  const el=document.getElementById('cd-loc-list');if(!el)return;
+  get('card_locations','card_id=eq.'+cardId+'&user_id=eq.'+UID+'&order=created_at.desc').then(d=>{
+    const locs=Array.isArray(d)?d:[];
+    if(!locs.length){el.innerHTML='';return;}
+    el.innerHTML='<div style="font-size:11px;font-weight:700;color:#706f87;text-transform:uppercase;margin:8px 0 4px">Saved locations</div>'+
+      locs.map(l=>`<div style="display:flex;justify-content:space-between;align-items:center;background:#f9f9fb;border-radius:10px;padding:8px 12px;margin-bottom:6px">
+        <div><div style="font-size:13px;font-weight:600">📍 ${l.label||'Location'}</div>
+        <div style="font-size:11px;color:#706f87">${parseFloat(l.latitude).toFixed(4)}, ${parseFloat(l.longitude).toFixed(4)}</div></div>
+        <button onclick="deleteCardLocation('${l.id}','${cardId}')" style="background:#ffebee;color:#c62828;border:none;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px">✕</button>
+      </div>`).join('');
+  }).catch(()=>{});
+}
+function deleteCardLocation(lid,cardId){
+  if(!confirm('Remove this location?'))return;
+  del('card_locations','id=eq.'+lid+'&user_id=eq.'+UID).then(()=>{T('Location removed');loadCardLocations(cardId);}).catch(()=>T('Failed'));
+}
+function del(t,q){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'DELETE',headers:H()}).then(r=>r.json())}
+
+// ===== PAYMENT CARDS =====
+let PAYMENT_CARDS=[];
+function loadPaymentCards(){
+  get('payment_cards','user_id=eq.'+UID+'&order=created_at.desc').then(d=>{
+    PAYMENT_CARDS=Array.isArray(d)?d:[];renderPaymentCards();
+  }).catch(()=>{});
+}
+function renderPaymentCards(){
+  const el=document.getElementById('payment-cards-list');if(!el)return;
+  const nets={'visa':'💳','mastercard':'💳','amex':'💳','other':'💳'};
+  const typeColors={'credit':'#2d3a8c','debit':'#1a7f37','prepaid':'#7c3f00'};
+  el.innerHTML=PAYMENT_CARDS.length?PAYMENT_CARDS.map(c=>`
+    <div style="background:${typeColors[c.card_type]||'#2d3a8c'};border-radius:18px;padding:20px;color:#fff;min-height:120px;position:relative;overflow:hidden">
+      <div style="font-size:20px;position:absolute;right:20px;top:20px;opacity:.3">◉◉◉◉</div>
+      <div style="font-size:22px;letter-spacing:4px;margin-bottom:16px">••••  ••••  ••••  ${c.last_four||'••••'}</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end">
+        <div><div style="font-size:11px;opacity:.6">CARD HOLDER</div><div style="font-weight:700">${c.billing_name||c.nickname||'—'}</div></div>
+        <div><div style="font-size:11px;opacity:.6">EXPIRES</div><div style="font-weight:700">${c.expiry||'—'}</div></div>
+        <div style="text-align:right"><div style="font-size:11px;opacity:.6">${(c.network||'').toUpperCase()}</div><div style="font-size:11px;background:rgba(255,255,255,.2);border-radius:6px;padding:2px 6px">${c.card_type||'card'}</div></div>
+      </div>
+      <button onclick="deletePayCard('${c.id}')" style="position:absolute;top:10px;left:10px;background:rgba(255,255,255,.15);border:none;border-radius:6px;color:#fff;padding:3px 7px;cursor:pointer;font-size:11px">✕</button>
+    </div>`).join('')
+    :'<div class="empty"><i>💳</i>No payment cards saved<br>Add a card below</div>';
+}
+function addPayCard(){
+  const last4=prompt('Last 4 digits of your card:');
+  if(!last4||last4.length!==4||!/^\d{4}$/.test(last4)){T('Enter exactly 4 digits');return;}
+  const exp=prompt('Expiry (MM/YY):');if(!exp)return;
+  const name=prompt('Name on card:');if(!name)return;
+  const net=prompt('Network (visa/mastercard/amex):') || 'visa';
+  const type=prompt('Type (credit/debit/prepaid):')||'credit';
+  post('payment_cards',{user_id:UID,last_four:last4,expiry:exp,billing_name:name,network:net.toLowerCase(),card_type:type.toLowerCase(),created_at:Date.now()})
+  .then(()=>{T('✅ Card saved!');loadPaymentCards();}).catch(()=>T('Failed to save'));
+}
+function deletePayCard(id){
+  if(!confirm('Remove this card?'))return;
+  del('payment_cards','id=eq.'+id+'&user_id=eq.'+UID).then(()=>{T('Card removed');loadPaymentCards();}).catch(()=>T('Failed'));
+}
+
+// ===== CUSTOMER REWARDS/OFFERS =====
+let MY_REWARDS=[];
+function loadMyRewards(){
+  get('customer_rewards','customer_id=eq.'+UID+'&order=created_at.desc').then(d=>{
+    MY_REWARDS=Array.isArray(d)?d:[];renderMyRewards();
+    const badge=document.getElementById('offers-badge');
+    const unread=MY_REWARDS.filter(r=>!r.redeemed).length;
+    if(badge)badge.textContent=unread?'Offers ('+unread+')':'Offers';
+  }).catch(()=>{});
+}
+function renderMyRewards(){
+  const el=document.getElementById('rewards-list');if(!el)return;
+  const unredeemed=MY_REWARDS.filter(r=>!r.redeemed);
+  const redeemed=MY_REWARDS.filter(r=>r.redeemed);
+  el.innerHTML=(unredeemed.length?unredeemed.map(r=>`
+    <div class="item-card" style="border-left:4px solid #6C5CE7;background:linear-gradient(135deg,#ece9ff 0%,#fff 100%)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:14px;font-weight:700">🎁 ${r.description||'Reward'}</div>
+        <div style="font-size:20px;font-weight:900;color:#6C5CE7;margin:4px 0">+${r.points} pts</div>
+        <div style="font-size:11px;color:#706f87">${r.created_at?new Date(r.created_at).toLocaleDateString():''}</div></div>
+        <button onclick="redeemReward('${r.id}',${r.points})" style="background:#6C5CE7;color:#fff;border:none;border-radius:12px;padding:10px 16px;font-weight:700;cursor:pointer">Claim</button>
+      </div>
+    </div>`).join(''):'<div class="empty"><i>🎁</i>No new offers right now</div>')
+    +(redeemed.length?'<div style="font-size:12px;font-weight:700;color:#706f87;margin:12px 0 6px">Redeemed</div>'+redeemed.map(r=>`<div class="item-card" style="opacity:.5"><div style="font-size:13px">✅ ${r.description||'Reward'} — +${r.points} pts</div></div>`).join(''):'');
+}
+function redeemReward(id,pts){
+  if(!confirm('Claim '+pts+' points? They will be added to your account.'))return;
+  pat('customer_rewards','id=eq.'+id,{redeemed:true}).then(()=>{
+    pat('users','id=eq.'+UID,{total_points:(PROF.total_points||0)+pts}).then(()=>{
+      T('🎉 +'+pts+' points added to your wallet!');
+      PROF.total_points=(PROF.total_points||0)+pts;
+      loadMyRewards();
+    });
+  }).catch(()=>T('Failed to claim reward'));
+}
+
+// ===== EXTEND goTab for new screens =====
+const _origGoTab=goTab;
+function goTab(n){
+  _origGoTab(n);
+  if(n==='payments')loadPaymentCards();
+  if(n==='offers'){loadMyRewards();}
+}
+
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui,-apple-system,sans-serif;background:#f0efff;color:#1a1a2e;min-height:100vh}
@@ -253,8 +368,22 @@ button{cursor:pointer}
   </div>
 
   <div class="screen" id="orders-screen">
-    <div class="sh"><span class="sh-t">My orders</span></div>
+    <div class="sh"><span class="sh-t">📦 My orders</span></div>
     <div id="orders-list"></div>
+  </div>
+
+  <div class="screen" id="payments-screen">
+    <div class="sh"><span class="sh-t">💳 Payment cards</span></div>
+    <div id="payment-cards-list"><div class="empty"><i>💳</i>Loading...</div></div>
+    <button class="fab" style="position:relative;margin:16px auto;display:block;background:#6C5CE7;color:#fff;border:none;border-radius:14px;padding:14px 24px;font-size:14px;font-weight:700;cursor:pointer;width:100%" onclick="addPayCard()">+ Add payment card</button>
+    <div style="background:#ece9ff;border-radius:14px;padding:14px;font-size:12px;color:#4a3f8c;margin-top:8px">
+      🔒 Card details are stored securely. Stashlo never charges your card without permission.
+    </div>
+  </div>
+
+  <div class="screen" id="offers-screen">
+    <div class="sh"><span class="sh-t">🎁 Offers &amp; rewards</span></div>
+    <div id="rewards-list"><div class="empty"><i>🎁</i>Loading...</div></div>
   </div>
 
   <div class="screen" id="inbox-screen">
@@ -281,6 +410,8 @@ button{cursor:pointer}
     <div class="nb" id="nb-cards" onclick="goTab('cards')"><span class="nb-ico">💳</span><span class="nb-lab">Cards</span></div>
     <div class="nb" id="nb-shop" onclick="goTab('shop')"><span class="nb-ico">🛍️</span><span class="nb-lab">Shop</span></div>
     <div class="nb" id="nb-orders" onclick="goTab('orders')"><span class="nb-ico">📦</span><span class="nb-lab">Orders</span></div>
+    <div class="nb" id="nb-offers" onclick="goTab('offers')"><span class="nb-ico">🎁</span><span class="nb-lab" id="offers-badge">Offers</span></div>
+    <div class="nb" id="nb-payments" onclick="goTab('payments')"><span class="nb-ico">💳</span><span class="nb-lab">Wallet</span></div>
     <div class="nb" id="nb-inbox" onclick="goTab('inbox')"><span class="nb-ico">🔔</span><span class="nb-lab" id="inbox-lab">Inbox</span></div>
     <div class="nb" id="nb-profile" onclick="goTab('profile')"><span class="nb-ico">👤</span><span class="nb-lab">Me</span></div>
   </div>
@@ -374,6 +505,10 @@ button{cursor:pointer}
       <div style="font-size:12px;color:#706f87;margin-top:10px;word-break:break-all" id="bc-num"></div>
     </div>
     <div id="cd-rows"></div>
+    <button id="cd-loc-btn" class="mb" style="background:#e8f5e9;color:#2e7d32;margin-top:8px;font-size:13px;width:100%;padding:10px" onclick="saveCardLocation(this.getAttribute('data-cid'))">📍 Save current location to this card</button>
+    <div id="cd-loc-list" style="margin-top:8px"></div>
+    <button id="cd-loc-btn" class="mb" style="background:#e8f5e9;color:#2e7d32;margin-top:8px;font-size:13px;width:100%;padding:10px" onclick="saveCardLocation(this.getAttribute('data-cid'))">📍 Save current location to this card</button>
+    <div id="cd-loc-list" style="margin-top:8px"></div>
     <div id="cd-prods"></div>
     <button class="mb mb-red" style="margin-top:8px" onclick="delCard()">🗑 Remove card</button>
   </div>
@@ -506,7 +641,7 @@ function boot(){
   loadOrders();
   buildBrands();
   loadStashloProd();
-  setTimeout(()=>{loadInbox();startGPS();},2000);
+  setTimeout(()=>{loadInbox();startGPS();loadMyRewards();},2000);
 }
 
 function loadProf(){
@@ -571,9 +706,11 @@ function pickBrand(id,n,e,c){
   document.getElementById('brands-step').style.display='none';document.getElementById('card-step').style.display='block';
   // Request GPS automatically when card form opens
   if(navigator.geolocation){
+    document.getElementById('fc-loc').textContent='📍 Capturing location...';
     navigator.geolocation.getCurrentPosition(p=>{
-      document.getElementById('fc-loc').textContent='📍 Location captured — card will be GPS-tagged';
-    },()=>{});
+      userLat=p.coords.latitude; userLng=p.coords.longitude;
+      document.getElementById('fc-loc').textContent='✅ Location captured ('+p.coords.latitude.toFixed(4)+', '+p.coords.longitude.toFixed(4)+')';
+    },()=>{document.getElementById('fc-loc').textContent='⚠️ Location unavailable — allow in browser settings';},{enableHighAccuracy:true,timeout:8000});
   }
 }
 function backBrands(){document.getElementById('brands-step').style.display='block';document.getElementById('card-step').style.display='none'}
@@ -674,7 +811,16 @@ function pCard(p,shop){
 function closeShopDet(){document.getElementById('shopDet').classList.remove('on')}
 function addLocalCard(){
   if(!CUR_SHOP)return;
-  post('cards',{user_id:UID,card_id:'local-'+CUR_SHOP.id,merchant_id:CUR_SHOP.id,name:CUR_SHOP.name,shop_name:CUR_SHOP.name,emoji:CUR_SHOP.logo_emoji||'🏪',color:'#2d2d2d',type:'local',points:0,threshold:CUR_SHOP.loyalty_threshold||100,added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0},'user_id,card_id')
+  post('cards',{user_id:UID,card_id:'local-'+CUR_SHOP.id,merchant_id:CUR_SHOP.id,name:CUR_SHOP.name,shop_name:CUR_SHOP.name,emoji:CUR_SHOP.logo_emoji||'🏪',color:'#2d2d2d',type:'local',points:0,threshold:CUR_SHOP.loyalty_threshold||100,added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0,latitude:userLat||CUR_SHOP.lat||null,longitude:userLng||CUR_SHOP.lng||null},'user_id,card_id').then(d2=>{
+    // Also save location to card_locations table if we have GPS
+    if(userLat&&userLng){
+      post('card_locations',{card_id:'local-'+CUR_SHOP.id,user_id:UID,latitude:userLat,longitude:userLng,label:CUR_SHOP.name+' — Registered location',radius:200,created_at:Date.now()}).catch(()=>{});
+    }
+    // Also save merchant shop location if merchant has one
+    else if(CUR_SHOP.lat&&CUR_SHOP.lng){
+      post('card_locations',{card_id:'local-'+CUR_SHOP.id,user_id:UID,latitude:CUR_SHOP.lat,longitude:CUR_SHOP.lng,label:CUR_SHOP.name,radius:300,created_at:Date.now()}).catch(()=>{});
+    }
+  }
   .then(()=>{
     T('✅ '+CUR_SHOP.name+' loyalty card added!');
     // Save shop GPS
@@ -735,7 +881,7 @@ function submitOrder(){
   const qty=Math.max(1,parseInt(document.getElementById('o-qty').value)||1);
   const total=parseFloat(p.price||0)*qty;
   const mid=p.merchant_id;
-  if(!mid||mid==='stashlo'){T('Stashlo Store orders coming soon!');cmo('orderMo');return}
+  // stashlo store orders now go through too
   if(type==='delivery'&&!V('o-da')){sErr('o-err','Delivery address required');return}
   post('orders',{user_id:UID,merchant_id:mid,product_id:p.id,product_name:p.name,quantity:qty,total,type,status:'pending',delivery_address:V('o-da'),collect_time:V('o-ct'),note:V('o-note'),created_at:Date.now()})
   .then(d=>{
@@ -744,20 +890,90 @@ function submitOrder(){
   }).catch(()=>sErr('o-err','Failed — try again'))
 }
 function loadOrders(){
-  get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=30').then(d=>{
+  get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=30&select=*,merchants(name)').then(d=>{
+    // Flatten merchant name
+    if(Array.isArray(d))d.forEach(o=>{if(o.merchants)o.merchant_name=o.merchants.name;});
     ORDERS=Array.isArray(d)?d:[];txt('hs-o',ORDERS.length);renderOrders();
   }).catch(()=>{})
 }
+function statusTimeline(status){
+  const steps=['pending','confirmed','ready','completed'];
+  const icons=['🕐','✅','📦','🎉'];
+  const idx=steps.indexOf(status);
+  if(idx<0)return '';
+  return '<div style="display:flex;gap:0;margin:10px 0 4px;overflow:hidden">'+steps.map((s,i)=>`<div style="flex:1;text-align:center;font-size:9px;color:${i<=idx?'#6C5CE7':'#ccc'}"><div style="font-size:14px">${icons[i]}</div>${s}</div>`).join('<div style="flex:0 0 2px;background:#e5e5ea;align-self:center;height:2px;flex:1;margin:0 -1px;z-index:0"></div>')+'</div>';
+}
 function renderOrders(){
-  const sc={pending:'st-p',ready:'st-r',completed:'st-c',rejected:'st-x'};
-  const h=o=>`<div class="ocard">
-    <div class="ocard-h"><div style="font-size:12px;font-weight:700;color:#706f87">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div><div class="ostatus ${sc[o.status]||'st-p'}">${o.status||'pending'}</div></div>
-    <div style="font-size:15px;font-weight:700;margin-bottom:4px">${o.product_name||'Order'}</div>
-    <div style="font-size:12px;color:#706f87;margin-bottom:8px">Qty: ${o.quantity||1} • ${o.type==='collect'?'🏪 Collect':'🚚 Delivery'}${o.collect_time?' at '+o.collect_time:''}</div>
-    <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:17px;font-weight:800;color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</div><div style="font-size:11px;color:#706f87">${o.created_at?new Date(o.created_at).toLocaleDateString():''}</div></div>
+  const sc={pending:'st-p',confirmed:'st-r',ready:'st-r',completed:'st-c',rejected:'st-x',cancelled:'st-x'};
+  const sl={pending:'🕐 Pending',confirmed:'✅ Confirmed',ready:'📦 Ready',completed:'🎉 Done',rejected:'❌ Rejected',cancelled:'❌ Cancelled'};
+  const h=o=>`<div class="ocard" onclick="openOrderDetail('${o.id}')">
+    <div class="ocard-h"><div style="font-size:11px;font-weight:700;color:#706f87;font-family:monospace">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div><div class="ostatus ${sc[o.status]||'st-p'}">${sl[o.status]||o.status||'Pending'}</div></div>
+    <div style="display:flex;gap:12px;margin:8px 0">
+      <div style="font-size:28px">${o.product_emoji||'📦'}</div>
+      <div><div style="font-size:15px;font-weight:700">${o.product_name||'Order'}</div>
+      <div style="font-size:12px;color:#706f87">Qty: ${o.quantity||1} • ${o.type==='collect'?'🏪 Collect in store':'🚚 Delivery'}${o.collect_time?' at '+o.collect_time:''}</div>
+      <div style="font-size:12px;color:#706f87">${o.merchant_name||''}</div></div>
+    </div>
+    ${statusTimeline(o.status||'pending')}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f5">
+      <div style="font-size:18px;font-weight:800;color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="event.stopPropagation();openOrderChat('${o.id}','${(o.product_name||'Order').replace(/'/g,'')}')" style="background:#ece9ff;color:#6C5CE7;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">💬 Chat</button>
+        <div style="font-size:11px;color:#706f87;align-self:center">${o.created_at?new Date(o.created_at).toLocaleDateString():''}</div>
+      </div>
+    </div>
+    ${o.merchant_note?'<div style="background:#fff8e1;border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12px;color:#856404">📢 Merchant: '+o.merchant_note+'</div>':''}
   </div>`;
   document.getElementById('orders-list').innerHTML=ORDERS.length?ORDERS.map(h).join(''):'<div class="empty"><i>📦</i>No orders yet<br>Browse shops to place an order</div>';
   document.getElementById('home-orders').innerHTML=ORDERS.length?ORDERS.slice(0,2).map(h).join(''):'<div class="empty" style="padding:16px"><i style="font-size:28px">📦</i>No orders yet</div>';
+}
+let CUR_ORDER_CHAT=null;
+function openOrderDetail(id){
+  const o=ORDERS.find(x=>x.id===id);if(!o)return;
+  T('Order #'+o.id.slice(0,8).toUpperCase()+': '+((o.status||'pending').toUpperCase()));
+}
+function openOrderChat(orderId,productName){
+  CUR_ORDER_CHAT=orderId;
+  const chatEl=document.getElementById('order-chat-modal');
+  if(!chatEl){buildChatModal();return openOrderChat(orderId,productName);}
+  document.getElementById('chat-modal-title').textContent='💬 '+productName;
+  chatEl.classList.add('on');
+  loadOrderChat(orderId);
+}
+function buildChatModal(){
+  const d=document.createElement('div');
+  d.id='order-chat-modal';d.className='mo';
+  d.innerHTML=`<div class="mo-box" style="height:85vh;display:flex;flex-direction:column">
+    <div class="mo-head"><span id="chat-modal-title">💬 Order Chat</span><button class="mo-x" onclick="closeChatModal()">✕</button></div>
+    <div id="chat-messages" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#f9f9fb"></div>
+    <div style="padding:12px;border-top:1px solid #ebebef;display:flex;gap:8px">
+      <input id="chat-input" class="ai" placeholder="Type a message..." style="flex:1" onkeydown="if(event.key==='Enter')sendChatMsg()">
+      <button onclick="sendChatMsg()" style="background:#6C5CE7;color:#fff;border:none;border-radius:12px;padding:10px 16px;font-weight:700;cursor:pointer">Send</button>
+    </div>
+  </div>`;
+  document.body.appendChild(d);
+  d.addEventListener('click',e=>{if(e.target===d)closeChatModal();});
+}
+function closeChatModal(){const el=document.getElementById('order-chat-modal');if(el)el.classList.remove('on');}
+function loadOrderChat(orderId){
+  const el=document.getElementById('chat-messages');if(!el)return;
+  el.innerHTML='<div style="text-align:center;font-size:12px;color:#aaa">Loading...</div>';
+  get('chats','conversation_id=eq.order_'+orderId+'&order=created_at.asc&limit=50').then(d=>{
+    const msgs=Array.isArray(d)?d:[];
+    el.innerHTML=msgs.length?msgs.map(m=>`<div style="display:flex;flex-direction:${m.sender_role==='customer'?'row-reverse':'row'};gap:8px;align-items:flex-end">
+      <div style="max-width:72%;background:${m.sender_role==='customer'?'#6C5CE7':'#fff'};color:${m.sender_role==='customer'?'#fff':'#1a1a2e'};border-radius:${m.sender_role==='customer'?'18px 18px 4px 18px':'18px 18px 18px 4px'};padding:10px 14px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
+        <div style="font-size:13px">${m.message}</div>
+        <div style="font-size:10px;opacity:.6;margin-top:4px">${m.sender_name||m.sender_role}</div>
+      </div></div>`).join(''):'<div style="text-align:center;font-size:13px;color:#706f87;padding:20px">No messages yet. Ask about your order!</div>';
+    el.scrollTop=el.scrollHeight;
+  }).catch(()=>{el.innerHTML='<div style="text-align:center;color:#c62828;font-size:13px">Could not load messages</div>';});
+}
+function sendChatMsg(){
+  const inp=document.getElementById('chat-input');
+  const msg=inp.value.trim();if(!msg||!CUR_ORDER_CHAT)return;
+  inp.value='';
+  post('chats',{conversation_id:'order_'+CUR_ORDER_CHAT,sender_id:UID,sender_role:'customer',sender_name:PROF.name||UEMAIL,message:msg,order_id:CUR_ORDER_CHAT,created_at:Date.now()})
+  .then(()=>loadOrderChat(CUR_ORDER_CHAT)).catch(()=>T('Failed to send'));
 }
 
 // Card detail + Barcode
@@ -792,6 +1008,10 @@ function openCardDet(cardId){
     document.getElementById('bc-num').style.color='#0a0a14';
   }
   // Stats rows
+  // Card locations section
+  document.getElementById('cd-loc-btn').setAttribute('data-cid', c.card_id||c.id);
+  // Card locations section
+  document.getElementById('cd-loc-btn').setAttribute('data-cid', c.card_id||c.id);
   document.getElementById('cd-rows').innerHTML=`
     <div class="det-row"><div class="det-rl">Visits</div><div class="det-rv">${c.visitCount||0}</div></div>
     <div class="det-row"><div class="det-rl">Total spent</div><div class="det-rv">£${parseFloat(c.totalSpend||0).toFixed(2)}</div></div>
@@ -811,6 +1031,7 @@ function openCardDet(cardId){
       }
     }).catch(()=>{});
   }
+  loadCardLocations(c.card_id||c.id);
   document.getElementById('cardDet').classList.add('on');
 }
 function closeCardDet(){document.getElementById('cardDet').classList.remove('on')}
