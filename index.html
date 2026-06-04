@@ -820,7 +820,7 @@ function addLocalCard(){
     else if(CUR_SHOP.lat&&CUR_SHOP.lng){
       post('card_locations',{card_id:'local-'+CUR_SHOP.id,user_id:UID,latitude:CUR_SHOP.lat,longitude:CUR_SHOP.lng,label:CUR_SHOP.name,radius:300,created_at:Date.now()}).catch(()=>{});
     }
-  }
+  })
   .then(()=>{
     T('✅ '+CUR_SHOP.name+' loyalty card added!');
     // Save shop GPS
