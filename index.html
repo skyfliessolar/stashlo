@@ -240,8 +240,8 @@ button{cursor:pointer}
 
   <div class="screen" id="shop-screen">
     <div class="srch-row">
-      <input id="shop-inp" class="srch-inp" placeholder="Shop ID (e.g. SL-SKY1) or name" oninput="srchShops(this.value.trim())">
-      <button class="srch-btn" onclick="srchShops(document.getElementById('shop-inp').value.trim())">Go</button>
+      <input id="shop-inp" class="srch-inp" placeholder="Shop ID (e.g. SL-SKY1) or name" oninput="srchShops(this.value.trim())" onkeydown="if(event.key==='Enter')srchShops(this.value.trim())">
+      <button class="srch-btn" onclick="const v=document.getElementById('shop-inp').value.trim();if(v)srchShops(v)">Go</button>
     </div>
     <div id="shop-results"></div>
     <div id="stashlo-sec" style="display:none">
@@ -340,6 +340,8 @@ button{cursor:pointer}
     <div style="font-size:40px;margin-bottom:10px" id="sd-e"></div>
     <div class="det-pts" style="font-size:26px;margin-bottom:4px" id="sd-name"></div>
     <div style="color:rgba(255,255,255,.5);font-size:12px" id="sd-meta"></div>
+    <div style="color:rgba(255,255,255,.65);font-size:12px;margin-top:3px" id="sd-addr"></div>
+    <div style="color:rgba(255,255,255,.5);font-size:11px;margin-top:2px" id="sd-hours"></div>
     <div class="det-info" id="sd-loy"></div>
   </div>
   <div class="det-body">
@@ -579,7 +581,7 @@ function saveNatCard(){
   const num=V('fc-n');
   if(!num||num.length<4){sErr('fc-err','Card number is required (4+ digits)');return}
   if(!CUR_BRAND){T('Error — please try again');return}
-  const payload={user_id:UID,card_id:CUR_BRAND.id,name:CUR_BRAND.n,shop_name:CUR_BRAND.n,emoji:CUR_BRAND.e,color:CUR_BRAND.c,type:'national',points:0,threshold:500,added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0,card_number:num,card_holder:V('fc-h')||null,store_location:V('fc-s')||null};
+  const payload={user_id:UID,card_id:CUR_BRAND.id,name:CUR_BRAND.n,shop_name:CUR_BRAND.n,emoji:CUR_BRAND.e,color:CUR_BRAND.c,type:'national',points:0,threshold:500,added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0,card_number:num,card_holder:V('fc-h')||null,store_location:V('fc-s')||null,latitude:userLat||null,longitude:userLng||null};
   post('cards',payload,'user_id,card_id').then(d=>{
     if(d&&d.code){sErr('fc-err',d.message||'Save failed');return}
     T('✅ '+CUR_BRAND.n+' card added!');cmo('addNatMo');loadCards();
@@ -646,7 +648,7 @@ function openShopById(mid){
     const s=Array.isArray(d)&&d[0]?d[0]:null;if(!s){T('Shop not found');return}
     CUR_SHOP=s;
     txt('sd-e',s.logo_emoji||'🏪');txt('sd-name',s.name);
-    txt('sd-meta',(s.category||'').toUpperCase()+(s.address?' • '+s.address:''));txt('sd-loy',fmtLoy(s));
+    txt('sd-meta',(s.category||'').toUpperCase());txt('sd-addr',s.address?'📍 '+s.address:'');txt('sd-hours',s.open_hours?'🕐 '+s.open_hours:'');txt('sd-loy',fmtLoy(s));
     const mc=CARDS.find(c=>c.merchant_id===s.id);
     txt('sd-pts',mc?(mc.points||0):'—');
     const btn=document.getElementById('sd-btn');
@@ -794,7 +796,10 @@ function openCardDet(cardId){
     <div class="det-row"><div class="det-rl">Visits</div><div class="det-rv">${c.visitCount||0}</div></div>
     <div class="det-row"><div class="det-rl">Total spent</div><div class="det-rv">£${parseFloat(c.totalSpend||0).toFixed(2)}</div></div>
     <div class="det-row"><div class="det-rl">Rewards redeemed</div><div class="det-rv">${c.rewardsRedeemed||0}</div></div>
-    ${c.store_location?'<div class="det-row"><div class="det-rl">Store</div><div class="det-rv">'+c.store_location+'</div></div>':''}`;
+    ${c.store_location?'<div class="det-row"><div class="det-rl">📍 Store</div><div class="det-rv">'+c.store_location+'</div></div>':''}
+    ${c.card_holder?'<div class="det-row"><div class="det-rl">👤 Cardholder</div><div class="det-rv">'+c.card_holder+'</div></div>':''}
+    ${c.order_ref?'<div class="det-row"><div class="det-rl">🧾 Order Ref</div><div class="det-rv">'+c.order_ref+'</div></div>':''}
+    ${c.latitude&&c.longitude?'<div class="det-row"><div class="det-rl">🗺️ GPS</div><div class="det-rv">'+parseFloat(c.latitude).toFixed(4)+', '+parseFloat(c.longitude).toFixed(4)+'</div></div>':''}`;
   // Local shop products
   const pd=document.getElementById('cd-prods');pd.innerHTML='';
   if(c.type==='local'&&c.merchant_id){
