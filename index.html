@@ -1,192 +1,177 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<meta name="theme-color" content="#0a0a14">
-<link rel="manifest" href="manifest.json">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a0a14"><link rel="manifest" href="manifest.json">
 <title>Stashlo</title>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui,-apple-system,sans-serif;background:#f0efff;color:#1a1a2e;min-height:100vh}
-button{cursor:pointer;border:none;font-family:inherit;outline:none}
-input,select,textarea{font-family:inherit;border:none;outline:none}
+button,input,select,textarea{font-family:inherit;border:none;outline:none}
+button{cursor:pointer}
 
-/* Splash */
 #splash{position:fixed;inset:0;background:#0a0a14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:9999}
 .sp-logo{font-size:48px;font-weight:900;color:#fff}.sp-logo b{color:#6C5CE7}
 .sp-dots{display:flex;gap:8px}.sp-dots span{width:8px;height:8px;background:#6C5CE7;border-radius:50%;animation:pulse 1.2s infinite}
 .sp-dots span:nth-child(2){animation-delay:.2s}.sp-dots span:nth-child(3){animation-delay:.4s}
 @keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
 
-/* Auth */
 #auth{display:none;position:fixed;inset:0;background:#0a0a14;align-items:center;justify-content:center;padding:20px;z-index:100;overflow-y:auto}
-.auth-card{background:#fff;border-radius:28px;padding:32px 24px;width:100%;max-width:380px;box-shadow:0 24px 64px rgba(108,92,231,.2)}
+.auth-card{background:#fff;border-radius:28px;padding:32px 24px;width:100%;max-width:380px}
 .auth-logo{font-size:28px;font-weight:900;margin-bottom:4px}.auth-logo b{color:#6C5CE7}
 .auth-sub{color:#706f87;font-size:13px;margin-bottom:24px}
-.auth-inp{width:100%;padding:14px;border:2px solid #f0f0f5;border-radius:14px;font-size:15px;margin-bottom:12px;transition:border-color .2s;background:#fafafa}
-.auth-inp:focus{border-color:#6C5CE7;background:#fff}
-.auth-btn{width:100%;padding:15px;background:#0a0a14;color:#fff;border-radius:14px;font-weight:700;font-size:16px}
-.auth-link{text-align:center;margin-top:14px;font-size:13px;color:#706f87}
-.auth-link span{color:#6C5CE7;cursor:pointer;font-weight:600}
-.auth-err{color:#c62828;font-size:12px;padding:10px 14px;background:#ffebee;border-radius:10px;margin-top:10px;display:none}
+.ai{width:100%;padding:14px;border:2px solid #f0f0f5;border-radius:14px;font-size:15px;margin-bottom:12px;background:#fafafa;transition:border-color .2s}
+.ai:focus{border-color:#6C5CE7;background:#fff}
+.ab{width:100%;padding:15px;background:#0a0a14;color:#fff;border-radius:14px;font-weight:700;font-size:16px}
+.al{text-align:center;margin-top:14px;font-size:13px;color:#706f87}.al span{color:#6C5CE7;cursor:pointer;font-weight:600}
+.ae{color:#c62828;font-size:12px;padding:10px 14px;background:#ffebee;border-radius:10px;margin-top:10px;display:none}
 
-/* App shell */
 #app{display:none;flex-direction:column;min-height:100vh;padding-bottom:72px}
 .topbar{background:#0a0a14;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99}
 .tb-brand{font-size:20px;font-weight:900}.tb-brand b{color:#6C5CE7}
-.tb-right{display:flex;gap:10px}
-.tb-btn{background:rgba(255,255,255,.1);color:#fff;padding:8px 12px;border-radius:10px;font-size:13px;font-weight:600}
+.tb-right{display:flex;gap:8px}
+.tb-btn{background:rgba(255,255,255,.12);color:#fff;padding:8px 12px;border-radius:10px;font-size:13px;font-weight:600}
 
-/* Bottom nav */
-.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1.5px solid #ececf3;display:flex;z-index:99}
-.nb{flex:1;padding:11px 4px 8px;text-align:center;cursor:pointer;color:#a0a0b5;transition:color .15s}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1.5px solid #ececf3;display:flex;z-index:99;padding-bottom:env(safe-area-inset-bottom)}
+.nb{flex:1;padding:10px 4px 8px;text-align:center;cursor:pointer;color:#a0a0b5;transition:color .15s}
 .nb.on{color:#6C5CE7}
-.nb-ico{font-size:22px;display:block;line-height:1}
+.nb-ico{font-size:22px;display:block}
 .nb-lab{font-size:10px;font-weight:600;margin-top:2px;display:block}
+.nb-dot{display:inline-block;width:6px;height:6px;background:#6C5CE7;border-radius:50%;margin-left:3px;vertical-align:top;margin-top:2px}
 
-/* Screens */
-.screen{display:none;padding:16px;animation:fi .2s}
+.screen{display:none;padding:16px;animation:fi .2s ease}
 .screen.on{display:block}
-@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
 /* Hero */
-.hero{background:linear-gradient(135deg,#0a0a14,#1a1040);color:#fff;border-radius:22px;padding:22px 20px;margin-bottom:18px}
-.hero-greet{font-size:12px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.hero-name{font-size:22px;font-weight:800;margin-bottom:16px}
+.hero{background:linear-gradient(135deg,#0a0a14 0%,#1a1040 100%);color:#fff;border-radius:22px;padding:22px 20px;margin-bottom:18px}
+.hero-g{font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.hero-n{font-size:22px;font-weight:800;margin-bottom:16px}
 .hero-stats{display:flex;gap:10px}
-.hstat{flex:1;background:rgba(255,255,255,.08);border-radius:12px;padding:12px}
-.hstat-v{font-size:24px;font-weight:800;color:#fff}
-.hstat-l{font-size:11px;color:rgba(255,255,255,.4);margin-top:3px}
+.hs{flex:1;background:rgba(255,255,255,.08);border-radius:12px;padding:12px;cursor:pointer}
+.hs-v{font-size:24px;font-weight:900;color:#fff}
+.hs-l{font-size:11px;color:rgba(255,255,255,.4);margin-top:3px}
 
-/* Section headers */
+/* Section */
 .sh{display:flex;justify-content:space-between;align-items:center;margin:20px 0 12px}
 .sh-t{font-size:16px;font-weight:800}
 .sh-a{font-size:13px;color:#6C5CE7;font-weight:600;cursor:pointer}
-.fab{width:38px;height:38px;background:#ece9ff;border-radius:12px;color:#6C5CE7;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none}
+.fab{width:38px;height:38px;background:#ece9ff;border-radius:12px;color:#6C5CE7;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer}
 
 /* Loyalty cards */
-.lcard{border-radius:18px;padding:18px;cursor:pointer;color:#fff;margin-bottom:12px;position:relative;overflow:hidden;min-height:120px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .2s}
-.lcard:active{transform:scale(.98)}
-.lcard::after{content:'';position:absolute;top:-20%;right:-5%;width:120px;height:120px;background:rgba(255,255,255,.05);border-radius:50%}
-.lcard-top{display:flex;justify-content:space-between;align-items:flex-start}
-.lcard-name{font-size:14px;font-weight:700}
-.lcard-badge{font-size:10px;background:rgba(255,255,255,.2);padding:3px 8px;border-radius:10px;font-weight:600}
-.lcard-pts{font-size:38px;font-weight:900;line-height:1;margin:8px 0 2px}
-.lcard-sub{font-size:11px;opacity:.5}
+.lc{border-radius:18px;padding:18px;cursor:pointer;color:#fff;margin-bottom:12px;position:relative;overflow:hidden;min-height:118px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .15s,box-shadow .15s}
+.lc:active{transform:scale(.975)}
+.lc::after{content:'';position:absolute;top:-20%;right:-5%;width:110px;height:110px;background:rgba(255,255,255,.05);border-radius:50%}
+.lc-top{display:flex;justify-content:space-between;align-items:flex-start}
+.lc-name{font-size:14px;font-weight:700}
+.lc-badge{font-size:10px;background:rgba(255,255,255,.2);padding:3px 8px;border-radius:10px;font-weight:600}
+.lc-pts{font-size:38px;font-weight:900;line-height:1;margin:6px 0 2px}
+.lc-sub{font-size:11px;opacity:.5}
 
-/* Filter chips */
-.chips{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-.chip{padding:7px 14px;border-radius:100px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid transparent;transition:all .2s;background:#f0f0f5;color:#706f87}
+/* Chips */
+.chips{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px}
+.chip{padding:7px 14px;border-radius:100px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid transparent;white-space:nowrap;background:#f0f0f5;color:#706f87;transition:all .15s}
 .chip.on{background:#ece9ff;color:#6C5CE7;border-color:#6C5CE7}
 
 /* Shop screen */
-.search-row{display:flex;gap:10px;margin-bottom:16px}
-.search-row input{flex:1;padding:13px 14px;background:#fff;border-radius:14px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
-.search-row button{padding:12px 18px;background:#6C5CE7;color:#fff;border-radius:14px;font-weight:700}
+.srch-row{display:flex;gap:10px;margin-bottom:16px}
+.srch-inp{flex:1;padding:13px 14px;background:#fff;border-radius:14px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.srch-btn{padding:12px 18px;background:#6C5CE7;color:#fff;border-radius:14px;font-weight:700}
+
+/* Shop + product cards */
 .shop-item{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);cursor:pointer;transition:transform .15s}
 .shop-item:active{transform:scale(.98)}
-.shop-ico{font-size:32px;width:56px;height:56px;background:#f4f2ff;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.shop-ico{font-size:30px;width:54px;height:54px;background:#f4f2ff;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .shop-info{flex:1}
 .shop-name{font-size:15px;font-weight:700}
 .shop-meta{font-size:12px;color:#706f87;margin-top:2px}
-.shop-btn{background:#ece9ff;color:#6C5CE7;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:700;border:none;cursor:pointer}
+.shop-btn{background:#ece9ff;color:#6C5CE7;padding:7px 12px;border-radius:10px;font-size:12px;font-weight:700;flex-shrink:0}
 
-/* Products */
-.prods{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.prod{background:#fff;border-radius:16px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);cursor:pointer;transition:transform .15s}
-.prod:active{transform:scale(.97)}
-.prod-ico{font-size:32px;margin-bottom:8px}
+.prods-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px}
+.prod-card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);cursor:pointer;transition:transform .15s}
+.prod-card:active{transform:scale(.97)}
+.prod-ico{font-size:30px;margin-bottom:8px}
 .prod-name{font-size:13px;font-weight:700;margin-bottom:4px}
 .prod-price{font-size:16px;font-weight:800;color:#6C5CE7}
 .prod-tags{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
-.tag{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600}
-.tag-c{background:#e8f5e9;color:#2e7d32}
-.tag-d{background:#e3f2fd;color:#1565c0}
+.pt{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600}
+.pt-c{background:#e8f5e9;color:#2e7d32}
+.pt-d{background:#e3f2fd;color:#1565c0}
 
 /* Orders */
 .ocard{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
-.ocard-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.oid{font-size:12px;font-weight:700;color:#706f87}
+.ocard-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .ostatus{font-size:11px;font-weight:700;padding:4px 10px;border-radius:10px}
-.s-pending{background:#fff3e0;color:#e65100}
-.s-ready{background:#e8f5e9;color:#2e7d32}
-.s-completed{background:#e3f2fd;color:#1565c0}
-.s-rejected{background:#ffebee;color:#c62828}
+.st-p{background:#fff3e0;color:#e65100}.st-r{background:#e8f5e9;color:#2e7d32}
+.st-c{background:#e3f2fd;color:#1565c0}.st-x{background:#ffebee;color:#c62828}
 
 /* Inbox */
-.inbox-item{background:#fff;border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
-.inbox-unread{border-left:3px solid #6C5CE7}
-.inbox-from{font-size:12px;font-weight:700;color:#6C5CE7;margin-bottom:4px}
-.inbox-title{font-size:15px;font-weight:700}
-.inbox-body{font-size:13px;color:#706f87;margin-top:4px}
-.inbox-time{font-size:11px;color:#a0a0b5;margin-top:6px}
+.icard{background:#fff;border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.06);cursor:pointer}
+.icard-unread{border-left:3px solid #6C5CE7}
+.icard-from{font-size:12px;font-weight:700;color:#6C5CE7;margin-bottom:4px}
+.icard-title{font-size:15px;font-weight:700}
+.icard-body{font-size:13px;color:#706f87;margin-top:4px;line-height:1.5}
 
 /* Profile */
-.prof-hero{background:linear-gradient(135deg,#6C5CE7,#a29bfe);border-radius:20px;padding:24px 20px;text-align:center;margin-bottom:16px;color:#fff}
-.prof-av{width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.2);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:28px}
-.prof-name{font-size:20px;font-weight:800}
-.prof-email{font-size:13px;opacity:.7;margin-top:4px}
-.prof-row{background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.05)}
-.prof-row-ico{font-size:22px;width:44px;height:44px;background:#f4f2ff;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.prof-row-t{font-size:14px;font-weight:600}
-.prof-row-s{font-size:12px;color:#706f87;margin-top:2px}
+.ph{background:linear-gradient(135deg,#6C5CE7,#a29bfe);border-radius:20px;padding:24px 20px;text-align:center;margin-bottom:16px;color:#fff}
+.ph-av{width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.2);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:28px}
+.ph-name{font-size:20px;font-weight:800}
+.ph-email{font-size:13px;opacity:.7;margin-top:4px}
+.prow{background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.prow-ico{font-size:22px;width:44px;height:44px;background:#f4f2ff;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.prow-t{font-size:14px;font-weight:600}
 
 /* Modals */
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;z-index:200}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;z-index:200}
 .mo.on{display:flex}
-.ms{background:#fff;width:100%;border-radius:28px 28px 0 0;padding:24px 18px 36px;max-height:92vh;overflow-y:auto}
+.ms{background:#fff;width:100%;border-radius:28px 28px 0 0;padding:24px 18px 38px;max-height:93vh;overflow-y:auto}
 .mh{width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 16px}
 .mt{font-size:18px;font-weight:800;margin-bottom:18px}
 .mf{margin-bottom:14px}
 .ml{display:block;font-size:11px;font-weight:700;color:#706f87;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.mi{width:100%;padding:13px 14px;border:2px solid #f0f0f5;border-radius:14px;font-size:14px;transition:border-color .2s;background:#fafafa}
+.mi{width:100%;padding:13px 14px;border:2px solid #f0f0f5;border-radius:14px;font-size:14px;background:#fafafa;transition:border-color .2s}
 .mi:focus{border-color:#6C5CE7;background:#fff}
-.msel{width:100%;padding:13px 14px;border:2px solid #f0f0f5;border-radius:14px;font-size:14px;background:#fafafa;-webkit-appearance:none}
-.mb{width:100%;padding:14px;border-radius:14px;font-weight:700;font-size:15px;margin:6px 0;cursor:pointer;border:none}
+.mta{width:100%;padding:13px 14px;border:2px solid #f0f0f5;border-radius:14px;font-size:14px;background:#fafafa;resize:vertical;min-height:70px}
+.mb{width:100%;padding:14px;border-radius:14px;font-weight:700;font-size:15px;margin:6px 0;cursor:pointer}
 .mb-dark{background:#0a0a14;color:#fff}
 .mb-purple{background:#6C5CE7;color:#fff}
-.mb-green{background:#00897B;color:#fff}
 .mb-gray{background:#f0f0f5;color:#706f87}
 .mb-red{background:#ffebee;color:#c62828}
-.merr{color:#c62828;font-size:12px;padding:10px 14px;background:#ffebee;border-radius:10px;display:none;margin-top:8px}
-.mcheck{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f9f9fb;border-radius:12px;margin-bottom:8px;cursor:pointer}
-.mcheck input{width:18px;height:18px;cursor:pointer}
+.merr{color:#c62828;font-size:12px;padding:10px;background:#ffebee;border-radius:10px;display:none;margin-top:8px}
+.order-type-row{display:flex;gap:10px;margin-top:6px}
+.ot{flex:1;background:#f0f0f5;border-radius:12px;padding:12px;text-align:center;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.ot.sel{background:#f4f2ff;border-color:#6C5CE7}
 
-/* Card detail overlay */
+/* Detail views */
 .det{position:fixed;inset:0;background:#0a0a14;display:none;flex-direction:column;z-index:150;overflow-y:auto}
 .det.on{display:flex}
 .det-top{padding:20px;flex-shrink:0}
-.det-back{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:18px;border:none}
-.det-shop{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:6px}
-.det-pts{font-size:64px;font-weight:900;color:#fff;line-height:1}
-.det-lab{font-size:14px;color:rgba(255,255,255,.4);margin-top:4px}
-.det-info{background:rgba(108,92,231,.3);border:1px solid rgba(108,92,231,.5);border-radius:12px;padding:12px;margin-top:12px;color:#fff;font-size:13px}
+.det-back{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:18px}
+.det-pts{font-size:60px;font-weight:900;color:#fff;line-height:1}
+.det-lab{font-size:13px;color:rgba(255,255,255,.4);margin-top:4px}
+.det-info{background:rgba(108,92,231,.3);border:1px solid rgba(108,92,231,.4);border-radius:12px;padding:12px;margin-top:12px;color:#fff;font-size:13px;line-height:1.5}
 .det-body{background:#fff;flex:1;border-radius:28px 28px 0 0;padding:22px 18px}
-.det-row{background:#f9f9fb;border-radius:14px;padding:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
-.det-row-l{font-size:12px;font-weight:700;color:#706f87;text-transform:uppercase}
-.det-row-v{font-size:15px;font-weight:800}
+.det-row{background:#f9f9fb;border-radius:14px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.det-rl{font-size:12px;font-weight:700;color:#706f87;text-transform:uppercase}
+.det-rv{font-size:15px;font-weight:800}
 
 /* Barcode */
-.bc-wrap{background:#fff;border-radius:16px;padding:16px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.1);margin-bottom:14px}
+.bc-wrap{background:#fff;border:2px solid #f0f0f5;border-radius:16px;padding:18px;text-align:center;margin-bottom:16px}
 #bc-svg{max-width:100%}
 
-/* Nearby popup */
-#nearby-pop{display:none;position:fixed;top:74px;left:14px;right:14px;background:#fff;border-radius:20px;padding:16px 18px;z-index:300;box-shadow:0 8px 32px rgba(108,92,231,.25);border:2px solid #ece9ff;animation:slideDown .3s}
-@keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
-.np-from{font-size:11px;font-weight:700;color:#6C5CE7;margin-bottom:4px;text-transform:uppercase}
-.np-name{font-size:16px;font-weight:800;margin-bottom:2px}
-.np-pts{font-size:13px;color:#706f87}
+/* Nearby */
+#nearby-pop{display:none;position:fixed;top:74px;left:14px;right:14px;background:#fff;border-radius:20px;padding:16px 18px;z-index:300;box-shadow:0 8px 32px rgba(108,92,231,.3);border:2px solid #ece9ff}
+.np-from{font-size:11px;font-weight:700;color:#6C5CE7;text-transform:uppercase;margin-bottom:4px}
+.np-name{font-size:16px;font-weight:800}
+.np-pts{font-size:12px;color:#706f87;margin-top:2px}
 .np-btns{display:flex;gap:8px;margin-top:12px}
-.np-btns button{flex:1;padding:10px;border-radius:12px;font-weight:700;font-size:13px;border:none;cursor:pointer}
+.np-btns button{flex:1;padding:10px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer}
 
-/* Toast */
-.toast{position:fixed;bottom:86px;left:50%;transform:translateX(-50%);background:#0a0a14;color:#fff;padding:11px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+.toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:#0a0a14;color:#fff;padding:11px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .toast.show{opacity:1}
-.empty{text-align:center;padding:48px 20px;color:#706f87}
-.empty-i{font-size:48px;margin-bottom:14px}
-.empty-t{font-size:14px;line-height:1.7}
+.empty{text-align:center;padding:44px 20px;color:#706f87}
+.empty i{display:block;font-size:44px;margin-bottom:14px;font-style:normal}
 </style>
 </head>
 <body>
@@ -201,20 +186,20 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     <div class="auth-logo">Stash<b>lo</b></div>
     <p class="auth-sub">Smart Loyalty Wallet</p>
     <div id="auth-login">
-      <input type="email" id="ai-email" class="auth-inp" placeholder="Email address">
-      <input type="password" id="ai-pw" class="auth-inp" placeholder="Password">
-      <button class="auth-btn" onclick="doLogin()">Sign in</button>
-      <p class="auth-link">New user? <span onclick="showSU()">Create account</span></p>
-      <div class="auth-err" id="ai-err"></div>
+      <input type="email" id="ai-e" class="ai" placeholder="Email address">
+      <input type="password" id="ai-p" class="ai" placeholder="Password">
+      <button class="ab" onclick="doLogin()">Sign in</button>
+      <p class="al">New user? <span onclick="showSU()">Create account</span></p>
+      <div class="ae" id="ai-err"></div>
     </div>
-    <div id="auth-signup" style="display:none">
-      <input type="text" id="su-name" class="auth-inp" placeholder="Full name">
-      <input type="email" id="su-email" class="auth-inp" placeholder="Email address">
-      <input type="password" id="su-pw" class="auth-inp" placeholder="Password (6+ chars)">
-      <input type="tel" id="su-phone" class="auth-inp" placeholder="Phone (optional)">
-      <button class="auth-btn" onclick="doSignup()">Create account</button>
-      <p class="auth-link">Have account? <span onclick="showSI()">Sign in</span></p>
-      <div class="auth-err" id="su-err"></div>
+    <div id="auth-su" style="display:none">
+      <input type="text" id="su-n" class="ai" placeholder="Full name">
+      <input type="email" id="su-e" class="ai" placeholder="Email address">
+      <input type="password" id="su-p" class="ai" placeholder="Password (6+ chars)">
+      <input type="tel" id="su-ph" class="ai" placeholder="Phone (optional)">
+      <button class="ab" onclick="doSignup()">Create account</button>
+      <p class="al">Have account? <span onclick="showSI()">Sign in</span></p>
+      <div class="ae" id="su-err"></div>
     </div>
   </div>
 </div>
@@ -228,15 +213,14 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     </div>
   </div>
 
-  <!-- HOME -->
   <div class="screen on" id="home-screen">
     <div class="hero">
-      <div class="hero-greet" id="h-greet">Good morning</div>
-      <div class="hero-name" id="h-name">Your wallet</div>
+      <div class="hero-g" id="h-greet">Good morning</div>
+      <div class="hero-n" id="h-name">Your wallet</div>
       <div class="hero-stats">
-        <div class="hstat"><div class="hstat-v" id="hs-cards">0</div><div class="hstat-l">Cards</div></div>
-        <div class="hstat"><div class="hstat-v" id="hs-pts">0</div><div class="hstat-l">Total pts</div></div>
-        <div class="hstat"><div class="hstat-v" id="hs-orders">0</div><div class="hstat-l">Orders</div></div>
+        <div class="hs" onclick="goTab('cards')"><div class="hs-v" id="hs-c">0</div><div class="hs-l">Cards</div></div>
+        <div class="hs" onclick="goTab('cards')"><div class="hs-v" id="hs-p">0</div><div class="hs-l">Points</div></div>
+        <div class="hs" onclick="goTab('orders')"><div class="hs-v" id="hs-o">0</div><div class="hs-l">Orders</div></div>
       </div>
     </div>
     <div class="sh"><span class="sh-t">My cards</span><span class="sh-a" onclick="goTab('cards')">See all →</span></div>
@@ -245,64 +229,50 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     <div id="home-orders"></div>
   </div>
 
-  <!-- CARDS -->
   <div class="screen" id="cards-screen">
     <div class="chips">
-      <div class="chip on" id="chip-nat" onclick="filterCards('national')">🇬🇧 National</div>
-      <div class="chip" id="chip-loc" onclick="filterCards('local')">🏪 Local Shops</div>
+      <div class="chip on" id="cn" onclick="fCards('n')">🇬🇧 National</div>
+      <div class="chip" id="cl" onclick="fCards('l')">🏪 Local Shops</div>
     </div>
-    <div id="nat-section">
-      <div class="sh"><span class="sh-t">National brands</span><button class="fab" onclick="openAddNational()">+</button></div>
-      <div id="nat-list"></div>
-    </div>
-    <div id="loc-section" style="display:none">
-      <div class="sh"><span class="sh-t">Local shops</span><button class="fab" onclick="openShopSearch()">+</button></div>
-      <div id="loc-list"></div>
-    </div>
+    <div id="n-sec"><div class="sh"><span class="sh-t">National brands</span><button class="fab" onclick="openAddNat()">+</button></div><div id="n-list"></div></div>
+    <div id="l-sec" style="display:none"><div class="sh"><span class="sh-t">Local shops</span><button class="fab" onclick="openShopSearch()">+</button></div><div id="l-list"></div></div>
   </div>
 
-  <!-- SHOP -->
   <div class="screen" id="shop-screen">
-    <div class="search-row">
-      <input id="shop-inp" placeholder="Shop ID (e.g. SL-SKY1) or name" oninput="searchShops(this.value)">
-      <button onclick="searchShops(document.getElementById('shop-inp').value)">Go</button>
+    <div class="srch-row">
+      <input id="shop-inp" class="srch-inp" placeholder="Shop ID (e.g. SL-SKY1) or name" oninput="srchShops(this.value.trim())">
+      <button class="srch-btn" onclick="srchShops(document.getElementById('shop-inp').value.trim())">Go</button>
     </div>
     <div id="shop-results"></div>
-    <!-- Stashlo products -->
-    <div id="stashlo-section" style="display:none">
+    <div id="stashlo-sec" style="display:none">
       <div class="sh"><span class="sh-t">🛍️ Stashlo Store</span></div>
-      <div class="prods" id="stashlo-prods"></div>
+      <div class="prods-grid" id="stashlo-prods"></div>
     </div>
-    <div class="sh" style="margin-top:8px"><span class="sh-t">My local shops</span></div>
+    <div class="sh"><span class="sh-t">My local shops</span></div>
     <div id="my-shops"></div>
   </div>
 
-  <!-- ORDERS -->
   <div class="screen" id="orders-screen">
     <div class="sh"><span class="sh-t">My orders</span></div>
     <div id="orders-list"></div>
   </div>
 
-  <!-- INBOX -->
   <div class="screen" id="inbox-screen">
-    <div class="sh"><span class="sh-t">Notifications</span><span class="sh-a" onclick="markAllRead()">Mark read</span></div>
+    <div class="sh"><span class="sh-t">Notifications</span><span class="sh-a" onclick="markAllRead()">Mark all read</span></div>
     <div id="inbox-list"></div>
   </div>
 
-  <!-- PROFILE -->
   <div class="screen" id="profile-screen">
-    <div class="prof-hero">
-      <div class="prof-av">👤</div>
-      <div class="prof-name" id="prof-name">—</div>
-      <div class="prof-email" id="prof-email">—</div>
+    <div class="ph">
+      <div class="ph-av">👤</div>
+      <div class="ph-name" id="prof-name">—</div>
+      <div class="ph-email" id="prof-email">—</div>
     </div>
-    <div class="prof-row" onclick="openEditProf()">
-      <div class="prof-row-ico">✏️</div>
-      <div><div class="prof-row-t">Edit Profile</div><div class="prof-row-s">Name, phone</div></div>
+    <div class="prow" onclick="openEditProf()">
+      <div class="prow-ico">✏️</div><div><div class="prow-t">Edit Profile</div><div style="font-size:12px;color:#706f87;margin-top:2px">Name, phone</div></div>
     </div>
-    <div class="prof-row" onclick="doLogout()">
-      <div class="prof-row-ico">🚪</div>
-      <div><div class="prof-row-t">Sign out</div></div>
+    <div class="prow" onclick="doLogout()">
+      <div class="prow-ico">🚪</div><div><div class="prow-t">Sign out</div></div>
     </div>
   </div>
 
@@ -312,19 +282,15 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     <div class="nb" id="nb-shop" onclick="goTab('shop')"><span class="nb-ico">🛍️</span><span class="nb-lab">Shop</span></div>
     <div class="nb" id="nb-orders" onclick="goTab('orders')"><span class="nb-ico">📦</span><span class="nb-lab">Orders</span></div>
     <div class="nb" id="nb-inbox" onclick="goTab('inbox')"><span class="nb-ico">🔔</span><span class="nb-lab" id="inbox-lab">Inbox</span></div>
-    <div class="nb" id="nb-profile" onclick="goTab('profile')"><span class="nb-ico">👤</span><span class="nb-lab">Profile</span></div>
+    <div class="nb" id="nb-profile" onclick="goTab('profile')"><span class="nb-ico">👤</span><span class="nb-lab">Me</span></div>
   </div>
 </div>
 
 <!-- Nearby popup -->
 <div id="nearby-pop">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start">
-    <div>
-      <div class="np-from">📍 You're nearby!</div>
-      <div class="np-name" id="np-name">—</div>
-      <div class="np-pts" id="np-pts">—</div>
-    </div>
-    <button onclick="closeNearby()" style="background:none;color:#a0a0b5;font-size:20px;border:none;cursor:pointer;padding:0">✕</button>
+  <div style="display:flex;justify-content:space-between">
+    <div><div class="np-from">📍 You're nearby!</div><div class="np-name" id="np-n"></div><div class="np-pts" id="np-p"></div></div>
+    <button onclick="closeNearby()" style="background:none;font-size:20px;color:#aaa;padding:0">✕</button>
   </div>
   <div class="np-btns">
     <button style="background:#6C5CE7;color:#fff" onclick="openNearbyShop()">View Shop</button>
@@ -333,38 +299,37 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 </div>
 
 <!-- Add national card modal -->
-<div class="mo" id="addNatModal" onclick="if(event.target===this)closeMo('addNatModal')">
+<div class="mo" id="addNatMo" onclick="if(event.target===this)cmo('addNatMo')">
   <div class="ms">
-    <div class="mh"></div>
-    <div class="mt">Add loyalty card</div>
+    <div class="mh"></div><div class="mt">Add loyalty card</div>
     <div id="brands-step">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px" id="brands-grid"></div>
-      <button class="mb mb-gray" onclick="closeMo('addNatModal')">Cancel</button>
+      <button class="mb mb-gray" onclick="cmo('addNatMo')">Cancel</button>
     </div>
-    <div id="card-form-step" style="display:none">
+    <div id="card-step" style="display:none">
       <div style="background:#f4f2ff;border-radius:14px;padding:14px;margin-bottom:16px;text-align:center">
-        <div style="font-size:32px" id="fp-emo"></div>
-        <div style="font-size:15px;font-weight:700;margin-top:6px" id="fp-name"></div>
+        <div style="font-size:32px" id="fp-e"></div><div style="font-size:15px;font-weight:700;margin-top:6px" id="fp-n"></div>
       </div>
-      <div class="mf"><label class="ml">Card number ★</label><input id="fc-num" class="mi" placeholder="e.g. 6340040123456789"></div>
-      <div class="mf"><label class="ml">Your name on card</label><input id="fc-holder" class="mi" placeholder="Cardholder name"></div>
-      <div class="mf"><label class="ml">Store / Branch</label><input id="fc-store" class="mi" placeholder="e.g. Bristol Cabot Circus"></div>
-      <div id="fc-loc-status" style="font-size:12px;color:#706f87;text-align:center;height:18px;margin-bottom:8px"></div>
+      <div class="mf"><label class="ml">Card number ★</label><input id="fc-n" class="mi" placeholder="Your loyalty card number"></div>
+      <div class="mf"><label class="ml">Name on card</label><input id="fc-h" class="mi" placeholder="Cardholder name"></div>
+      <div class="mf"><label class="ml">Store / Branch</label><input id="fc-s" class="mi" placeholder="e.g. Bristol Broadmead"></div>
+      <div id="fc-loc" style="font-size:12px;color:#00897B;text-align:center;min-height:18px;margin-bottom:8px"></div>
       <button class="mb mb-dark" onclick="saveNatCard()">✓ Save card</button>
-      <button class="mb mb-gray" onclick="backToBrands()">← Back</button>
+      <button class="mb mb-gray" onclick="backBrands()">← Back</button>
       <div class="merr" id="fc-err"></div>
     </div>
   </div>
 </div>
 
 <!-- Shop search modal -->
-<div class="mo" id="shopSearchModal" onclick="if(event.target===this)closeMo('shopSearchModal')">
+<div class="mo" id="shopSearchMo" onclick="if(event.target===this)cmo('shopSearchMo')">
   <div class="ms">
-    <div class="mh"></div>
-    <div class="mt">Find a local shop</div>
-    <div class="mf"><label class="ml">Shop ID (from receipt/sign)</label><input id="ms-id" class="mi" placeholder="e.g. SL-SKY1" oninput="modalSearch(this.value)"></div>
+    <div class="mh"></div><div class="mt">Find a local shop</div>
+    <div class="mf"><label class="ml">Shop ID (from receipt or signage)</label>
+      <input id="ms-id" class="mi" placeholder="e.g. SL-SKY1" oninput="mSrch(this.value.trim())">
+    </div>
     <div id="ms-results"></div>
-    <button class="mb mb-gray" onclick="closeMo('shopSearchModal')">Cancel</button>
+    <button class="mb mb-gray" onclick="cmo('shopSearchMo')">Cancel</button>
   </div>
 </div>
 
@@ -372,94 +337,91 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 <div class="det" id="shopDet">
   <div class="det-top">
     <button class="det-back" onclick="closeShopDet()">← Back</button>
-    <div style="font-size:40px;margin-bottom:10px" id="sd-emo"></div>
-    <div class="det-pts" style="font-size:28px;margin-bottom:4px" id="sd-name"></div>
-    <div style="color:rgba(255,255,255,.5);font-size:13px" id="sd-meta"></div>
-    <div class="det-info" id="sd-loyalty"></div>
+    <div style="font-size:40px;margin-bottom:10px" id="sd-e"></div>
+    <div class="det-pts" style="font-size:26px;margin-bottom:4px" id="sd-name"></div>
+    <div style="color:rgba(255,255,255,.5);font-size:12px" id="sd-meta"></div>
+    <div class="det-info" id="sd-loy"></div>
   </div>
   <div class="det-body">
     <div id="sd-card-row" style="margin-bottom:18px">
       <div class="det-row">
-        <div><div class="det-row-l">Your points</div><div class="det-row-v" id="sd-mypts">—</div></div>
-        <button id="sd-card-btn" class="mb mb-purple" style="width:auto;padding:10px 16px" onclick="addLocalCard()">+ Add card</button>
+        <div><div class="det-rl">Your loyalty points</div><div class="det-rv" id="sd-pts">—</div></div>
+        <button id="sd-btn" class="mb mb-purple" style="width:auto;padding:10px 16px" onclick="addLocalCard()">+ Add card</button>
       </div>
     </div>
-    <div style="font-size:15px;font-weight:700;margin-bottom:12px">Menu / Products</div>
-    <div class="prods" id="sd-prods"></div>
+    <div class="sh" style="margin-top:0"><span class="sh-t">Products</span></div>
+    <div id="sd-prods"><div class="empty"><i>🛍️</i>No products yet</div></div>
   </div>
 </div>
 
-<!-- Card detail -->
+<!-- Card detail + barcode -->
 <div class="det" id="cardDet">
   <div class="det-top">
     <button class="det-back" onclick="closeCardDet()">← Back</button>
-    <div class="det-shop" id="cd-shop"></div>
+    <div style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:6px" id="cd-shop"></div>
     <div class="det-pts" id="cd-pts">0</div>
     <div class="det-lab">loyalty points</div>
-    <div class="det-info" id="cd-reward" style="display:none"></div>
+    <div class="det-info" id="cd-rew" style="display:none"></div>
   </div>
   <div class="det-body">
-    <!-- Barcode section -->
-    <div class="bc-wrap" id="bc-section">
-      <div style="font-size:24px;margin-bottom:8px" id="bc-emo"></div>
+    <!-- Barcode always shown -->
+    <div class="bc-wrap" id="bc-wrap">
+      <div style="font-size:22px;margin-bottom:6px" id="bc-e"></div>
       <div style="font-size:14px;font-weight:700;margin-bottom:14px" id="bc-name"></div>
-      <svg id="bc-svg"></svg>
-      <div style="font-size:12px;color:#706f87;margin-top:10px" id="bc-num"></div>
+      <svg id="bc-svg" style="max-width:100%;display:block;margin:0 auto"></svg>
+      <div style="font-size:12px;color:#706f87;margin-top:10px;word-break:break-all" id="bc-num"></div>
     </div>
-    <div id="cd-stats"></div>
+    <div id="cd-rows"></div>
     <div id="cd-prods"></div>
-    <button class="mb mb-red" onclick="deleteMyCard()" style="margin-top:12px">🗑 Remove card</button>
+    <button class="mb mb-red" style="margin-top:8px" onclick="delCard()">🗑 Remove card</button>
   </div>
 </div>
 
 <!-- Order modal -->
-<div class="mo" id="orderModal" onclick="if(event.target===this)closeMo('orderModal')">
+<div class="mo" id="orderMo" onclick="if(event.target===this)cmo('orderMo')">
   <div class="ms">
-    <div class="mh"></div>
-    <div class="mt">Place Order</div>
-    <div id="order-prod-preview" style="background:#f4f2ff;border-radius:14px;padding:14px;margin-bottom:16px"></div>
+    <div class="mh"></div><div class="mt">Place Order</div>
+    <div id="o-preview" style="background:#f4f2ff;border-radius:14px;padding:14px;margin-bottom:16px"></div>
     <div class="mf">
       <label class="ml">Order type</label>
-      <div style="display:flex;gap:10px;margin-top:6px">
-        <label id="opt-collect" style="flex:1;background:#f0f0f5;border-radius:12px;padding:12px;text-align:center;cursor:pointer;border:2px solid transparent">
-          <input type="radio" name="otype" value="collect" checked style="display:none" onchange="updateOrderType()">
+      <div class="order-type-row">
+        <label class="ot" id="ot-c" onclick="selOType('collect')">
+          <input type="radio" name="ot" value="collect" checked style="display:none">
           <div style="font-size:20px">🏪</div><div style="font-size:13px;font-weight:700;margin-top:4px">Click & Collect</div>
         </label>
-        <label id="opt-delivery" style="flex:1;background:#f0f0f5;border-radius:12px;padding:12px;text-align:center;cursor:pointer;border:2px solid transparent">
-          <input type="radio" name="otype" value="delivery" style="display:none" onchange="updateOrderType()">
+        <label class="ot" id="ot-d" onclick="selOType('delivery')">
+          <input type="radio" name="ot" value="delivery" style="display:none">
           <div style="font-size:20px">🚚</div><div style="font-size:13px;font-weight:700;margin-top:4px">Delivery</div>
         </label>
       </div>
     </div>
     <div class="mf"><label class="ml">Quantity</label><input id="o-qty" class="mi" type="number" value="1" min="1" max="20"></div>
-    <div id="f-collect-time" class="mf"><label class="ml">Collect time (optional)</label><input id="o-time" class="mi" placeholder="e.g. 2:30pm today"></div>
-    <div id="f-address" class="mf" style="display:none"><label class="ml">Delivery address ★</label><textarea id="o-addr" class="mi" rows="2" placeholder="Full delivery address"></textarea></div>
-    <div class="mf"><label class="ml">Note (optional)</label><input id="o-note" class="mi" placeholder="Any special instructions?"></div>
-    <div id="o-loyalty" style="background:#e8f5e9;border-radius:12px;padding:12px;font-size:13px;color:#2e7d32;margin-bottom:12px;display:none"></div>
+    <div id="o-cf" class="mf"><label class="ml">Collect time (optional)</label><input id="o-ct" class="mi" placeholder="e.g. 2:30pm today"></div>
+    <div id="o-df" class="mf" style="display:none"><label class="ml">Delivery address ★</label><textarea id="o-da" class="mta" placeholder="Full delivery address"></textarea></div>
+    <div class="mf"><label class="ml">Note</label><input id="o-note" class="mi" placeholder="Any instructions?"></div>
+    <div id="o-loy" style="background:#e8f5e9;border-radius:12px;padding:12px;font-size:13px;color:#2e7d32;margin-bottom:10px;display:none"></div>
     <button class="mb mb-purple" onclick="submitOrder()">🛒 Place Order</button>
-    <button class="mb mb-gray" onclick="closeMo('orderModal')">Cancel</button>
+    <button class="mb mb-gray" onclick="cmo('orderMo')">Cancel</button>
     <div class="merr" id="o-err"></div>
   </div>
 </div>
 
-<!-- Edit profile modal -->
-<div class="mo" id="editProfModal" onclick="if(event.target===this)closeMo('editProfModal')">
+<!-- Edit profile -->
+<div class="mo" id="editProfMo" onclick="if(event.target===this)cmo('editProfMo')">
   <div class="ms">
-    <div class="mh"></div>
-    <div class="mt">Edit Profile</div>
-    <div class="mf"><label class="ml">Name</label><input id="ep-name" class="mi" placeholder="Your name"></div>
-    <div class="mf"><label class="ml">Phone</label><input id="ep-phone" class="mi" placeholder="07700 900000"></div>
+    <div class="mh"></div><div class="mt">Edit Profile</div>
+    <div class="mf"><label class="ml">Name</label><input id="ep-n" class="mi" placeholder="Your name"></div>
+    <div class="mf"><label class="ml">Phone</label><input id="ep-p" class="mi" placeholder="07700 900000"></div>
     <button class="mb mb-dark" onclick="saveProf()">Save</button>
-    <button class="mb mb-gray" onclick="closeMo('editProfModal')">Cancel</button>
+    <button class="mb mb-gray" onclick="cmo('editProfMo')">Cancel</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-const SU='https://gcwevgaymahywqjorhnn.supabase.co', SK='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
-const SR='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2V2Z2F5bWFoeXdxam9yaG5uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTIzNjA2NywiZXhwIjoyMDk0ODEyMDY3fQ.w72URBw7g0TCP5y-TLcqLfiZNfjmaIAZ4M430Qb77E4';
-let TOK=null,UID=null,UEMAIL=null,CARDS=[],ORDERS=[],PROF={},INBOX=[],READ=JSON.parse(localStorage.getItem('sl_read')||'[]'),CUR_SHOP=null,CUR_CARD=null,CUR_BRAND=null,CUR_PROD=null,USER_LAT=null,USER_LNG=null,NEARBY_MID=null;
+const SU='https://gcwevgaymahywqjorhnn.supabase.co',SK='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
+let TOK=null,UID=null,UEMAIL=null,CARDS=[],ORDERS=[],PROF={},INBOX=[],READ=JSON.parse(localStorage.getItem('sl_r')||'[]'),CUR_SHOP=null,CUR_CARD=null,CUR_BRAND=null,CUR_PROD=null,NEARBY_MID=null;
 
 const BRANDS=[
   {id:'tesco',n:'Tesco Clubcard',e:'🛒',c:'#00539B'},{id:'nectar',n:'Nectar',e:'🏵️',c:'#FF6600'},
@@ -474,169 +436,175 @@ const BRANDS=[
   {id:'vue',n:'Vue Cinemas',e:'🎭',c:'#1B1464'},{id:'cineworld',n:'Cineworld',e:'🎬',c:'#C41230'}
 ];
 
-// ── Core helpers ─────────────────────────────────────────
-function H(admin){const k=admin?SR:(TOK||SK);return{'apikey':k,'Authorization':'Bearer '+k,'Content-Type':'application/json','Prefer':'return=representation'}}
-function get(t,q,admin){return fetch(SU+'/rest/v1/'+t+'?select=*'+(q?'&'+q:''),{headers:H(admin)}).then(r=>r.json())}
-function post(t,d,c,admin){const u=SU+'/rest/v1/'+t+(c?'?on_conflict='+c:'');return fetch(u,{method:'POST',headers:{...H(admin),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json())}
+// Core
+function H(){return{'apikey':SK,'Authorization':'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'return=representation'}}
+function get(t,q){return fetch(SU+'/rest/v1/'+t+'?select=*'+(q?'&'+q:''),{headers:H()}).then(r=>r.json())}
+function post(t,d,c){return fetch(SU+'/rest/v1/'+t+(c?'?on_conflict='+c:''),{method:'POST',headers:{...H(),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json())}
 function pat(t,q,d){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'PATCH',headers:H(),body:JSON.stringify(d)}).then(r=>r.json())}
 function del(t,q){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'DELETE',headers:H()})}
-function T(m,d=2800){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),d)}
+function T(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2800)}
 function V(id){const e=document.getElementById(id);return e?e.value.trim():''}
 function txt(id,v){const e=document.getElementById(id);if(e)e.textContent=v}
-function openMo(id){document.getElementById(id).classList.add('on')}
-function closeMo(id){document.getElementById(id).classList.remove('on')}
-function greet(){const h=new Date().getHours();return h<12?'Good morning':h<17?'Good afternoon':'Good evening'}
-function fmtLoy(m){if(!m)return'Earn points on every visit';const t=m.loyalty_type||'points',v=m.loyalty_value||1,th=m.loyalty_threshold||100;if(t==='points')return`Earn ${v} pt per £1 • Redeem at ${th} pts`;if(t==='percentage')return`${v}% cashback every purchase`;if(t==='stamp')return`Stamp card: reward every ${th} visits`;if(t==='discount')return`£${v} off when spending £${th}`;return'Earn points on every visit'}
-function dist(a,b,c,d){const R=6371000,f=(c-a)*Math.PI/180,g=(d-b)*Math.PI/180,h=Math.sin(f/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(g/2)**2;return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))}
+function omo(id){document.getElementById(id).classList.add('on')}
+function cmo(id){document.getElementById(id).classList.remove('on')}
+function sErr(id,m){const e=document.getElementById(id);if(e){e.textContent=m;e.style.display=m?'block':'none'}}
+function greet(){const h=new Date().getHours();return h<12?'Good morning ☀️':h<17?'Good afternoon 🌤':' Good evening 🌙'}
+function fmtLoy(m){if(!m||!m.loyalty_type)return'Earn loyalty points on every visit';const t=m.loyalty_type,v=m.loyalty_value||1,th=m.loyalty_threshold||100;if(t==='points')return`⭐ Earn ${v} point per £1 • Reward at ${th} pts`;if(t==='percentage')return`💸 ${v}% cashback on every purchase`;if(t==='stamp')return`🎫 Collect stamps — reward every ${th} visits`;if(t==='discount')return`💷 £${v} off when you spend £${th}`;return'Earn loyalty points'}
+function haversine(a,b,c,d){const R=6371000,f=(c-a)*Math.PI/180,g=(d-b)*Math.PI/180,h=Math.sin(f/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(g/2)**2;return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))}
 
-// ── Session ───────────────────────────────────────────────
-window.addEventListener('load',()=>{
-  setTimeout(()=>{
-    const s=JSON.parse(localStorage.getItem('sl_s')||'null');
-    if(s&&s.tok&&s.uid&&s.exp>Date.now()){TOK=s.tok;UID=s.uid;UEMAIL=s.email;startApp();}
-    else{document.getElementById('auth').style.display='flex';document.getElementById('splash').style.display='none';}
-  },900);
-});
-function saveSess(tok,uid,email,exp){TOK=tok;UID=uid;UEMAIL=email;localStorage.setItem('sl_s',JSON.stringify({tok,uid,email,exp:Date.now()+(exp||3600)*1000}))}
+// Session
+window.addEventListener('load',()=>setTimeout(()=>{
+  const s=JSON.parse(localStorage.getItem('sl_s')||'null');
+  if(s&&s.tok&&s.uid&&s.exp>Date.now()){TOK=s.tok;UID=s.uid;UEMAIL=s.email;boot();}
+  else{document.getElementById('auth').style.display='flex';document.getElementById('splash').style.display='none';}
+},900));
+function saveSess(tok,uid,email,exp){TOK=tok;UID=uid;UEMAIL=email;localStorage.setItem('sl_s',JSON.stringify({tok,uid,email,exp:Date.now()+(exp||3600)*1e3}))}
 function doLogout(){localStorage.removeItem('sl_s');location.reload()}
-function showSI(){document.getElementById('auth-login').style.display='block';document.getElementById('auth-signup').style.display='none'}
-function showSU(){document.getElementById('auth-login').style.display='none';document.getElementById('auth-signup').style.display='block'}
+function showSU(){document.getElementById('auth-login').style.display='none';document.getElementById('auth-su').style.display='block'}
+function showSI(){document.getElementById('auth-login').style.display='block';document.getElementById('auth-su').style.display='none'}
 
-// ── Auth ─────────────────────────────────────────────────
+// Auth
 function doLogin(){
-  const e=V('ai-email'),p=document.getElementById('ai-pw').value;
-  if(!e||!p){showErr('ai-err','Enter email and password');return}
-  const btn=document.querySelector('#auth-login .auth-btn');btn.textContent='Signing in...';btn.disabled=true;
+  const e=V('ai-e'),p=document.getElementById('ai-p').value;
+  if(!e||!p){sErr('ai-err','Enter email and password');return}
+  const b=document.querySelector('#auth-login .ab');b.textContent='Signing in...';b.disabled=true;
   fetch(SU+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})})
   .then(r=>r.json()).then(d=>{
-    btn.textContent='Sign in';btn.disabled=false;
-    if(!d.access_token){showErr('ai-err',d.error_code==='invalid_credentials'?'Wrong email or password':d.error_description||d.msg||'Sign in failed');return}
+    b.textContent='Sign in';b.disabled=false;
+    if(!d.access_token){sErr('ai-err',d.error_code==='invalid_credentials'?'Wrong email or password':d.error_description||d.msg||'Sign in failed');return}
     saveSess(d.access_token,d.user.id,d.user.email,d.expires_in);
     post('users',{id:d.user.id,email:d.user.email,created_at:Date.now(),total_points:0},'id').catch(()=>{});
-    startApp();
-  }).catch(()=>{btn.textContent='Sign in';btn.disabled=false;showErr('ai-err','Connection error — check internet')})
+    boot();
+  }).catch(()=>{b.textContent='Sign in';b.disabled=false;sErr('ai-err','Connection error — check internet')})
 }
 function doSignup(){
-  const name=V('su-name'),email=V('su-email'),pw=document.getElementById('su-pw').value,phone=V('su-phone');
-  if(!name||!email||pw.length<6){showErr('su-err','Name, email and 6+ char password required');return}
-  const btn=document.querySelector('#auth-signup .auth-btn');btn.textContent='Creating...';btn.disabled=true;
+  const name=V('su-n'),email=V('su-e'),pw=document.getElementById('su-p').value,phone=V('su-ph');
+  if(!name||!email||pw.length<6){sErr('su-err','All fields required (password 6+ chars)');return}
+  const b=document.querySelector('#auth-su .ab');b.textContent='Creating...';b.disabled=true;
   fetch(SU+'/auth/v1/signup',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email,password:pw,data:{name}})})
   .then(r=>r.json()).then(d=>{
-    btn.textContent='Create account';btn.disabled=false;
+    b.textContent='Create account';b.disabled=false;
     if(d.access_token&&d.user){
       saveSess(d.access_token,d.user.id,d.user.email,d.expires_in);
       post('users',{id:d.user.id,email,name,phone:phone||null,created_at:Date.now(),total_points:0},'id').catch(()=>{});
-      startApp();
-    } else if(d.user){
-      document.getElementById('ai-email').value=email;document.getElementById('ai-pw').value=pw;showSI();doLogin();
-    } else showErr('su-err',d.error_code==='user_already_exists'?'Account exists — sign in instead':d.error_description||d.msg||'Sign up failed')
-  }).catch(()=>{btn.textContent='Create account';btn.disabled=false;showErr('su-err','Connection error')})
+      boot();
+    }else if(d.user){document.getElementById('ai-e').value=email;document.getElementById('ai-p').value=pw;showSI();doLogin();}
+    else sErr('su-err',d.error_code==='user_already_exists'?'Account exists — sign in':d.error_description||d.msg||'Sign up failed')
+  }).catch(()=>{b.textContent='Create account';b.disabled=false;sErr('su-err','Connection error')})
 }
-function showErr(id,msg){const e=document.getElementById(id);if(e){e.textContent=msg;e.style.display='block'}}
 
-// ── App start ─────────────────────────────────────────────
-function startApp(){
+// Boot
+function boot(){
   document.getElementById('splash').style.display='none';
   document.getElementById('auth').style.display='none';
   document.getElementById('app').style.display='flex';
   txt('h-greet',greet());
-  loadProfile();loadCards();loadOrders();buildBrandGrid();loadStashloProds();
-  setTimeout(()=>{loadInbox();startGPS();},2500);
+  loadProf();
+  loadCards();
+  loadOrders();
+  buildBrands();
+  loadStashloProd();
+  setTimeout(()=>{loadInbox();startGPS();},2000);
 }
-function loadProfile(){
+
+function loadProf(){
   get('users','id=eq.'+UID).then(d=>{
     PROF=Array.isArray(d)&&d[0]?d[0]:{};
-    const n=PROF.name||UEMAIL||'there';
-    txt('h-name',n+"'s wallet");txt('prof-name',n);txt('prof-email',UEMAIL||'');
+    const n=PROF.name||(UEMAIL?UEMAIL.split('@')[0]:'there');
+    txt('h-name',n+"'s wallet");txt('prof-name',PROF.name||'You');txt('prof-email',UEMAIL||'');
   }).catch(()=>{})
 }
 
-// ── Cards ─────────────────────────────────────────────────
+// Cards
 function loadCards(){
-  get('cards','user_id=eq.'+UID+'&order=added_at.desc').then(d=>{
-    CARDS=(Array.isArray(d)?d:[]).map(c=>({
-      ...c, id:c.card_id, shopName:c.shop_name, addedAt:c.added_at,
+  get('cards','user_id=eq.'+UID+'&order=added_at.desc').then(raw=>{
+    CARDS=(Array.isArray(raw)?raw:[]).map(c=>({
+      ...c,
+      id:c.card_id, shopName:c.shop_name||c.name,
       visitCount:c.visit_count||0, totalSpend:c.total_spend||0, rewardsRedeemed:c.rewards_redeemed||0
     }));
-    renderCards();
-    txt('hs-cards',CARDS.length);
-    txt('hs-pts',CARDS.reduce((a,c)=>a+(c.points||0),0));
+    renderAllCards();
+    txt('hs-c',CARDS.length);
+    txt('hs-p',CARDS.reduce((a,c)=>a+(c.points||0),0));
     updateMyShops();
   }).catch(()=>{})
 }
-function renderCards(){
+
+function renderAllCards(){
   const nat=CARDS.filter(c=>c.type==='national');
   const loc=CARDS.filter(c=>c.type==='local');
-  const cardHtml=c=>`
-    <div class="lcard" style="background:${c.color||'#6C5CE7'}" onclick="openCardDet('${c.card_id}')">
-      <div class="lcard-top"><div class="lcard-name">${c.emoji||'🛍️'} ${c.shopName||c.name}</div>
-      <div class="lcard-badge">${c.type==='national'?'🇬🇧 National':'🏪 Local'}</div></div>
-      <div><div class="lcard-pts">${c.points||0}</div>
-      <div class="lcard-sub">points${c.threshold?' • next reward at '+c.threshold:''}</div></div>
-    </div>`;
-  document.getElementById('home-cards').innerHTML=CARDS.length?CARDS.slice(0,3).map(cardHtml).join(''):'<div class="empty"><div class="empty-i">💳</div><div class="empty-t">No cards yet<br>Go to Cards tab to add</div></div>';
-  document.getElementById('nat-list').innerHTML=nat.length?nat.map(cardHtml).join(''):'<div class="empty"><div class="empty-i">🇬🇧</div><div class="empty-t">No national cards<br>Tap + to add</div></div>';
-  document.getElementById('loc-list').innerHTML=loc.length?loc.map(cardHtml).join(''):'<div class="empty"><div class="empty-i">🏪</div><div class="empty-t">No local shop cards<br>Find a shop and add it</div></div>';
-}
-function filterCards(type){
-  const isNat=type==='national';
-  document.getElementById('nat-section').style.display=isNat?'block':'none';
-  document.getElementById('loc-section').style.display=isNat?'none':'block';
-  document.getElementById('chip-nat').classList.toggle('on',isNat);
-  document.getElementById('chip-loc').classList.toggle('on',!isNat);
+  const ch=c=>`<div class="lc" style="background:${c.color||'#6C5CE7'}" onclick="openCardDet('${c.card_id}')">
+    <div class="lc-top"><div class="lc-name">${c.emoji||'🛍️'} ${c.shopName||c.name}</div>
+    <div class="lc-badge">${c.type==='national'?'🇬🇧':'🏪'}</div></div>
+    <div><div class="lc-pts">${c.points||0}</div><div class="lc-sub">points${c.threshold?' • reward at '+c.threshold:''}</div></div>
+  </div>`;
+  const E=(ico,t)=>`<div class="empty"><i>${ico}</i>${t}</div>`;
+  txt('home-cards',''); // clear first
+  document.getElementById('home-cards').innerHTML=CARDS.length?CARDS.slice(0,3).map(ch).join(''):E('💳','No cards yet — tap Cards to add');
+  document.getElementById('n-list').innerHTML=nat.length?nat.map(ch).join(''):E('🇬🇧','No national cards<br>Tap + to add your first');
+  document.getElementById('l-list').innerHTML=loc.length?loc.map(ch).join(''):E('🏪','No local shop cards<br>Search a shop to add');
 }
 
-// ── Add national card ──────────────────────────────────────
-function buildBrandGrid(){
+function fCards(type){
+  const isN=type==='n';
+  document.getElementById('n-sec').style.display=isN?'block':'none';
+  document.getElementById('l-sec').style.display=isN?'none':'block';
+  document.getElementById('cn').classList.toggle('on',isN);
+  document.getElementById('cl').classList.toggle('on',!isN);
+}
+
+// National card add
+function buildBrands(){
   document.getElementById('brands-grid').innerHTML=BRANDS.map(b=>`
-    <div style="background:#f9f9fb;border-radius:14px;padding:14px;text-align:center;cursor:pointer" onclick="pickBrand('${b.id}','${b.n.replace(/'/g,"\\'")}','${b.e}','${b.c}')">
+    <div style="background:#f9f9fb;border-radius:14px;padding:14px;text-align:center;cursor:pointer;transition:background .15s" onclick="pickBrand('${b.id}','${b.n.replace(/'/g,"\\'")}','${b.e}','${b.c}')">
       <div style="font-size:28px">${b.e}</div><div style="font-size:12px;font-weight:600;margin-top:6px">${b.n}</div>
     </div>`).join('')
 }
-function openAddNational(){openMo('addNatModal');document.getElementById('brands-step').style.display='block';document.getElementById('card-form-step').style.display='none'}
+function openAddNat(){omo('addNatMo');document.getElementById('brands-step').style.display='block';document.getElementById('card-step').style.display='none'}
 function pickBrand(id,n,e,c){
   CUR_BRAND={id,n,e,c};
-  document.getElementById('fp-emo').textContent=e;document.getElementById('fp-name').textContent=n;
-  document.getElementById('fc-num').value='';document.getElementById('fc-holder').value='';document.getElementById('fc-store').value='';
-  document.getElementById('fc-loc-status').textContent='';
-  document.getElementById('brands-step').style.display='none';document.getElementById('card-form-step').style.display='block';
-  // Auto-request location for the card
-  requestGPS(function(lat,lng){
-    document.getElementById('fc-loc-status').textContent='📍 Location captured: '+lat.toFixed(4)+', '+lng.toFixed(4);
-  });
+  document.getElementById('fp-e').textContent=e;document.getElementById('fp-n').textContent=n;
+  ['fc-n','fc-h','fc-s'].forEach(x=>document.getElementById(x).value='');
+  document.getElementById('fc-loc').textContent='';
+  document.getElementById('brands-step').style.display='none';document.getElementById('card-step').style.display='block';
+  // Request GPS automatically when card form opens
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(p=>{
+      document.getElementById('fc-loc').textContent='📍 Location captured — card will be GPS-tagged';
+    },()=>{});
+  }
 }
-function backToBrands(){document.getElementById('brands-step').style.display='block';document.getElementById('card-form-step').style.display='none'}
+function backBrands(){document.getElementById('brands-step').style.display='block';document.getElementById('card-step').style.display='none'}
 function saveNatCard(){
-  const num=V('fc-num');if(!num||num.length<4){showErr2('fc-err','Card number required (4+ digits)');return}
-  if(!CUR_BRAND||!UID){T('Please sign in again');return}
-  post('cards',{user_id:UID,card_id:CUR_BRAND.id,name:CUR_BRAND.n,shop_name:CUR_BRAND.n,emoji:CUR_BRAND.e,color:CUR_BRAND.c,type:'national',points:0,threshold:500,added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0,card_number:num,card_holder:V('fc-holder')||null,store_location:V('fc-store')||null},'user_id,card_id')
-  .then(d=>{if(d&&d.code){showErr2('fc-err',d.message||'Save failed');return}T('✅ '+CUR_BRAND.n+' added!');closeMo('addNatModal');loadCards()})
-  .catch(()=>showErr2('fc-err','Save failed — try again'))
+  const num=V('fc-n');
+  if(!num||num.length<4){sErr('fc-err','Card number is required (4+ digits)');return}
+  if(!CUR_BRAND){T('Error — please try again');return}
+  const payload={user_id:UID,card_id:CUR_BRAND.id,name:CUR_BRAND.n,shop_name:CUR_BRAND.n,emoji:CUR_BRAND.e,color:CUR_BRAND.c,type:'national',points:0,threshold:500,added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0,card_number:num,card_holder:V('fc-h')||null,store_location:V('fc-s')||null};
+  post('cards',payload,'user_id,card_id').then(d=>{
+    if(d&&d.code){sErr('fc-err',d.message||'Save failed');return}
+    T('✅ '+CUR_BRAND.n+' card added!');cmo('addNatMo');loadCards();
+  }).catch(()=>sErr('fc-err','Save failed — try again'))
 }
-function showErr2(id,msg){const e=document.getElementById(id);if(e){e.textContent=msg;e.style.display='block'}}
 
-// ── GPS & Location ────────────────────────────────────────
-function requestGPS(cb){
-  if(!navigator.geolocation){if(cb)cb(null,null);return}
-  navigator.geolocation.getCurrentPosition(p=>{USER_LAT=p.coords.latitude;USER_LNG=p.coords.longitude;if(cb)cb(USER_LAT,USER_LNG);},()=>{if(cb)cb(null,null);},{enableHighAccuracy:true,timeout:8000})
-}
+// GPS
+let userLat=null,userLng=null;
 function startGPS(){
-  requestGPS(function(){checkNearby();});
-  setInterval(function(){requestGPS(function(){checkNearby();})},180000);
+  if(!navigator.geolocation)return;
+  navigator.geolocation.getCurrentPosition(p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;checkNearby();},()=>{},{enableHighAccuracy:true,timeout:8000});
+  setInterval(()=>navigator.geolocation.getCurrentPosition(p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;checkNearby();},()=>{},{timeout:8000}),120000);
 }
 function checkNearby(){
-  if(!USER_LAT||!USER_LNG)return;
-  const localCards=CARDS.filter(c=>c.type==='local'&&c.merchant_id);
-  if(!localCards.length)return;
-  get('merchants','id=in.('+localCards.map(c=>c.merchant_id).join(',')+')'+'&lat=not.is.null').then(d=>{
-    (Array.isArray(d)?d:[]).forEach(m=>{
+  if(!userLat||!userLng||!CARDS.length)return;
+  const lids=CARDS.filter(c=>c.type==='local'&&c.merchant_id).map(c=>c.merchant_id);
+  if(!lids.length)return;
+  get('merchants','id=in.('+lids.join(',')+')'+'&lat=not.is.null&lng=not.is.null').then(ms=>{
+    (Array.isArray(ms)?ms:[]).forEach(m=>{
       if(!m.lat||!m.lng)return;
-      const d2=dist(USER_LAT,USER_LNG,parseFloat(m.lat),parseFloat(m.lng));
-      if(d2<500){
-        const mc=localCards.find(c=>c.merchant_id===m.id);
+      if(haversine(userLat,userLng,parseFloat(m.lat),parseFloat(m.lng))<500){
         NEARBY_MID=m.id;
-        txt('np-name',(m.logo_emoji||'🏪')+' '+m.name);
-        txt('np-pts',mc?(mc.points||0)+' points accumulated':'Tap to view shop');
+        const mc=CARDS.find(c=>c.merchant_id===m.id);
+        txt('np-n',(m.logo_emoji||'🏪')+' '+m.name);
+        txt('np-p',mc?(mc.points||0)+' points on your card':'Add this shop to your wallet');
         document.getElementById('nearby-pop').style.display='block';
         setTimeout(closeNearby,10000);
       }
@@ -644,62 +612,61 @@ function checkNearby(){
   }).catch(()=>{})
 }
 function closeNearby(){document.getElementById('nearby-pop').style.display='none'}
-function openNearbyShop(){closeNearby();if(NEARBY_MID)loadShopById(NEARBY_MID)}
+function openNearbyShop(){closeNearby();if(NEARBY_MID)openShopById(NEARBY_MID)}
 
-// ── Shop search ───────────────────────────────────────────
-function openShopSearch(){openMo('shopSearchModal');document.getElementById('ms-id').value='';document.getElementById('ms-results').innerHTML=''}
-function searchShops(q){
-  q=q.trim();
+// Shop search
+function openShopSearch(){omo('shopSearchMo');document.getElementById('ms-id').value='';document.getElementById('ms-results').innerHTML=''}
+function srchShops(q){
   const el=document.getElementById('shop-results');
   if(!q){el.innerHTML='';return}
-  get('merchants','shop_id=eq.'+q).then(d=>{
-    if(Array.isArray(d)&&d.length)renderShopResults(d,el);
-    else get('merchants','name=ilike.*'+q+'*&limit=5').then(d2=>renderShopResults(d2,el))
+  get('merchants','shop_id=eq.'+encodeURIComponent(q)).then(d=>{
+    if(Array.isArray(d)&&d.length)renderShops(d,el,true);
+    else get('merchants','name=ilike.*'+encodeURIComponent(q)+'*&limit=6').then(d2=>renderShops(d2,el,true)).catch(()=>{})
   }).catch(()=>{})
 }
-function modalSearch(q){
-  q=q.trim();if(!q){document.getElementById('ms-results').innerHTML='';return}
-  get('merchants','shop_id=eq.'+q).then(d=>{
-    const el=document.getElementById('ms-results');
-    if(Array.isArray(d)&&d.length)renderShopResults(d,el,true);
-    else el.innerHTML='<div style="padding:12px;color:#706f87;font-size:13px">No shop found with ID "'+q+'"</div>';
-  })
+function mSrch(q){
+  const el=document.getElementById('ms-results');
+  if(!q){el.innerHTML='';return}
+  get('merchants','shop_id=eq.'+encodeURIComponent(q)).then(d=>{
+    if(Array.isArray(d)&&d.length)renderShops(d,el,false);
+    else el.innerHTML='<div style="padding:12px;color:#706f87;font-size:13px;text-align:center">No shop found for "'+q+'"</div>';
+  }).catch(()=>{})
 }
-function renderShopResults(shops,el,fromModal){
+function renderShops(shops,el,hideModal){
   if(!shops||!shops.length){el.innerHTML='';return}
   el.innerHTML=shops.map(s=>`
-    <div class="shop-item" onclick="${fromModal?'closeMo(\'shopSearchModal\');':'' }loadShopById('${s.id}')">
+    <div class="shop-item" onclick="${hideModal?'':'cmo(\'shopSearchMo\');'}openShopById('${s.id}')">
       <div class="shop-ico">${s.logo_emoji||'🏪'}</div>
-      <div class="shop-info"><div class="shop-name">${s.name}</div><div class="shop-meta">ID: ${s.shop_id||'—'} • ${fmtLoy(s).slice(0,40)}</div></div>
+      <div class="shop-info"><div class="shop-name">${s.name}</div><div class="shop-meta">ID: ${s.shop_id||'—'} • ${fmtLoy(s).slice(0,45)}</div></div>
       <button class="shop-btn">View →</button>
     </div>`).join('')
 }
-function loadShopById(mid){
+function openShopById(mid){
   get('merchants','id=eq.'+mid).then(d=>{
-    const s=Array.isArray(d)&&d[0]?d[0]:null;
-    if(!s){T('Shop not found');return}
+    const s=Array.isArray(d)&&d[0]?d[0]:null;if(!s){T('Shop not found');return}
     CUR_SHOP=s;
-    txt('sd-name',s.name);txt('sd-emo',s.logo_emoji||'🏪');txt('sd-meta',(s.category||'').toUpperCase()+(s.address?' • '+s.address:''));txt('sd-loyalty','💳 '+fmtLoy(s));
-    const myCard=CARDS.find(c=>c.merchant_id===s.id);
-    txt('sd-mypts',myCard?(myCard.points||0):'—');
-    const btn=document.getElementById('sd-card-btn');
-    if(myCard){btn.textContent='View card';btn.onclick=()=>openCardDet('local-'+s.id);}
-    else{btn.textContent='+ Add card';btn.onclick=addLocalCard;}
-    get('products','merchant_id=eq.'+s.id+'&active=eq.true&order=created_at.asc').then(pd=>{
-      const prods=Array.isArray(pd)?pd:[];
-      document.getElementById('sd-prods').innerHTML=prods.length?'<div class="prods">'+prods.map(p=>prodCard(p,s)).join('')+'</div>':'<div style="padding:16px;color:#706f87;font-size:13px">No products listed yet</div>';
-    });
+    txt('sd-e',s.logo_emoji||'🏪');txt('sd-name',s.name);
+    txt('sd-meta',(s.category||'').toUpperCase()+(s.address?' • '+s.address:''));txt('sd-loy',fmtLoy(s));
+    const mc=CARDS.find(c=>c.merchant_id===s.id);
+    txt('sd-pts',mc?(mc.points||0):'—');
+    const btn=document.getElementById('sd-btn');
+    if(mc){btn.textContent='View my card';btn.onclick=()=>openCardDet('local-'+s.id);}
+    else{btn.textContent='+ Add loyalty card';btn.onclick=addLocalCard;}
+    // Load products
+    get('products','merchant_id=eq.'+s.id+'&active=eq.true&order=created_at.asc').then(ps=>{
+      const prods=Array.isArray(ps)?ps:[];
+      document.getElementById('sd-prods').innerHTML=prods.length?'<div class="prods-grid">'+prods.map(p=>pCard(p,s)).join('')+'</div>':'<div class="empty"><i>🛍️</i>No products listed yet</div>';
+    }).catch(()=>{});
     document.getElementById('shopDet').classList.add('on');
-  })
+  }).catch(()=>T('Could not load shop'))
 }
-function prodCard(p,shop){
-  const shopData=shop||CUR_SHOP||{};
-  const enc=encodeURIComponent(JSON.stringify({id:p.id,name:p.name,price:p.price,emoji:p.emoji,collect:p.collect,delivery:p.delivery,merchant_id:p.merchant_id||shopData.id,shopName:shopData.name||'Shop',loyalty_type:shopData.loyalty_type,loyalty_threshold:shopData.loyalty_threshold}));
-  return`<div class="prod" onclick="openOrder(decodeURIComponent('${enc}'))">
+function pCard(p,shop){
+  const enc=encodeURIComponent(JSON.stringify({id:p.id,name:p.name,price:p.price,emoji:p.emoji||'🛍️',collect:p.collect,delivery:p.delivery,merchant_id:p.merchant_id||(shop?shop.id:''),shopName:shop?shop.name:'Shop',loyalty_type:shop?shop.loyalty_type:'',loyalty_threshold:shop?shop.loyalty_threshold:100}));
+  return`<div class="prod-card" onclick="openOrder(decodeURIComponent('${enc}'))">
     <div class="prod-ico">${p.emoji||'🛍️'}</div>
     <div class="prod-name">${p.name}</div>
     <div class="prod-price">£${parseFloat(p.price||0).toFixed(2)}</div>
-    <div class="prod-tags">${p.collect!==false?'<span class="tag tag-c">Collect</span>':''}${p.delivery?'<span class="tag tag-d">Delivery</span>':''}</div>
+    <div class="prod-tags">${p.collect!==false?'<span class="pt pt-c">Collect</span>':''}${p.delivery?'<span class="pt pt-d">Delivery</span>':''}</div>
   </div>`
 }
 function closeShopDet(){document.getElementById('shopDet').classList.remove('on')}
@@ -707,178 +674,191 @@ function addLocalCard(){
   if(!CUR_SHOP)return;
   post('cards',{user_id:UID,card_id:'local-'+CUR_SHOP.id,merchant_id:CUR_SHOP.id,name:CUR_SHOP.name,shop_name:CUR_SHOP.name,emoji:CUR_SHOP.logo_emoji||'🏪',color:'#2d2d2d',type:'local',points:0,threshold:CUR_SHOP.loyalty_threshold||100,added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0},'user_id,card_id')
   .then(()=>{
-    T('✅ '+CUR_SHOP.name+' card added!');
-    // Save shop GPS if available
-    requestGPS(function(lat,lng){if(lat&&lng)pat('merchants','id=eq.'+CUR_SHOP.id,{lat,lng}).catch(()=>{})});
-    loadCards();loadShopById(CUR_SHOP.id);
+    T('✅ '+CUR_SHOP.name+' loyalty card added!');
+    // Save shop GPS
+    if(navigator.geolocation&&CUR_SHOP){
+      navigator.geolocation.getCurrentPosition(p=>{
+        pat('merchants','id=eq.'+CUR_SHOP.id,{lat:p.coords.latitude,lng:p.coords.longitude}).catch(()=>{});
+      },()=>{},{timeout:6000});
+    }
+    loadCards();openShopById(CUR_SHOP.id);
   }).catch(()=>T('Error adding card'))
 }
 
-// ── My shops in shop tab ──────────────────────────────────
+// My shops list
 function updateMyShops(){
   const loc=CARDS.filter(c=>c.type==='local');
   document.getElementById('my-shops').innerHTML=loc.length?loc.map(c=>`
-    <div class="shop-item" onclick="loadShopById('${c.merchant_id}')">
+    <div class="shop-item" onclick="openShopById('${c.merchant_id}')">
       <div class="shop-ico">${c.emoji||'🏪'}</div>
       <div class="shop-info"><div class="shop-name">${c.shopName||c.name}</div><div class="shop-meta">${c.points||0} points</div></div>
       <button class="shop-btn">View →</button>
-    </div>`).join(''):'<div class="empty" style="padding:20px"><div class="empty-t">Find shops to add them here</div></div>';
+    </div>`).join(''):'<div class="empty" style="padding:20px"><i>🏪</i>Find a shop and add it here</div>';
 }
 
-// ── Stashlo products ──────────────────────────────────────
-function loadStashloProds(){
+// Stashlo products
+function loadStashloProd(){
   get('stashlo_products','active=eq.true&order=created_at.desc').then(d=>{
-    const prods=Array.isArray(d)?d:[];
-    const sec=document.getElementById('stashlo-section');
+    const ps=Array.isArray(d)?d:[];
+    const sec=document.getElementById('stashlo-sec');
     const el=document.getElementById('stashlo-prods');
-    if(!prods.length){if(sec)sec.style.display='none';return}
-    if(sec)sec.style.display='block';
-    if(el)el.innerHTML=prods.map(p=>prodCard(p,{id:'stashlo',name:'Stashlo Store',loyalty_type:'points'})).join('');
+    if(!ps.length||!sec||!el){if(sec)sec.style.display='none';return}
+    sec.style.display='block';
+    el.innerHTML=ps.map(p=>pCard(p,{id:'stashlo',name:'Stashlo Store',loyalty_type:'points',loyalty_threshold:100})).join('');
   }).catch(()=>{})
 }
 
-// ── Orders ────────────────────────────────────────────────
-let ORDER_PROD=null;
-function openOrder(prodJson){
-  try{ORDER_PROD=typeof prodJson==='string'?JSON.parse(prodJson):prodJson;}catch(e){return}
-  const p=ORDER_PROD;
-  document.getElementById('order-prod-preview').innerHTML=`<div style="font-size:24px">${p.emoji||'🛍️'}</div><div style="font-weight:700;margin-top:6px">${p.name}</div><div style="color:#6C5CE7;font-size:18px;font-weight:800">£${parseFloat(p.price||0).toFixed(2)}</div><div style="font-size:12px;color:#706f87;margin-top:3px">${p.shopName||'Shop'}</div>`;
-  document.getElementById('o-qty').value='1';document.getElementById('o-time').value='';document.getElementById('o-note').value='';
-  const lo=document.getElementById('o-loyalty');
+// Orders
+let curOrderProd=null;
+function openOrder(j){
+  try{curOrderProd=typeof j==='string'?JSON.parse(j):j}catch(e){return}
+  const p=curOrderProd;
+  document.getElementById('o-preview').innerHTML=`<div style="font-size:28px">${p.emoji||'🛍️'}</div><div style="font-weight:700;font-size:16px;margin-top:6px">${p.name}</div><div style="color:#6C5CE7;font-size:20px;font-weight:800">£${parseFloat(p.price||0).toFixed(2)}</div><div style="font-size:12px;color:#706f87;margin-top:3px">${p.shopName||''}</div>`;
+  document.getElementById('o-qty').value='1';['o-ct','o-note'].forEach(x=>document.getElementById(x).value='');
+  document.getElementById('o-da').value='';
+  const lo=document.getElementById('o-loy');
   if(p.loyalty_type){lo.textContent='🎁 '+fmtLoy(p);lo.style.display='block';}else lo.style.display='none';
-  updateOrderType();openMo('orderModal');
+  selOType('collect');omo('orderMo');
 }
-function updateOrderType(){
-  const type=document.querySelector('input[name="otype"]:checked')?.value||'collect';
-  document.getElementById('opt-collect').style.border=type==='collect'?'2px solid #6C5CE7':'2px solid transparent';
-  document.getElementById('opt-delivery').style.border=type==='delivery'?'2px solid #6C5CE7':'2px solid transparent';
-  document.getElementById('f-collect-time').style.display=type==='collect'?'block':'none';
-  document.getElementById('f-address').style.display=type==='delivery'?'block':'none';
+function selOType(t){
+  document.querySelector('input[name="ot"][value="'+t+'"]').checked=true;
+  document.getElementById('ot-c').classList.toggle('sel',t==='collect');
+  document.getElementById('ot-d').classList.toggle('sel',t==='delivery');
+  document.getElementById('o-cf').style.display=t==='collect'?'block':'none';
+  document.getElementById('o-df').style.display=t==='delivery'?'block':'none';
 }
 function submitOrder(){
-  const p=ORDER_PROD;if(!p||!UID){showErr2('o-err','Error — please try again');return}
-  const type=document.querySelector('input[name="otype"]:checked')?.value||'collect';
+  const p=curOrderProd;if(!p||!UID){sErr('o-err','Error — please try again');return}
+  const type=document.querySelector('input[name="ot"]:checked')?.value||'collect';
   const qty=Math.max(1,parseInt(document.getElementById('o-qty').value)||1);
   const total=parseFloat(p.price||0)*qty;
-  const mid=p.merchant_id;if(!mid||mid==='stashlo'){T('Order unavailable for Stashlo Store');return}
-  if(type==='delivery'&&!V('o-addr')){showErr2('o-err','Delivery address required');return}
-  post('orders',{user_id:UID,merchant_id:mid,product_id:p.id,product_name:p.name,quantity:qty,total,type,status:'pending',delivery_address:V('o-addr'),collect_time:V('o-time'),note:V('o-note'),created_at:Date.now()})
-  .then(d=>{if(d&&d.code){showErr2('o-err',d.message||'Order failed');return}T('✅ Order placed! '+p.name+' × '+qty);closeMo('orderModal');closeShopDet();loadOrders();goTab('orders')})
-  .catch(()=>showErr2('o-err','Failed — try again'))
+  const mid=p.merchant_id;
+  if(!mid||mid==='stashlo'){T('Stashlo Store orders coming soon!');cmo('orderMo');return}
+  if(type==='delivery'&&!V('o-da')){sErr('o-err','Delivery address required');return}
+  post('orders',{user_id:UID,merchant_id:mid,product_id:p.id,product_name:p.name,quantity:qty,total,type,status:'pending',delivery_address:V('o-da'),collect_time:V('o-ct'),note:V('o-note'),created_at:Date.now()})
+  .then(d=>{
+    if(d&&d.code){sErr('o-err',d.message||'Order failed');return}
+    T('✅ Order placed — '+p.name+' × '+qty);cmo('orderMo');closeShopDet();loadOrders();goTab('orders');
+  }).catch(()=>sErr('o-err','Failed — try again'))
 }
 function loadOrders(){
   get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=30').then(d=>{
-    ORDERS=Array.isArray(d)?d:[];txt('hs-orders',ORDERS.length);renderOrders();
+    ORDERS=Array.isArray(d)?d:[];txt('hs-o',ORDERS.length);renderOrders();
   }).catch(()=>{})
 }
 function renderOrders(){
-  const sc={pending:'s-pending',ready:'s-ready',completed:'s-completed',rejected:'s-rejected'};
-  const html=ORDERS.length?ORDERS.map(o=>`
-    <div class="ocard">
-      <div class="ocard-head"><div class="oid">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div><div class="ostatus ${sc[o.status]||'s-pending'}">${o.status||'pending'}</div></div>
-      <div style="font-size:14px;font-weight:700;margin-bottom:4px">${o.product_name||'Order'}</div>
-      <div style="font-size:12px;color:#706f87;margin-bottom:8px">Qty: ${o.quantity||1} • ${o.type==='collect'?'🏪 Collect':'🚚 Delivery'}${o.collect_time?' at '+o.collect_time:''}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:16px;font-weight:800;color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</div><div style="font-size:11px;color:#706f87">${o.created_at?new Date(o.created_at).toLocaleDateString():''}</div></div>
-    </div>`).join(''):'<div class="empty"><div class="empty-i">📦</div><div class="empty-t">No orders yet<br>Browse shops to order</div></div>';
-  document.getElementById('orders-list').innerHTML=html;
-  document.getElementById('home-orders').innerHTML=ORDERS.length?ORDERS.slice(0,2).map(o=>`
-    <div class="ocard"><div class="ocard-head"><div class="oid">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div><div class="ostatus ${sc[o.status]||'s-pending'}">${o.status||'pending'}</div></div>
-    <div style="font-size:14px;font-weight:700">${o.product_name||'Order'}</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><div style="font-size:14px;font-weight:800;color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</div><div style="font-size:11px;color:#706f87">${o.type}</div></div></div>`).join(''):'<div class="empty" style="padding:20px"><div class="empty-t">No orders yet</div></div>';
+  const sc={pending:'st-p',ready:'st-r',completed:'st-c',rejected:'st-x'};
+  const h=o=>`<div class="ocard">
+    <div class="ocard-h"><div style="font-size:12px;font-weight:700;color:#706f87">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div><div class="ostatus ${sc[o.status]||'st-p'}">${o.status||'pending'}</div></div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">${o.product_name||'Order'}</div>
+    <div style="font-size:12px;color:#706f87;margin-bottom:8px">Qty: ${o.quantity||1} • ${o.type==='collect'?'🏪 Collect':'🚚 Delivery'}${o.collect_time?' at '+o.collect_time:''}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:17px;font-weight:800;color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</div><div style="font-size:11px;color:#706f87">${o.created_at?new Date(o.created_at).toLocaleDateString():''}</div></div>
+  </div>`;
+  document.getElementById('orders-list').innerHTML=ORDERS.length?ORDERS.map(h).join(''):'<div class="empty"><i>📦</i>No orders yet<br>Browse shops to place an order</div>';
+  document.getElementById('home-orders').innerHTML=ORDERS.length?ORDERS.slice(0,2).map(h).join(''):'<div class="empty" style="padding:16px"><i style="font-size:28px">📦</i>No orders yet</div>';
 }
 
-// ── Card detail + Barcode ─────────────────────────────────
+// Card detail + Barcode
 function openCardDet(cardId){
   const c=CARDS.find(x=>x.card_id===cardId||x.id===cardId);if(!c)return;
   CUR_CARD=c;
   txt('cd-shop',c.shopName||c.name);txt('cd-pts',c.points||0);
-  // Reward info
-  const ri=document.getElementById('cd-reward');
+  // Reward banner
+  const rew=document.getElementById('cd-rew');
   if(c.threshold){
-    const left=c.threshold-(c.points||0);
-    ri.textContent=left<=0?'🎉 You can redeem a reward! Show this card to the shop.':`${left} more points to next reward (need ${c.threshold})`;
-    ri.style.display='block';
-  } else ri.style.display='none';
-  // Barcode
-  const num=c.card_number||c.card_id||c.id||'0000000000000';
-  txt('bc-emo',c.emoji||'🛍️');txt('bc-name',c.shopName||c.name);txt('bc-num',String(num));
-  const bcEl=document.getElementById('bc-svg');
-  try{
-    JsBarcode(bcEl,String(num),{format:'CODE128',width:2,height:72,displayValue:true,fontSize:13,margin:8,background:'#ffffff',lineColor:'#0a0a14'});
-    document.getElementById('bc-section').style.display='block';
-  }catch(e){
-    bcEl.parentElement.innerHTML='<div style="padding:20px;text-align:center"><div style="font-size:28px;font-weight:900;letter-spacing:4px;color:#0a0a14">'+num+'</div><div style="font-size:11px;color:#706f87;margin-top:8px">Card number</div></div>';
+    const left=(c.threshold||0)-(c.points||0);
+    rew.textContent=left<=0?'🎉 Reward unlocked! Show this card to the merchant.':left+' more points until your next reward ('+c.threshold+' needed)';
+    rew.style.display='block';
+  }else rew.style.display='none';
+  // BARCODE — always render
+  const num=String(c.card_number||c.card_id||c.id||'0000000000');
+  txt('bc-e',c.emoji||'🛍️');txt('bc-name',c.shopName||c.name);txt('bc-num',num);
+  const svg=document.getElementById('bc-svg');
+  if(typeof JsBarcode!=='undefined'){
+    try{
+      JsBarcode(svg,num,{format:'CODE128',width:2,height:72,displayValue:true,fontSize:13,margin:8,background:'#ffffff',lineColor:'#0a0a14'});
+      svg.style.display='block';
+    }catch(e){
+      svg.style.display='none';
+      document.getElementById('bc-wrap').innerHTML+='<div style="font-size:26px;font-weight:900;letter-spacing:4px;padding:12px 0">'+num+'</div>';
+    }
+  }else{
+    svg.style.display='none';
+    document.getElementById('bc-num').style.fontSize='24px';
+    document.getElementById('bc-num').style.fontWeight='900';
+    document.getElementById('bc-num').style.letterSpacing='4px';
+    document.getElementById('bc-num').style.color='#0a0a14';
   }
-  // Stats
-  document.getElementById('cd-stats').innerHTML=`
-    <div class="det-row"><div class="det-row-l">Visits</div><div class="det-row-v">${c.visitCount||0}</div></div>
-    <div class="det-row"><div class="det-row-l">Total spent</div><div class="det-row-v">£${parseFloat(c.totalSpend||0).toFixed(2)}</div></div>
-    <div class="det-row"><div class="det-row-l">Rewards redeemed</div><div class="det-row-v">${c.rewardsRedeemed||0}</div></div>
-    ${c.store_location?'<div class="det-row"><div class="det-row-l">Store</div><div class="det-row-v">'+c.store_location+'</div></div>':''}`;
-  // Products for local cards
-  const pdEl=document.getElementById('cd-prods');
+  // Stats rows
+  document.getElementById('cd-rows').innerHTML=`
+    <div class="det-row"><div class="det-rl">Visits</div><div class="det-rv">${c.visitCount||0}</div></div>
+    <div class="det-row"><div class="det-rl">Total spent</div><div class="det-rv">£${parseFloat(c.totalSpend||0).toFixed(2)}</div></div>
+    <div class="det-row"><div class="det-rl">Rewards redeemed</div><div class="det-rv">${c.rewardsRedeemed||0}</div></div>
+    ${c.store_location?'<div class="det-row"><div class="det-rl">Store</div><div class="det-rv">'+c.store_location+'</div></div>':''}`;
+  // Local shop products
+  const pd=document.getElementById('cd-prods');pd.innerHTML='';
   if(c.type==='local'&&c.merchant_id){
-    get('products','merchant_id=eq.'+c.merchant_id+'&active=eq.true&order=created_at.asc').then(d=>{
-      const prods=Array.isArray(d)?d:[];
+    get('products','merchant_id=eq.'+c.merchant_id+'&active=eq.true&order=created_at.asc').then(ps=>{
+      const prods=Array.isArray(ps)?ps:[];
       if(prods.length){
-        const shopInfo={id:c.merchant_id,name:c.shopName||c.name,loyalty_type:CARDS.find(x=>x.merchant_id===c.merchant_id)?.loyalty_type};
-        pdEl.innerHTML='<div style="font-size:15px;font-weight:700;margin:16px 0 10px">Order from this shop</div><div class="prods">'+prods.map(p=>prodCard(p,shopInfo)).join('')+'</div>';
-      }else pdEl.innerHTML='';
-    });
-  }else pdEl.innerHTML='';
+        const shopRef={id:c.merchant_id,name:c.shopName||c.name,loyalty_type:'points',loyalty_threshold:c.threshold||100};
+        pd.innerHTML='<div class="sh" style="margin-top:16px"><span class="sh-t">Order from this shop</span></div><div class="prods-grid">'+prods.map(p=>pCard(p,shopRef)).join('')+'</div>';
+      }
+    }).catch(()=>{});
+  }
   document.getElementById('cardDet').classList.add('on');
 }
 function closeCardDet(){document.getElementById('cardDet').classList.remove('on')}
-function deleteMyCard(){
-  if(!CUR_CARD||!confirm('Remove this loyalty card?'))return;
+function delCard(){
+  if(!CUR_CARD||!confirm('Remove this loyalty card from your wallet?'))return;
   del('cards','user_id=eq.'+UID+'&card_id=eq.'+(CUR_CARD.card_id||CUR_CARD.id))
-  .then(()=>{T('Card removed');closeCardDet();loadCards()}).catch(()=>T('Error'))
+  .then(()=>{T('Card removed');closeCardDet();loadCards()}).catch(()=>T('Error removing card'))
 }
 
-// ── Inbox ─────────────────────────────────────────────────
+// Inbox
 function loadInbox(){
-  const localMerchants=CARDS.filter(c=>c.type==='local'&&c.merchant_id).map(c=>c.merchant_id);
-  const p=[get('broadcasts','audience=in.(all,customers)&order=sent_at.desc&limit=30')];
-  if(localMerchants.length)p.push(get('notifications','merchant_id=in.('+localMerchants.join(',')+')'+'&order=sent_at.desc&limit=20'));
-  Promise.all(p).then(([bc,no])=>{
+  const lids=CARDS.filter(c=>c.type==='local'&&c.merchant_id).map(c=>c.merchant_id);
+  const ps=[get('broadcasts','audience=in.(all,customers)&order=sent_at.desc&limit=30')];
+  if(lids.length)ps.push(get('notifications','merchant_id=in.('+lids.join(',')+')'+'&order=sent_at.desc&limit=20').catch(()=>[]));
+  Promise.all(ps).then(([bc,no])=>{
     const bcast=(Array.isArray(bc)?bc:[]).map(b=>({...b,_from:'📢 Stashlo'}));
     const notifs=(Array.isArray(no)?no:[]).map(n=>({...n,_from:'🏪 Shop'}));
     INBOX=[...bcast,...notifs].sort((a,b)=>(b.sent_at||0)-(a.sent_at||0));
-    renderInbox();updateInboxBadge();
+    renderInbox();updBadge();
   }).catch(()=>{})
 }
 function renderInbox(){
   const el=document.getElementById('inbox-list');if(!el)return;
-  if(!INBOX.length){el.innerHTML='<div class="empty"><div class="empty-i">🔔</div><div class="empty-t">No notifications yet</div></div>';return}
+  if(!INBOX.length){el.innerHTML='<div class="empty"><i>🔔</i>No notifications yet</div>';return}
   el.innerHTML=INBOX.map(m=>{
-    const read=READ.includes(m.id);
-    return`<div class="inbox-item ${read?'':'inbox-unread'}" onclick="markRead('${m.id}')">
-      <div class="inbox-from">${m._from||'Stashlo'}</div>
-      <div class="inbox-title">${m.title||'Notification'}</div>
-      <div class="inbox-body">${m.body||''}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-        <div class="inbox-time">${m.sent_at?new Date(m.sent_at).toLocaleString().slice(0,14):'—'}</div>
-        ${!read?'<div style="width:8px;height:8px;background:#6C5CE7;border-radius:50%"></div>':''}
+    const rd=READ.includes(String(m.id));
+    return`<div class="icard ${rd?'':'icard-unread'}" onclick="markRead('${m.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div class="icard-from">${m._from||'Stashlo'}</div>
+        <div class="icard-title">${m.title||'Notification'}</div>
+        <div class="icard-body">${m.body||''}</div>
+        <div style="font-size:11px;color:#a0a0b5;margin-top:6px">${m.sent_at?new Date(m.sent_at).toLocaleString().slice(0,15):'—'}</div></div>
+        ${!rd?'<div style="width:8px;height:8px;background:#6C5CE7;border-radius:50%;flex-shrink:0;margin-top:4px"></div>':''}
       </div>
     </div>`}).join('')
 }
-function markRead(id){if(!READ.includes(id)){READ.push(id);localStorage.setItem('sl_read',JSON.stringify(READ));renderInbox();updateInboxBadge()}}
-function markAllRead(){READ=INBOX.map(m=>m.id);localStorage.setItem('sl_read',JSON.stringify(READ));renderInbox();updateInboxBadge()}
-function updateInboxBadge(){const u=INBOX.filter(m=>!READ.includes(m.id)).length;txt('inbox-lab',u?'Inbox ('+u+')':'Inbox')}
+function markRead(id){if(!READ.includes(String(id))){READ.push(String(id));localStorage.setItem('sl_r',JSON.stringify(READ));renderInbox();updBadge()}}
+function markAllRead(){READ=INBOX.map(m=>String(m.id));localStorage.setItem('sl_r',JSON.stringify(READ));renderInbox();updBadge()}
+function updBadge(){const u=INBOX.filter(m=>!READ.includes(String(m.id))).length;txt('inbox-lab',u?'Inbox ('+u+')':'Inbox')}
 
-// ── Profile ───────────────────────────────────────────────
-function openEditProf(){document.getElementById('ep-name').value=PROF.name||'';document.getElementById('ep-phone').value=PROF.phone||'';openMo('editProfModal')}
-function saveProf(){pat('users','id=eq.'+UID,{name:V('ep-name'),phone:V('ep-phone')}).then(()=>{T('✅ Profile saved');closeMo('editProfModal');loadProfile()}).catch(()=>T('Save failed'))}
+// Profile
+function openEditProf(){document.getElementById('ep-n').value=PROF.name||'';document.getElementById('ep-p').value=PROF.phone||'';omo('editProfMo')}
+function saveProf(){pat('users','id=eq.'+UID,{name:V('ep-n'),phone:V('ep-p')}).then(()=>{T('✅ Saved');cmo('editProfMo');loadProf()}).catch(()=>T('Save failed'))}
 
-// ── Navigation ────────────────────────────────────────────
-function goTab(name){
+// Navigation
+function goTab(n){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
-  document.getElementById(name+'-screen').classList.add('on');
-  const nb=document.getElementById('nb-'+name);if(nb)nb.classList.add('on');
-  if(name==='orders')loadOrders();
-  if(name==='shop'){updateMyShops();loadStashloProds();}
-  if(name==='inbox')loadInbox();
+  document.getElementById(n+'-screen').classList.add('on');
+  const nb=document.getElementById('nb-'+n);if(nb)nb.classList.add('on');
+  if(n==='orders')loadOrders();
+  if(n==='shop'){updateMyShops();loadStashloProd();}
+  if(n==='inbox')loadInbox();
 }
 </script>
 </body>

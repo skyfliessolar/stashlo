@@ -158,7 +158,7 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
       </div>
       <div class="mfield"><label class="mlabel">Title</label><input id="bc-title" class="minput" placeholder="Broadcast title"></div>
       <div class="mfield"><label class="mlabel">Message</label><textarea id="bc-body" class="mtextarea" placeholder="Your message..."></textarea></div>
-      <button class="mbtn mbtn-purple" onclick="sendBroadcast()">📢 Send Broadcast</button>
+      <button class="mbtn mbtn-purple" id="bc-send-btn" onclick="sendBroadcast()">📢 Send Broadcast</button>
     </div>
     <div class="sec-head" style="margin-top:24px"><span class="sec-title">Sent Broadcasts</span></div>
     <div id="broadcasts-list"></div>
@@ -214,119 +214,118 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 
 <div class="toast" id="toast"></div>
 <script>
-const SURL='https://gcwevgaymahywqjorhnn.supabase.co',SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_',SR='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2V2Z2F5bWFoeXdxam9yaG5uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTIzNjA2NywiZXhwIjoyMDk0ODEyMDY3fQ.w72URBw7g0TCP5y-TLcqLfiZNfjmaIAZ4M430Qb77E4';
-let TOKEN=null,UID=null,MERCHANTS=[],CUSTOMERS=[],ORDERS=[],STASH_PRODS=[],BROADCASTS=[],CUR_MERCHANT=null,CUR_CUSTOMER=null;
+const SU='https://gcwevgaymahywqjorhnn.supabase.co',SK='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_',SR='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2V2Z2F5bWFoeXdxam9yaG5uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTIzNjA2NywiZXhwIjoyMDk0ODEyMDY3fQ.w72URBw7g0TCP5y-TLcqLfiZNfjmaIAZ4M430Qb77E4';
+let TOK=null,UID=null,MERCHANTS=[],CUSTOMERS=[],ORDERS=[],STASH_PRODS=[],BROADCASTS=[],CUR_MERCH=null,CUR_CUST=null,EDIT_PROD_ID=null;
 
 function HS(){return{'apikey':SR,'Authorization':'Bearer '+SR,'Content-Type':'application/json','Prefer':'return=representation'}}
-function H(){return{'apikey':SKEY,'Authorization':'Bearer '+(TOKEN||SKEY),'Content-Type':'application/json','Prefer':'return=representation'}}
-function sget(t,q){return fetch(`${SURL}/rest/v1/${t}?select=*${q?'&'+q:''}`,{headers:HS()}).then(r=>r.json())}
-function spost(t,d,c){const u=`${SURL}/rest/v1/${t}${c?'?on_conflict='+c:''}`;return fetch(u,{method:'POST',headers:{...HS(),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json())}
-function sdel(t,q){return fetch(`${SURL}/rest/v1/${t}?${q}`,{method:'DELETE',headers:HS()})}
-function toast(m,d=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d)}
+function H(){return{'apikey':SK,'Authorization':'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'return=representation'}}
+function sget(t,q){return fetch(SU+'/rest/v1/'+t+'?select=*'+(q?'&'+q:''),{headers:HS()}).then(r=>r.json())}
+function spost(t,d,c){return fetch(SU+'/rest/v1/'+t+(c?'?on_conflict='+c:''),{method:'POST',headers:{...HS(),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json())}
+function spat(t,q,d){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'PATCH',headers:HS(),body:JSON.stringify(d)}).then(r=>r.json())}
+function sdel(t,q){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'DELETE',headers:HS()})}
+function T(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2800)}
+function V(id){const e=document.getElementById(id);return e?e.value.trim():''}
 function txt(id,v){const e=document.getElementById(id);if(e)e.textContent=v}
-function val(id){const e=document.getElementById(id);return e?e.value.trim():''}
-function err(id,m){const e=document.getElementById(id);if(e){e.textContent=m;e.style.display=m?'block':'none'}}
-function openModal(id){document.getElementById(id).classList.add('show')}
-function closeModal(id){document.getElementById(id).classList.remove('show')}
+function omo(id){document.getElementById(id).classList.add('show')}
+function cmo(id){document.getElementById(id).classList.remove('show')}
 
 window.addEventListener('load',()=>{
   setTimeout(()=>{
-    const s=JSON.parse(localStorage.getItem('admin_sess')||'null');
-    if(s&&s.tok&&s.uid&&s.exp>Date.now()){TOKEN=s.tok;UID=s.uid;showApp();}
-    else{document.getElementById('auth').style.display='flex';document.getElementById('splash').style.display='none';}
+    const s=JSON.parse(localStorage.getItem('ad_s')||'null');
+    if(s&&s.tok&&s.uid&&s.exp>Date.now()){TOK=s.tok;UID=s.uid;showApp();}
+    else{document.getElementById('splash').style.display='flex';setTimeout(()=>{document.getElementById('splash').style.display='none';document.getElementById('auth').style.display='flex';},1200);}
   },900);
 });
-function logout(){localStorage.removeItem('admin_sess');TOKEN=null;location.reload()}
+function doLogout(){localStorage.removeItem('ad_s');location.reload()}
 
 function login(){
-  const e=val('email'),p=document.getElementById('password').value;
-  if(!e||!p){err('auth-error','Enter credentials');return}
-  const btn=document.querySelector('#auth .auth-btn');btn.textContent='Signing in...';btn.disabled=true;
-  fetch(`${SURL}/auth/v1/token?grant_type=password`,{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})})
+  const e=V('email'),p=document.getElementById('password').value;
+  if(!e||!p){const er=document.getElementById('auth-error');if(er){er.textContent='Enter credentials';er.style.display='block';}return}
+  const b=document.querySelector('#auth .auth-btn');if(b){b.disabled=true;b.textContent='Signing in...';}
+  fetch(SU+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})})
   .then(r=>r.json()).then(d=>{
-    btn.textContent='Sign in';btn.disabled=false;
-    if(!d.access_token){err('auth-error',d.error_description||d.msg||'Invalid credentials');return}
-    TOKEN=d.access_token;UID=d.user.id;
-    localStorage.setItem('admin_sess',JSON.stringify({tok:TOKEN,uid:UID,exp:Date.now()+(d.expires_in||3600)*1000}));
+    if(b){b.disabled=false;b.textContent='Sign in';}
+    if(!d.access_token){const er=document.getElementById('auth-error');if(er){er.textContent=d.error_description||d.msg||'Invalid credentials';er.style.display='block';}return}
+    TOK=d.access_token;UID=d.user.id;
+    localStorage.setItem('ad_s',JSON.stringify({tok:TOK,uid:UID,exp:Date.now()+(d.expires_in||3600)*1000}));
     showApp();
-  }).catch(()=>{btn.textContent='Sign in';btn.disabled=false;err('auth-error','Connection error')})
+  }).catch(()=>{if(b){b.disabled=false;b.textContent='Sign in';}const er=document.getElementById('auth-error');if(er){er.textContent='Connection error';er.style.display='block';}})
 }
 
 function showApp(){
-  document.getElementById('splash').style.display='none';
-  document.getElementById('auth').style.display='none';
-  document.getElementById('app').style.display='flex';
+  ['splash','auth'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none'});
+  const a=document.getElementById('app');if(a)a.style.display='flex';
   loadAll();
 }
 function loadAll(){loadMerchants();loadCustomers();loadOrders();loadStashProds();loadBroadcasts();}
+
 function loadMerchants(){
   sget('merchants','order=created_at.desc&limit=200').then(d=>{
-    MERCHANTS=Array.isArray(d)?d:[];
-    txt('d-merchants',MERCHANTS.length);
-    renderMerchants(MERCHANTS);
-    renderActivity();
+    MERCHANTS=Array.isArray(d)?d:[];txt('d-merchants',MERCHANTS.length);
+    renderMerchants(MERCHANTS);renderActivity();
   }).catch(()=>{})
 }
 function loadCustomers(){
   sget('users','order=created_at.desc&limit=200').then(d=>{
-    CUSTOMERS=Array.isArray(d)?d:[];
-    txt('d-customers',CUSTOMERS.length);
-    renderCustomers(CUSTOMERS);
+    CUSTOMERS=Array.isArray(d)?d:[];txt('d-customers',CUSTOMERS.length);renderCustomers(CUSTOMERS);
   }).catch(()=>{})
 }
 function loadOrders(){
   sget('orders','order=created_at.desc&limit=100').then(d=>{
-    ORDERS=Array.isArray(d)?d:[];
-    txt('d-orders',ORDERS.length);
-    renderOrders();
+    ORDERS=Array.isArray(d)?d:[];txt('d-orders',ORDERS.length);renderOrders();
   }).catch(()=>{})
 }
 function loadStashProds(){
   sget('stashlo_products','order=created_at.desc').then(d=>{
-    STASH_PRODS=Array.isArray(d)?d:[];
-    renderStashProds();
+    STASH_PRODS=Array.isArray(d)?d:[];renderStashProds();
   }).catch(()=>{})
 }
 function loadBroadcasts(){
   sget('broadcasts','order=sent_at.desc&limit=20').then(d=>{
-    BROADCASTS=Array.isArray(d)?d:[];
-    txt('d-broadcasts',BROADCASTS.length);
-    renderBroadcasts();
+    BROADCASTS=Array.isArray(d)?d:[];txt('d-broadcasts',BROADCASTS.length);renderBroadcasts();
   }).catch(()=>{})
 }
 
+// ── Render ──────────────────────────────────────────────
 function renderMerchants(list){
   const el=document.getElementById('merchants-list');if(!el)return;
   el.innerHTML=(list||MERCHANTS).length?(list||MERCHANTS).map(m=>`
-    <div class="item-card" onclick="openMerchant('${m.id}')">
+    <div class="item-card" onclick="openMerch('${m.id}')">
       <div class="item-row">
         <div><div class="item-name">${m.logo_emoji||'🏪'} ${m.name||'Unnamed'}</div>
           <div class="item-sub">ID: ${m.shop_id||'—'} • ${m.email||'—'}</div>
-          <div class="item-sub">${m.loyalty_type||'points'} • ${m.address||''}</div></div>
-        <div class="item-actions"><button class="btn-sm btn-red" onclick="event.stopPropagation();confirmDeleteMerchant('${m.id}')">🗑</button></div>
+          <div class="item-sub">${m.loyalty_type||'points'} • ${m.address||'no address'}</div>
+        </div>
+        <div class="item-actions">
+          <button class="btn-sm btn-blue" onclick="event.stopPropagation();editMerch('${m.id}')">✏️</button>
+          <button class="btn-sm btn-red" onclick="event.stopPropagation();confirmDelMerch('${m.id}')">🗑</button>
+        </div>
       </div>
     </div>`).join(''):'<div class="empty"><div class="empty-ico">🏪</div><div class="empty-txt">No merchants yet</div></div>';
 }
 function renderCustomers(list){
   const el=document.getElementById('customers-list');if(!el)return;
   el.innerHTML=(list||CUSTOMERS).length?(list||CUSTOMERS).map(c=>`
-    <div class="item-card" onclick="openCustomer('${c.id}')">
+    <div class="item-card" onclick="openCust('${c.id}')">
       <div class="item-row">
         <div><div class="item-name">👤 ${c.name||'User'}</div>
           <div class="item-sub">${c.email||'—'} • ${c.phone||'no phone'}</div></div>
-        <div class="item-actions"><button class="btn-sm btn-red" onclick="event.stopPropagation();confirmDeleteCustomer('${c.id}')">🗑</button></div>
+        <div class="item-actions">
+          <button class="btn-sm btn-red" onclick="event.stopPropagation();confirmDelCust('${c.id}')">🗑</button>
+        </div>
       </div>
     </div>`).join(''):'<div class="empty"><div class="empty-ico">👥</div><div class="empty-txt">No customers yet</div></div>';
 }
 function renderOrders(){
   const el=document.getElementById('orders-list');if(!el)return;
-  const stCls={pending:'badge-active',ready:'badge-active',completed:'badge-active',rejected:'badge-active'};
+  const sc={pending:'st-pending',ready:'st-ready',completed:'st-completed',rejected:'st-rejected'};
   el.innerHTML=ORDERS.length?ORDERS.map(o=>`
     <div class="item-card">
       <div class="item-row">
         <div><div class="item-name">${o.product_name||'Order'} × ${o.quantity||1}</div>
-          <div class="item-sub">£${parseFloat(o.total||0).toFixed(2)} • ${o.type||'collect'} • <span style="font-weight:700">${o.status||'pending'}</span></div>
-          <div class="item-sub">${o.created_at?new Date(o.created_at).toLocaleString().slice(0,14):'—'}</div></div>
+          <div class="item-sub">£${parseFloat(o.total||0).toFixed(2)} • ${o.type||'collect'} • <span class="status-badge ${sc[o.status]||'st-pending'}">${o.status||'pending'}</span></div>
+          <div class="item-sub">${o.created_at?new Date(o.created_at).toLocaleString().slice(0,15):'—'}</div>
+        </div>
         <div style="font-size:16px;font-weight:800;color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</div>
       </div>
     </div>`).join(''):'<div class="empty"><div class="empty-ico">📦</div><div class="empty-txt">No orders yet</div></div>';
@@ -337,133 +336,148 @@ function renderStashProds(){
     <div class="item-card">
       <div class="item-row">
         <div><div class="item-name">${p.emoji||'📦'} ${p.name}</div>
-          <div class="item-sub">£${parseFloat(p.price||0).toFixed(2)} • ${p.category||'—'}</div></div>
+          <div class="item-sub">£${parseFloat(p.price||0).toFixed(2)} • ${p.category||'—'} ${p.active===false?'• <span style=\"color:#c62828\">Hidden</span>':''}</div>
+        </div>
         <div class="item-actions">
-          <button class="btn-sm btn-blue" onclick="editStashProd('${p.id}')">✏️</button>
-          <button class="btn-sm btn-red" onclick="deleteStashProd('${p.id}')">🗑</button>
+          <button class="btn-sm btn-blue" onclick="editSP('${p.id}')">✏️</button>
+          <button class="btn-sm btn-red" onclick="delSP('${p.id}')">🗑</button>
         </div>
       </div>
-    </div>`).join(''):'<div class="empty"><div class="empty-ico">📦</div><div class="empty-txt">No products yet<br>Tap + Add to create</div></div>';
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">📦</div><div class="empty-txt">No Stashlo products yet<br>Tap + Add to create some</div></div>';
 }
 function renderBroadcasts(){
   const el=document.getElementById('broadcasts-list');if(!el)return;
   el.innerHTML=BROADCASTS.length?BROADCASTS.map(b=>`
     <div class="item-card">
       <div class="item-name">${b.title||'Broadcast'}</div>
-      <div class="item-sub" style="margin-top:4px">${b.body||''}</div>
-      <div class="item-sub" style="margin-top:6px">To: ${b.audience||'all'} • ${b.sent_at?new Date(b.sent_at).toLocaleString().slice(0,14):'—'}</div>
+      <div class="item-sub" style="margin-top:4px;line-height:1.5">${b.body||''}</div>
+      <div class="item-sub" style="margin-top:6px">To: ${b.audience||'all'} • ${b.sent_at?new Date(b.sent_at).toLocaleString().slice(0,15):'—'}</div>
     </div>`).join(''):'<div style="padding:16px;text-align:center;color:#706f87;font-size:13px">No broadcasts sent yet</div>';
 }
 function renderActivity(){
   const el=document.getElementById('recent-activity');if(!el)return;
   el.innerHTML=MERCHANTS.slice(0,3).map(m=>`
     <div class="item-card" style="margin-bottom:8px">
-      <div class="item-row"><div><div class="item-name">${m.logo_emoji||'🏪'} ${m.name||'Unnamed'}</div><div class="item-sub">Merchant • ${m.email||'—'}</div></div></div>
-    </div>`).join('')||'<div style="padding:16px;text-align:center;color:#706f87;font-size:13px">No recent activity</div>';
+      <div class="item-row"><div><div class="item-name">${m.logo_emoji||'🏪'} ${m.name||'Unnamed'}</div>
+        <div class="item-sub">${m.email||'—'} • ${m.loyalty_type||'points'}</div></div></div>
+    </div>`).join('')||'<div style="padding:16px;text-align:center;color:#706f87;font-size:13px">No merchants yet</div>';
 }
 
-function filterMerchants(){
-  const q=val('m-search').toLowerCase();
-  renderMerchants(MERCHANTS.filter(m=>(m.name||'').toLowerCase().includes(q)||(m.email||'').toLowerCase().includes(q)||(m.shop_id||'').toLowerCase().includes(q)));
-}
-function filterCustomers(){
-  const q=val('c-search').toLowerCase();
-  renderCustomers(CUSTOMERS.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q)||(c.phone||'').includes(q)));
-}
+// ── Filter search ─────────────────────────────────────────
+function filterMerchants(){const q=V('m-search').toLowerCase();renderMerchants(MERCHANTS.filter(m=>(m.name||'').toLowerCase().includes(q)||(m.email||'').toLowerCase().includes(q)||(m.shop_id||'').toLowerCase().includes(q)));}
+function filterCustomers(){const q=V('c-search').toLowerCase();renderCustomers(CUSTOMERS.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q)||(c.phone||'').includes(q)));}
 
-function openMerchant(id){
-  CUR_MERCHANT=MERCHANTS.find(m=>m.id===id);if(!CUR_MERCHANT)return;
-  const m=CUR_MERCHANT;
+// ── Merchant detail & edit ────────────────────────────────
+function openMerch(id){CUR_MERCH=MERCHANTS.find(m=>m.id===id);if(!CUR_MERCH)return;
+  const m=CUR_MERCH;
   document.getElementById('merchant-detail-body').innerHTML=`
-    <div class="item-card" style="margin-bottom:12px">
-      <div style="font-size:32px;margin-bottom:8px">${m.logo_emoji||'🏪'}</div>
-      <div style="font-size:18px;font-weight:800">${m.name||'Unnamed'}</div>
+    <div style="background:#f4f2ff;border-radius:14px;padding:16px;margin-bottom:14px;text-align:center">
+      <div style="font-size:36px">${m.logo_emoji||'🏪'}</div>
+      <div style="font-size:18px;font-weight:800;margin-top:8px">${m.name||'Unnamed'}</div>
       <div style="font-size:13px;color:#706f87;margin-top:4px">${m.email||'—'}</div>
     </div>
-    ${[['Shop ID',m.shop_id||'—'],['Category',m.category||'—'],['Address',m.address||'—'],['Loyalty',m.loyalty_type||'points'],['Open Hours',m.open_hours||'—']].map(([l,v])=>`
-    <div class="item-card" style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:#706f87;text-transform:uppercase;margin-bottom:4px">${l}</div><div style="font-size:15px;font-weight:700">${v}</div></div>`).join('')}`;
-  openModal('merchantModal');
+    ${[['Shop ID',m.shop_id||'—'],['Category',m.category||'—'],['Address',m.address||'—'],['Open Hours',m.open_hours||'—'],['Loyalty',m.loyalty_type||'points'],['Points per £1',m.loyalty_value||1],['Reward threshold',m.loyalty_threshold||100]].map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:12px;background:#f9f9fb;border-radius:12px;margin-bottom:8px"><div style="font-size:12px;font-weight:700;color:#706f87;text-transform:uppercase">${l}</div><div style="font-size:14px;font-weight:700">${v}</div></div>`).join('')}`;
+  omo('merchantModal');
 }
-function confirmDeleteMerchant(id){
-  CUR_MERCHANT=MERCHANTS.find(m=>m.id===id);openMerchant(id);
+function editMerch(id){
+  CUR_MERCH=MERCHANTS.find(m=>m.id===id);if(!CUR_MERCH)return;
+  const m=CUR_MERCH;
+  document.getElementById('em-name').value=m.name||'';
+  document.getElementById('em-addr').value=m.address||'';
+  document.getElementById('em-hours').value=m.open_hours||'';
+  document.getElementById('em-thresh').value=m.loyalty_threshold||100;
+  document.getElementById('em-val').value=m.loyalty_value||1;
+  const lt=document.getElementById('em-type');if(lt)lt.value=m.loyalty_type||'points';
+  omo('editMerchModal');
 }
+function saveEditMerch(){
+  if(!CUR_MERCH)return;
+  const upd={name:V('em-name'),address:V('em-addr'),open_hours:V('em-hours'),loyalty_threshold:parseFloat(document.getElementById('em-thresh').value)||100,loyalty_value:parseFloat(document.getElementById('em-val').value)||1,loyalty_type:document.getElementById('em-type')?document.getElementById('em-type').value:'points'};
+  spat('merchants','id=eq.'+CUR_MERCH.id,upd).then(()=>{T('✅ Merchant updated!');cmo('editMerchModal');loadMerchants();}).catch(()=>T('Update failed'));
+}
+function confirmDelMerch(id){CUR_MERCH=MERCHANTS.find(m=>m.id===id);omo('merchantModal');}
 function deleteMerchant(){
-  if(!CUR_MERCHANT)return;
-  if(!confirm('Delete merchant '+CUR_MERCHANT.name+'? This cannot be undone.'))return;
-  sdel('merchants','id=eq.'+CUR_MERCHANT.id).then(()=>{
-    sdel('products','merchant_id=eq.'+CUR_MERCHANT.id).catch(()=>{});
-    toast('✅ Merchant deleted');closeModal('merchantModal');loadMerchants();
-  }).catch(()=>toast('Delete failed'))
+  if(!CUR_MERCH||!confirm('Delete merchant '+CUR_MERCH.name+'? This cannot be undone.'))return;
+  sdel('merchants','id=eq.'+CUR_MERCH.id).then(()=>{
+    sdel('products','merchant_id=eq.'+CUR_MERCH.id).catch(()=>{});
+    sdel('transactions','merchant_id=eq.'+CUR_MERCH.id).catch(()=>{});
+    T('✅ Merchant deleted');cmo('merchantModal');loadMerchants();
+  }).catch(()=>T('Delete failed'));
 }
-function openCustomer(id){
-  CUR_CUSTOMER=CUSTOMERS.find(c=>c.id===id);if(!CUR_CUSTOMER)return;
-  const c=CUR_CUSTOMER;
+
+// ── Customer detail & delete ──────────────────────────────
+function openCust(id){CUR_CUST=CUSTOMERS.find(c=>c.id===id);if(!CUR_CUST)return;
+  const c=CUR_CUST;
   document.getElementById('customer-detail-body').innerHTML=`
-    <div class="item-card" style="margin-bottom:12px">
-      <div style="font-size:18px;font-weight:800">👤 ${c.name||'User'}</div>
+    <div style="background:#f4f2ff;border-radius:14px;padding:16px;margin-bottom:14px;text-align:center">
+      <div style="font-size:36px">👤</div>
+      <div style="font-size:18px;font-weight:800;margin-top:8px">${c.name||'User'}</div>
       <div style="font-size:13px;color:#706f87;margin-top:4px">${c.email||'—'}</div>
     </div>
-    ${[['Phone',c.phone||'—'],['Total Points',c.total_points||0],['Account ID',c.id.slice(0,20)+'...']].map(([l,v])=>`
-    <div class="item-card" style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:#706f87;text-transform:uppercase;margin-bottom:4px">${l}</div><div style="font-size:15px;font-weight:700">${v}</div></div>`).join('')}`;
-  openModal('customerModal');
+    ${[['Phone',c.phone||'—'],['Total Points',c.total_points||0]].map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:12px;background:#f9f9fb;border-radius:12px;margin-bottom:8px"><div style="font-size:12px;font-weight:700;color:#706f87;text-transform:uppercase">${l}</div><div style="font-size:14px;font-weight:700">${v}</div></div>`).join('')}`;
+  omo('customerModal');
 }
-function confirmDeleteCustomer(id){
-  CUR_CUSTOMER=CUSTOMERS.find(c=>c.id===id);openCustomer(id);
-}
+function confirmDelCust(id){CUR_CUST=CUSTOMERS.find(c=>c.id===id);openCust(id);}
 function deleteCustomer(){
-  if(!CUR_CUSTOMER)return;
-  if(!confirm('Delete customer '+( CUR_CUSTOMER.name||CUR_CUSTOMER.email)+'?'))return;
-  sdel('users','id=eq.'+CUR_CUSTOMER.id).then(()=>{
-    sdel('cards','user_id=eq.'+CUR_CUSTOMER.id).catch(()=>{});
-    sdel('orders','user_id=eq.'+CUR_CUSTOMER.id).catch(()=>{});
-    toast('✅ Customer deleted');closeModal('customerModal');loadCustomers();
-  }).catch(()=>toast('Delete failed'))
+  if(!CUR_CUST||!confirm('Delete customer '+( CUR_CUST.name||CUR_CUST.email)+'?'))return;
+  sdel('users','id=eq.'+CUR_CUST.id).then(()=>{
+    sdel('cards','user_id=eq.'+CUR_CUST.id).catch(()=>{});
+    sdel('orders','user_id=eq.'+CUR_CUST.id).catch(()=>{});
+    T('✅ Customer deleted');cmo('customerModal');loadCustomers();
+  }).catch(()=>T('Delete failed'));
 }
 
-function sendBroadcast(){
-  const title=val('bc-title'),body=document.getElementById('bc-body').value.trim(),audience=document.getElementById('bc-target').value;
-  if(!title||!body){toast('Fill title and message');return}
-  spost('broadcasts',{title,body,audience,sent_at:Date.now()}).then(()=>{
-    toast('✅ Broadcast sent to '+audience+'!');
-    document.getElementById('bc-title').value='';document.getElementById('bc-body').value='';
-    loadBroadcasts();
-  }).catch(()=>toast('Failed to send'))
-}
-
-function openAddStashProd(){
-  document.getElementById('sp-edit-id').value='';
+// ── Stashlo products ──────────────────────────────────────
+function openAddSP(){
+  EDIT_PROD_ID=null;
   document.getElementById('sp-modal-title').textContent='Add Stashlo Product';
   ['sp-name','sp-cat','sp-desc'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
   document.getElementById('sp-price').value='';document.getElementById('sp-emoji').value='';
-  openModal('stashProdModal');
+  const ae=document.getElementById('sp-active');if(ae)ae.checked=true;
+  const ce=document.getElementById('sp-collect');if(ce)ce.checked=true;
+  const de=document.getElementById('sp-delivery');if(de)de.checked=false;
+  omo('stashProdModal');
 }
-function editStashProd(id){
+function editSP(id){
   const p=STASH_PRODS.find(x=>x.id===id);if(!p)return;
-  document.getElementById('sp-edit-id').value=id;
+  EDIT_PROD_ID=id;
   document.getElementById('sp-modal-title').textContent='Edit Product';
   document.getElementById('sp-name').value=p.name||'';document.getElementById('sp-price').value=p.price||'';
   document.getElementById('sp-emoji').value=p.emoji||'';document.getElementById('sp-cat').value=p.category||'';
   document.getElementById('sp-desc').value=p.description||'';
-  openModal('stashProdModal');
+  const ae=document.getElementById('sp-active');if(ae)ae.checked=p.active!==false;
+  const ce=document.getElementById('sp-collect');if(ce)ce.checked=p.collect!==false;
+  const de=document.getElementById('sp-delivery');if(de)de.checked=!!p.delivery;
+  omo('stashProdModal');
 }
-function saveStashProd(){
-  const name=val('sp-name'),price=parseFloat(document.getElementById('sp-price').value||0),editId=val('sp-edit-id');
-  if(!name||price<=0){err('sp-err','Name and price required');return}
-  const data={name,price,emoji:val('sp-emoji')||'📦',category:val('sp-cat')||'other',description:val('sp-desc'),active:true};
-  const action=editId?
-    fetch(`${SURL}/rest/v1/stashlo_products?id=eq.${editId}`,{method:'PATCH',headers:HS(),body:JSON.stringify(data)}).then(r=>r.json()):
-    spost('stashlo_products',{...data,collect:true,delivery:false,created_at:Date.now()});
-  action.then(()=>{toast('✅ Product saved');closeModal('stashProdModal');loadStashProds()}).catch(()=>err('sp-err','Save failed'))
+function saveSP(){
+  const name=V('sp-name'),price=parseFloat(document.getElementById('sp-price').value||0);
+  if(!name||price<0){T('Name required');return}
+  const data={name,price,emoji:V('sp-emoji')||'📦',category:V('sp-cat')||'other',description:V('sp-desc'),active:document.getElementById('sp-active')?document.getElementById('sp-active').checked:true,collect:document.getElementById('sp-collect')?document.getElementById('sp-collect').checked:true,delivery:document.getElementById('sp-delivery')?document.getElementById('sp-delivery').checked:false};
+  const action=EDIT_PROD_ID?spat('stashlo_products','id=eq.'+EDIT_PROD_ID,data):spost('stashlo_products',{...data,created_at:Date.now()});
+  action.then(()=>{T('✅ Product saved — now visible to customers!');cmo('stashProdModal');loadStashProds();}).catch(()=>T('Save failed'));
 }
-function deleteStashProd(id){
-  if(!confirm('Delete this product?'))return;
-  sdel('stashlo_products','id=eq.'+id).then(()=>{toast('✅ Deleted');loadStashProds()})
+function delSP(id){if(!confirm('Delete this product?'))return;sdel('stashlo_products','id=eq.'+id).then(()=>{T('✅ Deleted');loadStashProds();});}
+
+// ── Broadcast ─────────────────────────────────────────────
+function sendBroadcast(){
+  const target=document.getElementById('bc-target')?document.getElementById('bc-target').value:'all';
+  const title=V('bc-title'),body=document.getElementById('bc-body').value.trim();
+  if(!title||!body){T('Fill title and message');return}
+  const b=document.getElementById('bc-send-btn');if(b){b.disabled=true;b.textContent='Sending...';}
+  spost('broadcasts',{title,body,audience:target,sent_at:Date.now()}).then(()=>{
+    if(b){b.disabled=false;b.textContent='📢 Send Broadcast';}
+    T('✅ Broadcast sent to '+target+'!');
+    document.getElementById('bc-title').value='';document.getElementById('bc-body').value='';
+    loadBroadcasts();
+  }).catch(()=>{if(b){b.disabled=false;b.textContent='📢 Send Broadcast';}T('Send failed')});
 }
 
+// ── Navigation ────────────────────────────────────────────
 function switchTab(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
-  document.getElementById(name+'-screen').classList.add('on');
+  const sc=document.getElementById(name+'-screen');if(sc)sc.classList.add('on');
   const nb=document.getElementById('nav-'+name);if(nb)nb.classList.add('on');
   if(name==='orders')loadOrders();
   if(name==='broadcast')loadBroadcasts();

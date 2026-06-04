@@ -294,7 +294,7 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 
   <!-- ORDERS -->
   <div class="screen" id="orders-screen">
-    <div class="sec-head"><span class="sec-title">Customer Orders</span><button class="sec-btn" onclick="loadOrders()">🔄 Refresh</button></div>
+    <div class="sec-head"><span class="sec-title">Customer Orders</span><div style="display:flex;gap:8px"><button class="sec-btn" onclick="downloadCSV('orders')">⬇ CSV</button><button class="sec-btn" onclick="loadOrders()">🔄</button></div></div>
     <div id="orders-list"></div>
   </div>
 
@@ -448,325 +448,312 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 <div class="toast" id="toast"></div>
 
 <script>
-const SURL='https://gcwevgaymahywqjorhnn.supabase.co',SKEY='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
-let TOKEN=null,UID=null,MID=null,MDATA={},PRODUCTS=[],ORDERS=[],CUSTOMERS=[],TRANSACTIONS=[],LOYALTY_TYPE='points',CUR_ORDER=null,SCAN_PHONE=null;
+const SU='https://gcwevgaymahywqjorhnn.supabase.co',SK='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
+let TOK=null,UID=null,MID=null,MDATA={},PRODUCTS=[],ORDERS=[],CUSTOMERS=[],TXNS=[],LT='points',CUR_ORDER=null,SCAN_PHONE=null;
 
-function H(){return{'apikey':SKEY,'Authorization':'Bearer '+(TOKEN||SKEY),'Content-Type':'application/json','Prefer':'return=representation'}}
-function get(t,q){return fetch(`${SURL}/rest/v1/${t}?select=*${q?'&'+q:''}`,{headers:H()}).then(r=>r.json())}
-function post(t,d,c){const u=`${SURL}/rest/v1/${t}${c?'?on_conflict='+c:''}`;return fetch(u,{method:'POST',headers:{...H(),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json())}
-function patch(t,q,d){return fetch(`${SURL}/rest/v1/${t}?${q}`,{method:'PATCH',headers:H(),body:JSON.stringify(d)}).then(r=>r.json())}
-function del(t,q){return fetch(`${SURL}/rest/v1/${t}?${q}`,{method:'DELETE',headers:H()})}
-function toast(m,d=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d)}
+function H(){return{'apikey':SK,'Authorization':'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'return=representation'}}
+function get(t,q){return fetch(SU+'/rest/v1/'+t+'?select=*'+(q?'&'+q:''),{headers:H()}).then(r=>r.json())}
+function post(t,d,c){return fetch(SU+'/rest/v1/'+t+(c?'?on_conflict='+c:''),{method:'POST',headers:{...H(),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json())}
+function pat(t,q,d){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'PATCH',headers:H(),body:JSON.stringify(d)}).then(r=>r.json())}
+function del(t,q){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'DELETE',headers:H()})}
+function T(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2800)}
+function V(id){const e=document.getElementById(id);return e?e.value.trim():''}
 function txt(id,v){const e=document.getElementById(id);if(e)e.textContent=v}
-function val(id){const e=document.getElementById(id);return e?e.value.trim():''}
-function err(id,m){const e=document.getElementById(id);if(e){e.textContent=m;e.style.display=m?'block':'none'}}
-function openModal(id){document.getElementById(id).classList.add('show')}
-function closeModal(id){document.getElementById(id).classList.remove('show')}
+function omo(id){document.getElementById(id).classList.add('show')}
+function cmo(id){document.getElementById(id).classList.remove('show')}
 
-function calcLoyalty(amount,mdata){
-  const t=(mdata||MDATA).loyalty_type||'points',v=(mdata||MDATA).loyalty_value||1,th=(mdata||MDATA).loyalty_threshold||100;
-  if(t==='points')return{pts:Math.floor(amount*v),desc:`+${Math.floor(amount*v)} pts`};
-  if(t==='percentage')return{pts:Math.floor(amount*v),cashback:(amount*v/100).toFixed(2),desc:`+${v}% (£${(amount*v/100).toFixed(2)} cashback)`};
-  if(t==='stamp')return{pts:1,desc:'+1 stamp'};
-  if(t==='discount')return{pts:Math.floor(amount),desc:`+${Math.floor(amount)} pts (redeem £${v} off at ${th} pts)`};
-  return{pts:Math.floor(amount),desc:`+${Math.floor(amount)} pts`};
+function calcLoy(amt){
+  const t=MDATA.loyalty_type||'points',v=parseFloat(MDATA.loyalty_value||1),th=parseFloat(MDATA.loyalty_threshold||100);
+  if(t==='points'){const pts=Math.floor(amt*v);return{pts,desc:'+'+pts+' pts ('+v+' per £1)'};}
+  if(t==='percentage'){const pts=Math.floor(amt*v);return{pts,desc:'+'+v+'% cashback ('+pts+' pts)'};}
+  if(t==='stamp'){return{pts:1,desc:'+1 stamp'};}
+  if(t==='discount'){const pts=Math.floor(amt);return{pts,desc:'+'+pts+' pts (redeem £'+v+' off at '+th+'pts)'};}
+  return{pts:Math.floor(amt),desc:'+'+Math.floor(amt)+' pts'};
 }
 function fmtRule(){
   const t=MDATA.loyalty_type||'points',v=MDATA.loyalty_value||1,th=MDATA.loyalty_threshold||100;
-  if(t==='points')return`Earn ${v} point per £1 • Redeem reward at ${th} points`;
-  if(t==='percentage')return`Earn ${v}% cashback on every purchase`;
-  if(t==='stamp')return`Collect a stamp per visit • Free reward every ${th} visits`;
-  if(t==='discount')return`Earn £${v} discount when spending £${th}`;
-  return'Earn points on every visit';}
+  if(t==='points')return'⭐ '+v+' point per £1 • Reward at '+th+' points';
+  if(t==='percentage')return'💸 '+v+'% cashback on every purchase';
+  if(t==='stamp')return'🎫 Stamp per visit • Reward every '+th+' visits';
+  if(t==='discount')return'💷 £'+v+' off when spending £'+th;
+  return'Loyalty points';
+}
 
-// ── Session ──────────────────────────────────────────────
 window.addEventListener('load',()=>{
   setTimeout(()=>{
-    const s=JSON.parse(localStorage.getItem('ms_sess')||'null');
-    if(s&&s.tok&&s.uid&&s.exp>Date.now()){TOKEN=s.tok;UID=s.uid;MID=s.uid;showApp();}
-    else{document.getElementById('auth').style.display='flex';document.getElementById('splash').style.display='none';}
+    const s=JSON.parse(localStorage.getItem('ms_s')||'null');
+    if(s&&s.tok&&s.uid&&s.exp>Date.now()){TOK=s.tok;UID=s.uid;MID=s.uid;showApp();}
+    else{document.getElementById('splash').style.display='flex';setTimeout(()=>{document.getElementById('splash').style.display='none';document.getElementById('auth').style.display='flex';},1200);}
   },900);
 });
-function saveSession(tok,uid,exp){TOKEN=tok;UID=uid;MID=uid;localStorage.setItem('ms_sess',JSON.stringify({tok,uid,exp:Date.now()+(exp||3600)*1000}))}
-function logout(){localStorage.removeItem('ms_sess');TOKEN=null;UID=null;location.reload()}
-function showReg(){document.getElementById('reg-section').style.display=document.getElementById('reg-section').style.display==='none'?'block':'none'}
+function saveSess(tok,uid,exp){TOK=tok;UID=uid;MID=uid;localStorage.setItem('ms_s',JSON.stringify({tok,uid,exp:Date.now()+(exp||3600)*1e3}))}
+function doLogout(){localStorage.removeItem('ms_s');location.reload()}
 
-// ── Auth ─────────────────────────────────────────────────
 function login(){
-  const e=val('email'),p=document.getElementById('password').value;
-  if(!e||!p){err('auth-error','Enter email and password');return}
-  const btn=document.querySelector('#auth .auth-btn');btn.textContent='Signing in...';btn.disabled=true;
-  fetch(`${SURL}/auth/v1/token?grant_type=password`,{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})})
+  const e=V('email'),p=document.getElementById('password').value;
+  if(!e||!p){showAuthErr('Enter email and password');return}
+  const b=document.querySelector('#auth button[onclick="login()"]');if(b){b.disabled=true;b.textContent='Signing in...';}
+  fetch(SU+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})})
   .then(r=>r.json()).then(d=>{
-    btn.textContent='Sign in';btn.disabled=false;
-    if(!d.access_token){err('auth-error',d.error_code==='invalid_credentials'?'Wrong email or password':d.error_description||d.msg||'Sign in failed');return}
-    saveSession(d.access_token,d.user.id,d.expires_in);showApp();
-  }).catch(()=>{btn.textContent='Sign in';btn.disabled=false;err('auth-error','Connection error')})
+    if(b){b.disabled=false;b.textContent='Sign in';}
+    if(!d.access_token){showAuthErr(d.error_code==='invalid_credentials'?'Wrong email or password':d.error_description||d.msg||'Sign in failed');return}
+    saveSess(d.access_token,d.user.id,d.expires_in);showApp();
+  }).catch(()=>{if(b){b.disabled=false;b.textContent='Sign in';}showAuthErr('Connection error')})
 }
 function register(){
-  const name=val('r-name'),email=val('r-email'),pw=document.getElementById('r-pw').value;
-  if(!name||!email||pw.length<6){err('reg-error','All fields required, password 6+ chars');return}
-  fetch(`${SURL}/auth/v1/signup`,{method:'POST',headers:{'apikey':SKEY,'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})})
+  const name=V('r-name'),email=V('r-email'),pw=document.getElementById('r-pw').value;
+  if(!name||!email||pw.length<6){showAuthErr('All fields required, password 6+ chars');return}
+  fetch(SU+'/auth/v1/signup',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})})
   .then(r=>r.json()).then(d=>{
     if(d.access_token&&d.user){
-      saveSession(d.access_token,d.user.id,d.expires_in);
-      const shopId='SL-'+Math.random().toString(36).toUpperCase().slice(2,6);
-      post('merchants',{id:d.user.id,email,name,shop_id:shopId,loyalty_type:'points',loyalty_value:1,loyalty_threshold:100,logo_emoji:'🏪',created_at:Date.now()},'id').catch(()=>{});
+      saveSess(d.access_token,d.user.id,d.expires_in);
+      const sid='SL-'+Math.random().toString(36).toUpperCase().slice(2,6);
+      post('merchants',{id:d.user.id,email,name,shop_id:sid,loyalty_type:'points',loyalty_value:1,loyalty_threshold:100,logo_emoji:'🏪',created_at:Date.now()},'id').catch(()=>{});
       showApp();
-    } else if(d.user){
-      document.getElementById('email').value=email;document.getElementById('password').value=pw;login();
-    } else err('reg-error',d.error_description||d.msg||'Registration failed')
-  }).catch(()=>err('reg-error','Connection error'))
+    }else if(d.user){document.getElementById('email').value=email;document.getElementById('password').value=pw;login();}
+    else showAuthErr(d.error_description||d.msg||'Registration failed')
+  }).catch(()=>showAuthErr('Connection error'))
 }
+function showAuthErr(m){const e=document.getElementById('auth-error');if(e){e.textContent=m;e.style.display='block'}}
+function showReg(){const s=document.getElementById('reg-section');if(s)s.style.display=s.style.display==='none'?'block':'none'}
 
-// ── App ──────────────────────────────────────────────────
 function showApp(){
-  document.getElementById('splash').style.display='none';
-  document.getElementById('auth').style.display='none';
-  document.getElementById('app').style.display='flex';
+  ['splash','auth'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none'});
+  const a=document.getElementById('app');if(a)a.style.display='flex';
   loadAll();
 }
-function loadAll(){
-  loadMerchant();loadProducts();loadOrders();loadCustomers();loadTransactions();
-}
+function loadAll(){loadMerchant();loadProducts();loadOrders();loadCustomers();loadTxns();}
+
 function loadMerchant(){
   get('merchants','id=eq.'+MID).then(d=>{
     MDATA=Array.isArray(d)&&d[0]?d[0]:{};
-    const name=MDATA.name||'My Shop';
-    txt('shop-name-top',name);
-    txt('s-shopid-display',MDATA.shop_id||'—');
-    document.getElementById('shop-id-btn').textContent='📋 '+( MDATA.shop_id||'—');
-    if(document.getElementById('s-name'))document.getElementById('s-name').value=MDATA.name||'';
-    if(document.getElementById('s-addr'))document.getElementById('s-addr').value=MDATA.address||'';
-    if(document.getElementById('s-hours'))document.getElementById('s-hours').value=MDATA.open_hours||'';
-    if(document.getElementById('s-emoji'))document.getElementById('s-emoji').value=MDATA.logo_emoji||'🏪';
-    if(document.getElementById('s-email-display'))txt('s-email-display',MDATA.email||'—');
-    if(document.getElementById('s-uid-display'))txt('s-uid-display',MID||'—');
-    if(document.getElementById('s-cat')){const el=document.getElementById('s-cat');if(MDATA.category)el.value=MDATA.category;}
-    LOYALTY_TYPE=MDATA.loyalty_type||'points';
-    selectLoyalty(LOYALTY_TYPE,true);
+    txt('shop-name-top',MDATA.name||'My Shop');
+    const sb=document.getElementById('shop-id-btn');if(sb)sb.textContent='📋 '+(MDATA.shop_id||'—');
     txt('loyalty-rule-text',fmtRule());
+    LT=MDATA.loyalty_type||'points';
+    // Populate settings
+    ['s-name','s-addr','s-hours'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=MDATA[id.slice(2)]||MDATA[{name:'name',addr:'address',hours:'open_hours'}[id.slice(2)]]||''});
+    const sn=document.getElementById('s-name');if(sn)sn.value=MDATA.name||'';
+    const sa=document.getElementById('s-addr');if(sa)sa.value=MDATA.address||'';
+    const sh=document.getElementById('s-hours');if(sh)sh.value=MDATA.open_hours||'';
+    const se=document.getElementById('s-emoji');if(se)se.value=MDATA.logo_emoji||'🏪';
+    const sc=document.getElementById('s-cat');if(sc&&MDATA.category)sc.value=MDATA.category;
+    const sed=document.getElementById('s-email-display');if(sed)txt('s-email-display',MDATA.email||'—');
+    const su=document.getElementById('s-uid-display');if(su)txt('s-uid-display',MID||'—');
+    const sid=document.getElementById('s-shopid-display');if(sid)txt('s-shopid-display',MDATA.shop_id||'—');
+    selectLoyalty(LT,true);
   }).catch(()=>{})
 }
 function loadProducts(){
   get('products','merchant_id=eq.'+MID+'&order=created_at.desc').then(d=>{
-    PRODUCTS=Array.isArray(d)?d:[];
-    renderProducts();
-    txt('d-products',PRODUCTS.filter(p=>p.active!==false).length);
+    PRODUCTS=Array.isArray(d)?d:[];renderProducts();txt('d-products',PRODUCTS.filter(p=>p.active!==false).length);
   }).catch(()=>{})
 }
 function loadOrders(){
   get('orders','merchant_id=eq.'+MID+'&order=created_at.desc&limit=50').then(d=>{
-    ORDERS=Array.isArray(d)?d:[];
-    renderOrders();
-    txt('d-orders',ORDERS.filter(o=>o.status==='pending').length);
-    renderPendingOrders();
+    ORDERS=Array.isArray(d)?d:[];renderOrders();txt('d-orders',ORDERS.filter(o=>o.status==='pending').length);renderPending();
   }).catch(()=>{})
 }
 function loadCustomers(){
   get('merchant_customers','merchant_id=eq.'+MID+'&order=last_updated.desc&limit=100').then(d=>{
-    CUSTOMERS=Array.isArray(d)?d:[];
-    renderCustomers();
-    txt('d-customers',CUSTOMERS.length);
+    CUSTOMERS=Array.isArray(d)?d:[];renderCustomers();txt('d-customers',CUSTOMERS.length);
   }).catch(()=>{})
 }
-function loadTransactions(){
-  get('transactions','merchant_id=eq.'+MID+'&order=timestamp.desc&limit=50').then(d=>{
-    TRANSACTIONS=Array.isArray(d)?d:[];
-    const rev=TRANSACTIONS.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
+function loadTxns(){
+  get('transactions','merchant_id=eq.'+MID+'&order=timestamp.desc&limit=100').then(d=>{
+    TXNS=Array.isArray(d)?d:[];
+    const rev=TXNS.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
     txt('d-revenue','£'+rev.toFixed(0));
-    renderTillTxns();
-    renderRecentTxns();
+    renderTxns();renderRecentTxns();
   }).catch(()=>{})
 }
 
-// ── Render ────────────────────────────────────────────────
+// ── Render ──────────────────────────────────────────────
 function renderProducts(){
   const el=document.getElementById('products-list');if(!el)return;
   el.innerHTML=PRODUCTS.length?PRODUCTS.map(p=>`
     <div class="item-card">
       <div class="item-row">
-        <div><div class="item-name">${p.emoji||'🛍️'} ${p.name}</div><div class="item-sub">£${parseFloat(p.price||0).toFixed(2)} • ${p.category||'other'} ${p.active===false?'<span style="color:#c62828">• Hidden</span>':''}</div>
+        <div><div class="item-name">${p.emoji||'🛍️'} ${p.name}</div>
+          <div class="item-sub">£${parseFloat(p.price||0).toFixed(2)} • ${p.category||'other'} ${p.active===false?'<span style="color:#c62828">• Hidden</span>':''}</div>
           <div style="display:flex;gap:6px;margin-top:6px">${p.collect!==false?'<span style="font-size:11px;background:#e8f5e9;color:#2e7d32;padding:3px 8px;border-radius:8px;font-weight:700">Collect</span>':''}${p.delivery?'<span style="font-size:11px;background:#e3f2fd;color:#1565c0;padding:3px 8px;border-radius:8px;font-weight:700">Delivery</span>':''}</div>
         </div>
         <div class="item-actions">
-          <button class="btn-sm btn-gray" onclick="editProduct('${p.id}')">✏️</button>
-          <button class="btn-sm btn-red" onclick="deleteProduct('${p.id}')">🗑</button>
+          <button class="btn-sm btn-gray" onclick="editProd('${p.id}')">✏️</button>
+          <button class="btn-sm btn-red" onclick="delProd('${p.id}')">🗑</button>
         </div>
       </div>
-    </div>`).join(''):'<div class="empty"><div class="empty-ico">🛍️</div><div class="empty-txt">No products yet<br>Tap + Add Product to start</div></div>';
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">🛍️</div><div class="empty-txt">No products yet<br>Tap + Add Product</div></div>';
 }
 function renderOrders(){
   const el=document.getElementById('orders-list');if(!el)return;
-  const stCls={pending:'st-pending',ready:'st-ready',completed:'st-completed',rejected:'st-rejected'};
+  const sc={pending:'st-pending',ready:'st-ready',completed:'st-completed',rejected:'st-rejected'};
   el.innerHTML=ORDERS.length?ORDERS.map(o=>`
-    <div class="order-card" onclick="openOrderDetail('${o.id}')">
+    <div class="order-card" onclick="openOrderDet('${o.id}')">
       <div class="order-header">
         <div class="order-id">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div>
-        <div class="status-badge ${stCls[o.status]||'st-pending'}">${o.status||'pending'}</div>
+        <div class="status-badge ${sc[o.status]||'st-pending'}">${o.status||'pending'}</div>
       </div>
       <div class="order-body">${o.product_name||'Order'} × ${o.quantity||1}</div>
       <div class="order-detail">${o.type==='collect'?'🏪 Click & Collect':'🚚 Delivery'}${o.collect_time?' at '+o.collect_time:''}${o.delivery_address?' • '+o.delivery_address.slice(0,30):''}</div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div style="font-size:18px;font-weight:800;color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</div>
-        <div style="font-size:12px;color:#706f87">${o.created_at?new Date(o.created_at).toLocaleString().slice(0,14):'—'}</div>
+        <div style="font-size:11px;color:#706f87">${o.created_at?new Date(o.created_at).toLocaleString().slice(0,14):'—'}</div>
       </div>
     </div>`).join(''):'<div class="empty"><div class="empty-ico">📦</div><div class="empty-txt">No orders yet</div></div>';
 }
-function renderPendingOrders(){
+function renderPending(){
   const el=document.getElementById('pending-orders');if(!el)return;
-  const pending=ORDERS.filter(o=>o.status==='pending').slice(0,3);
-  el.innerHTML=pending.length?pending.map(o=>`
-    <div class="order-card" onclick="openOrderDetail('${o.id}')">
-      <div class="order-header"><div class="order-id">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div><div class="status-badge st-pending">pending</div></div>
-      <div class="order-body">${o.product_name||'Order'} × ${o.quantity||1}</div>
-      <div class="order-footer" style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:15px;font-weight:800;color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</div><div style="font-size:12px;color:#706f87">${o.type}</div></div>
-    </div>`).join(''):'<div style="padding:16px;text-align:center;color:#706f87;font-size:13px">No pending orders</div>';
+  const pd=ORDERS.filter(o=>o.status==='pending').slice(0,3);
+  el.innerHTML=pd.length?pd.map(o=>`
+    <div class="item-card" style="margin-bottom:8px;cursor:pointer" onclick="openOrderDet('${o.id}')">
+      <div class="item-row"><div><div class="item-name">${o.product_name||'Order'} × ${o.quantity||1}</div>
+        <div class="item-sub">${o.type==='collect'?'🏪 Collect':'🚚 Delivery'} • £${parseFloat(o.total||0).toFixed(2)}</div></div>
+        <span class="status-badge st-pending">pending</span></div>
+    </div>`).join(''):'<div style="padding:12px;text-align:center;font-size:13px;color:#706f87">No pending orders</div>';
 }
 function renderCustomers(){
   const el=document.getElementById('customers-list');if(!el)return;
   el.innerHTML=CUSTOMERS.length?CUSTOMERS.map(c=>`
     <div class="item-card">
       <div class="item-row">
-        <div><div class="item-name">👤 ${c.name||'Customer'}</div><div class="item-sub">${c.phone} • ${c.points||0} pts • ${c.visit_count||0} visits</div></div>
+        <div><div class="item-name">👤 ${c.name||'Customer'}</div>
+          <div class="item-sub">${c.phone} • ${c.points||0} pts • ${c.visit_count||0} visits</div></div>
         <div class="item-actions">
-          <button class="btn-sm btn-blue" onclick="addBonusPoints('${c.phone}')">+pts</button>
+          <button class="btn-sm btn-blue" onclick="addBonus('${c.phone}')">+pts</button>
         </div>
       </div>
     </div>`).join(''):'<div class="empty"><div class="empty-ico">👥</div><div class="empty-txt">No loyalty customers yet</div></div>';
 }
-function renderTillTxns(){
+function renderTxns(){
   const el=document.getElementById('till-txns');if(!el)return;
-  const today=Date.now()-86400000;
-  const txns=TRANSACTIONS.filter(t=>t.timestamp>today);
-  el.innerHTML=txns.length?txns.map(t=>`
+  const today=Date.now()-864e5;
+  const ts=TXNS.filter(t=>t.timestamp>today);
+  el.innerHTML=ts.length?ts.map(t=>`
     <tr><td>${t.phone||'—'}</td><td>£${parseFloat(t.amount||0).toFixed(2)}</td>
     <td style="color:#6C5CE7;font-weight:700">${t.points_added||0} pts</td>
-    <td style="font-size:12px;color:#706f87">${t.timestamp?new Date(t.timestamp).toLocaleTimeString().slice(0,5):'—'}</td></tr>`).join('')
-    :'<tr><td colspan="4" style="text-align:center;padding:20px;color:#706f87">No sales today</td></tr>';
+    <td style="font-size:11px;color:#706f87">${t.timestamp?new Date(t.timestamp).toLocaleTimeString().slice(0,5):'—'}</td>
+    <td><button onclick="delTxn('${t.id}')" style="background:#ffebee;color:#c62828;padding:4px 8px;border-radius:8px;font-size:11px;cursor:pointer;border:none">✕</button></td></tr>`).join('')
+    :'<tr><td colspan="5" style="text-align:center;padding:20px;color:#706f87">No sales today</td></tr>';
 }
 function renderRecentTxns(){
   const el=document.getElementById('recent-txns');if(!el)return;
-  el.innerHTML=TRANSACTIONS.slice(0,3).map(t=>`
+  el.innerHTML=TXNS.slice(0,3).map(t=>`
     <div class="item-card" style="margin-bottom:8px">
-      <div class="item-row"><div><div class="item-name">${t.phone||'Customer'}</div><div class="item-sub">£${parseFloat(t.amount||0).toFixed(2)} • +${t.points_added||0} pts</div></div>
-      <div style="font-size:12px;color:#706f87">${t.timestamp?new Date(t.timestamp).toLocaleString().slice(0,14):'—'}</div></div>
-    </div>`).join('')||'<div style="padding:16px;text-align:center;color:#706f87;font-size:13px">No recent sales</div>';
+      <div class="item-row"><div><div class="item-name">${t.phone||'Customer'}</div>
+        <div class="item-sub">£${parseFloat(t.amount||0).toFixed(2)} • +${t.points_added||0} pts</div></div>
+        <div style="font-size:11px;color:#706f87">${t.timestamp?new Date(t.timestamp).toLocaleString().slice(0,14):'—'}</div>
+      </div>
+    </div>`).join('')||'<div style="padding:12px;text-align:center;font-size:13px;color:#706f87">No recent sales</div>';
 }
 
-// ── Till ──────────────────────────────────────────────────
+// ── Till ─────────────────────────────────────────────────
 function processSale(){
-  const phone=val('till-phone'),amount=parseFloat(document.getElementById('till-amount').value||0);
-  if(!phone||!amount||amount<=0){toast('Enter valid phone and amount');return}
-  const loyalty=calcLoyalty(amount,MDATA);
-  // Upsert customer
+  const phone=V('till-phone'),amount=parseFloat(document.getElementById('till-amount').value||0);
+  if(!phone||!amount||amount<=0){T('Enter valid phone and amount');return}
+  const loy=calcLoy(amount);
+  // Upsert customer record
   get('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(d=>{
-    const cu=(Array.isArray(d)&&d[0])||{points:0,visit_count:0,total_spend:0,name:'Customer'};
-    const newPts=(cu.points||0)+loyalty.pts;
+    const cu=Array.isArray(d)&&d[0]?d[0]:{points:0,visit_count:0,total_spend:0,name:'Customer'};
+    const newPts=(cu.points||0)+loy.pts;
     post('merchant_customers',{merchant_id:MID,phone,name:cu.name||'Customer',points:newPts,visit_count:(cu.visit_count||0)+1,total_spend:(cu.total_spend||0)+amount,last_updated:Date.now()},'merchant_id,phone');
-    // Update customer card points
-    patch('cards','user_id=eq.not.null&merchant_id=eq.'+MID+'&card_id=eq.local-'+MID,{points:newPts}).catch(()=>{});
+    // Update the customer's loyalty card points
+    pat('cards','user_id=not.is.null&merchant_id=eq.'+MID+'&card_id=eq.local-'+MID,{points:newPts}).catch(()=>{});
   }).catch(()=>{});
-  // Log transaction
-  post('transactions',{merchant_id:MID,phone,amount,points_added:loyalty.pts,type:'purchase',timestamp:Date.now()})
+  post('transactions',{merchant_id:MID,phone,amount,points_added:loy.pts,type:'purchase',timestamp:Date.now()})
   .then(()=>{
-    toast(`✅ Sale recorded! ${loyalty.desc}`);
+    T('✅ Sale recorded! '+loy.desc);
     document.getElementById('till-phone').value='';document.getElementById('till-amount').value='';
     loadAll();
-  }).catch(()=>toast('Sale failed'))
+  }).catch(()=>T('Sale failed'))
 }
 
-// ── Redeem ────────────────────────────────────────────────
-let REDEEM_CUST=null;
-function openRedeemModal(){document.getElementById('r-phone').value='';document.getElementById('r-cust-info').style.display='none';document.getElementById('r-confirm-btn').style.display='none';openModal('redeemModal')}
-function lookupForRedeem(){
-  const phone=val('r-phone');if(!phone){return}
-  get('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(d=>{
-    REDEEM_CUST=Array.isArray(d)&&d[0]?d[0]:null;
-    const ci=document.getElementById('r-cust-info');
-    const th=MDATA.loyalty_threshold||100;
-    if(REDEEM_CUST){
-      ci.innerHTML=`<div style="font-weight:700">${REDEEM_CUST.name||'Customer'}</div><div style="font-size:15px;color:#6C5CE7;font-weight:800;margin:8px 0">${REDEEM_CUST.points||0} points</div><div style="font-size:13px;color:#706f87">${REDEEM_CUST.points>=th?'✅ Can redeem reward! (needs '+th+' pts)':'Needs '+(th-(REDEEM_CUST.points||0))+' more points for reward'}</div>`;
+// ── Redeem ───────────────────────────────────────────────
+let RC=null;
+function openRedeemMo(){document.getElementById('r-phone').value='';document.getElementById('r-cust-info').style.display='none';document.getElementById('r-confirm-btn').style.display='none';omo('redeemModal')}
+function lookupRedeem(){
+  const ph=V('r-phone');if(!ph)return;
+  get('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(ph)).then(d=>{
+    RC=Array.isArray(d)&&d[0]?d[0]:null;
+    const ci=document.getElementById('r-cust-info'),th=parseFloat(MDATA.loyalty_threshold||100);
+    if(RC){
+      ci.innerHTML='<div style="font-weight:700">'+( RC.name||'Customer')+'</div><div style="font-size:20px;color:#6C5CE7;font-weight:900;margin:8px 0">'+(RC.points||0)+' pts</div><div style="font-size:13px;color:#706f87">'+(RC.points>=th?'✅ Can redeem reward ('+th+' pts)':'Needs '+(th-(RC.points||0))+' more points')+'</div>';
       ci.style.display='block';
-      document.getElementById('r-confirm-btn').style.display=REDEEM_CUST.points>=th?'block':'none';
-    } else {ci.innerHTML='<div style="color:#c62828">Customer not found</div>';ci.style.display='block'}
+      document.getElementById('r-confirm-btn').style.display=RC.points>=th?'block':'none';
+    }else{ci.innerHTML='<div style="color:#c62828">No loyalty record for '+ph+'</div>';ci.style.display='block'}
   })
 }
 function confirmRedeem(){
-  if(!REDEEM_CUST)return;
-  const th=MDATA.loyalty_threshold||100;
-  const newPts=(REDEEM_CUST.points||0)-th;
-  post('merchant_customers',{merchant_id:MID,phone:REDEEM_CUST.phone,name:REDEEM_CUST.name,points:Math.max(0,newPts),visit_count:REDEEM_CUST.visit_count||0,rewards_redeemed:(REDEEM_CUST.rewards_redeemed||0)+1,last_updated:Date.now()},'merchant_id,phone')
-  .then(()=>{toast('🎁 Reward redeemed! '+REDEEM_CUST.name+' now has '+Math.max(0,newPts)+' pts');closeModal('redeemModal');loadAll()})
+  if(!RC)return;const th=parseFloat(MDATA.loyalty_threshold||100);
+  const newPts=Math.max(0,(RC.points||0)-th);
+  post('merchant_customers',{merchant_id:MID,phone:RC.phone,name:RC.name||'Customer',points:newPts,visit_count:RC.visit_count||0,rewards_redeemed:(RC.rewards_redeemed||0)+1,last_updated:Date.now()},'merchant_id,phone')
+  .then(()=>{T('🎁 Reward redeemed! '+newPts+' pts remaining');cmo('redeemModal');loadAll()})
 }
-function addBonusPoints(phone){
-  const pts=parseInt(prompt('Add bonus points to '+phone+':'));
-  if(!pts||pts<=0)return;
-  get('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(d=>{
+function addBonus(ph){
+  const pts=parseInt(prompt('Add bonus points for '+ph+':'));if(!pts||pts<=0)return;
+  get('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(ph)).then(d=>{
     const cu=Array.isArray(d)&&d[0]?d[0]:{points:0,visit_count:0,total_spend:0};
-    post('merchant_customers',{merchant_id:MID,phone,points:(cu.points||0)+pts,visit_count:cu.visit_count||0,total_spend:cu.total_spend||0,last_updated:Date.now()},'merchant_id,phone')
-    .then(()=>{toast(`+${pts} bonus points added!`);loadAll()})
+    post('merchant_customers',{merchant_id:MID,phone:ph,points:(cu.points||0)+pts,visit_count:cu.visit_count||0,total_spend:cu.total_spend||0,last_updated:Date.now()},'merchant_id,phone')
+    .then(()=>{T('+'+pts+' bonus points!');loadAll()})
   })
 }
 
 // ── Products ─────────────────────────────────────────────
-function openAddProduct(){
+function openAddProd(){
   document.getElementById('edit-prod-id').value='';
   document.getElementById('prod-modal-title').textContent='Add Product';
   ['p-name','p-desc'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
   document.getElementById('p-price').value='';document.getElementById('p-emoji').value='';
   document.getElementById('p-collect').checked=true;document.getElementById('p-delivery').checked=false;document.getElementById('p-active').checked=true;
-  err('p-err','');openModal('addProductModal');
+  const pe=document.getElementById('p-err');if(pe)pe.style.display='none';
+  omo('addProductModal');
 }
-function editProduct(id){
+function editProd(id){
   const p=PRODUCTS.find(x=>x.id===id);if(!p)return;
   document.getElementById('edit-prod-id').value=id;
   document.getElementById('prod-modal-title').textContent='Edit Product';
   document.getElementById('p-name').value=p.name||'';document.getElementById('p-price').value=p.price||'';
   document.getElementById('p-emoji').value=p.emoji||'';document.getElementById('p-desc').value=p.description||'';
-  if(document.getElementById('p-cat'))document.getElementById('p-cat').value=p.category||'other';
-  document.getElementById('p-collect').checked=p.collect!==false;document.getElementById('p-delivery').checked=p.delivery===true;document.getElementById('p-active').checked=p.active!==false;
-  openModal('addProductModal');
+  const pc=document.getElementById('p-cat');if(pc)pc.value=p.category||'other';
+  document.getElementById('p-collect').checked=p.collect!==false;document.getElementById('p-delivery').checked=!!p.delivery;document.getElementById('p-active').checked=p.active!==false;
+  omo('addProductModal');
 }
-function saveProduct(){
-  const name=val('p-name'),price=parseFloat(document.getElementById('p-price').value||0),editId=val('edit-prod-id');
-  if(!name||price<=0){err('p-err','Name and price required');return}
-  const data={merchant_id:MID,name,price,emoji:val('p-emoji')||'🛍️',category:document.getElementById('p-cat')?document.getElementById('p-cat').value:'other',description:val('p-desc'),collect:document.getElementById('p-collect').checked,delivery:document.getElementById('p-delivery').checked,active:document.getElementById('p-active').checked,shop_name:MDATA.name||''};
-  const action=editId?patch('products','id=eq.'+editId,data):post('products',{...data,created_at:Date.now()});
-  action.then(()=>{toast(`✅ ${name} saved!`);closeModal('addProductModal');loadProducts()}).catch(()=>err('p-err','Save failed'))
+function saveProd(){
+  const name=V('p-name'),price=parseFloat(document.getElementById('p-price').value||0),eid=V('edit-prod-id');
+  if(!name||price<=0){const e=document.getElementById('p-err');if(e){e.textContent='Name and price required';e.style.display='block';}return}
+  const data={merchant_id:MID,name,price,emoji:V('p-emoji')||'🛍️',category:document.getElementById('p-cat')?document.getElementById('p-cat').value:'other',description:V('p-desc'),collect:document.getElementById('p-collect').checked,delivery:document.getElementById('p-delivery').checked,active:document.getElementById('p-active').checked};
+  const action=eid?pat('products','id=eq.'+eid,data):post('products',{...data,created_at:Date.now()});
+  action.then(()=>{T('✅ '+name+' saved!');cmo('addProductModal');loadProducts()}).catch(()=>{const e=document.getElementById('p-err');if(e){e.textContent='Save failed';e.style.display='block';}})
 }
-function deleteProduct(id){
-  if(!confirm('Delete this product?'))return;
-  del('products','id=eq.'+id).then(()=>{toast('✅ Deleted');loadProducts()})
-}
+function delProd(id){if(!confirm('Delete this product?'))return;del('products','id=eq.'+id).then(()=>{T('✅ Deleted');loadProducts()})}
+function delTxn(id){if(!confirm('Delete this sale record?'))return;del('transactions','id=eq.'+id).then(()=>{T('✅ Deleted');loadTxns()})}
 
-// ── Orders ────────────────────────────────────────────────
-function openOrderDetail(id){
-  const o=ORDERS.find(x=>x.id===id);if(!o)return;
-  CUR_ORDER=o;
-  const stCls={pending:'st-pending',ready:'st-ready',completed:'st-completed',rejected:'st-rejected'};
+// ── Orders ───────────────────────────────────────────────
+function openOrderDet(id){
+  const o=ORDERS.find(x=>x.id===id);if(!o)return;CUR_ORDER=o;
+  const sc={pending:'st-pending',ready:'st-ready',completed:'st-completed',rejected:'st-rejected'};
   document.getElementById('order-detail-body').innerHTML=`
-    <div style="background:#f4f2ff;border-radius:14px;padding:16px;margin-bottom:16px">
+    <div style="background:#f4f2ff;border-radius:14px;padding:16px;margin-bottom:14px">
       <div style="font-size:12px;color:#706f87;margin-bottom:6px">ORDER #${o.id?o.id.slice(0,8).toUpperCase():'—'}</div>
       <div style="font-size:18px;font-weight:800;margin-bottom:4px">${o.product_name||'Order'}</div>
-      <div style="font-size:14px;color:#706f87">Quantity: ${o.quantity||1} • Total: <strong style="color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</strong></div>
+      <div style="font-size:14px;color:#706f87">Qty: ${o.quantity||1} • <strong style="color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</strong></div>
     </div>
-    <div class="item-card" style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between"><div style="font-size:12px;font-weight:700;color:#706f87">Status</div><div class="status-badge ${stCls[o.status]||'st-pending'}">${o.status||'pending'}</div></div>
+    <div class="item-card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between"><div style="font-size:12px;font-weight:700;color:#706f87">Status</div><span class="status-badge ${sc[o.status]||'st-pending'}">${o.status}</span></div>
     </div>
-    <div class="item-card" style="margin-bottom:12px">
+    <div class="item-card" style="margin-bottom:10px">
       <div style="font-size:12px;font-weight:700;color:#706f87;margin-bottom:6px">Order Type</div>
       <div style="font-size:15px;font-weight:700">${o.type==='collect'?'🏪 Click & Collect':'🚚 Delivery'}</div>
-      ${o.collect_time?'<div style="font-size:13px;color:#706f87;margin-top:4px">Collect time: '+o.collect_time+'</div>':''}
+      ${o.collect_time?'<div style="font-size:13px;color:#706f87;margin-top:4px">Collect at: '+o.collect_time+'</div>':''}
       ${o.delivery_address?'<div style="font-size:13px;color:#706f87;margin-top:4px">Address: '+o.delivery_address+'</div>':''}
     </div>
-    ${o.note?'<div class="item-card" style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:#706f87;margin-bottom:6px">Note</div><div style="font-size:14px">'+o.note+'</div></div>':''}
-    <div class="item-card"><div style="font-size:12px;font-weight:700;color:#706f87;margin-bottom:6px">Ordered</div><div style="font-size:13px">${o.created_at?new Date(o.created_at).toLocaleString():'—'}</div></div>`;
-  openModal('orderDetailModal');
+    ${o.note?'<div class="item-card" style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#706f87;margin-bottom:4px">Note</div><div style="font-size:14px">'+o.note+'</div></div>':''}
+    <div class="item-card"><div style="font-size:12px;font-weight:700;color:#706f87;margin-bottom:4px">Ordered at</div><div style="font-size:13px">${o.created_at?new Date(o.created_at).toLocaleString():'—'}</div></div>`;
+  omo('orderDetailModal');
 }
-function updateOrderStatus(status){
+function updateStatus(s){
   if(!CUR_ORDER)return;
-  patch('orders','id=eq.'+CUR_ORDER.id,{status}).then(()=>{toast('✅ Order marked '+status);closeModal('orderDetailModal');loadOrders()})
+  pat('orders','id=eq.'+CUR_ORDER.id,{status:s}).then(()=>{T('✅ Order marked '+s);cmo('orderDetailModal');loadOrders()})
 }
 
 // ── Scan ─────────────────────────────────────────────────
@@ -774,122 +761,97 @@ let scanActive=false;
 function startScan(){
   if(scanActive)return;scanActive=true;
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(stream=>{
-    const v=document.getElementById('video');v.srcObject=stream;
-    // Load jsQR
-    const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
-    s.onload=()=>scanLoop(v);document.head.appendChild(s);
-  }).catch(()=>{toast('Camera not available — use manual entry')});
+    const v=document.getElementById('video');if(v){v.srcObject=stream;v.play();}
+    const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+    sc.onload=()=>{const cv=document.createElement('canvas');const ctx=cv.getContext('2d');
+      (function tick(){if(!scanActive)return;
+        if(v&&v.readyState===v.HAVE_ENOUGH_DATA){cv.width=v.videoWidth;cv.height=v.videoHeight;ctx.drawImage(v,0,0);const img=ctx.getImageData(0,0,cv.width,cv.height);const code=window.jsQR&&window.jsQR(img.data,img.width,img.height);if(code){handleScan(code.data);return;}}
+        requestAnimationFrame(tick);})();
+    };document.head.appendChild(sc);
+  }).catch(()=>T('Camera not available — use manual phone entry'));
 }
-function scanLoop(video){
-  const canvas=document.createElement('canvas');const ctx=canvas.getContext('2d');
-  function tick(){
-    if(video.readyState===video.HAVE_ENOUGH_DATA){
-      canvas.width=video.videoWidth;canvas.height=video.videoHeight;
-      ctx.drawImage(video,0,0);
-      const img=ctx.getImageData(0,0,canvas.width,canvas.height);
-      const code=window.jsQR&&window.jsQR(img.data,img.width,img.height);
-      if(code){handleScan(code.data);return;}
-    }
-    if(scanActive)requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
-}
-function handleScan(data){
-  SCAN_PHONE=data;
-  txt('scan-value',data);
-  document.getElementById('scan-result').style.display='block';
-  document.getElementById('manual-phone').value=data;
-  lookupCustomer();
-}
-function lookupCustomer(){
-  const phone=val('manual-phone')||SCAN_PHONE;if(!phone)return;
-  SCAN_PHONE=phone;
-  get('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(phone)).then(d=>{
+function handleScan(d){SCAN_PHONE=d;txt('scan-value',d);document.getElementById('scan-result').style.display='block';document.getElementById('manual-phone').value=d;lookupCust();}
+function lookupCust(){
+  const ph=V('manual-phone')||SCAN_PHONE;if(!ph)return;SCAN_PHONE=ph;
+  get('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(ph)).then(d=>{
     const cu=Array.isArray(d)&&d[0]?d[0]:null;
     const el=document.getElementById('customer-lookup-result');
-    const scBtn=document.getElementById('scan-add-pts-btn');
-    if(cu){
-      el.innerHTML='<div class="item-card"><div class="item-name">👤 '+( cu.name||'Customer')+'</div><div class="item-sub">'+cu.phone+' • '+( cu.points||0)+' pts • '+(cu.visit_count||0)+' visits</div></div>';
-      if(scBtn)scBtn.style.display='block';
-    } else {
-      el.innerHTML='<div class="item-card" style="color:#706f87">No loyalty record for '+phone+'.<br>Process a sale to create one.</div>';
-      if(scBtn)scBtn.style.display='none';
-    }
+    const b=document.getElementById('scan-add-pts-btn');
+    if(cu){el.innerHTML='<div class="item-card"><div class="item-name">👤 '+(cu.name||'Customer')+'</div><div class="item-sub">'+cu.phone+' • '+(cu.points||0)+' pts • '+(cu.visit_count||0)+' visits</div></div>';if(b)b.style.display='block';}
+    else{el.innerHTML='<div class="item-card" style="color:#706f87">No record for '+ph+' — process a sale to create one</div>';if(b)b.style.display='none';}
   })
 }
-function addPointsFromScan(){
-  if(!SCAN_PHONE){return}
-  const amount=parseFloat(prompt('Enter sale amount for '+SCAN_PHONE+':'));
-  if(!amount||amount<=0)return;
-  document.getElementById('till-phone').value=SCAN_PHONE;
-  document.getElementById('till-amount').value=amount;
-  switchTab('till');processSale();
-}
+function addPtsFromScan(){if(!SCAN_PHONE)return;const a=parseFloat(prompt('Sale amount for '+SCAN_PHONE+':'));if(!a||a<=0)return;document.getElementById('till-phone').value=SCAN_PHONE;document.getElementById('till-amount').value=a;switchTab('till');processSale();}
 
 // ── Settings ─────────────────────────────────────────────
-function selectLoyalty(type,noSave){
-  LOYALTY_TYPE=type;
-  ['points','percentage','discount','stamp'].forEach(t=>{
-    const el=document.getElementById('lopt-'+t);
-    if(el)el.classList.toggle('sel',t===type);
-  });
-  const vs=document.getElementById('loyalty-val-section');
-  const vf=document.getElementById('loyalty-val-fields');
-  if(!vs||!vf)return;
-  vs.style.display='block';
-  if(type==='points')vf.innerHTML='<div class="mfield"><label class="mlabel">Points per £1 spent</label><input id="lv-val" class="minput" type="number" step="0.5" min="0.5" value="'+(MDATA.loyalty_value||1)+'"></div><div class="mfield"><label class="mlabel">Points needed for reward</label><input id="lv-thresh" class="minput" type="number" min="1" value="'+(MDATA.loyalty_threshold||100)+'"></div>';
-  else if(type==='percentage')vf.innerHTML='<div class="mfield"><label class="mlabel">Cashback % per purchase</label><input id="lv-val" class="minput" type="number" step="0.5" min="0.5" max="50" value="'+(MDATA.loyalty_value||5)+'"></div>';
-  else if(type==='discount')vf.innerHTML='<div class="mfield"><label class="mlabel">Discount £ amount</label><input id="lv-val" class="minput" type="number" step="0.5" min="0.5" value="'+(MDATA.loyalty_value||5)+'"></div><div class="mfield"><label class="mlabel">Minimum spend to trigger (£)</label><input id="lv-thresh" class="minput" type="number" min="1" value="'+(MDATA.loyalty_threshold||50)+'"></div>';
-  else if(type==='stamp')vf.innerHTML='<div class="mfield"><label class="mlabel">Visits needed for reward</label><input id="lv-thresh" class="minput" type="number" min="2" max="20" value="'+(MDATA.loyalty_threshold||10)+'"></div>';
+function selectLoyalty(t,noSave){
+  LT=t;
+  ['points','percentage','discount','stamp'].forEach(x=>{const e=document.getElementById('lopt-'+x);if(e)e.classList.toggle('sel',x===t)});
+  const vs=document.getElementById('loyalty-val-section'),vf=document.getElementById('loyalty-val-fields');
+  if(!vs||!vf)return;vs.style.display='block';
+  const v=MDATA.loyalty_value||1,th=MDATA.loyalty_threshold||100;
+  if(t==='points')vf.innerHTML='<div class="mfield"><label class="mlabel">Points per £1 spent</label><input id="lv-val" class="minput" type="number" step="0.5" min="0.5" value="'+v+'"></div><div class="mfield"><label class="mlabel">Points needed for reward</label><input id="lv-thresh" class="minput" type="number" min="1" value="'+th+'"></div>';
+  else if(t==='percentage')vf.innerHTML='<div class="mfield"><label class="mlabel">Cashback % per purchase</label><input id="lv-val" class="minput" type="number" step="0.5" min="0.5" max="50" value="'+v+'"></div>';
+  else if(t==='discount')vf.innerHTML='<div class="mfield"><label class="mlabel">Discount amount (£)</label><input id="lv-val" class="minput" type="number" step="0.5" min="0.5" value="'+v+'"></div><div class="mfield"><label class="mlabel">Minimum spend to qualify (£)</label><input id="lv-thresh" class="minput" type="number" min="1" value="'+th+'"></div>';
+  else if(t==='stamp')vf.innerHTML='<div class="mfield"><label class="mlabel">Visits needed for reward</label><input id="lv-thresh" class="minput" type="number" min="2" max="20" value="'+th+'"></div>';
+}
+function setShopLoc(){
+  if(!navigator.geolocation){T('Location not available');return}
+  T('📍 Getting location...');
+  navigator.geolocation.getCurrentPosition(p=>{
+    pat('merchants','id=eq.'+MID,{lat:p.coords.latitude,lng:p.coords.longitude}).then(()=>{
+      MDATA.lat=p.coords.latitude;MDATA.lng=p.coords.longitude;
+      T('✅ Shop location set! Customers nearby will get reminders');
+    });
+  },e=>T('Location error: '+e.message));
 }
 function saveSettings(){
   const lv=document.getElementById('lv-val'),lt=document.getElementById('lv-thresh');
-  const updates={name:val('s-name'),category:document.getElementById('s-cat')?document.getElementById('s-cat').value:'other',address:val('s-addr'),open_hours:val('s-hours'),logo_emoji:val('s-emoji')||'🏪',loyalty_type:LOYALTY_TYPE,loyalty_value:lv?parseFloat(lv.value)||1:1,loyalty_threshold:lt?parseFloat(lt.value)||100:100};
-  patch('merchants','id=eq.'+MID,updates).then(d=>{
-    toast('✅ Settings saved!');loadMerchant();
-  }).catch(()=>toast('Save failed'))
+  const upd={name:V('s-name'),category:document.getElementById('s-cat')?document.getElementById('s-cat').value:'other',address:V('s-addr'),open_hours:V('s-hours'),logo_emoji:V('s-emoji')||'🏪',loyalty_type:LT,loyalty_value:lv?parseFloat(lv.value)||1:1,loyalty_threshold:lt?parseFloat(lt.value)||100:100};
+  pat('merchants','id=eq.'+MID,upd).then(()=>{T('✅ Settings saved!');loadMerchant()}).catch(()=>T('Save failed'))
 }
-function copyShopId(){
-  const id=MDATA.shop_id||'—';
-  navigator.clipboard.writeText(id).then(()=>toast('📋 Shop ID copied: '+id)).catch(()=>toast('Shop ID: '+id));
+function copyShopId(){const id=MDATA.shop_id||'—';navigator.clipboard.writeText(id).then(()=>T('📋 Shop ID copied: '+id)).catch(()=>alert('Shop ID: '+id))}
+
+// ── Notify customers ─────────────────────────────────────
+function openNotifyMo(){const m=document.getElementById('notifyModal');if(m)omo('notifyModal')}
+function sendNotif(){
+  const title=V('notif-title'),body=document.getElementById('notif-body').value.trim();
+  if(!title||!body){T('Fill title and message');return}
+  post('notifications',{merchant_id:MID,title,body,type:'promo',recipients:CUSTOMERS.length,sent_at:Date.now()})
+  .then(()=>{T('✅ Notification sent to '+CUSTOMERS.length+' customers!');cmo('notifyModal');document.getElementById('notif-title').value='';document.getElementById('notif-body').value='';})
+  .catch(()=>T('Send failed'))
 }
 
-// ── Navigation ────────────────────────────────────────────
+// ── Download CSV ─────────────────────────────────────────
+function downloadCSV(type){
+  let rows=[],filename='';
+  if(type==='sales'){
+    rows=[['Phone','Amount','Points','Type','Date'],...TXNS.map(t=>[t.phone||'',t.amount||0,t.points_added||0,t.type||'purchase',t.timestamp?new Date(t.timestamp).toLocaleString():''])];
+    filename='stashlo_sales_'+new Date().toLocaleDateString().replace(/\//g,'-')+'.csv';
+  }else if(type==='customers'){
+    rows=[['Name','Phone','Points','Visits','Total Spend'],...CUSTOMERS.map(c=>[c.name||'',c.phone||'',c.points||0,c.visit_count||0,c.total_spend||0])];
+    filename='stashlo_customers_'+new Date().toLocaleDateString().replace(/\//g,'-')+'.csv';
+  }else if(type==='orders'){
+    rows=[['ID','Product','Qty','Total','Type','Status','Date'],...ORDERS.map(o=>[o.id?o.id.slice(0,8):'',o.product_name||'',o.quantity||1,o.total||0,o.type||'',o.status||'',o.created_at?new Date(o.created_at).toLocaleString():''])];
+    filename='stashlo_orders_'+new Date().toLocaleDateString().replace(/\//g,'-')+'.csv';
+  }
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=filename;a.click();
+  T('✅ Downloaded: '+filename);
+}
+
+// ── Navigation ───────────────────────────────────────────
 function switchTab(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
-  document.getElementById(name+'-screen').classList.add('on');
+  const sc=document.getElementById(name+'-screen');if(sc)sc.classList.add('on');
   const nb=document.getElementById('nav-'+name);if(nb)nb.classList.add('on');
-  if(name==='scan'){startScan();}
+  if(name==='scan')startScan();
   if(name==='orders')loadOrders();
   if(name==='customers')loadCustomers();
-  if(name==='till'){loadTransactions();}
+  if(name==='till')loadTxns();
 }
-function showToast(m){toast(m)}
-
-function openNotifyModal(){openModal('notifyModal');}
-function setShopLocation() {
-  if (!navigator.geolocation) { showToast('Location not supported'); return; }
-  showToast('📍 Getting location...');
-  navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude, lng = pos.coords.longitude;
-    patch('merchants', 'id=eq.'+MID, {lat, lng}).then(() => {
-      MDATA.lat = lat; MDATA.lng = lng;
-      showToast('✅ Shop location set: ' + lat.toFixed(4) + ', ' + lng.toFixed(4));
-    });
-  }, err => showToast('Location error: ' + err.message));
-}
-
-function sendNotificationToCustomers(title, body) {
-  if (!title || !body) { showToast('Enter title and message'); return; }
-  supaPost('notifications', {
-    merchant_id: MID, title, body, type: 'promo',
-    recipients: CUSTOMERS.length, sent_at: Date.now()
-  }).then(() => {
-    showToast('✅ Notification sent to ' + CUSTOMERS.length + ' customers!');
-  }).catch(() => showToast('Failed to send'));
-}
-
+function showToast(m){T(m)}
 </script>
 </body>
 </html>
