@@ -562,7 +562,7 @@ function loadProducts(){
 }
 function loadOrders(){
   get('orders','merchant_id=eq.'+MID+'&order=created_at.desc&limit=50').then(d=>{
-    ORDERS=Array.isArray(d)?d:[];renderOrders();txt('d-orders',ORDERS.filter(o=>o.status==='pending').length);renderPending();
+    ORDERS=Array.isArray(d)?d:[];renderOrders();renderOrderCards();txt('d-orders',ORDERS.filter(o=>o.status==='pending').length);renderPending();
   }).catch(()=>{})
 }
 function loadCustomers(){
@@ -724,7 +724,9 @@ function confirmRedeem(){
   .then(()=>{T('🎁 Reward redeemed! '+newPts+' pts remaining');cmo('redeemModal');loadAll()})
 }
 function addBonus(ph){
-  const pts=parseInt(prompt('Add bonus points for '+ph+':'));if(!pts||pts<=0)return;
+  const ptsInput=document.getElementById('bonus-pts-'+ph.replace(/[^0-9]/g,''));
+  if(!ptsInput){T('Use the till to add points');return;}
+  const pts=parseInt(ptsInput.value)||0;if(!pts||pts<=0){T('Enter points to add');return;}
   get('merchant_customers','merchant_id=eq.'+MID+'&phone=eq.'+encodeURIComponent(ph)).then(d=>{
     const cu=Array.isArray(d)&&d[0]?d[0]:{points:0,visit_count:0,total_spend:0};
     post('merchant_customers',{merchant_id:MID,phone:ph,points:(cu.points||0)+pts,visit_count:cu.visit_count||0,total_spend:cu.total_spend||0,last_updated:Date.now()},'merchant_id,phone')
@@ -822,7 +824,13 @@ function lookupCust(){
     }
   })
 }
-function addPtsFromScan(){if(!SCAN_PHONE)return;const a=parseFloat(prompt('Sale amount for '+SCAN_PHONE+':'));if(!a||a<=0)return;document.getElementById('till-phone').value=SCAN_PHONE;document.getElementById('till-amount').value=a;switchTab('till');processSale();}
+function addPtsFromScan(){
+  if(!SCAN_PHONE)return;
+  switchTab('till');
+  document.getElementById('till-phone').value=SCAN_PHONE;
+  document.getElementById('till-amount').focus();
+  T('📱 Phone filled - enter sale amount and press Process');
+}
 
 // ── Settings ─────────────────────────────────────────────
 function selectLoyalty(t,noSave){
