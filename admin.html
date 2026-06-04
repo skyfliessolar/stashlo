@@ -597,7 +597,7 @@ function loadAdminChatMsgs(orderId){
     const msgs=Array.isArray(d)?d:[];
     el.innerHTML=msgs.length?msgs.map(m=>`<div style="display:flex;flex-direction:${m.sender_role==='admin'?'row-reverse':'row'};gap:8px">
       <div style="max-width:72%;background:${m.sender_role==='admin'?'#6C5CE7':'#fff'};color:${m.sender_role==='admin'?'#fff':'#1a1a2e'};border-radius:14px;padding:10px 14px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
-        <div style="font-size:13px">${m.message}</div>
+        <div style="font-size:13px">${(m.message||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
         <div style="font-size:10px;opacity:.6;margin-top:3px">${m.sender_name||m.sender_role}</div>
       </div></div>`).join(''):'<div style="text-align:center;padding:20px;font-size:13px;color:#706f87">No messages yet</div>';
     el.scrollTop=el.scrollHeight;
