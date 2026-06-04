@@ -12,7 +12,7 @@ function saveCardLocation(cardId){
   T('📍 Capturing location...');
   navigator.geolocation.getCurrentPosition(p=>{
     const lat=p.coords.latitude, lng=p.coords.longitude;
-    const label=prompt('Name this location (e.g. "Home Tesco"):')||'Saved location';
+    const label='Near '+((window.CUR_CARD_NAME)||'Shop')+' ('+new Date().toLocaleDateString()+')';
     post('card_locations',{card_id:cardId,user_id:UID,latitude:lat,longitude:lng,label,radius:200,created_at:Date.now()})
     .then(()=>{T('✅ Location saved! Will remind you near this spot');loadCardLocations(cardId);})
     .catch(()=>T('Failed to save location'));
@@ -35,45 +35,162 @@ function deleteCardLocation(lid,cardId){
   if(!confirm('Remove this location?'))return;
   del('card_locations','id=eq.'+lid+'&user_id=eq.'+UID).then(()=>{T('Location removed');loadCardLocations(cardId);}).catch(()=>T('Failed'));
 }
-function del(t,q){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'DELETE',headers:H()}).then(r=>r.json())}
 
-// ===== PAYMENT CARDS =====
+// ===== PAYMENT CARDS (Klarna-style) =====
 let PAYMENT_CARDS=[];
 function loadPaymentCards(){
   get('payment_cards','user_id=eq.'+UID+'&order=created_at.desc').then(d=>{
     PAYMENT_CARDS=Array.isArray(d)?d:[];renderPaymentCards();
   }).catch(()=>{});
 }
+function detectNetwork(num){
+  if(!num)return 'other';
+  const n=num.replace(/\s/g,'');
+  if(/^4/.test(n))return 'visa';
+  if(/^5[1-5]|^2[2-7]/.test(n))return 'mastercard';
+  if(/^3[47]/.test(n))return 'amex';
+  if(/^6/.test(n))return 'discover';
+  return 'other';
+}
+function networkLogo(net){
+  const logos={visa:'💳 VISA',mastercard:'💳 MC',amex:'💳 AMEX',discover:'💳 DISC',other:'💳'};
+  return logos[net]||'💳';
+}
+function cardBg(net,type){
+  if(type==='debit')return 'linear-gradient(135deg,#1a7f37 0%,#0d5c27 100%)';
+  if(type==='prepaid')return 'linear-gradient(135deg,#7c3f00 0%,#5a2d00 100%)';
+  if(net==='visa')return 'linear-gradient(135deg,#1a237e 0%,#283593 100%)';
+  if(net==='mastercard')return 'linear-gradient(135deg,#b71c1c 0%,#880e0e 100%)';
+  if(net==='amex')return 'linear-gradient(135deg,#004d40 0%,#00695c 100%)';
+  return 'linear-gradient(135deg,#1a1a2e 0%,#2d2d4e 100%)';
+}
 function renderPaymentCards(){
   const el=document.getElementById('payment-cards-list');if(!el)return;
-  const nets={'visa':'💳','mastercard':'💳','amex':'💳','other':'💳'};
-  const typeColors={'credit':'#2d3a8c','debit':'#1a7f37','prepaid':'#7c3f00'};
-  el.innerHTML=PAYMENT_CARDS.length?PAYMENT_CARDS.map(c=>`
-    <div style="background:${typeColors[c.card_type]||'#2d3a8c'};border-radius:18px;padding:20px;color:#fff;min-height:120px;position:relative;overflow:hidden">
-      <div style="font-size:20px;position:absolute;right:20px;top:20px;opacity:.3">◉◉◉◉</div>
-      <div style="font-size:22px;letter-spacing:4px;margin-bottom:16px">••••  ••••  ••••  ${c.last_four||'••••'}</div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-end">
-        <div><div style="font-size:11px;opacity:.6">CARD HOLDER</div><div style="font-weight:700">${c.billing_name||c.nickname||'—'}</div></div>
-        <div><div style="font-size:11px;opacity:.6">EXPIRES</div><div style="font-weight:700">${c.expiry||'—'}</div></div>
-        <div style="text-align:right"><div style="font-size:11px;opacity:.6">${(c.network||'').toUpperCase()}</div><div style="font-size:11px;background:rgba(255,255,255,.2);border-radius:6px;padding:2px 6px">${c.card_type||'card'}</div></div>
+  el.innerHTML=PAYMENT_CARDS.length?PAYMENT_CARDS.map((c,i)=>`
+    <div style="background:${cardBg(c.network,c.card_type)};border-radius:20px;padding:24px 20px;color:#fff;min-height:140px;position:relative;overflow:hidden;margin-bottom:16px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+      <div style="position:absolute;right:-20px;top:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.07)"></div>
+      <div style="position:absolute;right:20px;top:20px;font-size:12px;font-weight:700;letter-spacing:1px;opacity:.8">${networkLogo(c.network)}</div>
+      <div style="font-size:13px;opacity:.5;margin-bottom:4px;margin-top:4px">${(c.card_type||'credit').toUpperCase()} CARD</div>
+      <div style="font-size:20px;letter-spacing:6px;margin:12px 0;font-weight:300">••••  ••••  ••••  ${c.last_four||'••••'}</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:16px">
+        <div><div style="font-size:9px;opacity:.5;text-transform:uppercase;letter-spacing:1px">Card Holder</div><div style="font-weight:600;font-size:14px">${c.billing_name||'—'}</div></div>
+        <div><div style="font-size:9px;opacity:.5;text-transform:uppercase;letter-spacing:1px">Expires</div><div style="font-weight:600;font-size:14px">${c.expiry||'—'}</div></div>
       </div>
-      <button onclick="deletePayCard('${c.id}')" style="position:absolute;top:10px;left:10px;background:rgba(255,255,255,.15);border:none;border-radius:6px;color:#fff;padding:3px 7px;cursor:pointer;font-size:11px">✕</button>
+      <button onclick="deletePayCard('${c.id}')" style="position:absolute;top:12px;left:14px;background:rgba(255,255,255,.15);border:none;border-radius:8px;color:#fff;padding:4px 9px;cursor:pointer;font-size:11px;backdrop-filter:blur(4px)">✕ Remove</button>
     </div>`).join('')
     :'<div class="empty"><i>💳</i>No payment cards saved<br>Add a card below</div>';
 }
 function addPayCard(){
-  const last4=prompt('Last 4 digits of your card:');
-  if(!last4||last4.length!==4||!/^\d{4}$/.test(last4)){T('Enter exactly 4 digits');return;}
-  const exp=prompt('Expiry (MM/YY):');if(!exp)return;
-  const name=prompt('Name on card:');if(!name)return;
-  const net=prompt('Network (visa/mastercard/amex):') || 'visa';
-  const type=prompt('Type (credit/debit/prepaid):')||'credit';
-  post('payment_cards',{user_id:UID,last_four:last4,expiry:exp,billing_name:name,network:net.toLowerCase(),card_type:type.toLowerCase(),created_at:Date.now()})
-  .then(()=>{T('✅ Card saved!');loadPaymentCards();}).catch(()=>T('Failed to save'));
+  // Build modal if not exists
+  if(!document.getElementById('addCardModal')){
+    const m=document.createElement('div');
+    m.id='addCardModal';m.className='mo';m.style.zIndex='500';
+    m.innerHTML=`<div class="mo-box" style="max-width:420px">
+      <div class="mo-head"><span>💳 Add payment card</span><button class="mo-x" onclick="cmo('addCardModal')">✕</button></div>
+      <!-- Live card preview -->
+      <div id="card-preview-live" style="background:linear-gradient(135deg,#1a237e,#283593);border-radius:16px;padding:20px;color:#fff;margin-bottom:20px;min-height:120px;transition:background .3s">
+        <div style="font-size:10px;opacity:.5;text-transform:uppercase;letter-spacing:1px">Card Type</div>
+        <div style="font-size:18px;letter-spacing:5px;margin:10px 0;font-weight:300" id="prev-num">••••  ••••  ••••  ••••</div>
+        <div style="display:flex;justify-content:space-between;margin-top:14px">
+          <div><div style="font-size:9px;opacity:.5;text-transform:uppercase">Holder</div><div id="prev-name" style="font-weight:600">YOUR NAME</div></div>
+          <div><div style="font-size:9px;opacity:.5;text-transform:uppercase">Expires</div><div id="prev-exp" style="font-weight:600">MM/YY</div></div>
+          <div style="text-align:right"><div id="prev-net" style="font-weight:700;font-size:12px">VISA</div></div>
+        </div>
+      </div>
+      <div class="mo-field"><label class="mo-label">Card number</label>
+        <input id="wlt-num" class="ai" placeholder="0000 0000 0000 0000" maxlength="19" oninput="fmtCardNum(this)" style="font-size:18px;letter-spacing:3px;font-family:monospace">
+      </div>
+      <div style="display:flex;gap:12px">
+        <div class="mo-field" style="flex:1"><label class="mo-label">Expiry date</label>
+          <input id="wlt-exp" class="ai" placeholder="MM/YY" maxlength="5" oninput="fmtExpiry(this)">
+        </div>
+        <div class="mo-field" style="flex:1"><label class="mo-label">CVV</label>
+          <input id="wlt-cvv" class="ai" placeholder="•••" maxlength="4" type="password">
+        </div>
+      </div>
+      <div class="mo-field"><label class="mo-label">Name on card</label>
+        <input id="wlt-name" class="ai" placeholder="JOHN SMITH" oninput="document.getElementById('prev-name').textContent=this.value.toUpperCase()||'YOUR NAME'" style="text-transform:uppercase">
+      </div>
+      <div class="mo-field"><label class="mo-label">Card type</label>
+        <select id="wlt-type" class="ai" style="cursor:pointer">
+          <option value="credit">Credit card</option>
+          <option value="debit">Debit card</option>
+          <option value="prepaid">Prepaid card</option>
+        </select>
+      </div>
+      <div id="wlt-err" style="color:#c62828;font-size:12px;margin-bottom:8px;display:none"></div>
+      <button class="mb mb-purple" onclick="savePayCard()">+ Add card securely</button>
+      <div style="text-align:center;font-size:11px;color:#706f87;margin-top:10px">🔒 Card info stored securely. We never charge without your permission.</div>
+    </div>`;
+    document.body.appendChild(m);
+    m.addEventListener('click',e=>{if(e.target===m)cmo('addCardModal');});
+  }
+  // Reset form
+  ['wlt-num','wlt-exp','wlt-cvv','wlt-name'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('wlt-type').value='credit';
+  document.getElementById('wlt-err').style.display='none';
+  document.getElementById('prev-num').textContent='••••  ••••  ••••  ••••';
+  document.getElementById('prev-name').textContent='YOUR NAME';
+  document.getElementById('prev-exp').textContent='MM/YY';
+  document.getElementById('prev-net').textContent='VISA';
+  document.getElementById('card-preview-live').style.background='linear-gradient(135deg,#1a237e,#283593)';
+  omo('addCardModal');
+}
+function fmtCardNum(el){
+  let v=el.value.replace(/\D/g,'');
+  v=v.substring(0,16);
+  const net=detectNetwork(v);
+  const grp=net==='amex'?[4,6,5]:[4,4,4,4];
+  let out='',pos=0;
+  grp.forEach((g,i)=>{if(pos<v.length){out+=(i>0?' ':'')+v.substring(pos,pos+g);pos+=g;}});
+  el.value=out;
+  const last4=v.substring(v.length-4)||'••••';
+  const display=v.length>0?'••••  ••••  ••••  '+last4:'••••  ••••  ••••  ••••';
+  document.getElementById('prev-num').textContent=display;
+  document.getElementById('prev-net').textContent=net.toUpperCase();
+  const bgs={visa:'linear-gradient(135deg,#1a237e,#283593)',mastercard:'linear-gradient(135deg,#b71c1c,#880e0e)',amex:'linear-gradient(135deg,#004d40,#00695c)',other:'linear-gradient(135deg,#1a1a2e,#2d2d4e)'};
+  document.getElementById('card-preview-live').style.background=bgs[net]||bgs.other;
+}
+function fmtExpiry(el){
+  let v=el.value.replace(/\D/g,'');
+  if(v.length>=2)v=v.substring(0,2)+'/'+v.substring(2,4);
+  el.value=v;
+  document.getElementById('prev-exp').textContent=v||'MM/YY';
+}
+function savePayCard(){
+  const numEl=document.getElementById('wlt-num');
+  const num=numEl.value.replace(/\s/g,'');
+  const exp=document.getElementById('wlt-exp').value;
+  const name=document.getElementById('wlt-name').value.trim();
+  const type=document.getElementById('wlt-type').value;
+  const errEl=document.getElementById('wlt-err');
+  errEl.style.display='none';
+  if(num.length<15){errEl.textContent='Please enter a valid card number';errEl.style.display='block';return;}
+  if(!exp.match(/^\d{2}\/\d{2}$/)){errEl.textContent='Enter expiry in MM/YY format';errEl.style.display='block';return;}
+  if(!name){errEl.textContent='Please enter the name on your card';errEl.style.display='block';return;}
+  const net=detectNetwork(num);
+  const last4=num.slice(-4);
+  const btn=document.querySelector('#addCardModal .mb-purple');
+  if(btn){btn.textContent='Adding...';btn.disabled=true;}
+  post('payment_cards',{user_id:UID,last_four:last4,expiry:exp,billing_name:name.toUpperCase(),network:net,card_type:type,created_at:Date.now()})
+  .then(()=>{
+    T('✅ Card ending in '+last4+' added!');
+    cmo('addCardModal');
+    loadPaymentCards();
+    if(btn){btn.textContent='+ Add card securely';btn.disabled=false;}
+  }).catch(()=>{
+    errEl.textContent='Failed to save — please try again';errEl.style.display='block';
+    if(btn){btn.textContent='+ Add card securely';btn.disabled=false;}
+  });
 }
 function deletePayCard(id){
-  if(!confirm('Remove this card?'))return;
-  del('payment_cards','id=eq.'+id+'&user_id=eq.'+UID).then(()=>{T('Card removed');loadPaymentCards();}).catch(()=>T('Failed'));
+  // Use custom confirmation instead of browser confirm()
+  const card=PAYMENT_CARDS.find(c=>c.id===id);
+  const msg='Remove card ending in '+(card?.last_four||'••••')+'?';
+  if(!window.confirm(msg))return;
+  del('payment_cards','id=eq.'+id+'&user_id=eq.'+UID)
+  .then(()=>{T('Card removed');loadPaymentCards();})
+  .catch(()=>T('Failed to remove'));
 }
 
 // ===== CUSTOMER REWARDS/OFFERS =====
@@ -279,6 +396,10 @@ button{cursor:pointer}
 .toast.show{opacity:1}
 .empty{text-align:center;padding:44px 20px;color:#706f87}
 .empty i{display:block;font-size:44px;margin-bottom:14px;font-style:normal}
+
+/* Wallet / Payment card modal */
+#addCardModal .mo-field{margin-bottom:14px}
+#addCardModal .mo-label{font-size:11px;font-weight:700;color:#706f87;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px}
 </style>
 </head>
 <body>
@@ -366,7 +487,7 @@ button{cursor:pointer}
 
   <div class="screen" id="payments-screen">
     <div class="sh"><span class="sh-t">💳 Payment cards</span></div>
-    <div id="payment-cards-list"><div class="empty"><i>💳</i>Loading...</div></div>
+    <div id="payment-cards-list"><div class="empty"><i>💳</i>No payment cards saved<br>Add a card below</div></div>
     <button class="fab" style="position:relative;margin:16px auto;display:block;background:#6C5CE7;color:#fff;border:none;border-radius:14px;padding:14px 24px;font-size:14px;font-weight:700;cursor:pointer;width:100%" onclick="addPayCard()">+ Add payment card</button>
     <div style="background:#ece9ff;border-radius:14px;padding:14px;font-size:12px;color:#4a3f8c;margin-top:8px">
       🔒 Card details are stored securely. Stashlo never charges your card without permission.
@@ -375,7 +496,7 @@ button{cursor:pointer}
 
   <div class="screen" id="offers-screen">
     <div class="sh"><span class="sh-t">🎁 Offers &amp; rewards</span></div>
-    <div id="rewards-list"><div class="empty"><i>🎁</i>Loading...</div></div>
+    <div id="rewards-list"><div class="empty"><i>🎁</i>No offers yet</div></div>
   </div>
 
   <div class="screen" id="inbox-screen">
@@ -722,7 +843,7 @@ let userLat=null,userLng=null;
 function startGPS(){
   if(!navigator.geolocation)return;
   navigator.geolocation.getCurrentPosition(p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;checkNearby();},()=>{},{enableHighAccuracy:true,timeout:8000});
-  setInterval(()=>navigator.geolocation.getCurrentPosition(p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;checkNearby();},()=>{},{timeout:8000}),120000);
+  setInterval(()=>{if(!document.hidden)navigator.geolocation.getCurrentPosition(p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;checkNearby();},()=>{},{timeout:8000});},300000);
 }
 function checkNearby(){
   if(!userLat||!userLng||!CARDS.length)return;
@@ -882,9 +1003,7 @@ function submitOrder(){
   }).catch(()=>sErr('o-err','Failed — try again'))
 }
 function loadOrders(){
-  get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=30&select=*,merchants(name)').then(d=>{
-    // Flatten merchant name
-    if(Array.isArray(d))d.forEach(o=>{if(o.merchants)o.merchant_name=o.merchants.name;});
+  get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=30').then(d=>{
     ORDERS=Array.isArray(d)?d:[];txt('hs-o',ORDERS.length);renderOrders();
   }).catch(()=>{})
 }
@@ -954,7 +1073,7 @@ function loadOrderChat(orderId){
     const msgs=Array.isArray(d)?d:[];
     el.innerHTML=msgs.length?msgs.map(m=>`<div style="display:flex;flex-direction:${m.sender_role==='customer'?'row-reverse':'row'};gap:8px;align-items:flex-end">
       <div style="max-width:72%;background:${m.sender_role==='customer'?'#6C5CE7':'#fff'};color:${m.sender_role==='customer'?'#fff':'#1a1a2e'};border-radius:${m.sender_role==='customer'?'18px 18px 4px 18px':'18px 18px 18px 4px'};padding:10px 14px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
-        <div style="font-size:13px">${m.message}</div>
+        <div style="font-size:13px">${(m.message||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
         <div style="font-size:10px;opacity:.6;margin-top:4px">${m.sender_name||m.sender_role}</div>
       </div></div>`).join(''):'<div style="text-align:center;font-size:13px;color:#706f87;padding:20px">No messages yet. Ask about your order!</div>';
     el.scrollTop=el.scrollHeight;
