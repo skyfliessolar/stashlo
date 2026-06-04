@@ -372,6 +372,10 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     <button class="mbtn mbtn-purple" onclick="saveSettings()">💾 Save All Settings</button>
   </div>
 
+  <div class="screen" id="inbox-screen">
+    <div class="sec-head"><span class="sec-title">📬 Inbox</span><span class="sec-link" onclick="markMerchantMsgsRead()">Mark all read</span></div>
+    <div id="merchant-inbox-list"><div class="empty"><div class="empty-ico">📬</div><div class="empty-txt">No messages yet</div></div></div>
+  </div>
   <div class="bottomnav">
     <div class="nav-btn on" id="nav-overview" onclick="switchTab('overview')"><span class="nav-icon">📊</span><span class="nav-label">Overview</span></div>
     <div class="nav-btn" id="nav-scan" onclick="switchTab('scan')"><span class="nav-icon">📷</span><span class="nav-label">Scan</span></div>
@@ -380,6 +384,7 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     <div class="nav-btn" id="nav-orders" onclick="switchTab('orders')"><span class="nav-icon">📦</span><span class="nav-label">Orders</span></div>
     <div class="nav-btn" id="nav-customers" onclick="switchTab('customers')"><span class="nav-icon">👥</span><span class="nav-label">Customers</span></div>
     <div class="nav-btn" id="nav-settings" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span></div>
+    <div class="nav-btn" id="nav-inbox" onclick="switchTab('inbox')"><span class="nav-icon">📬</span><span class="nav-label" id="m-inbox-badge">Inbox</span></div>
   </div>
 </div>
 
@@ -522,7 +527,7 @@ function showApp(){
   const a=document.getElementById('app');if(a)a.style.display='flex';
   loadAll();
 }
-function loadAll(){loadMerchant();loadProducts();loadOrders();loadCustomers();loadTxns();}
+function loadAll(){loadMerchant();loadProducts();loadOrders();loadCustomers();loadTxns();loadMerchantInbox();}
 
 function loadMerchant(){
   get('merchants','id=eq.'+MID).then(d=>{
@@ -850,8 +855,38 @@ function switchTab(name){
   if(name==='orders')loadOrders();
   if(name==='customers')loadCustomers();
   if(name==='till')loadTxns();
+  if(name==='inbox')loadMerchantInbox();
 }
 function showToast(m){T(m)}
+
+// ===== MERCHANT INBOX (Admin Broadcasts) =====
+let MERCHANT_BROADCASTS=[];
+function loadMerchantInbox(){
+  get('broadcasts','order=sent_at.desc&limit=30').then(d=>{
+    MERCHANT_BROADCASTS=Array.isArray(d)?d:[];
+    renderMerchantInbox();
+    const badge=document.getElementById('m-inbox-badge');
+    if(badge)badge.textContent=MERCHANT_BROADCASTS.length?'Inbox ('+MERCHANT_BROADCASTS.length+')':'Inbox';
+  }).catch(()=>{});
+}
+function renderMerchantInbox(){
+  const el=document.getElementById('merchant-inbox-list');if(!el)return;
+  if(!MERCHANT_BROADCASTS.length){el.innerHTML='<div class="empty"><div class="empty-ico">📬</div><div class="empty-txt">No messages from admin yet</div></div>';return;}
+  el.innerHTML=MERCHANT_BROADCASTS.map(b=>`
+    <div class="item-card" style="border-left:4px solid #6C5CE7;margin-bottom:12px">
+      <div class="item-row"><div>
+        <div class="item-name">📢 ${b.title||'Message'}</div>
+        <div class="item-sub" style="margin-top:6px;line-height:1.6">${b.body||''}</div>
+        <div class="item-sub" style="margin-top:6px;color:#aaa">To: ${b.audience||'all'} • ${b.sent_at?new Date(b.sent_at).toLocaleString().slice(0,16):'—'}</div>
+      </div></div>
+    </div>`).join('');
+}
+function markMerchantMsgsRead(){
+  const badge=document.getElementById('m-inbox-badge');
+  if(badge)badge.textContent='Inbox';
+  T('All messages marked as read');
+}
+
 </script>
 </body>
 </html>
