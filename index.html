@@ -4,7 +4,8 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0a0a14"><link rel="manifest" href="manifest.json">
 <title>Stashlo</title>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js">
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script>
 // ===== CARD LOCATION MANAGEMENT =====
 function saveCardLocation(cardId){
   if(!navigator.geolocation){T('Location not supported');return}
@@ -110,15 +111,6 @@ function redeemReward(id,pts){
     });
   }).catch(()=>T('Failed to claim reward'));
 }
-
-// ===== EXTEND goTab for new screens =====
-const _origGoTab=goTab;
-function goTab(n){
-  _origGoTab(n);
-  if(n==='payments')loadPaymentCards();
-  if(n==='offers'){loadMyRewards();}
-}
-
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -641,7 +633,7 @@ function boot(){
   loadOrders();
   buildBrands();
   loadStashloProd();
-  setTimeout(()=>{loadInbox();startGPS();loadMyRewards();},2000);
+  setTimeout(()=>{loadInbox();startGPS();if(typeof loadMyRewards==="function")loadMyRewards();},2000);
 }
 
 function loadProf(){
@@ -1085,6 +1077,8 @@ function goTab(n){
   if(n==='orders')loadOrders();
   if(n==='shop'){updateMyShops();loadStashloProd();}
   if(n==='inbox')loadInbox();
+  if(n==='payments')loadPaymentCards();
+  if(n==='offers')loadMyRewards();
 }
 </script>
 </body>
