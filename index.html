@@ -228,6 +228,18 @@ function redeemReward(id,pts){
     });
   }).catch(()=>T('Failed to claim reward'));
 }
+// ===== UNREAD CHAT BADGE =====
+function checkUnreadChats(){
+  if(!UID||!ORDERS.length)return;
+  const ids=ORDERS.filter(o=>o.status!=='completed'&&o.status!=='cancelled').map(o=>o.id);
+  if(!ids.length)return;
+  get('chats','order_id=in.('+ids.join(',')+')'+'&sender_role=neq.customer&read_by_other=eq.false&limit=20').then(d=>{
+    const unread=Array.isArray(d)?d.length:0;
+    const badge=document.getElementById('nb-orders');
+    if(badge)badge.querySelector('.nb-lab').textContent=unread>0?'Orders ('+unread+')':'Orders';
+  }).catch(()=>{});
+}
+
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -755,6 +767,8 @@ function boot(){
   buildBrands();
   loadStashloProd();
   setTimeout(()=>{loadInbox();startGPS();if(typeof loadMyRewards==="function")loadMyRewards();},2000);
+  // Poll for unread chat messages every 30s
+  setInterval(()=>checkUnreadChats(),30000);
 }
 
 function loadProf(){
@@ -840,10 +854,102 @@ function saveNatCard(){
 
 // GPS
 let userLat=null,userLng=null;
+// ===== GEOFENCING ENGINE =====
+let GEO_WATCH_ID=null, LAST_NOTIF={}, NOTIF_COOLDOWN=3600000; // 1hr per shop
 function startGPS(){
   if(!navigator.geolocation)return;
-  navigator.geolocation.getCurrentPosition(p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;checkNearby();},()=>{},{enableHighAccuracy:true,timeout:8000});
-  setInterval(()=>{if(!document.hidden)navigator.geolocation.getCurrentPosition(p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;checkNearby();},()=>{},{timeout:8000});},300000);
+  // Request notification permission on first GPS start
+  if('Notification' in window && Notification.permission==='default'){
+    Notification.requestPermission();
+  }
+  // High-accuracy watch (fires every ~5s on movement)
+  GEO_WATCH_ID = navigator.geolocation.watchPosition(
+    p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;checkNearby();},
+    ()=>{},
+    {enableHighAccuracy:true,maximumAge:30000,timeout:15000}
+  );
+  // Fallback poll every 90s when tab visible
+  setInterval(()=>{
+    if(!document.hidden&&navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(
+        p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;checkNearby();},
+        ()=>{},{timeout:10000,maximumAge:60000}
+      );
+    }
+  },90000);
+}
+function checkNearby(){
+  if(!userLat||!userLng||!CARDS.length)return;
+  const now=Date.now();
+  // Check all loyalty cards (both local and national)
+  const cardIds=CARDS.map(c=>c.card_id||c.id).filter(Boolean);
+  if(!cardIds.length)return;
+  // 1. Check saved card_locations
+  get('card_locations','user_id=eq.'+UID+'&order=created_at.desc').then(locs=>{
+    if(!Array.isArray(locs))return;
+    locs.forEach(loc=>{
+      if(!loc.latitude||!loc.longitude)return;
+      const dist=haversine(userLat,userLng,parseFloat(loc.latitude),parseFloat(loc.longitude));
+      const r=loc.radius||200;
+      if(dist<r){
+        const key='loc_'+loc.id;
+        if(!LAST_NOTIF[key]||now-LAST_NOTIF[key]>NOTIF_COOLDOWN){
+          LAST_NOTIF[key]=now;
+          const card=CARDS.find(c=>(c.card_id||c.id)===loc.card_id);
+          if(card)showLoyaltyReminder(card,loc.label||card.shopName||'this shop',loc.id);
+        }
+      }
+    });
+  }).catch(()=>{});
+  // 2. Check merchant shop coordinates
+  const lids=CARDS.filter(c=>c.type==='local'&&c.merchant_id).map(c=>c.merchant_id);
+  if(lids.length){
+    get('merchants','id=in.('+lids.join(',')+')'+'&lat=not.is.null&lng=not.is.null').then(ms=>{
+      if(!Array.isArray(ms))return;
+      ms.forEach(m=>{
+        if(!m.lat||!m.lng)return;
+        const dist=haversine(userLat,userLng,parseFloat(m.lat),parseFloat(m.lng));
+        if(dist<500){
+          const key='merch_'+m.id;
+          if(!LAST_NOTIF[key]||now-LAST_NOTIF[key]>NOTIF_COOLDOWN){
+            LAST_NOTIF[key]=now;
+            const card=CARDS.find(c=>c.merchant_id===m.id);
+            if(card)showLoyaltyReminder(card,m.name,m.id);
+            // Also show the old popup banner for open app
+            NEARBY_MID=m.id;
+            txt('np-n',(m.logo_emoji||'🏪')+' '+m.name);
+            txt('np-p',card?(card.points||0)+' pts on your card':'Open your loyalty card');
+            document.getElementById('nearby-pop').style.display='block';
+            setTimeout(closeNearby,12000);
+          }
+        }
+      });
+    }).catch(()=>{});
+  }
+}
+function showLoyaltyReminder(card,shopName,shopId){
+  const msg='🎁 Don\'t forget your '+card.shopName+' loyalty card at '+shopName+'!\nYou have '+(card.points||0)+' points.';
+  // 1. Web Notification (works in background)
+  if('Notification' in window&&Notification.permission==='granted'){
+    try{
+      new Notification('Stashlo Loyalty Reminder 💳',{
+        body:msg,
+        icon:'/stashlo/favicon.ico',
+        badge:'/stashlo/favicon.ico',
+        tag:'loyalty_'+shopId,
+        renotify:false,
+        vibrate:[200,100,200]
+      });
+    }catch(e){}
+  }
+  // 2. In-app toast (app is open)
+  T(msg);
+  // 3. Persistent banner
+  NEARBY_MID=shopId;
+  txt('np-n',(card.emoji||'💳')+' '+card.shopName);
+  txt('np-p','You have '+(card.points||0)+' points — tap to view card');
+  document.getElementById('nearby-pop').style.display='block';
+  setTimeout(closeNearby,15000);
 }
 function checkNearby(){
   if(!userLat||!userLng||!CARDS.length)return;
@@ -1017,26 +1123,57 @@ function statusTimeline(status){
 function renderOrders(){
   const sc={pending:'st-p',confirmed:'st-r',ready:'st-r',completed:'st-c',rejected:'st-x',cancelled:'st-x'};
   const sl={pending:'🕐 Pending',confirmed:'✅ Confirmed',ready:'📦 Ready',completed:'🎉 Done',rejected:'❌ Rejected',cancelled:'❌ Cancelled'};
-  const h=o=>`<div class="ocard" onclick="openOrderDetail('${o.id}')">
+  const canCancel=s=>s==='pending'||s==='confirmed';
+  const h=o=>`<div class="ocard">
     <div class="ocard-h"><div style="font-size:11px;font-weight:700;color:#706f87;font-family:monospace">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div><div class="ostatus ${sc[o.status]||'st-p'}">${sl[o.status]||o.status||'Pending'}</div></div>
     <div style="display:flex;gap:12px;margin:8px 0">
       <div style="font-size:28px">${o.product_emoji||'📦'}</div>
-      <div><div style="font-size:15px;font-weight:700">${o.product_name||'Order'}</div>
-      <div style="font-size:12px;color:#706f87">Qty: ${o.quantity||1} • ${o.type==='collect'?'🏪 Collect in store':'🚚 Delivery'}${o.collect_time?' at '+o.collect_time:''}</div>
-      <div style="font-size:12px;color:#706f87">${o.merchant_name||''}</div></div>
+      <div style="flex:1"><div style="font-size:15px;font-weight:700">${o.product_name||'Order'}</div>
+      <div style="font-size:12px;color:#706f87">Qty: ${o.quantity||1} • £${parseFloat(o.total||0).toFixed(2)}</div>
+      <div style="font-size:12px;color:#706f87">${o.type==='collect'?'🏪 Collect':'🚚 Delivery'}${o.collect_time?' · '+o.collect_time:''}</div></div>
     </div>
     ${statusTimeline(o.status||'pending')}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f5">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid #f0f0f5;gap:8px;flex-wrap:wrap">
       <div style="font-size:18px;font-weight:800;color:#6C5CE7">£${parseFloat(o.total||0).toFixed(2)}</div>
       <div style="display:flex;gap:8px">
-        <button onclick="event.stopPropagation();openOrderChat('${o.id}','${(o.product_name||'Order').replace(/'/g,'')}')" style="background:#ece9ff;color:#6C5CE7;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">💬 Chat</button>
-        <div style="font-size:11px;color:#706f87;align-self:center">${o.created_at?new Date(o.created_at).toLocaleDateString():''}</div>
+        <button onclick="openOrderChat('${o.id}','${(o.product_name||'Order').replace(/'/g,'')}')" style="background:#ece9ff;color:#6C5CE7;border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">💬 Chat</button>
+        ${canCancel(o.status)?`<button onclick="cancelOrder('${o.id}','${(o.product_name||'Order').replace(/'/g,'')}')" style="background:#ffebee;color:#c62828;border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">✕ Cancel</button>`:''}
+        <div style="font-size:11px;color:#aaa;align-self:center">${o.created_at?new Date(o.created_at).toLocaleDateString():''}</div>
       </div>
     </div>
-    ${o.merchant_note?'<div style="background:#fff8e1;border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12px;color:#856404">📢 Merchant: '+o.merchant_note+'</div>':''}
+    ${o.merchant_note?'<div style="background:#fff8e1;border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12px;color:#856404">📢 '+o.merchant_note+'</div>':''}
   </div>`;
   document.getElementById('orders-list').innerHTML=ORDERS.length?ORDERS.map(h).join(''):'<div class="empty"><i>📦</i>No orders yet<br>Browse shops to place an order</div>';
   document.getElementById('home-orders').innerHTML=ORDERS.length?ORDERS.slice(0,2).map(h).join(''):'<div class="empty" style="padding:16px"><i style="font-size:28px">📦</i>No orders yet</div>';
+}
+function cancelOrder(orderId,productName){
+  if(!orderId)return;
+  // Inline confirm without browser confirm()
+  const el=document.getElementById('orders-list');
+  if(!el)return;
+  const existing=document.getElementById('cancel-confirm-'+orderId);
+  if(existing){existing.remove();return;}
+  const div=document.createElement('div');
+  div.id='cancel-confirm-'+orderId;
+  div.style.cssText='background:#fff3cd;border:1.5px solid #ffc107;border-radius:12px;padding:14px;margin:8px 0;font-size:13px';
+  div.innerHTML=`<div style="font-weight:700;margin-bottom:8px">Cancel "${productName}"?</div>
+    <div style="color:#706f87;margin-bottom:10px">This will cancel your order. If already being prepared, the merchant may not be able to stop it.</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="confirmCancelOrder('${orderId}')" style="background:#c62828;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;flex:1">Yes, cancel order</button>
+      <button onclick="document.getElementById('cancel-confirm-${orderId}').remove()" style="background:#f0f0f0;color:#333;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;flex:1">Keep order</button>
+    </div>`;
+  // Insert before orders list
+  el.prepend(div);
+}
+function confirmCancelOrder(orderId){
+  pat('orders','id=eq.'+orderId+'&user_id=eq.'+UID,{status:'cancelled',tracking_status:'cancelled'})
+  .then(()=>{
+    T('Order cancelled');
+    const conf=document.getElementById('cancel-confirm-'+orderId);
+    if(conf)conf.remove();
+    loadOrders();
+  })
+  .catch(()=>T('Could not cancel — please contact the shop'));
 }
 let CUR_ORDER_CHAT=null;
 function openOrderDetail(id){
@@ -1049,7 +1186,9 @@ function openOrderChat(orderId,productName){
   if(!chatEl){buildChatModal();return openOrderChat(orderId,productName);}
   document.getElementById('chat-modal-title').textContent='💬 '+productName;
   chatEl.classList.add('on');
+  CHAT_LAST_COUNT=0;
   loadOrderChat(orderId);
+  startChatPolling(orderId);
 }
 function buildChatModal(){
   const d=document.createElement('div');
@@ -1066,25 +1205,47 @@ function buildChatModal(){
   d.addEventListener('click',e=>{if(e.target===d)closeChatModal();});
 }
 function closeChatModal(){const el=document.getElementById('order-chat-modal');if(el)el.classList.remove('on');}
-function loadOrderChat(orderId){
+let CHAT_POLL_INTERVAL=null, CHAT_LAST_COUNT=0;
+function loadOrderChat(orderId,silent){
   const el=document.getElementById('chat-messages');if(!el)return;
-  el.innerHTML='<div style="text-align:center;font-size:12px;color:#aaa">Loading...</div>';
-  get('chats','conversation_id=eq.order_'+orderId+'&order=created_at.asc&limit=50').then(d=>{
+  if(!silent)el.innerHTML='<div style="text-align:center;font-size:12px;color:#aaa">Loading...</div>';
+  get('chats','conversation_id=eq.order_'+orderId+'&order=created_at.asc&limit=100').then(d=>{
     const msgs=Array.isArray(d)?d:[];
-    el.innerHTML=msgs.length?msgs.map(m=>`<div style="display:flex;flex-direction:${m.sender_role==='customer'?'row-reverse':'row'};gap:8px;align-items:flex-end">
-      <div style="max-width:72%;background:${m.sender_role==='customer'?'#6C5CE7':'#fff'};color:${m.sender_role==='customer'?'#fff':'#1a1a2e'};border-radius:${m.sender_role==='customer'?'18px 18px 4px 18px':'18px 18px 18px 4px'};padding:10px 14px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
-        <div style="font-size:13px">${(m.message||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-        <div style="font-size:10px;opacity:.6;margin-top:4px">${m.sender_name||m.sender_role}</div>
-      </div></div>`).join(''):'<div style="text-align:center;font-size:13px;color:#706f87;padding:20px">No messages yet. Ask about your order!</div>';
-    el.scrollTop=el.scrollHeight;
-  }).catch(()=>{el.innerHTML='<div style="text-align:center;color:#c62828;font-size:13px">Could not load messages</div>';});
+    const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;
+    const newMsgs=msgs.length>CHAT_LAST_COUNT;
+    CHAT_LAST_COUNT=msgs.length;
+    el.innerHTML=msgs.length?msgs.map(m=>`<div style="display:flex;flex-direction:${m.sender_role==='customer'?'row-reverse':'row'};gap:8px;align-items:flex-end;margin-bottom:6px">
+      <div style="max-width:75%;background:${m.sender_role==='customer'?'#6C5CE7':m.sender_role==='admin'?'#00695c':'#fff'};color:${m.sender_role==='customer'||m.sender_role==='admin'?'#fff':'#1a1a2e'};border-radius:18px;padding:10px 14px;box-shadow:0 1px 4px rgba(0,0,0,.1)">
+        <div style="font-size:13px;line-height:1.5">${(m.message||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        <div style="font-size:10px;opacity:.6;margin-top:3px;text-align:right">${m.sender_name||m.sender_role} · ${m.created_at?new Date(m.created_at).toLocaleTimeString().slice(0,5):''}</div>
+      </div></div>`).join(''):'<div style="text-align:center;font-size:13px;color:#706f87;padding:30px 20px">No messages yet.<br>Start the conversation below!</div>';
+    if(wasAtBottom||newMsgs)el.scrollTop=el.scrollHeight;
+  }).catch(()=>{if(!silent)el.innerHTML='<div style="text-align:center;color:#c62828;font-size:13px;padding:20px">Could not load messages</div>';});
+}
+function startChatPolling(orderId){
+  stopChatPolling();
+  CHAT_LAST_COUNT=0;
+  CHAT_POLL_INTERVAL=setInterval(()=>loadOrderChat(orderId,true),4000);
+}
+function stopChatPolling(){
+  if(CHAT_POLL_INTERVAL){clearInterval(CHAT_POLL_INTERVAL);CHAT_POLL_INTERVAL=null;}
 }
 function sendChatMsg(){
   const inp=document.getElementById('chat-input');
   const msg=inp.value.trim();if(!msg||!CUR_ORDER_CHAT)return;
   inp.value='';
-  post('chats',{conversation_id:'order_'+CUR_ORDER_CHAT,sender_id:UID,sender_role:'customer',sender_name:PROF.name||UEMAIL,message:msg,order_id:CUR_ORDER_CHAT,created_at:Date.now()})
-  .then(()=>loadOrderChat(CUR_ORDER_CHAT)).catch(()=>T('Failed to send'));
+  const btn=document.querySelector('#order-chat-modal button[onclick="sendChatMsg()"]');
+  if(btn){btn.textContent='...';btn.disabled=true;}
+  post('chats',{conversation_id:'order_'+CUR_ORDER_CHAT,sender_id:UID,sender_role:'customer',sender_name:PROF.name||UEMAIL,message:msg,order_id:CUR_ORDER_CHAT,read_by_other:false,created_at:Date.now()})
+  .then(()=>{
+    loadOrderChat(CUR_ORDER_CHAT,false);
+    if(btn){btn.textContent='Send';btn.disabled=false;}
+  })
+  .catch(()=>{
+    T('⚠️ Failed to send — check connection');
+    inp.value=msg; // restore message
+    if(btn){btn.textContent='Send';btn.disabled=false;}
+  });
 }
 
 // Card detail + Barcode
