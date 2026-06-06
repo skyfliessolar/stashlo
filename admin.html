@@ -509,7 +509,14 @@ function switchTab(name){
   if(name==='orders')loadOrders();
   if(name==='broadcast')loadBroadcasts();
   if(name==='rewards')loadRewardsGiven();
-  if(name==='admin-chat')loadAdminChats();
+  if(name==='admin-chat'){
+    loadAdminChats();
+    // Auto-refresh chat list every 30s when on chat screen
+    if(window._chatTabInterval)clearInterval(window._chatTabInterval);
+    window._chatTabInterval=setInterval(loadAdminChats,30000);
+  } else {
+    if(window._chatTabInterval){clearInterval(window._chatTabInterval);window._chatTabInterval=null;}
+  }
 }
 
 // ===== ADMIN: DELETE BROADCAST =====
@@ -553,20 +560,35 @@ function loadRewardsGiven(){
 
 // ===== ADMIN: CHATS =====
 let ADMIN_CHATS=[], CUR_ADMIN_CHAT=null;
+let ADMIN_CHAT_POLL=null, ADMIN_CHAT_LAST=0;
 function loadAdminChats(){
-  // Load all recent order chats where admin involved (stashlo store orders)
-  sget('orders','status=not.eq.completed&merchant_id=is.null&order=created_at.desc&limit=30').then(d=>{
+  // Load ALL recent orders with any chat activity
+  sget('orders','order=created_at.desc&limit=50').then(d=>{
     const orders=Array.isArray(d)?d:[];
     const el=document.getElementById('admin-chat-list');if(!el)return;
-    if(!orders.length){el.innerHTML='<div class="empty"><div class="empty-ico">💬</div><div class="empty-txt">No customer orders yet</div></div>';return;}
-    el.innerHTML=orders.map(o=>`<div class="item-card" style="cursor:pointer" onclick="openAdminChat('${o.id}','${(o.product_name||'Order').replace(/'/g,'')}')">
-      <div class="item-row">
-        <div><div class="item-name">📦 ${o.product_name||'Order'}</div>
-        <div class="item-sub">Status: ${o.status||'pending'} • £${parseFloat(o.total||0).toFixed(2)}</div>
-        <div class="item-sub">${o.created_at?new Date(o.created_at).toLocaleDateString():''}</div></div>
-        <button style="background:#ece9ff;color:#6C5CE7;border:none;border-radius:10px;padding:8px 12px;cursor:pointer;font-size:12px;font-weight:700">💬 Chat</button>
-      </div>
-    </div>`).join('');
+    // Load unread counts
+    sget('chats','sender_role=eq.customer&read_by_other=eq.false&order=created_at.desc&limit=100').then(unreadMsgs=>{
+      const unreadByOrder={};
+      if(Array.isArray(unreadMsgs)){unreadMsgs.forEach(m=>{unreadByOrder[m.order_id]=(unreadByOrder[m.order_id]||0)+1;});}
+      if(!orders.length){el.innerHTML='<div class="empty"><div class="empty-ico">💬</div><div class="empty-txt">No orders yet</div></div>';return;}
+      const sl={pending:'🕐',confirmed:'✅',ready:'📦',completed:'🎉',rejected:'❌',cancelled:'❌'};
+      el.innerHTML=orders.map(o=>{
+        const uc=unreadByOrder[o.id]||0;
+        return `<div class="item-card" style="cursor:pointer;border-left:3px solid ${uc>0?'#6C5CE7':'#e5e5ea'}" onclick="openAdminChat('${o.id}','${(o.product_name||'Order').replace(/'/g,'')}')">
+          <div class="item-row">
+            <div>
+              <div class="item-name">${sl[o.status]||'🕐'} ${o.product_name||'Order'} ×${o.quantity||1}</div>
+              <div class="item-sub">£${parseFloat(o.total||0).toFixed(2)} • ${o.type==='collect'?'Collect':'Delivery'}</div>
+              <div class="item-sub">${o.created_at?new Date(o.created_at).toLocaleString().slice(0,14):''}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+              ${uc>0?`<span style="background:#6C5CE7;color:#fff;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700">${uc} new</span>`:''}
+              <button style="background:#ece9ff;color:#6C5CE7;border:none;border-radius:10px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700">💬 Chat</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }).catch(()=>{el.innerHTML='<div class="empty">Error loading chats</div>';});
   }).catch(()=>{});
 }
 function openAdminChat(orderId,name){
@@ -575,7 +597,10 @@ function openAdminChat(orderId,name){
   if(!modal){buildAdminChatModal();return openAdminChat(orderId,name);}
   document.getElementById('adm-chat-title').textContent='💬 '+name;
   modal.classList.add('on');
+  ADMIN_CHAT_LAST=0;
   loadAdminChatMsgs(orderId);
+  stopAdminChatPoll();
+  ADMIN_CHAT_POLL=setInterval(()=>loadAdminChatMsgs(orderId,true),4000);
 }
 function buildAdminChatModal(){
   const d=document.createElement('div');d.id='admin-chat-modal';d.className='modal-overlay';d.style.display='flex';
@@ -590,25 +615,44 @@ function buildAdminChatModal(){
   document.body.appendChild(d);
   d.addEventListener('click',e=>{if(e.target===d)closeAdminChat();});
 }
-function closeAdminChat(){const el=document.getElementById('admin-chat-modal');if(el)el.classList.remove('on');}
-function loadAdminChatMsgs(orderId){
+function closeAdminChat(){const el=document.getElementById('admin-chat-modal');if(el)el.classList.remove('on');stopAdminChatPoll();}
+function loadAdminChatMsgs(orderId,silent){
   const el=document.getElementById('adm-chat-msgs');if(!el)return;
-  sget('chats','conversation_id=eq.order_'+orderId+'&order=created_at.asc&limit=50').then(d=>{
+  if(!silent)el.innerHTML='<div style="text-align:center;font-size:12px;color:#aaa">Loading...</div>';
+  sget('chats','conversation_id=eq.order_'+orderId+'&order=created_at.asc&limit=100').then(d=>{
     const msgs=Array.isArray(d)?d:[];
-    el.innerHTML=msgs.length?msgs.map(m=>`<div style="display:flex;flex-direction:${m.sender_role==='admin'?'row-reverse':'row'};gap:8px">
-      <div style="max-width:72%;background:${m.sender_role==='admin'?'#6C5CE7':'#fff'};color:${m.sender_role==='admin'?'#fff':'#1a1a2e'};border-radius:14px;padding:10px 14px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
-        <div style="font-size:13px">${(m.message||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-        <div style="font-size:10px;opacity:.6;margin-top:3px">${m.sender_name||m.sender_role}</div>
-      </div></div>`).join(''):'<div style="text-align:center;padding:20px;font-size:13px;color:#706f87">No messages yet</div>';
-    el.scrollTop=el.scrollHeight;
-  });
+    const atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;
+    const hasNew=msgs.length>ADMIN_CHAT_LAST;
+    ADMIN_CHAT_LAST=msgs.length;
+    msgs.filter(m=>m.sender_role!=='admin'&&!m.read_by_other).forEach(m=>{
+      spat('chats','id=eq.'+m.id,{read_by_other:true}).catch(()=>{});
+    });
+    el.innerHTML=msgs.length?msgs.map(m=>`<div style="display:flex;flex-direction:${m.sender_role==='admin'?'row-reverse':'row'};gap:8px;margin-bottom:6px">
+      <div style="max-width:76%;background:${m.sender_role==='admin'?'#6C5CE7':m.sender_role==='merchant'?'#00695c':'#f0f0f5'};color:${m.sender_role==='admin'||m.sender_role==='merchant'?'#fff':'#1a1a2e'};border-radius:16px;padding:10px 14px;box-shadow:0 2px 8px rgba(0,0,0,.1)">
+        <div style="font-size:13px;line-height:1.5">${(m.message||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        <div style="font-size:10px;opacity:.65;margin-top:3px;text-align:right">${m.sender_name||m.sender_role} · ${m.created_at?new Date(m.created_at).toLocaleTimeString().slice(0,5):''}</div>
+      </div></div>`).join(''):'<div style="text-align:center;padding:30px;font-size:13px;color:#706f87">No messages yet</div>';
+    if(atBottom||hasNew)el.scrollTop=el.scrollHeight;
+    if(hasNew&&!silent)loadAdminChats();
+  }).catch(()=>{});
 }
+
 function sendAdminChat(){
   const inp=document.getElementById('adm-chat-inp');
   const msg=inp.value.trim();if(!msg||!CUR_ADMIN_CHAT)return;
   inp.value='';
-  spost('chats',{conversation_id:'order_'+CUR_ADMIN_CHAT,sender_id:null,sender_role:'admin',sender_name:'Stashlo Admin',message:msg,order_id:CUR_ADMIN_CHAT,created_at:Date.now()})
-  .then(()=>loadAdminChatMsgs(CUR_ADMIN_CHAT)).catch(()=>T('Failed to send'));
+  const btn=document.querySelector('#admin-chat-modal .mbtn-purple');
+  if(btn){btn.textContent='...';btn.disabled=true;}
+  spost('chats',{conversation_id:'order_'+CUR_ADMIN_CHAT,sender_id:null,sender_role:'admin',sender_name:'Stashlo Admin',message:msg,order_id:CUR_ADMIN_CHAT,read_by_other:false,created_at:Date.now()})
+  .then(()=>{
+    loadAdminChatMsgs(CUR_ADMIN_CHAT,false);
+    if(btn){btn.textContent='Send';btn.disabled=false;}
+  })
+  .catch(()=>{
+    T('⚠️ Failed to send');
+    inp.value=msg;
+    if(btn){btn.textContent='Send';btn.disabled=false;}
+  });
 }
 
 </script>
