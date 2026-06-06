@@ -534,6 +534,19 @@ function showApp(){
   loadAll();
 }
 function loadAll(){loadMerchant();loadProducts();loadOrders();loadCustomers();loadTxns();loadMerchantInbox();}
+// Check for unread customer chat messages every 30s
+function checkMerchantUnreadChats(){
+  if(!MID)return;
+  get('chats','sender_role=eq.customer&read_by_other=eq.false&order=created_at.desc&limit=30').then(d=>{
+    const unread=Array.isArray(d)?d.filter(m=>{
+      const o=ORDERS.find(x=>x.id===m.order_id);
+      return o&&o.merchant_id===MID;
+    }).length:0;
+    const badge=document.getElementById('nav-orders');
+    if(badge)badge.querySelector('.nav-label').textContent=unread>0?'Orders ('+unread+')':'Orders';
+  }).catch(()=>{});
+}
+setInterval(checkMerchantUnreadChats,30000);
 
 function loadMerchant(){
   get('merchants','id=eq.'+MID).then(d=>{
@@ -969,7 +982,9 @@ function openOrderChatMerchant(orderId,customerName){
   if(!modal){buildMerchantChatModal();return openOrderChatMerchant(orderId,customerName);}
   document.getElementById('mcht-title').textContent='💬 '+customerName;
   modal.classList.add('on');
+  M_CHAT_LAST=0;
   loadMerchantChat(orderId);
+  startMerchantChatPoll(orderId);
 }
 function buildMerchantChatModal(){
   const d=document.createElement('div');d.id='merchant-chat-modal';d.className='modal-overlay';
@@ -984,26 +999,56 @@ function buildMerchantChatModal(){
   document.body.appendChild(d);
   d.addEventListener('click',e=>{if(e.target===d)closeMerchantChat();});
 }
-function closeMerchantChat(){const el=document.getElementById('merchant-chat-modal');if(el)el.classList.remove('on');}
-function loadMerchantChat(orderId){
+function closeMerchantChat(){
+  const el=document.getElementById('merchant-chat-modal');
+  if(el)el.classList.remove('on');
+  stopMerchantChatPoll();M_CHAT_LAST=0;
+}
+let M_CHAT_POLL=null, M_CHAT_LAST=0;
+function loadMerchantChat(orderId,silent){
   const el=document.getElementById('mcht-msgs');if(!el)return;
-  el.innerHTML='<div style="text-align:center;font-size:12px;color:#aaa">Loading...</div>';
-  get('chats','conversation_id=eq.order_'+orderId+'&order=created_at.asc&limit=50').then(d=>{
+  if(!silent)el.innerHTML='<div style="text-align:center;font-size:12px;color:#aaa">Loading...</div>';
+  get('chats','conversation_id=eq.order_'+orderId+'&order=created_at.asc&limit=100').then(d=>{
     const msgs=Array.isArray(d)?d:[];
-    el.innerHTML=msgs.length?msgs.map(m=>`<div style="display:flex;flex-direction:${m.sender_role==='merchant'?'row-reverse':'row'};gap:8px">
-      <div style="max-width:72%;background:${m.sender_role==='merchant'?'#6C5CE7':'#fff'};color:${m.sender_role==='merchant'?'#fff':'#1a1a2e'};border-radius:14px;padding:10px 14px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
-        <div style="font-size:13px">${m.message}</div>
-        <div style="font-size:10px;opacity:.6;margin-top:3px">${m.sender_name||m.sender_role}</div>
-      </div></div>`).join(''):'<div style="text-align:center;padding:20px;font-size:13px;color:#706f87">No messages yet</div>';
-    el.scrollTop=el.scrollHeight;
-  }).catch(()=>{el.innerHTML='<div style="color:#c62828;text-align:center;font-size:13px">Could not load</div>';});
+    const atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;
+    const hasNew=msgs.length>M_CHAT_LAST;
+    M_CHAT_LAST=msgs.length;
+    // Mark unread customer messages as read
+    msgs.filter(m=>m.sender_role==='customer'&&!m.read_by_other).forEach(m=>{
+      pat('chats','id=eq.'+m.id,{read_by_other:true}).catch(()=>{});
+    });
+    el.innerHTML=msgs.length?msgs.map(m=>`<div style="display:flex;flex-direction:${m.sender_role==='merchant'?'row-reverse':'row'};gap:8px;margin-bottom:6px">
+      <div style="max-width:76%;background:${m.sender_role==='merchant'?'#6C5CE7':m.sender_role==='admin'?'#00695c':'#fff'};color:${m.sender_role==='merchant'||m.sender_role==='admin'?'#fff':'#1a1a2e'};border-radius:16px;padding:10px 14px;box-shadow:0 2px 8px rgba(0,0,0,.1)">
+        <div style="font-size:13px;line-height:1.5">${(m.message||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        <div style="font-size:10px;opacity:.65;margin-top:3px;text-align:right">${m.sender_name||m.sender_role} · ${m.created_at?new Date(m.created_at).toLocaleTimeString().slice(0,5):''}</div>
+      </div></div>`).join(''):'<div style="text-align:center;padding:30px;font-size:13px;color:#706f87">No messages yet</div>';
+    if(atBottom||hasNew)el.scrollTop=el.scrollHeight;
+  }).catch(()=>{if(!silent)el.innerHTML='<div style="color:#c62828;text-align:center;font-size:13px;padding:20px">Could not load</div>';});
+}
+function startMerchantChatPoll(orderId){
+  stopMerchantChatPoll();
+  M_CHAT_LAST=0;
+  M_CHAT_POLL=setInterval(()=>loadMerchantChat(orderId,true),4000);
+}
+function stopMerchantChatPoll(){
+  if(M_CHAT_POLL){clearInterval(M_CHAT_POLL);M_CHAT_POLL=null;}
 }
 function sendMerchantChat(){
   const inp=document.getElementById('mcht-inp');
   const msg=inp.value.trim();if(!msg||!CUR_CHAT_ORDER)return;
   inp.value='';
-  post('chats',{conversation_id:'order_'+CUR_CHAT_ORDER,sender_id:MID,sender_role:'merchant',sender_name:MDATA.name||'Merchant',message:msg,order_id:CUR_CHAT_ORDER,created_at:Date.now()})
-  .then(()=>loadMerchantChat(CUR_CHAT_ORDER)).catch(()=>T('Failed to send'));
+  const btn=document.querySelector('#merchant-chat-modal .mbtn-purple');
+  if(btn){btn.textContent='...';btn.disabled=true;}
+  post('chats',{conversation_id:'order_'+CUR_CHAT_ORDER,sender_id:MID,sender_role:'merchant',sender_name:MDATA.name||'Merchant',message:msg,order_id:CUR_CHAT_ORDER,read_by_other:false,created_at:Date.now()})
+  .then(()=>{
+    loadMerchantChat(CUR_CHAT_ORDER,false);
+    if(btn){btn.textContent='Send';btn.disabled=false;}
+  })
+  .catch(()=>{
+    T('⚠️ Message failed — check connection');
+    inp.value=msg;
+    if(btn){btn.textContent='Send';btn.disabled=false;}
+  });
 }
 
 </script>
