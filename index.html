@@ -263,6 +263,13 @@ function switchCardTab(tab){
   if(!isLoyalty) loadPaymentCards();
 }
 
+function loadJobs(){get('jobs','active=eq.true&order=created_at.desc').then(d=>{const j=Array.isArray(d)?d:[];const el=document.getElementById('jobs-list');if(!el)return;el.innerHTML=j.length?j.map(x=>'<div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:15px;font-weight:700">'+x.title+'</div><span style="background:#ece9ff;color:#6C5CE7;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700">'+(x.job_type||'Part-time')+'</span></div><div style="font-size:13px;color:#6C5CE7;font-weight:600">🏪 '+(x.merchant_name||'Shop')+'</div>'+(x.salary?'<div style="font-size:13px;color:#1a7f37;font-weight:700;margin-top:4px">💷 '+x.salary+'</div>':'')+(x.location?'<div style="font-size:12px;color:#706f87;margin-top:2px">📍 '+x.location+'</div>':'')+'<div style="font-size:12px;color:#706f87;margin-top:6px;line-height:1.5">'+(x.description||'').slice(0,100)+'</div><button style="margin-top:10px;background:#6C5CE7;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer" onclick="applyJob(\''+x.contact_email+'\',\''+x.title.replace(/'/g,'').replace(/"/g,'')+'\')" >Apply Now</button></div>').join(''):'<div class="empty"><i>💼</i>No jobs posted yet</div>';}).catch(()=>{});}
+function applyJob(e,t){if(e)window.open('mailto:'+e+'?subject=Application for '+encodeURIComponent(t),'_blank');else T('Contact the shop directly');}
+let _sp=null;
+function loadSupportChat(){if(!UID)return;const el=document.getElementById('support-msgs');if(!el)return;get('support_chats','customer_id=eq.'+UID+'&order=created_at.asc&limit=100').then(d=>{const m=Array.isArray(d)?d:[];el.innerHTML=m.length?m.map(x=>'<div style="display:flex;flex-direction:'+(x.sender_role==='customer'?'row-reverse':'row')+';gap:8px;margin-bottom:5px"><div style="max-width:78%;background:'+(x.sender_role==='customer'?'#6C5CE7':'#f0f0f8')+';color:'+(x.sender_role==='customer'?'#fff':'#1a1a2e')+';border-radius:14px;padding:9px 13px;font-size:13px">'+(x.message||'').replace(/</g,'&lt;')+'</div></div>').join(''):'<div style="text-align:center;padding:30px;font-size:13px;color:#706f87">Welcome! How can we help?</div>';el.scrollTop=el.scrollHeight;if(!_sp)_sp=setInterval(()=>loadSupportChat(),8000);}).catch(()=>{});}
+function sendSupportMsg(){const inp=document.getElementById('support-inp');const msg=inp.value.trim();if(!msg||!UID)return;inp.value='';post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'customer',sender_name:PROF.name||UEMAIL,message:msg,created_at:Date.now()}).then(()=>loadSupportChat()).catch(()=>{T('Failed');inp.value=msg;});}
+const _gT5=goTab;goTab=function(n){_gT5(n);if(n==='jobs')loadJobs();if(n==='support')loadSupportChat();};
+
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -560,6 +567,25 @@ button{cursor:pointer}
   </div>
 
 
+  <div class="screen" id="jobs-screen" style="padding:0">
+    <div style="background:linear-gradient(135deg,#6C5CE7,#a29bfe);padding:20px 16px;color:#fff">
+      <button onclick="goTab('me')" style="background:rgba(255,255,255,.2);border:none;border-radius:10px;color:#fff;padding:6px 12px;font-size:13px;cursor:pointer;margin-bottom:12px">← Back</button>
+      <div style="font-size:22px;font-weight:800">💼 Jobs Near You</div>
+      <div style="font-size:13px;opacity:.8">Posted by local merchants</div>
+    </div>
+    <div style="padding:16px"><div id="jobs-list"><div class="empty"><i>💼</i>Loading...</div></div></div>
+  </div>
+  <div class="screen" id="support-screen" style="padding:0">
+    <div style="background:linear-gradient(135deg,#0a0a14,#1a1a2e);padding:14px 16px;color:#fff;display:flex;align-items:center;gap:10px">
+      <button onclick="goTab('me')" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;color:#fff;padding:6px 10px;cursor:pointer">←</button>
+      <div style="font-size:17px;font-weight:700">💬 Customer Support</div>
+    </div>
+    <div id="support-msgs" style="overflow-y:auto;padding:12px;background:#f9f9fb;display:flex;flex-direction:column;gap:8px;min-height:300px;max-height:calc(100vh - 220px)"></div>
+    <div style="padding:12px;border-top:1px solid #ebebef;display:flex;gap:8px;background:#fff">
+      <input id="support-inp" class="ai" placeholder="Type your message..." style="flex:1" onkeydown="if(event.key==='Enter')sendSupportMsg()">
+      <button onclick="sendSupportMsg()" style="background:#6C5CE7;color:#fff;border:none;border-radius:12px;padding:10px 16px;font-weight:700;cursor:pointer">Send</button>
+    </div>
+  </div>
   <div class="screen" id="offers-screen">
     <div class="sh"><span class="sh-t">🎁 Offers &amp; rewards</span></div>
     <div id="rewards-list"><div class="empty"><i>🎁</i>No offers yet</div></div>
@@ -579,12 +605,13 @@ button{cursor:pointer}
     <div class="prow" onclick="openEditProf()">
       <div class="prow-ico">✏️</div><div><div class="prow-t">Edit Profile</div><div style="font-size:12px;color:#706f87;margin-top:2px">Name, phone</div></div>
     </div>
+    <div onclick="goTab('jobs')" style="display:flex;align-items:center;gap:14px;background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.06);cursor:pointer"><div style="width:44px;height:44px;background:linear-gradient(135deg,#6C5CE7,#a29bfe);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">💼</div><div><div style="font-weight:700;font-size:14px">Jobs & Recruitment</div><div style="font-size:12px;color:#706f87">Local opportunities</div></div><span style="margin-left:auto;color:#aaa;font-size:20px">›</span></div>
     <div class="prow" onclick="doLogout()">
       <div class="prow-ico">🚪</div><div><div class="prow-t">Sign out</div></div>
     </div>
     <div style="margin-top:16px;background:#f9f9fb;border-radius:16px;overflow:hidden">
       <div style="padding:10px 16px;font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.8px">Help & Support</div>
-      <a href="mailto:stashloadmin@gmail.com" style="display:flex;align-items:center;gap:12px;padding:12px 16px;text-decoration:none;color:#1a1a2e;border-top:1px solid #f0f0f0">
+      <div onclick="goTab('support')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-top:1px solid #f0f0f0"><span style="font-size:20px">💬</span><div><div style="font-weight:600;font-size:13px">Live Chat Support</div><div style="font-size:11px;color:#706f87">Chat with our team</div></div><span style="margin-left:auto;color:#aaa">›</span></div><a href="mailto:stashloadmin@gmail.com" style="display:flex;align-items:center;gap:12px;padding:12px 16px;text-decoration:none;color:#1a1a2e;border-top:1px solid #f0f0f0">
         <span style="font-size:20px">✉️</span><div><div style="font-weight:600;font-size:13px">Email Support</div><div style="font-size:11px;color:#706f87">stashloadmin@gmail.com</div></div><span style="margin-left:auto;color:#aaa">›</span>
       </a>
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid #f0f0f0">
@@ -770,7 +797,7 @@ const BRANDS=[
 function H(){return{'apikey':SK,'Authorization':'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'return=representation'}}
 function get(t,q){return fetch(SU+'/rest/v1/'+t+'?select=*'+(q?'&'+q:''),{headers:H()}).then(r=>r.json())}
 function post(t,d,c){return fetch(SU+'/rest/v1/'+t+(c?'?on_conflict='+c:''),{method:'POST',headers:{...H(),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json())}
-function pat(t,q,d){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'PATCH',headers:H(),body:JSON.stringify(d)}).then(r=>r.json())}
+function pat(t,q,d){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'PATCH',headers:{...H(),'Prefer':'return=minimal'},body:JSON.stringify(d)}).then(r=>r.ok?r:r.json().then(e=>Promise.reject(e)))}
 function del(t,q){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'DELETE',headers:H()})}
 function T(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2800)}
 function V(id){const e=document.getElementById(id);return e?e.value.trim():''}
@@ -1038,7 +1065,7 @@ function closeNearby(){
   }
   document.getElementById('nearby-pop').style.display='none';
 }
-function openNearbyShop(){closeNearby();if(NEARBY_MID)openShopById(NEARBY_MID)}
+function openNearbyShop(){closeNearby();if(!NEARBY_MID)return;const nc=CARDS.find(x=>x.type==='national'&&(x.card_id===NEARBY_MID||x.merchant_id===NEARBY_MID));if(nc){goTab('cards');setTimeout(()=>openCardDet(nc.card_id||nc.id),200);}else openShopById(NEARBY_MID);}
 
 // Shop search
 function openShopSearch(){omo('shopSearchMo');document.getElementById('ms-id').value='';document.getElementById('ms-results').innerHTML=''}
@@ -1412,6 +1439,7 @@ function renderInbox(){
         <div><div class="icard-from">${m._from||'Stashlo'}</div>
         <div class="icard-title">${m.title||'Notification'}</div>
         <div class="icard-body">${m.body||''}</div>
+        ${m.image_url?`<img src="${m.image_url}" style="width:100%;border-radius:10px;margin-top:8px;max-height:180px;object-fit:cover" onerror="this.style.display='none'">`:''}        
         <div style="font-size:11px;color:#a0a0b5;margin-top:6px">${m.sent_at?new Date(m.sent_at).toLocaleString().slice(0,15):'—'}</div></div>
         ${!rd?'<div style="width:8px;height:8px;background:#6C5CE7;border-radius:50%;flex-shrink:0;margin-top:4px"></div>':''}
       </div>
