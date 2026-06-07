@@ -981,7 +981,7 @@ function openOrderChatMerchant(orderId,customerName){
   const modal=document.getElementById('merchant-chat-modal');
   if(!modal){buildMerchantChatModal();return openOrderChatMerchant(orderId,customerName);}
   document.getElementById('mcht-title').textContent='💬 '+customerName;
-  modal.classList.add('on');
+  modal.classList.add('on');modal.style.display='flex';
   M_CHAT_LAST=0;
   loadMerchantChat(orderId);
   startMerchantChatPoll(orderId);
@@ -1001,7 +1001,7 @@ function buildMerchantChatModal(){
 }
 function closeMerchantChat(){
   const el=document.getElementById('merchant-chat-modal');
-  if(el)el.classList.remove('on');
+  if(el){el.classList.remove('on');el.style.display='none';}
   stopMerchantChatPoll();M_CHAT_LAST=0;
 }
 let M_CHAT_POLL=null, M_CHAT_LAST=0;
