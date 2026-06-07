@@ -7,7 +7,7 @@
 <title>Stashlo Merchant</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui,-apple-system,sans-serif;background:#f0efff;color:#1a1a2e;min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;background:#f4f6fa;color:#1a2035;min-height:100vh}
 button{cursor:pointer;border:none;font-family:inherit}
 input,select,textarea{font-family:inherit;border:none;outline:none}
 
@@ -32,17 +32,20 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 .auth-err{color:#c62828;font-size:12px;padding:10px 14px;background:#ffebee;border-radius:10px;margin-top:10px;display:none}
 
 /* App */
-#app{display:none;flex-direction:column;min-height:100vh;padding-bottom:76px}
-.topbar{background:#0a0a14;color:#fff;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99}
+#app{display:none;flex-direction:column;min-height:100vh;padding-bottom:76px;background:#f4f6fa}
+.topbar{background:linear-gradient(135deg,#0f2027 0%,#203a43 50%,#2c5364 100%);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99;box-shadow:0 2px 20px rgba(0,0,0,.3)}
 .tb-left{display:flex;flex-direction:column}
-.tb-brand{font-size:18px;font-weight:900}.tb-brand b{color:#6C5CE7}
+.tb-brand{font-size:18px;font-weight:900}.tb-brand b{color:#00d2ff}
 .tb-shop{font-size:12px;color:rgba(255,255,255,.5);margin-top:1px}
 .tb-right{display:flex;gap:10px}
 .tb-btn{background:rgba(255,255,255,.1);color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600}
 
-.bottomnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1.5px solid #ececf3;display:flex;z-index:99}
-.nav-btn{flex:1;padding:11px 4px 8px;text-align:center;cursor:pointer;color:#a0a0b5;transition:color .15s}
+.bottomnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #eef0f7;display:flex;z-index:99;padding:0 0 env(safe-area-inset-bottom);box-shadow:0 -4px 20px rgba(0,0,0,.06)}
+.nav-btn{flex:1;padding:10px 2px 7px;text-align:center;cursor:pointer;color:#b0b8d0;transition:all .2s;position:relative}
 .nav-btn.on{color:#6C5CE7}
+.nav-btn.on::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:28px;height:3px;background:#6C5CE7;border-radius:2px 2px 0 0}
+.nav-icon{font-size:20px;display:block;margin-bottom:2px}
+.nav-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .nav-icon{font-size:20px;display:block}
 .nav-label{font-size:10px;font-weight:600;margin-top:2px;display:block}
 
@@ -204,26 +207,49 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 
   <!-- OVERVIEW -->
   <div class="screen on" id="overview-screen">
-    <div class="dash-grid">
-      <div class="dash-card purple" onclick="switchTab('customers')">
-        <div class="dash-card-ico">👥</div>
-        <div class="dash-card-val" id="d-customers">0</div>
-        <div class="dash-card-lab">Customers</div>
+    <!-- Revenue Hero Banner (BizLedger/Merchant360 style) -->
+    <div style="background:linear-gradient(135deg,#1a2a4a 0%,#2d3a6b 100%);border-radius:22px;padding:22px 20px;color:#fff;margin-bottom:14px;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-30px;top:-30px;width:150px;height:150px;background:rgba(255,255,255,.04);border-radius:50%"></div>
+      <div style="position:absolute;right:30px;bottom:-20px;width:80px;height:80px;background:rgba(0,210,255,.1);border-radius:50%"></div>
+      <div style="font-size:10px;opacity:.55;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Total Revenue</div>
+      <div style="font-size:38px;font-weight:900;line-height:1">£<span id="d-revenue">0.00</span></div>
+      <div style="font-size:12px;opacity:.5;margin-top:4px">Shop: <b id="d-shopid" style="color:rgba(255,255,255,.75)">—</b></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px">
+        <div onclick="switchTab('till')" style="background:rgba(255,255,255,.1);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;backdrop-filter:blur(10px)">
+          <div style="font-size:18px;font-weight:800" id="d-txn-count">0</div>
+          <div style="font-size:8px;opacity:.55;margin-top:2px;text-transform:uppercase;letter-spacing:.6px">Sales</div>
+        </div>
+        <div onclick="switchTab('customers')" style="background:rgba(255,255,255,.1);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer">
+          <div style="font-size:18px;font-weight:800" id="d-customers">0</div>
+          <div style="font-size:8px;opacity:.55;margin-top:2px;text-transform:uppercase;letter-spacing:.6px">Members</div>
+        </div>
+        <div onclick="switchTab('orders')" style="background:rgba(255,255,255,.1);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer">
+          <div style="font-size:18px;font-weight:800" id="d-orders">0</div>
+          <div style="font-size:8px;opacity:.55;margin-top:2px;text-transform:uppercase;letter-spacing:.6px">Orders</div>
+        </div>
+        <div onclick="switchTab('products')" style="background:rgba(255,255,255,.1);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer">
+          <div style="font-size:18px;font-weight:800" id="d-products">0</div>
+          <div style="font-size:8px;opacity:.55;margin-top:2px;text-transform:uppercase;letter-spacing:.6px">Products</div>
+        </div>
       </div>
-      <div class="dash-card green" onclick="switchTab('orders')">
-        <div class="dash-card-ico">📦</div>
-        <div class="dash-card-val" id="d-orders">0</div>
-        <div class="dash-card-lab">Orders</div>
+    </div>
+    <!-- Quick Action Grid (TaxBill Pro style) -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+      <div onclick="switchTab('scan')" style="background:#fff;border-radius:16px;padding:14px 6px;text-align:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.06)">
+        <div style="width:44px;height:44px;background:#ede9ff;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 6px">📷</div>
+        <div style="font-size:9px;font-weight:700;color:#7b8ab8;text-transform:uppercase;letter-spacing:.5px">Scan</div>
       </div>
-      <div class="dash-card" onclick="switchTab('till')">
-        <div class="dash-card-ico">💰</div>
-        <div class="dash-card-val" id="d-revenue">£0</div>
-        <div class="dash-card-lab">Revenue</div>
+      <div onclick="switchTab('till')" style="background:#fff;border-radius:16px;padding:14px 6px;text-align:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.06)">
+        <div style="width:44px;height:44px;background:#e6fff9;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 6px">💳</div>
+        <div style="font-size:9px;font-weight:700;color:#7b8ab8;text-transform:uppercase;letter-spacing:.5px">Till</div>
       </div>
-      <div class="dash-card" onclick="switchTab('products')">
-        <div class="dash-card-ico">🛍️</div>
-        <div class="dash-card-val" id="d-products">0</div>
-        <div class="dash-card-lab">Products</div>
+      <div onclick="switchTab('products')" style="background:#fff;border-radius:16px;padding:14px 6px;text-align:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.06)">
+        <div style="width:44px;height:44px;background:#fff4e6;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 6px">🏷️</div>
+        <div style="font-size:9px;font-weight:700;color:#7b8ab8;text-transform:uppercase;letter-spacing:.5px">Stock</div>
+      </div>
+      <div onclick="switchTab('customers')" style="background:#fff;border-radius:16px;padding:14px 6px;text-align:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.06)">
+        <div style="width:44px;height:44px;background:#e8f4fd;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 6px">👥</div>
+        <div style="font-size:9px;font-weight:700;color:#7b8ab8;text-transform:uppercase;letter-spacing:.5px">Members</div>
       </div>
     </div>
     <div class="sec-head"><span class="sec-title">Recent sales</span><span class="sec-link" onclick="switchTab('till')">See all →</span></div>
@@ -587,7 +613,10 @@ function loadTxns(){
   get('transactions','merchant_id=eq.'+MID+'&order=timestamp.desc&limit=100').then(d=>{
     TXNS=Array.isArray(d)?d:[];
     const rev=TXNS.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
-    txt('d-revenue','£'+rev.toFixed(0));
+    txt('d-revenue',rev.toFixed(2));
+    txt('d-txn-count',TXNS.length);
+    const siEl=document.getElementById('d-shopid');
+    if(siEl)siEl.textContent=MDATA&&MDATA.shop_id?MDATA.shop_id:'—';
     renderTxns();renderRecentTxns();
   }).catch(()=>{})
 }
