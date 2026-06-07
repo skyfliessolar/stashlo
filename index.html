@@ -41,6 +41,17 @@ let PAYMENT_CARDS=[];
 function loadPaymentCards(){
   get('payment_cards','user_id=eq.'+UID+'&order=created_at.desc').then(d=>{
     PAYMENT_CARDS=Array.isArray(d)?d:[];renderPaymentCards();
+    // Update wallet stats
+    const totalPts=CARDS.reduce((a,c)=>a+(c.points||0),0);
+    const totalSpent=ORDERS.reduce((a,o)=>a+(parseFloat(o.total)||0),0);
+    const wpEl=document.getElementById('wallet-total-pts');
+    const wcEl=document.getElementById('wallet-card-count');
+    const woEl=document.getElementById('wallet-total-orders');
+    const wsEl=document.getElementById('wallet-total-spent');
+    if(wpEl)wpEl.textContent=totalPts.toLocaleString();
+    if(wcEl)wcEl.textContent=CARDS.length;
+    if(woEl)woEl.textContent=ORDERS.length;
+    if(wsEl)wsEl.textContent='£'+totalSpent.toFixed(2);
   }).catch(()=>{});
 }
 function detectNetwork(num){
@@ -238,6 +249,18 @@ function checkUnreadChats(){
     const badge=document.getElementById('nb-orders');
     if(badge)badge.querySelector('.nb-lab').textContent=unread>0?'Orders ('+unread+')':'Orders';
   }).catch(()=>{});
+}
+
+// ===== CARD SCREEN SUB-TABS =====
+function switchCardTab(tab){
+  const isLoyalty = tab === 'loyalty';
+  document.getElementById('ctab-loyalty-pane').style.display = isLoyalty ? '' : 'none';
+  document.getElementById('ctab-wallet-pane').style.display = isLoyalty ? 'none' : '';
+  document.getElementById('ctab-loyalty').style.background = isLoyalty ? '#0a0a14' : 'none';
+  document.getElementById('ctab-loyalty').style.color = isLoyalty ? '#fff' : '#706f87';
+  document.getElementById('ctab-wallet').style.background = isLoyalty ? 'none' : '#6C5CE7';
+  document.getElementById('ctab-wallet').style.color = isLoyalty ? '#706f87' : '#fff';
+  if(!isLoyalty) loadPaymentCards();
 }
 
 </script>
@@ -470,14 +493,53 @@ button{cursor:pointer}
   </div>
 
   <div class="screen" id="cards-screen">
-    <div class="chips">
-      <div class="chip on" id="cn" onclick="fCards('n')">🇬🇧 National</div>
-      <div class="chip" id="cl" onclick="fCards('l')">🏪 Local Shops</div>
+    <!-- Cards sub-tabs: Loyalty | Wallet -->
+    <div style="display:flex;gap:4px;background:#ebebef;border-radius:14px;padding:4px;margin-bottom:16px">
+      <button id="ctab-loyalty" onclick="switchCardTab('loyalty')" style="flex:1;padding:9px 6px;border:none;border-radius:10px;font-weight:700;font-size:13px;background:#0a0a14;color:#fff;cursor:pointer;transition:all .2s">💳 Loyalty Cards</button>
+      <button id="ctab-wallet" onclick="switchCardTab('wallet')" style="flex:1;padding:9px 6px;border:none;border-radius:10px;font-weight:600;font-size:13px;background:none;color:#706f87;cursor:pointer;transition:all .2s">💰 Pay Wallet</button>
     </div>
-    <div id="n-sec"><div class="sh"><span class="sh-t">National brands</span><button class="fab" onclick="openAddNat()">+</button></div><div id="n-list"></div></div>
-    <div id="l-sec" style="display:none"><div class="sh"><span class="sh-t">Local shops</span><button class="fab" onclick="openShopSearch()">+</button></div><div id="l-list"></div></div>
+    <!-- Loyalty tab -->
+    <div id="ctab-loyalty-pane">
+      <div class="chips">
+        <div class="chip on" id="cn" onclick="fCards('n')">🇬🇧 National</div>
+        <div class="chip" id="cl" onclick="fCards('l')">🏪 Local Shops</div>
+      </div>
+      <div id="n-sec"><div class="sh"><span class="sh-t">National brands</span><button class="fab" onclick="goTab('shop')">+</button></div><div id="nat-list"></div></div>
+      <div id="l-sec" style="display:none"><div class="sh"><span class="sh-t">Local shops</span><button class="fab" onclick="openShopSearch()">+</button></div><div id="l-list"></div></div>
+    </div>
+    <!-- Wallet tab (Klarna-style) -->
+    <div id="ctab-wallet-pane" style="display:none">
+      <!-- Loyalty points summary at top (like Klarna balance) -->
+      <div style="background:linear-gradient(135deg,#0a0a14 0%,#1a1a2e 100%);border-radius:20px;padding:20px;color:#fff;margin-bottom:16px">
+        <div style="font-size:11px;opacity:.5;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Total loyalty points</div>
+        <div style="font-size:40px;font-weight:900" id="wallet-total-pts">0</div>
+        <div style="font-size:12px;opacity:.5;margin-top:4px">across <span id="wallet-card-count">0</span> loyalty cards</div>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <div style="background:rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;flex:1;text-align:center">
+            <div style="font-size:11px;opacity:.5">Orders</div>
+            <div style="font-size:20px;font-weight:800" id="wallet-total-orders">0</div>
+          </div>
+          <div style="background:rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;flex:1;text-align:center">
+            <div style="font-size:11px;opacity:.5">Spent</div>
+            <div style="font-size:20px;font-weight:800" id="wallet-total-spent">£0</div>
+          </div>
+        </div>
+      </div>
+      <!-- Payment cards -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:15px;font-weight:700">Payment cards</div>
+        <button onclick="addPayCard()" style="background:#6C5CE7;color:#fff;border:none;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer">+ Add</button>
+      </div>
+      <div id="payment-cards-list"><div class="empty"><i>💳</i>No payment cards saved</div></div>
+      <div style="background:#ece9ff;border-radius:14px;padding:12px 14px;margin-top:14px;display:flex;gap:10px;align-items:center">
+        <div style="font-size:22px">🔒</div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#4a3f8c">Bank-grade security</div>
+          <div style="font-size:11px;color:#706f87;margin-top:2px">We never store CVV. Cards secured with 256-bit encryption.</div>
+        </div>
+      </div>
+    </div>
   </div>
-
   <div class="screen" id="shop-screen">
     <div class="srch-row">
       <input id="shop-inp" class="srch-inp" placeholder="Shop ID (e.g. SL-SKY1) or name" oninput="srchShops(this.value.trim())" onkeydown="if(event.key==='Enter')srchShops(this.value.trim())">
@@ -497,14 +559,6 @@ button{cursor:pointer}
     <div id="orders-list"></div>
   </div>
 
-  <div class="screen" id="payments-screen">
-    <div class="sh"><span class="sh-t">💳 Payment cards</span></div>
-    <div id="payment-cards-list"><div class="empty"><i>💳</i>No payment cards saved<br>Add a card below</div></div>
-    <button class="fab" style="position:relative;margin:16px auto;display:block;background:#6C5CE7;color:#fff;border:none;border-radius:14px;padding:14px 24px;font-size:14px;font-weight:700;cursor:pointer;width:100%" onclick="addPayCard()">+ Add payment card</button>
-    <div style="background:#ece9ff;border-radius:14px;padding:14px;font-size:12px;color:#4a3f8c;margin-top:8px">
-      🔒 Card details are stored securely. Stashlo never charges your card without permission.
-    </div>
-  </div>
 
   <div class="screen" id="offers-screen">
     <div class="sh"><span class="sh-t">🎁 Offers &amp; rewards</span></div>
@@ -536,7 +590,7 @@ button{cursor:pointer}
     <div class="nb" id="nb-shop" onclick="goTab('shop')"><span class="nb-ico">🛍️</span><span class="nb-lab">Shop</span></div>
     <div class="nb" id="nb-orders" onclick="goTab('orders')"><span class="nb-ico">📦</span><span class="nb-lab">Orders</span></div>
     <div class="nb" id="nb-offers" onclick="goTab('offers')"><span class="nb-ico">🎁</span><span class="nb-lab" id="offers-badge">Offers</span></div>
-    <div class="nb" id="nb-payments" onclick="goTab('payments')"><span class="nb-ico">💳</span><span class="nb-lab">Wallet</span></div>
+
     <div class="nb" id="nb-inbox" onclick="goTab('inbox')"><span class="nb-ico">🔔</span><span class="nb-lab" id="inbox-lab">Inbox</span></div>
     <div class="nb" id="nb-profile" onclick="goTab('profile')"><span class="nb-ico">👤</span><span class="nb-lab">Me</span></div>
   </div>
@@ -847,6 +901,11 @@ function saveNatCard(){
   if(!CUR_BRAND){T('Error — please try again');return}
   const payload={user_id:UID,card_id:CUR_BRAND.id,name:CUR_BRAND.n,shop_name:CUR_BRAND.n,emoji:CUR_BRAND.e,color:CUR_BRAND.c,type:'national',points:0,threshold:500,added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0,card_number:num,card_holder:V('fc-h')||null,store_location:V('fc-s')||null,latitude:userLat||null,longitude:userLng||null};
   post('cards',payload,'user_id,card_id').then(d=>{
+    // Save current GPS to card_locations for geofencing (national cards like Nectar, Tesco etc)
+    if(userLat&&userLng){
+      const locLabel=(V('fc-s')||CUR_BRAND.n)+' location';
+      post('card_locations',{card_id:CUR_BRAND.id,user_id:UID,latitude:userLat,longitude:userLng,label:locLabel,radius:300,created_at:Date.now()}).catch(()=>{});
+    }
     if(d&&d.code){sErr('fc-err',d.message||'Save failed');return}
     T('✅ '+CUR_BRAND.n+' card added!');cmo('addNatMo');loadCards();
   }).catch(()=>sErr('fc-err','Save failed — try again'))
@@ -855,7 +914,11 @@ function saveNatCard(){
 // GPS
 let userLat=null,userLng=null;
 // ===== GEOFENCING ENGINE =====
-let GEO_WATCH_ID=null, LAST_NOTIF={}, NOTIF_COOLDOWN=3600000; // 1hr per shop
+let GEO_WATCH_ID=null, NOTIF_COOLDOWN=3600000; // 1hr per shop
+// Load persisted cooldowns from localStorage
+let LAST_NOTIF={};
+try{LAST_NOTIF=JSON.parse(localStorage.getItem('sl_notif')||'{}')}catch(e){}
+function saveNotifTime(key){LAST_NOTIF[key]=Date.now();try{localStorage.setItem('sl_notif',JSON.stringify(LAST_NOTIF));}catch(e){}}
 function startGPS(){
   if(!navigator.geolocation)return;
   // Request notification permission on first GPS start
@@ -894,7 +957,7 @@ function checkNearby(){
       if(dist<r){
         const key='loc_'+loc.id;
         if(!LAST_NOTIF[key]||now-LAST_NOTIF[key]>NOTIF_COOLDOWN){
-          LAST_NOTIF[key]=now;
+          saveNotifTime(key);
           const card=CARDS.find(c=>(c.card_id||c.id)===loc.card_id);
           if(card)showLoyaltyReminder(card,loc.label||card.shopName||'this shop',loc.id);
         }
@@ -912,7 +975,7 @@ function checkNearby(){
         if(dist<500){
           const key='merch_'+m.id;
           if(!LAST_NOTIF[key]||now-LAST_NOTIF[key]>NOTIF_COOLDOWN){
-            LAST_NOTIF[key]=now;
+            saveNotifTime(key);
             const card=CARDS.find(c=>c.merchant_id===m.id);
             if(card)showLoyaltyReminder(card,m.name,m.id);
             // Also show the old popup banner for open app
@@ -951,25 +1014,15 @@ function showLoyaltyReminder(card,shopName,shopId){
   document.getElementById('nearby-pop').style.display='block';
   setTimeout(closeNearby,15000);
 }
-function checkNearby(){
-  if(!userLat||!userLng||!CARDS.length)return;
-  const lids=CARDS.filter(c=>c.type==='local'&&c.merchant_id).map(c=>c.merchant_id);
-  if(!lids.length)return;
-  get('merchants','id=in.('+lids.join(',')+')'+'&lat=not.is.null&lng=not.is.null').then(ms=>{
-    (Array.isArray(ms)?ms:[]).forEach(m=>{
-      if(!m.lat||!m.lng)return;
-      if(haversine(userLat,userLng,parseFloat(m.lat),parseFloat(m.lng))<500){
-        NEARBY_MID=m.id;
-        const mc=CARDS.find(c=>c.merchant_id===m.id);
-        txt('np-n',(m.logo_emoji||'🏪')+' '+m.name);
-        txt('np-p',mc?(mc.points||0)+' points on your card':'Add this shop to your wallet');
-        document.getElementById('nearby-pop').style.display='block';
-        setTimeout(closeNearby,10000);
-      }
-    });
-  }).catch(()=>{})
+// checkNearby defined above with full geofencing
+function closeNearby(){
+  // When user manually dismisses, extend cooldown to 2 hours
+  if(NEARBY_MID){
+    saveNotifTime('loc_dismiss_'+NEARBY_MID);
+    LAST_NOTIF['loc_dismiss_'+NEARBY_MID]=Date.now();
+  }
+  document.getElementById('nearby-pop').style.display='none';
 }
-function closeNearby(){document.getElementById('nearby-pop').style.display='none'}
 function openNearbyShop(){closeNearby();if(NEARBY_MID)openShopById(NEARBY_MID)}
 
 // Shop search
@@ -1186,13 +1239,14 @@ function openOrderChat(orderId,productName){
   if(!chatEl){buildChatModal();return openOrderChat(orderId,productName);}
   document.getElementById('chat-modal-title').textContent='💬 '+productName;
   chatEl.classList.add('on');
+  chatEl.style.display='flex';
   CHAT_LAST_COUNT=0;
   loadOrderChat(orderId);
   startChatPolling(orderId);
 }
 function buildChatModal(){
   const d=document.createElement('div');
-  d.id='order-chat-modal';d.className='mo';
+  d.id='order-chat-modal';d.className='mo';d.style.display='none';
   d.innerHTML=`<div class="mo-box" style="height:85vh;display:flex;flex-direction:column">
     <div class="mo-head"><span id="chat-modal-title">💬 Order Chat</span><button class="mo-x" onclick="closeChatModal()">✕</button></div>
     <div id="chat-messages" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#f9f9fb"></div>
@@ -1203,8 +1257,16 @@ function buildChatModal(){
   </div>`;
   document.body.appendChild(d);
   d.addEventListener('click',e=>{if(e.target===d)closeChatModal();});
+  // Ensure the ✕ button in mo-head works
+  const closeBtn=d.querySelector('.mo-x');
+  if(closeBtn)closeBtn.onclick=closeChatModal;
 }
-function closeChatModal(){const el=document.getElementById('order-chat-modal');if(el)el.classList.remove('on');}
+function closeChatModal(){
+  const el=document.getElementById('order-chat-modal');
+  if(el){el.classList.remove('on');el.style.display='none';}
+  stopChatPolling();
+  CHAT_LAST_COUNT=0;
+}
 let CHAT_POLL_INTERVAL=null, CHAT_LAST_COUNT=0;
 function loadOrderChat(orderId,silent){
   const el=document.getElementById('chat-messages');if(!el)return;
@@ -1357,7 +1419,8 @@ function goTab(n){
   if(n==='orders')loadOrders();
   if(n==='shop'){updateMyShops();loadStashloProd();}
   if(n==='inbox')loadInbox();
-  if(n==='payments')loadPaymentCards();
+  if(n==='cards'){switchCardTab('loyalty');}
+  if(n==='payments'){goTab('cards');setTimeout(()=>switchCardTab('wallet'),50);}
   if(n==='offers')loadMyRewards();
 }
 </script>
