@@ -6,7 +6,7 @@
 <title>Stashlo Admin</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui,-apple-system,sans-serif;background:#f0efff;color:#1a1a2e;min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;background:#f4f6fa;color:#1a2035;min-height:100vh}
 button{cursor:pointer;border:none;font-family:inherit}
 input,select,textarea{font-family:inherit;border:none;outline:none}
 #splash{position:fixed;inset:0;background:#0a0a14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999}
@@ -24,7 +24,7 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 .auth-btn{width:100%;padding:15px;background:#0a0a14;color:#fff;border-radius:14px;font-weight:700;font-size:16px}
 .auth-err{color:#c62828;font-size:12px;padding:10px 14px;background:#ffebee;border-radius:10px;margin-top:10px;display:none}
 #app{display:none;flex-direction:column;min-height:100vh;padding-bottom:76px}
-.topbar{background:#0a0a14;color:#fff;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99}
+.topbar{background:linear-gradient(135deg,#0f2027 0%,#1a3a4a 100%);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99;box-shadow:0 2px 16px rgba(0,0,0,.2)}
 .tb-brand{font-size:18px;font-weight:900}.tb-brand b{color:#6C5CE7}
 .tb-btn{background:rgba(255,255,255,.1);color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600}
 .bottomnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1.5px solid #ececf3;display:flex;z-index:99}
@@ -83,6 +83,17 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 .empty-ico{font-size:40px;margin-bottom:12px}
 .empty-txt{font-size:14px;line-height:1.7}
 .broadcast-form{background:#fff;border-radius:20px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+
+/* Image upload */
+.img-upload-zone{border:2px dashed #dde1f0;border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:#f9fafc;position:relative}
+.img-upload-zone:hover{border-color:#6C5CE7;background:#ece9ff}
+.img-upload-zone input[type=file]{display:none}
+.img-preview-thumb{width:64px;height:64px;border-radius:12px;object-fit:cover;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+.img-avatar-sm{width:40px;height:40px;border-radius:10px;object-fit:cover}
+/* Admin analytics */
+.stat-pill{background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 2px 10px rgba(0,0,0,.05);border:1px solid rgba(0,0,0,.04)}
+.stat-val{font-size:26px;font-weight:800;color:#1a2035}
+.stat-lab{font-size:10px;font-weight:700;color:#7b8ab8;text-transform:uppercase;letter-spacing:.6px;margin-top:3px}
 </style>
 </head>
 <body>
@@ -108,6 +119,29 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
   </div>
   <!-- OVERVIEW -->
   <div class="screen on" id="overview-screen">
+    <!-- Analytics banner -->
+    <div style="background:linear-gradient(135deg,#1a2a4a,#2d3a6b);border-radius:20px;padding:20px;color:#fff;margin-bottom:14px;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-20px;top:-20px;width:100px;height:100px;background:rgba(255,255,255,.04);border-radius:50%"></div>
+      <div style="font-size:10px;opacity:.5;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Platform Overview</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px">
+        <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:10px 8px;text-align:center">
+          <div style="font-size:22px;font-weight:800" id="d-merchants">0</div>
+          <div style="font-size:8px;opacity:.55;margin-top:2px;text-transform:uppercase;letter-spacing:.5px">Shops</div>
+        </div>
+        <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:10px 8px;text-align:center">
+          <div style="font-size:22px;font-weight:800" id="d-customers">0</div>
+          <div style="font-size:8px;opacity:.55;margin-top:2px;text-transform:uppercase;letter-spacing:.5px">Users</div>
+        </div>
+        <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:10px 8px;text-align:center">
+          <div style="font-size:22px;font-weight:800" id="d-orders">0</div>
+          <div style="font-size:8px;opacity:.55;margin-top:2px;text-transform:uppercase;letter-spacing:.5px">Orders</div>
+        </div>
+        <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:10px 8px;text-align:center">
+          <div style="font-size:22px;font-weight:800" id="d-broadcasts">0</div>
+          <div style="font-size:8px;opacity:.55;margin-top:2px;text-transform:uppercase;letter-spacing:.5px">Broadcasts</div>
+        </div>
+      </div>
+    </div>
     <div class="dash-grid">
       <div class="dash-card purple" onclick="switchTab('merchants')">
         <div class="dash-card-ico">🏪</div><div class="dash-card-val" id="d-merchants">0</div><div class="dash-card-lab">Merchants</div>
@@ -228,7 +262,14 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     <div class="mfield"><label class="mlabel">Emoji</label><input id="sp-emoji" class="minput" placeholder="📦" maxlength="4"></div>
     <div class="mfield"><label class="mlabel">Category</label><input id="sp-cat" class="minput" placeholder="e.g. electronics"></div>
     <div class="mfield"><label class="mlabel">Description</label><input id="sp-desc" class="minput" placeholder="Optional"></div>
-    <button class="mbtn mbtn-primary" onclick="saveStashProd()">Save Product</button>
+    <div class="mfield"><label class="mlabel">Product Image (optional)</label>
+      <div class="img-upload-zone" onclick="document.getElementById('sp-img-file').click()">
+        <input type="file" id="sp-img-file" accept="image/*" onchange="previewUpload(this,'sp-img-prev')">
+        <img id="sp-img-prev" style="display:none;width:70px;height:70px;border-radius:12px;object-fit:cover;margin-bottom:8px">
+        <div class="upload-text" style="font-size:13px;color:#706f87">📸 Tap to upload image<br><span style="font-size:11px;color:#aaa">PNG, JPG max 5MB</span></div>
+      </div>
+    </div>
+    <button class="mbtn mbtn-primary" id="sp-save-btn" onclick="saveSPWithImage()">Save Product</button>
     <button class="mbtn mbtn-gray" onclick="closeModal('stashProdModal')">Cancel</button>
     <div class="merr" id="sp-err"></div>
   </div>
@@ -355,10 +396,15 @@ function renderOrders(){
 function renderStashProds(){
   const el=document.getElementById('stashlo-products-list');if(!el)return;
   el.innerHTML=STASH_PRODS.length?STASH_PRODS.map(p=>`
-    <div class="item-card">
-      <div class="item-row">
-        <div><div class="item-name">${p.emoji||'📦'} ${p.name}</div>
-          <div class="item-sub">£${parseFloat(p.price||0).toFixed(2)} • ${p.category||'—'} ${p.active===false?'• <span style=\"color:#c62828\">Hidden</span>':''}</div>
+    <div class="item-card" style="padding:12px 14px">
+      <div class="item-row" style="gap:12px;align-items:center">
+        <div style="flex-shrink:0">
+          ${p.image_url?`<img src="${p.image_url}" class="img-preview-thumb" onerror="this.style.display='none'">`:`<div style="width:56px;height:56px;background:#f0f0f8;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px">${p.emoji||'📦'}</div>`}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="item-name">${p.name}</div>
+          <div class="item-sub">£${parseFloat(p.price||0).toFixed(2)} • ${p.category||'—'} ${p.active===false?'• <span style=\"color:#c62828;font-weight:700\">Hidden</span>':''}</div>
+          <div style="display:flex;gap:4px;margin-top:4px">${p.collect!==false?'<span style=\"background:#e6fff9;color:#00b894;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700\">Collect</span>':''}${p.delivery?'<span style=\"background:#e8f4fd;color:#3498db;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700\">Delivery</span>':''}</div>
         </div>
         <div class="item-actions">
           <button class="btn-sm btn-blue" onclick="editSP('${p.id}')">✏️</button>
@@ -477,10 +523,24 @@ function editSP(id){
   const de=document.getElementById('sp-delivery');if(de)de.checked=!!p.delivery;
   omo('stashProdModal');
 }
+async function saveSPWithImage(){
+  const imgFile=document.getElementById('sp-img-file')?.files[0];
+  const btn=document.getElementById('sp-save-btn');
+  if(btn){btn.textContent='Saving...';btn.disabled=true;}
+  let imageUrl=null;
+  if(imgFile){
+    try{imageUrl=await uploadToStorage(imgFile,'products');}
+    catch(e){T('⚠️ Image failed: '+e.message);if(btn){btn.textContent='Save Product';btn.disabled=false;}return;}
+  }
+  window._spImg=imageUrl;
+  saveSP();
+  if(btn)setTimeout(()=>{btn.textContent='Save Product';btn.disabled=false;},500);
+}
 function saveSP(){
   const name=V('sp-name'),price=parseFloat(document.getElementById('sp-price').value||0);
   if(!name||price<0){T('Name required');return}
   const data={name,price,emoji:V('sp-emoji')||'📦',category:V('sp-cat')||'other',description:V('sp-desc'),active:document.getElementById('sp-active')?document.getElementById('sp-active').checked:true,collect:document.getElementById('sp-collect')?document.getElementById('sp-collect').checked:true,delivery:document.getElementById('sp-delivery')?document.getElementById('sp-delivery').checked:false};
+  if(window._spImg){data.image_url=window._spImg;window._spImg=null;}
   const action=EDIT_PROD_ID?spat('stashlo_products','id=eq.'+EDIT_PROD_ID,data):spost('stashlo_products',{...data,created_at:Date.now()});
   action.then(()=>{T('✅ Product saved — now visible to customers!');cmo('stashProdModal');loadStashProds();}).catch(()=>T('Save failed'));
 }
@@ -658,6 +718,59 @@ function sendAdminChat(){
     inp.value=msg;
     if(btn){btn.textContent='Send';btn.disabled=false;}
   });
+}
+
+// ===== SUPABASE STORAGE - IMAGE UPLOAD =====
+async function uploadToStorage(file, folder){
+  const ext=(file.name||'img').split('.').pop().toLowerCase();
+  const name=folder+'/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
+  const res=await fetch(SU+'/storage/v1/object/stashlo-images/'+name,{
+    method:'POST',
+    headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':file.type||'image/jpeg','x-upsert':'true'},
+    body:file
+  });
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.message||'Upload failed ('+res.status+')');}
+  return SU+'/storage/v1/object/public/stashlo-images/'+name;
+}
+function previewUpload(input, previewId){
+  const file=input.files[0];if(!file)return;
+  if(file.size>5*1024*1024){T('⚠️ Max 5MB');input.value='';return;}
+  const r=new FileReader();
+  r.onload=e=>{
+    const prev=document.getElementById(previewId);
+    if(prev){prev.src=e.target.result;prev.style.display='block';}
+    const zone=input.closest('.img-upload-zone');
+    if(zone){const txt=zone.querySelector('.upload-text');if(txt)txt.style.display='none';}
+  };
+  r.readAsDataURL(file);
+}
+
+// ===== MERCHANT IMAGE UPLOAD =====
+function openMerchantLogoUpload(merchantId){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=async()=>{
+    const file=inp.files[0];if(!file)return;
+    T('Uploading logo...');
+    try{
+      const url=await uploadToStorage(file,'merchants/'+merchantId);
+      await spat('merchants','id=eq.'+merchantId,{logo_url:url});
+      T('✅ Logo updated!');loadMerchants();
+    }catch(e){T('❌ Upload failed: '+e.message);}
+  };inp.click();
+}
+
+// ===== CUSTOMER AVATAR UPLOAD =====
+function openAvatarUpload(userId){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=async()=>{
+    const file=inp.files[0];if(!file)return;
+    T('Uploading photo...');
+    try{
+      const url=await uploadToStorage(file,'users/'+userId);
+      await spat('users','id=eq.'+userId,{avatar_url:url});
+      T('✅ Avatar updated!');loadCustomers();
+    }catch(e){T('❌ Upload failed: '+e.message);}
+  };inp.click();
 }
 
 </script>
