@@ -673,7 +673,7 @@ button{cursor:pointer}
       </div>
       <div class="mf"><label class="ml">Card number ★</label><input id="fc-n" class="mi" placeholder="Your loyalty card number"></div>
       <div class="mf"><label class="ml">Name on card</label><input id="fc-h" class="mi" placeholder="Cardholder name"></div>
-      <div class="mf"><label class="ml">Store / Branch</label><input id="fc-s" class="mi" placeholder="e.g. Bristol Broadmead"></div>
+      <div class="mf"><label class="ml">Local store/branch ✓</label><input id="fc-s" class="mi" placeholder="e.g. Bristol Broadmead, London Waterloo"></div>
       <div id="fc-loc" style="font-size:12px;color:#00897B;text-align:center;min-height:18px;margin-bottom:8px"></div>
       <button class="mb mb-dark" onclick="saveNatCard()">✓ Save card</button>
       <button class="mb mb-gray" onclick="backBrands()">← Back</button>
@@ -971,7 +971,7 @@ function saveNatCard(){
   post('cards',payload,'user_id,card_id').then(d=>{
     // Save current GPS to card_locations for geofencing (national cards like Nectar, Tesco etc)
     if(userLat&&userLng){
-      const locLabel=(V('fc-s')||CUR_BRAND.n)+' location';
+      const locLabel=V('fc-s')?CUR_BRAND.n+' at '+V('fc-s'):CUR_BRAND.n+' card';
       post('card_locations',{card_id:CUR_BRAND.id,user_id:UID,latitude:userLat,longitude:userLng,label:locLabel,radius:300,created_at:Date.now()}).catch(()=>{});
     }
     if(d&&d.code){sErr('fc-err',d.message||'Save failed');return}

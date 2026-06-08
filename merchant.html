@@ -597,9 +597,18 @@ function login(){
   fetch(SU+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})})
   .then(r=>r.json()).then(d=>{
     if(b){b.disabled=false;b.textContent='Sign in';}
-    if(!d.access_token){showAuthErr(d.error_code==='invalid_credentials'?'Wrong email or password':d.error_description||d.msg||'Sign in failed');return}
+    console.log('Auth response:',d);
+    if(!d.access_token){
+      const errMsg=d.error_code==='invalid_credentials'?'Wrong email or password':d.error_description||d.msg||'Sign in failed';
+      showAuthErr(errMsg + (d.error_code?' ('+d.error_code+')':''));
+      return;
+    }
     saveSess(d.access_token,d.user.id,d.expires_in);showApp();
-  }).catch(()=>{if(b){b.disabled=false;b.textContent='Sign in';}showAuthErr('Connection error')})
+  }).catch((err)=>{
+    if(b){b.disabled=false;b.textContent='Sign in';}
+    console.error('Login error:',err);
+    showAuthErr('Connection error - check your internet')
+  })
 }
 function register(){
   const name=V('r-name'),email=V('r-email'),pw=document.getElementById('r-pw').value;
