@@ -263,22 +263,7 @@ function switchCardTab(tab){
   if(!isLoyalty) loadPaymentCards();
 }
 
-function loadJobs(){
-  const el=document.getElementById('jobs-list');if(!el)return;
-  el.innerHTML='<div class="empty"><i>💼</i>Loading...</div>';
-  const timeout=setTimeout(()=>{
-    el.innerHTML='<div class="empty"><i>⚠️</i>Unable to load jobs. Please try again.</div>';
-  },8000);
-  get('jobs','active=eq.true&order=created_at.desc').then(d=>{
-    clearTimeout(timeout);
-    const j=Array.isArray(d)?d:[];
-    el.innerHTML=j.length?j.map(x=>'<div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:15px;font-weight:700">'+x.title+'</div><span style="background:#ece9ff;color:#6C5CE7;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700">'+(x.job_type||'Part-time')+'</span></div><div style="font-size:13px;color:#6C5CE7;font-weight:600">🏪 '+(x.merchant_name||'Shop')+'</div>'+(x.salary?'<div style="font-size:13px;color:#1a7f37;font-weight:700;margin-top:4px">💷 '+x.salary+'</div>':'')+(x.location?'<div style="font-size:12px;color:#706f87;margin-top:2px">📍 '+x.location+'</div>':'')+'<div style="font-size:12px;color:#706f87;margin-top:6px;line-height:1.5">'+(x.description||'').slice(0,100)+'</div><button style="margin-top:10px;background:#6C5CE7;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer" onclick="applyJob(\''+x.contact_email+'\',\''+x.title.replace(/'/g,'').replace(/"/g,'')+'\')" >Apply Now</button></div>').join(''):'<div class="empty"><i>💼</i>No jobs posted yet</div>';
-  }).catch(e=>{
-    clearTimeout(timeout);
-    el.innerHTML='<div class="empty"><i>⚠️</i>Error loading jobs. Please try again.</div>';
-    console.error('Jobs load error:',e);
-  });
-}
+function loadJobs(){get('jobs','active=eq.true&order=created_at.desc').then(d=>{const j=Array.isArray(d)?d:[];const el=document.getElementById('jobs-list');if(!el)return;el.innerHTML=j.length?j.map(x=>'<div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:15px;font-weight:700">'+x.title+'</div><span style="background:#ece9ff;color:#6C5CE7;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700">'+(x.job_type||'Part-time')+'</span></div><div style="font-size:13px;color:#6C5CE7;font-weight:600">🏪 '+(x.merchant_name||'Shop')+'</div>'+(x.salary?'<div style="font-size:13px;color:#1a7f37;font-weight:700;margin-top:4px">💷 '+x.salary+'</div>':'')+(x.location?'<div style="font-size:12px;color:#706f87;margin-top:2px">📍 '+x.location+'</div>':'')+'<div style="font-size:12px;color:#706f87;margin-top:6px;line-height:1.5">'+(x.description||'').slice(0,100)+'</div><button style="margin-top:10px;background:#6C5CE7;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer" onclick="applyJob(\''+x.contact_email+'\',\''+x.title.replace(/'/g,'').replace(/"/g,'')+'\')" >Apply Now</button></div>').join(''):'<div class="empty"><i>💼</i>No jobs posted yet</div>';}).catch(()=>{});}
 function applyJob(e,t){if(e)window.open('mailto:'+e+'?subject=Application for '+encodeURIComponent(t),'_blank');else T('Contact the shop directly');}
 let _sp=null;
 function loadSupportChat(){if(!UID)return;const el=document.getElementById('support-msgs');if(!el)return;get('support_chats','customer_id=eq.'+UID+'&order=created_at.asc&limit=100').then(d=>{const m=Array.isArray(d)?d:[];el.innerHTML=m.length?m.map(x=>'<div style="display:flex;flex-direction:'+(x.sender_role==='customer'?'row-reverse':'row')+';gap:8px;margin-bottom:5px"><div style="max-width:78%;background:'+(x.sender_role==='customer'?'#6C5CE7':'#f0f0f8')+';color:'+(x.sender_role==='customer'?'#fff':'#1a1a2e')+';border-radius:14px;padding:9px 13px;font-size:13px">'+(x.message||'').replace(/</g,'&lt;')+'</div></div>').join(''):'<div style="text-align:center;padding:30px;font-size:13px;color:#706f87">Welcome! How can we help?</div>';el.scrollTop=el.scrollHeight;if(!_sp)_sp=setInterval(()=>loadSupportChat(),8000);}).catch(()=>{});}
@@ -769,18 +754,7 @@ button{cursor:pointer}
     </div>
     <div class="mf"><label class="ml">Quantity</label><input id="o-qty" class="mi" type="number" value="1" min="1" max="20"></div>
     <div id="o-cf" class="mf"><label class="ml">Collect time (optional)</label><input id="o-ct" class="mi" placeholder="e.g. 2:30pm today"></div>
-    <div id="o-df" style="display:none">
-      <div style="background:#f9f9f9;border-radius:12px;padding:16px;border:1px solid #e0e0e0">
-        <div style="font-weight:700;color:#333;margin-bottom:14px;font-size:14px">📍 Delivery Address</div>
-        <div class="mf"><label class="ml">Address Line 1 ★</label><input id="o-da-l1" class="mi" placeholder="House/flat number and street"></div>
-        <div class="mf"><label class="ml">Address Line 2</label><input id="o-da-l2" class="mi" placeholder="Area, neighbourhood (optional)"></div>
-        <div class="mf"><label class="ml">City ★</label><input id="o-da-city" class="mi" placeholder="e.g. London, Manchester"></div>
-        <div class="mf" style="display:flex;gap:12px">
-          <div style="flex:1"><label class="ml">Postcode ★</label><input id="o-da-pc" class="mi" placeholder="e.g. SW1A 1AA"></div>
-          <div style="flex:1"><label class="ml">Country</label><input id="o-da-country" class="mi" placeholder="UK" value="UK"></div>
-        </div>
-      </div>
-    </div>
+    <div id="o-df" class="mf" style="display:none"><label class="ml">Delivery address ★</label><textarea id="o-da" class="mta" placeholder="Full delivery address"></textarea></div>
     <div class="mf"><label class="ml">Note</label><input id="o-note" class="mi" placeholder="Any instructions?"></div>
     <div id="o-loy" style="background:#e8f5e9;border-radius:12px;padding:12px;font-size:13px;color:#2e7d32;margin-bottom:10px;display:none"></div>
     <button class="mb mb-purple" onclick="submitOrder()">🛒 Place Order</button>
@@ -1203,7 +1177,7 @@ function openOrder(j){
   const p=curOrderProd;
   document.getElementById('o-preview').innerHTML=`<div style="font-size:28px">${p.emoji||'🛍️'}</div><div style="font-weight:700;font-size:16px;margin-top:6px">${p.name}</div><div style="color:#6C5CE7;font-size:20px;font-weight:800">£${parseFloat(p.price||0).toFixed(2)}</div><div style="font-size:12px;color:#706f87;margin-top:3px">${p.shopName||''}</div>`;
   document.getElementById('o-qty').value='1';['o-ct','o-note'].forEach(x=>document.getElementById(x).value='');
-  ['o-da-l1','o-da-l2','o-da-city','o-da-pc','o-da-country'].forEach(x=>{const el=document.getElementById(x);if(el&&x!=='o-da-country')el.value='';})
+  document.getElementById('o-da').value='';
   const lo=document.getElementById('o-loy');
   if(p.loyalty_type){lo.textContent='🎁 '+fmtLoy(p);lo.style.display='block';}else lo.style.display='none';
   selOType('collect');omo('orderMo');
@@ -1222,12 +1196,8 @@ function submitOrder(){
   const total=parseFloat(p.price||0)*qty;
   const mid=p.merchant_id;
   // stashlo store orders now go through too
-  if(type==='delivery'){
-    const addr1=V('o-da-l1'),city=V('o-da-city'),pc=V('o-da-pc');
-    if(!addr1||!city||!pc){sErr('o-err','Please fill in all address fields');return}
-  }
-  const deliveryAddr = type==='delivery' ? `${V('o-da-l1')}, ${V('o-da-l2')?V('o-da-l2')+', ':''}${V('o-da-city')}, ${V('o-da-pc')}, ${V('o-da-country')}` : null;
-  post('orders',{user_id:UID,merchant_id:mid,product_id:p.id,product_name:p.name,quantity:qty,total,type,status:'pending',delivery_address:deliveryAddr,collect_time:V('o-ct'),note:V('o-note'),created_at:Date.now()})
+  if(type==='delivery'&&!V('o-da')){sErr('o-err','Delivery address required');return}
+  post('orders',{user_id:UID,merchant_id:mid,product_id:p.id,product_name:p.name,quantity:qty,total,type,status:'pending',delivery_address:V('o-da'),collect_time:V('o-ct'),note:V('o-note'),created_at:Date.now()})
   .then(d=>{
     if(d&&d.code){sErr('o-err',d.message||'Order failed');return}
     T('✅ Order placed — '+p.name+' × '+qty);cmo('orderMo');closeShopDet();loadOrders();goTab('orders');
