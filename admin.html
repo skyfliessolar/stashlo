@@ -187,7 +187,40 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
   </div>
 
   <!-- Give Rewards Screen -->
-  <div class="screen" id="rewards-screen">
+  <div class="screen" id="delivery-screen">
+    <div class="sec-head"><span class="sec-title">🚚 Delivery Settings</span></div>
+    <div class="item-card">
+      <div style="background:#fff8e1;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#856404">
+        ⚠️ Merchants cannot see these prices — customers see the final delivery charge only.
+      </div>
+      <div class="mfield"><label class="mlabel">Pricing Type</label>
+        <select id="del-type" class="minput" style="cursor:pointer" onchange="document.getElementById('del-val-label').textContent=this.value==='percentage'?'Percentage (%)':'Fixed price (£)'">
+          <option value="percentage">Percentage of order</option>
+          <option value="fixed">Fixed price per order</option>
+        </select>
+      </div>
+      <div class="mfield"><label class="mlabel" id="del-val-label">Percentage (%)</label>
+        <input id="del-value" class="minput" type="number" min="0" step="0.1" placeholder="10">
+      </div>
+      <div class="mfield"><label class="mlabel">Minimum charge (£)</label><input id="del-min" class="minput" type="number" min="0" step="0.01" placeholder="2.99"></div>
+      <div class="mfield"><label class="mlabel">Maximum charge (£)</label><input id="del-max" class="minput" type="number" min="0" step="0.01" placeholder="9.99"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <input type="checkbox" id="del-enabled" style="width:18px;height:18px;cursor:pointer">
+        <label style="font-size:13px;font-weight:600;cursor:pointer" for="del-enabled">Enable delivery</label>
+      </div>
+      <button class="mbtn mbtn-purple" onclick="saveDeliverySettings()">💾 Save settings</button>
+    </div>
+    <div class="sec-head" style="margin-top:20px"><span class="sec-title">💰 Customer Payments</span></div>
+    <div id="admin-payments-list" class="item-card">Loading...</div>
+  </div>
+  <div class="screen" id="support-admin-screen" style="padding:0">
+    <div style="background:linear-gradient(135deg,#0f2027,#1a3a4a);padding:14px 16px;color:#fff">
+      <div style="font-size:17px;font-weight:800">💬 Customer Support</div>
+      <div style="font-size:12px;opacity:.6;margin-top:2px">Reply to customer queries</div>
+    </div>
+    <div style="padding:12px"><div id="support-admin-list"><div class="empty"><div class="empty-ico">💬</div><div class="empty-txt">No support messages</div></div></div></div>
+  </div>
+    <div class="screen" id="rewards-screen">
     <div class="sec-head"><span class="sec-title">🎁 Give Rewards</span></div>
     <div class="item-card">
       <div class="item-name" style="margin-bottom:12px">Give loyalty points to a customer</div>
@@ -212,7 +245,19 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
       </div>
       <div class="mfield"><label class="mlabel">Title</label><input id="bc-title" class="minput" placeholder="Broadcast title"></div>
       <div class="mfield"><label class="mlabel">Message</label><textarea id="bc-body" class="mtextarea" placeholder="Your message..."></textarea></div>
-      <button class="mbtn mbtn-purple" id="bc-send-btn" onclick="sendBroadcast()">📢 Send Broadcast</button>
+      <div class="mfield"><label class="mlabel">📸 Image (optional)</label>
+        <div style="border:2px dashed #dde1f0;border-radius:12px;padding:14px;text-align:center;cursor:pointer;background:#f9fafc" onclick="document.getElementById('bc-img-input').click()">
+          <input type="file" id="bc-img-input" accept="image/*" style="display:none" onchange="previewBcImg(this)">
+          <img id="bc-img-prev" style="display:none;max-width:200px;border-radius:10px;margin-bottom:8px">
+          <div id="bc-img-txt" style="font-size:13px;color:#706f87">📎 Attach image</div>
+        </div>
+      </div>
+      <select id="bc-audience" class="minput" style="margin-bottom:12px;cursor:pointer">
+        <option value="all">Send to: Everyone</option>
+        <option value="customers">Customers only</option>
+        <option value="merchants">Merchants only</option>
+      </select>
+      <button class="mbtn mbtn-purple" id="bc-send-btn" onclick="sendBroadcastWithImage()">📢 Send Broadcast</button>
     </div>
     <div class="sec-head" style="margin-top:24px"><span class="sec-title">Sent Broadcasts</span></div>
     <div id="broadcasts-list"></div>
@@ -225,7 +270,9 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     <div class="nav-btn" id="nav-products" onclick="switchTab('products')"><span class="nav-icon">🛍️</span><span class="nav-label">Products</span></div>
     <div class="nav-btn" id="nav-broadcast" onclick="switchTab('broadcast')"><span class="nav-icon">📢</span><span class="nav-label">Broadcast</span></div>
     <div class="nav-btn" id="nav-rewards" onclick="switchTab('rewards')"><span class="nav-icon">🎁</span><span class="nav-label">Rewards</span></div>
-    <div class="nav-btn" id="nav-admin-chat" onclick="switchTab('admin-chat')"><span class="nav-icon">💬</span><span class="nav-label">Chats</span></div>
+    <div class="nav-btn" id="nav-admin-chat" onclick="switchTab('admin-chat')">
+    <div class="nav-btn" id="nav-delivery" onclick="switchTab('delivery')"><span class="nav-icon">🚚</span><span class="nav-label">Delivery</span></div>
+    <div class="nav-btn" id="nav-support-admin" onclick="switchTab('support-admin')"><span class="nav-icon">🎧</span><span class="nav-label">Support</span></div><span class="nav-icon">💬</span><span class="nav-label">Chats</span></div>
   </div>
 </div>
 
@@ -284,7 +331,7 @@ function HS(){return{'apikey':SR,'Authorization':'Bearer '+SR,'Content-Type':'ap
 function H(){return{'apikey':SK,'Authorization':'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'return=representation'}}
 function sget(t,q){return fetch(SU+'/rest/v1/'+t+'?select=*'+(q?'&'+q:''),{headers:HS()}).then(r=>r.json())}
 function spost(t,d,c){return fetch(SU+'/rest/v1/'+t+(c?'?on_conflict='+c:''),{method:'POST',headers:{...HS(),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json())}
-function spat(t,q,d){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'PATCH',headers:HS(),body:JSON.stringify(d)}).then(r=>r.json())}
+function spat(t,q,d){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'PATCH',headers:{...H(),'Prefer':'return=minimal'},body:JSON.stringify(d)}).then(r=>r.ok?r:r.json().then(e=>Promise.reject(e)))}
 function sdel(t,q){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'DELETE',headers:HS()})}
 function T(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2800)}
 function V(id){const e=document.getElementById(id);return e?e.value.trim():''}
@@ -569,6 +616,8 @@ function switchTab(name){
   if(name==='orders')loadOrders();
   if(name==='broadcast')loadBroadcasts();
   if(name==='rewards')loadRewardsGiven();
+  if(name==='delivery'){loadDeliverySettings();loadAdminPayments();}
+  if(name==='support-admin')loadSupportAdmin();
   if(name==='admin-chat'){
     loadAdminChats();
     // Auto-refresh chat list every 30s when on chat screen
@@ -771,6 +820,176 @@ function openAvatarUpload(userId){
       T('✅ Avatar updated!');loadCustomers();
     }catch(e){T('❌ Upload failed: '+e.message);}
   };inp.click();
+}
+
+// ===== BROADCAST WITH IMAGE =====
+function previewBcImg(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const p=document.getElementById('bc-img-prev');if(p){p.src=e.target.result;p.style.display='block';}const t=document.getElementById('bc-img-txt');if(t)t.style.display='none';};r.readAsDataURL(f);}
+async function sendBroadcastWithImage(){
+  const title=V('bc-title'),body=document.getElementById('bc-body').value.trim();
+  const audience=document.getElementById('bc-audience')?.value||'all';
+  if(!title||!body){T('Title and message required');return;}
+  const btn=document.getElementById('bc-send-btn');if(btn){btn.textContent='Sending...';btn.disabled=true;}
+  let imageUrl=null;
+  const imgFile=document.getElementById('bc-img-input')?.files[0];
+  if(imgFile){try{const ext=imgFile.name.split('.').pop().toLowerCase();const name='broadcasts/'+Date.now()+'.'+ext;const res=await fetch(SU+'/storage/v1/object/stashlo-images/'+name,{method:'POST',headers:{'apikey':SK,'Authorization':'Bearer '+(STOK||SK),'Content-Type':imgFile.type,'x-upsert':'true'},body:imgFile});if(res.ok)imageUrl=SU+'/storage/v1/object/public/stashlo-images/'+name;}catch(e){T('Image upload failed');}}
+  spost('broadcasts',{title,body,audience,image_url:imageUrl,sent_at:Date.now()}).then(()=>{
+    T('✅ Broadcast sent!');
+    ['bc-title','bc-body'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    const p=document.getElementById('bc-img-prev');if(p){p.style.display='none';p.src='';}
+    const fi=document.getElementById('bc-img-input');if(fi)fi.value='';
+    const t=document.getElementById('bc-img-txt');if(t)t.style.display='block';
+    loadBroadcasts();
+    if(btn){btn.textContent='📢 Send Broadcast';btn.disabled=false;}
+  }).catch(()=>{T('Send failed');if(btn){btn.textContent='📢 Send Broadcast';btn.disabled=false;}});
+}
+
+// ===== EDIT MERCHANT MODAL =====
+let EDIT_MERCH_ID=null;
+function editMerchantModal(id){
+  EDIT_MERCH_ID=id;const m=MERCHANTS.find(x=>x.id===id);if(!m)return;
+  let modal=document.getElementById('edit-merch-modal');
+  if(!modal){
+    modal=document.createElement('div');modal.id='edit-merch-modal';modal.className='modal-overlay';modal.style.display='none';
+    modal.onclick=e=>{if(e.target===modal)modal.style.display='none';};
+    modal.innerHTML=`<div class="modal-sheet"><div class="modal-handle"></div>
+      <div class="modal-title">✏️ Edit Merchant</div>
+      <div class="mfield"><label class="mlabel">Shop Name</label><input id="em-name" class="minput"></div>
+      <div class="mfield"><label class="mlabel">Address</label><input id="em-addr" class="minput"></div>
+      <div class="mfield"><label class="mlabel">Opening Hours</label><input id="em-hours" class="minput"></div>
+      <div class="mfield"><label class="mlabel">Category</label><input id="em-cat" class="minput"></div>
+      <div class="mfield"><label class="mlabel">Loyalty Type</label>
+        <select id="em-ltype" class="minput"><option value="points">Points</option><option value="stamp">Stamp card</option><option value="discount">Discount</option></select></div>
+      <div class="mfield"><label class="mlabel">Loyalty Threshold</label><input id="em-thresh" class="minput" type="number"></div>
+      <div class="mfield"><label class="mlabel">Logo Emoji</label><input id="em-emoji" class="minput" maxlength="4"></div>
+      <button class="mbtn mbtn-primary" onclick="saveMerchantEdit()">💾 Save changes</button>
+      <button class="mbtn mbtn-red" style="margin-top:8px" onclick="deleteMerchantAdmin()">🗑️ Delete merchant</button>
+    </div>`;document.body.appendChild(modal);
+  }
+  document.getElementById('em-name').value=m.name||'';document.getElementById('em-addr').value=m.address||'';
+  document.getElementById('em-hours').value=m.open_hours||'';document.getElementById('em-cat').value=m.category||'';
+  document.getElementById('em-ltype').value=m.loyalty_type||'points';document.getElementById('em-thresh').value=m.loyalty_threshold||100;
+  document.getElementById('em-emoji').value=m.logo_emoji||'🏪';modal.style.display='flex';
+}
+function saveMerchantEdit(){
+  if(!EDIT_MERCH_ID)return;
+  const data={name:V('em-name'),address:V('em-addr'),open_hours:V('em-hours'),category:V('em-cat'),loyalty_type:document.getElementById('em-ltype').value,loyalty_threshold:parseInt(V('em-thresh'))||100,logo_emoji:V('em-emoji')||'🏪'};
+  spat('merchants','id=eq.'+EDIT_MERCH_ID,data).then(()=>{T('✅ Merchant updated!');document.getElementById('edit-merch-modal').style.display='none';loadMerchants();}).catch(()=>T('Update failed'));
+}
+function deleteMerchantAdmin(){
+  if(!EDIT_MERCH_ID||!confirm('Delete this merchant? Cannot be undone.'))return;
+  fetch(SU+'/rest/v1/merchants?id=eq.'+EDIT_MERCH_ID,{method:'DELETE',headers:H()}).then(()=>{T('Merchant deleted');document.getElementById('edit-merch-modal').style.display='none';loadMerchants();}).catch(()=>T('Delete failed'));
+}
+
+// ===== EDIT CUSTOMER MODAL =====
+let EDIT_CUST_ID=null;
+function editCustomerModal(id){
+  EDIT_CUST_ID=id;const u=CUSTOMERS.find(x=>x.id===id);if(!u)return;
+  let modal=document.getElementById('edit-cust-modal');
+  if(!modal){
+    modal=document.createElement('div');modal.id='edit-cust-modal';modal.className='modal-overlay';modal.style.display='none';
+    modal.onclick=e=>{if(e.target===modal)modal.style.display='none';};
+    modal.innerHTML=`<div class="modal-sheet"><div class="modal-handle"></div>
+      <div class="modal-title">✏️ Edit Customer</div>
+      <div class="mfield"><label class="mlabel">Name</label><input id="ec-name" class="minput"></div>
+      <div class="mfield"><label class="mlabel">Phone</label><input id="ec-phone" class="minput"></div>
+      <button class="mbtn mbtn-primary" onclick="saveCustomerEdit()">💾 Save changes</button>
+    </div>`;document.body.appendChild(modal);
+  }
+  document.getElementById('ec-name').value=u.name||'';document.getElementById('ec-phone').value=u.phone||'';
+  modal.style.display='flex';
+}
+function saveCustomerEdit(){
+  if(!EDIT_CUST_ID)return;
+  spat('users','id=eq.'+EDIT_CUST_ID,{name:V('ec-name'),phone:V('ec-phone')}).then(()=>{T('✅ Updated!');document.getElementById('edit-cust-modal').style.display='none';loadCustomers();}).catch(()=>T('Failed'));
+}
+
+// ===== DELIVERY SETTINGS =====
+let DEL_ID=null;
+function loadDeliverySettings(){
+  sget('delivery_settings','order=updated_at.desc&limit=1').then(d=>{
+    const s=Array.isArray(d)&&d[0]?d[0]:null;DEL_ID=s?.id||null;
+    if(s){
+      const f=n=>document.getElementById(n);
+      if(f('del-type'))f('del-type').value=s.type||'percentage';
+      if(f('del-value'))f('del-value').value=s.value||10;
+      if(f('del-min'))f('del-min').value=s.min_charge||2.99;
+      if(f('del-max'))f('del-max').value=s.max_charge||9.99;
+      if(f('del-enabled'))f('del-enabled').checked=s.enabled!==false;
+      if(f('del-val-label'))f('del-val-label').textContent=s.type==='fixed'?'Fixed price (£)':'Percentage (%)';
+    }
+  }).catch(()=>{});
+}
+function saveDeliverySettings(){
+  const data={type:document.getElementById('del-type').value,value:parseFloat(document.getElementById('del-value').value)||10,min_charge:parseFloat(document.getElementById('del-min').value)||2.99,max_charge:parseFloat(document.getElementById('del-max').value)||9.99,enabled:document.getElementById('del-enabled').checked,updated_at:Date.now()};
+  if(DEL_ID){spat('delivery_settings','id=eq.'+DEL_ID,data).then(()=>T('✅ Delivery settings saved!')).catch(()=>T('Failed'));}
+  else{spost('delivery_settings',data).then(()=>{T('✅ Settings created!');loadDeliverySettings();}).catch(()=>T('Failed'));}
+}
+
+// ===== CUSTOMER PAYMENTS =====
+function loadAdminPayments(){
+  const el=document.getElementById('admin-payments-list');if(!el)return;
+  sget('stashlo_payments','order=created_at.desc&limit=20').then(d=>{
+    const pmts=Array.isArray(d)?d:[];
+    el.innerHTML=pmts.length?pmts.map(p=>`<div class="item-card" style="padding:12px 14px;border-left:4px solid ${p.status==='completed'?'#00b894':'#f39c12'}">
+      <div class="item-row"><div><div class="item-name">£${parseFloat(p.amount||0).toFixed(2)} — ${p.customer_email||'Customer'}</div>
+      <div class="item-sub">${p.purpose||'Payment'} · ${p.status} · ${p.created_at?new Date(p.created_at).toLocaleDateString():''}</div></div>
+      ${p.status==='pending'?`<button onclick="approvePayment('${p.id}')" style="background:#e8f5e9;color:#1a7f37;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:700">✓ Process</button>`:''}</div>
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">💰</div><div class="empty-txt">No payments yet</div></div>';
+  }).catch(()=>{el.innerHTML='<div style="color:#c62828;padding:12px;text-align:center;font-size:13px">Error loading payments</div>';});
+}
+function approvePayment(id){spat('stashlo_payments','id=eq.'+id,{status:'completed',processed_at:Date.now()}).then(()=>{T('✅ Payment processed!');loadAdminPayments();}).catch(()=>T('Failed'));}
+
+// ===== CUSTOMER SUPPORT (ADMIN SIDE) =====
+let CUR_SUPPORT_CUST=null;
+function loadSupportAdmin(){
+  sget('support_chats','order=created_at.desc&limit=200').then(d=>{
+    const msgs=Array.isArray(d)?d:[];
+    const byCust={};
+    msgs.forEach(m=>{if(!byCust[m.customer_id])byCust[m.customer_id]={id:m.customer_id,email:m.customer_email,msgs:[],unread:0};byCust[m.customer_id].msgs.push(m);if(!m.read_by_admin&&m.sender_role==='customer')byCust[m.customer_id].unread++;});
+    const el=document.getElementById('support-admin-list');if(!el)return;
+    const custs=Object.values(byCust).sort((a,b)=>b.unread-a.unread);
+    el.innerHTML=custs.length?custs.map(cust=>`<div class="item-card" style="cursor:pointer;border-left:3px solid ${cust.unread>0?'#6C5CE7':'#eee'}" onclick="openSupportReply('${cust.id}','${cust.email||'Customer'}')">
+      <div class="item-row"><div><div class="item-name">👤 ${cust.email||cust.id.slice(0,8)}</div>
+      <div class="item-sub">${(cust.msgs[0]?.message||'').slice(0,50)}...</div></div>
+      ${cust.unread>0?`<span style="background:#6C5CE7;color:#fff;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700">${cust.unread} new</span>`:''}</div>
+    </div>`).join(''):'<div class="empty"><div class="empty-ico">🎧</div><div class="empty-txt">No support messages</div></div>';
+  }).catch(()=>{});
+}
+function openSupportReply(custId,custEmail){
+  CUR_SUPPORT_CUST=custId;
+  // Build reply modal if not exists
+  let modal=document.getElementById('support-reply-modal');
+  if(!modal){
+    modal=document.createElement('div');modal.id='support-reply-modal';modal.className='modal-overlay';modal.style.display='none';
+    modal.onclick=e=>{if(e.target===modal)closeSupportReply();};
+    modal.innerHTML=`<div class="modal-sheet" style="height:70vh;display:flex;flex-direction:column">
+      <div class="modal-handle"></div>
+      <div class="modal-head"><span id="support-reply-title">💬 Chat</span><button class="mbtn mbtn-gray" style="width:auto;padding:6px 12px" onclick="closeSupportReply()">✕</button></div>
+      <div id="support-reply-msgs" style="flex:1;overflow-y:auto;padding:12px;background:#f9f9fb;display:flex;flex-direction:column;gap:6px"></div>
+      <div style="padding:10px;border-top:1px solid #ebebef;display:flex;gap:8px">
+        <input id="support-reply-inp" class="minput" placeholder="Reply to customer..." style="flex:1" onkeydown="if(event.key==='Enter')sendSupportReply()">
+        <button class="mbtn mbtn-purple" style="width:auto;padding:10px 14px" onclick="sendSupportReply()">Send</button>
+      </div>
+    </div>`;document.body.appendChild(modal);
+  }
+  const title=document.getElementById('support-reply-title');if(title)title.textContent='💬 '+custEmail;
+  modal.style.display='flex';
+  loadSupportReplies(custId);
+}
+function closeSupportReply(){const m=document.getElementById('support-reply-modal');if(m)m.style.display='none';CUR_SUPPORT_CUST=null;}
+function loadSupportReplies(custId){
+  const el=document.getElementById('support-reply-msgs');if(!el)return;
+  sget('support_chats','customer_id=eq.'+custId+'&order=created_at.asc&limit=100').then(d=>{
+    const msgs=Array.isArray(d)?d:[];
+    msgs.filter(m=>m.sender_role==='customer'&&!m.read_by_admin).forEach(m=>spat('support_chats','id=eq.'+m.id,{read_by_admin:true}).catch(()=>{}));
+    el.innerHTML=msgs.map(m=>`<div style="display:flex;flex-direction:${m.sender_role==='admin'?'row-reverse':'row'};gap:8px;margin-bottom:5px"><div style="max-width:76%;background:${m.sender_role==='admin'?'#6C5CE7':'#f0f0f8'};color:${m.sender_role==='admin'?'#fff':'#1a1a2e'};border-radius:14px;padding:9px 13px;font-size:13px">${(m.message||'').replace(/</g,'&lt;')}<div style="font-size:10px;opacity:.6;margin-top:2px">${m.created_at?new Date(m.created_at).toLocaleTimeString().slice(0,5):''}</div></div></div>`).join('');
+    el.scrollTop=el.scrollHeight;
+  }).catch(()=>{});
+}
+function sendSupportReply(){
+  const inp=document.getElementById('support-reply-inp');const msg=inp.value.trim();if(!msg||!CUR_SUPPORT_CUST)return;
+  inp.value='';
+  spost('support_chats',{customer_id:CUR_SUPPORT_CUST,customer_email:'',sender_role:'admin',sender_name:'Stashlo Support',message:msg,read_by_admin:true,created_at:Date.now()}).then(()=>loadSupportReplies(CUR_SUPPORT_CUST)).catch(()=>{T('Failed');inp.value=msg;});
 }
 
 </script>
