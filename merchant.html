@@ -179,6 +179,7 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     <input type="email" id="email" class="auth-inp" placeholder="Email address">
     <input type="password" id="password" class="auth-inp" placeholder="Password">
     <button class="auth-btn" onclick="login()">Sign in</button>
+    <p class="auth-link" style="margin-top:8px;font-size:12px"><span onclick="resetMerchantPassword()" style="color:#6C5CE7;cursor:pointer">Forgot password?</span></p>
     <p class="auth-link" style="margin-top:12px">New merchant? <span onclick="showReg()">Register shop</span></p>
     <div class="auth-err" id="auth-error"></div>
     <div id="reg-section" style="display:none;margin-top:16px;border-top:1px solid #f0f0f5;padding-top:16px">
@@ -621,6 +622,15 @@ function login(){
     console.error('Login error:',err);
     showAuthErr('Connection error - check your internet')
   })
+}
+function resetMerchantPassword(){
+  const email=V('email');
+  if(!email){showAuthErr('Enter your email first');return}
+  fetch(SU+'/auth/v1/recover',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error)showAuthErr('Could not send reset email');
+    else showAuthErr('✅ Check your email for password reset link',true);
+  }).catch(()=>showAuthErr('Connection error'))
 }
 function register(){
   const name=V('r-name'),email=V('r-email'),pw=document.getElementById('r-pw').value;

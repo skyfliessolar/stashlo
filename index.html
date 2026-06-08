@@ -497,6 +497,7 @@ button{cursor:pointer}
       <input type="email" id="ai-e" class="ai" placeholder="Email address">
       <input type="password" id="ai-p" class="ai" placeholder="Password">
       <button class="ab" onclick="doLogin()">Sign in</button>
+      <p class="al" style="font-size:12px"><span onclick="resetCustomerPassword()" style="color:#6C5CE7;cursor:pointer">Forgot password?</span></p>
       <p class="al">New user? <span onclick="showSU()">Create account</span></p>
       <div class="ae" id="ai-err"></div>
     </div>
@@ -897,6 +898,15 @@ function doSignup(){
     }else if(d.user){document.getElementById('ai-e').value=email;document.getElementById('ai-p').value=pw;showSI();doLogin();}
     else sErr('su-err',d.error_code==='user_already_exists'?'Account exists — sign in':d.error_description||d.msg||'Sign up failed')
   }).catch(()=>{b.textContent='Create account';b.disabled=false;sErr('su-err','Connection error')})
+}
+function resetCustomerPassword(){
+  const email=V('ai-e');
+  if(!email){sErr('ai-err','Enter your email first');return}
+  fetch(SU+'/auth/v1/recover',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error)sErr('ai-err','Could not send reset email');
+    else T('✅ Check your email for password reset link');
+  }).catch(()=>sErr('ai-err','Connection error'))
 }
 
 // Boot
