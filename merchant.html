@@ -40,15 +40,13 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 .tb-right{display:flex;gap:10px}
 .tb-btn{background:rgba(255,255,255,.1);color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600}
 
-.bottomnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #eef0f7;display:flex;z-index:99;padding:0 0 env(safe-area-inset-bottom);box-shadow:0 -4px 20px rgba(0,0,0,.06)}
-.nav-btn{flex:1;padding:10px 2px 7px;text-align:center;cursor:pointer;color:#b0b8d0;transition:all .2s;position:relative}
+.bottomnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #eef0f7;display:flex;overflow-x:auto;overflow-y:hidden;z-index:99;padding:0 0 env(safe-area-inset-bottom);box-shadow:0 -4px 20px rgba(0,0,0,.06);scroll-behavior:smooth}
+.bottomnav::-webkit-scrollbar{display:none}
+.nav-btn{flex-shrink:0;min-width:70px;padding:8px 4px 6px;text-align:center;cursor:pointer;color:#b0b8d0;transition:all .2s;position:relative;border:none}
 .nav-btn.on{color:#6C5CE7}
-.nav-btn.on::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:28px;height:3px;background:#6C5CE7;border-radius:2px 2px 0 0}
-.nav-btn.on::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:28px;height:3px;background:#6C5CE7;border-radius:2px 2px 0 0}
-.nav-icon{font-size:20px;display:block;margin-bottom:2px}
-.nav-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.nav-icon{font-size:20px;display:block}
-.nav-label{font-size:10px;font-weight:600;margin-top:2px;display:block}
+.nav-btn.on::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:3px;background:#6C5CE7;border-radius:2px 2px 0 0}
+.nav-icon{font-size:18px;display:block;margin-bottom:1px}
+.nav-label{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1}
 
 .screen{display:none;padding:16px;animation:fi .2s}
 .screen.on{display:block}
@@ -396,7 +394,21 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
         <div id="loyalty-val-fields"></div>
       </div>
     </div>
-    <div class="setting-card" id="shop-id-card">
+    <div class="setting-card">
+      <div class="setting-title">🤖 AI Finance Advisor</div>
+      <div class="setting-sub">Get instant help with VAT, HMRC, and financial queries</div>
+      <div style="background:linear-gradient(135deg,#6C5CE7,#a29bfe);border-radius:14px;padding:16px;color:#fff;margin-bottom:12px">
+        <div style="font-size:14px;margin-bottom:8px">💡 Your AI-powered finance assistant</div>
+        <ul style="font-size:12px;margin-left:16px;line-height:1.6">
+          <li>VAT calculations & thresholds</li>
+          <li>HMRC tax guidance</li>
+          <li>Invoicing best practices</li>
+          <li>Financial compliance</li>
+        </ul>
+      </div>
+      <button class="mbtn mbtn-purple" onclick="switchTab('ai')" style="width:100%">💬 Open AI Advisor</button>
+    </div>
+    <div class="setting-card">
       <div class="setting-title">Your Shop ID</div>
       <div class="setting-sub">Share this with customers so they can find your shop</div>
       <div style="background:#f4f2ff;border-radius:12px;padding:16px;text-align:center">
@@ -1009,7 +1021,12 @@ function switchTab(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
   const sc=document.getElementById(name+'-screen');if(sc)sc.classList.add('on');
-  const nb=document.getElementById('nav-'+name);if(nb)nb.classList.add('on');
+  const nb=document.getElementById('nav-'+name);if(nb){
+    nb.classList.add('on');
+    // Auto-scroll nav to keep active tab visible
+    const nav=document.querySelector('.bottomnav');
+    if(nav)setTimeout(()=>nb.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}),0);
+  }
   if(name==='scan')startScan();
   if(name==='orders')loadOrders();
   if(name==='customers')loadCustomers();

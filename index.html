@@ -282,7 +282,30 @@ function loadJobs(){
 function applyJob(e,t){if(e)window.open('mailto:'+e+'?subject=Application for '+encodeURIComponent(t),'_blank');else T('Contact the shop directly');}
 let _sp=null;
 function loadSupportChat(){if(!UID)return;const el=document.getElementById('support-msgs');if(!el)return;get('support_chats','customer_id=eq.'+UID+'&order=created_at.asc&limit=100').then(d=>{const m=Array.isArray(d)?d:[];el.innerHTML=m.length?m.map(x=>'<div style="display:flex;flex-direction:'+(x.sender_role==='customer'?'row-reverse':'row')+';gap:8px;margin-bottom:5px"><div style="max-width:78%;background:'+(x.sender_role==='customer'?'#6C5CE7':'#f0f0f8')+';color:'+(x.sender_role==='customer'?'#fff':'#1a1a2e')+';border-radius:14px;padding:9px 13px;font-size:13px">'+(x.message||'').replace(/</g,'&lt;')+'</div></div>').join(''):'<div style="text-align:center;padding:30px;font-size:13px;color:#706f87">Welcome! How can we help?</div>';el.scrollTop=el.scrollHeight;if(!_sp)_sp=setInterval(()=>loadSupportChat(),8000);}).catch(()=>{});}
-function sendSupportMsg(){const inp=document.getElementById('support-inp');const msg=inp.value.trim();if(!msg||!UID)return;inp.value='';post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'customer',sender_name:PROF.name||UEMAIL,message:msg,created_at:Date.now()}).then(()=>loadSupportChat()).catch(()=>{T('Failed');inp.value=msg;});}
+function sendSupportMsg(){
+  const inp=document.getElementById('support-inp');
+  const msg=inp.value.trim();
+  if(!msg||!UID)return;
+  inp.value='';
+  inp.disabled=true;
+  post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'customer',sender_name:PROF.name||UEMAIL,message:msg,created_at:Date.now()})
+    .then(d=>{
+      inp.disabled=false;
+      if(d && (d.code || d.error)){
+        T('Error: ' + (d.message||d.error||'Failed'));
+        inp.value=msg;
+      } else {
+        T('✅ Message sent');
+        loadSupportChat();
+      }
+    })
+    .catch(e=>{
+      console.error('Support message error:',e);
+      T('Failed to send');
+      inp.value=msg;
+      inp.disabled=false;
+    })
+}
 const _gT5=goTab;goTab=function(n){_gT5(n);if(n==='jobs')loadJobs();if(n==='support')loadSupportChat();};
 
 </script>
@@ -314,11 +337,11 @@ button{cursor:pointer}
 .tb-right{display:flex;gap:8px}
 .tb-btn{background:rgba(255,255,255,.12);color:#fff;padding:8px 12px;border-radius:10px;font-size:13px;font-weight:600}
 
-.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1.5px solid #ececf3;display:flex;z-index:99;padding-bottom:env(safe-area-inset-bottom)}
-.nb{flex:1;padding:10px 4px 8px;text-align:center;cursor:pointer;color:#a0a0b5;transition:color .15s}
-.nb.on{color:#6C5CE7}
-.nb-ico{font-size:22px;display:block}
-.nb-lab{font-size:10px;font-weight:600;margin-top:2px;display:block}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1.5px solid #ececf3;display:flex;z-index:99;padding-bottom:env(safe-area-inset-bottom);gap:2px}
+.nb{flex:1;padding:8px 2px 6px;text-align:center;cursor:pointer;color:#a0a0b5;transition:color .15s,background .15s}
+.nb.on{color:#6C5CE7;background:rgba(108,92,231,.05)}
+.nb-ico{font-size:20px;display:block;margin-bottom:1px}
+.nb-lab{font-size:9px;font-weight:700;display:block;line-height:1}
 .nb-dot{display:inline-block;width:6px;height:6px;background:#6C5CE7;border-radius:50%;margin-left:3px;vertical-align:top;margin-top:2px}
 
 .screen{display:none;padding:16px;animation:fi .2s ease}

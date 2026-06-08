@@ -987,9 +987,28 @@ function loadSupportReplies(custId){
   }).catch(()=>{});
 }
 function sendSupportReply(){
-  const inp=document.getElementById('support-reply-inp');const msg=inp.value.trim();if(!msg||!CUR_SUPPORT_CUST)return;
+  const inp=document.getElementById('support-reply-inp');
+  const msg=inp.value.trim();
+  if(!msg||!CUR_SUPPORT_CUST){T('Please enter a message');return}
   inp.value='';
-  spost('support_chats',{customer_id:CUR_SUPPORT_CUST,customer_email:'',sender_role:'admin',sender_name:'Stashlo Support',message:msg,read_by_admin:true,created_at:Date.now()}).then(()=>loadSupportReplies(CUR_SUPPORT_CUST)).catch(()=>{T('Failed');inp.value=msg;});
+  inp.disabled=true;
+  spost('support_chats',{customer_id:CUR_SUPPORT_CUST,customer_email:'',sender_role:'admin',sender_name:'Stashlo Support',message:msg,read_by_admin:true,created_at:Date.now()})
+    .then(d=>{
+      if(d && (d.code || d.error)){
+        T('Error: ' + (d.message||d.error||'Failed to send'));
+        inp.value=msg;
+      } else {
+        T('✅ Message sent');
+        loadSupportReplies(CUR_SUPPORT_CUST);
+      }
+      inp.disabled=false;
+    })
+    .catch(e=>{
+      console.error('Support reply error:',e);
+      T('Failed to send — check connection');
+      inp.value=msg;
+      inp.disabled=false;
+    })
 }
 
 </script>
