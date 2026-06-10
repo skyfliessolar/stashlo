@@ -1197,7 +1197,7 @@ function updateMyShops(){
     <div class="shop-item" onclick="openShopById('${c.merchant_id}')">
       <div class="shop-ico">${c.emoji||'🏪'}</div>
       <div class="shop-info"><div class="shop-name">${c.shopName||c.name}</div><div class="shop-meta">${c.points||0} points</div></div>
-      <button class="shop-btn">Order →</button>
+      <button class="shop-btn" style="pointer-events:none">Order →</button>
     </div>`).join(''):'<div class="empty" style="padding:20px"><i>🏪</i><p>Find a shop and add it here</p></div>';
 }
 
