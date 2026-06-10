@@ -411,3 +411,18 @@ CREATE POLICY "allow_all_receipts" ON receipts FOR ALL TO anon, authenticated US
 CREATE POLICY "allow_all_job_unlocks" ON job_unlocks FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_merchant_rewards" ON merchant_rewards FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_audit_logs" ON audit_logs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- ===== v5: 3D THEME ENGINE (admin-controlled, live-applies to all apps) =====
+CREATE TABLE IF NOT EXISTS app_settings (
+  key text PRIMARY KEY,
+  value text,
+  updated_at bigint DEFAULT (extract(epoch from now())*1000)::bigint
+);
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "allow_all_app_settings" ON app_settings;
+CREATE POLICY "allow_all_app_settings" ON app_settings FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- Default 3D theme
+INSERT INTO app_settings (key, value) VALUES ('theme3d',
+'{"enabled":true,"depth":1,"tilt":true,"orbs":true,"glass":true,"flip":true,"primary":"#6366F1","accent":"#8B5CF6","glow":"#22d3ee"}')
+ON CONFLICT (key) DO NOTHING;

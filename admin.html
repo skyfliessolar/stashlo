@@ -302,6 +302,41 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
   </div>
 
   <!-- MORE SCREEN (hub for secondary features) -->
+  <!-- 3D DESIGN STUDIO -->
+  <div class="screen" id="design3d-screen">
+    <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">🎨 3D Design Studio</div>
+    <div style="margin:0 16px 12px;background:linear-gradient(135deg,#6366F1,#8B5CF6);border-radius:12px;padding:12px 14px;font-size:12px;font-weight:600;color:#fff">Changes apply LIVE to Customer &amp; Merchant apps on their next load</div>
+
+    <!-- Live preview card -->
+    <div style="margin:0 16px 16px;perspective:900px">
+      <div id="d3-preview" style="background:linear-gradient(135deg,var(--purple,#6366F1),#8B5CF6);border-radius:18px;padding:20px;min-height:120px;color:#fff;transform-style:preserve-3d;transition:transform .15s;box-shadow:0 18px 40px -12px rgba(0,0,0,.45);position:relative;overflow:hidden">
+        <div style="font-size:13px;font-weight:700">🛍️ Preview Loyalty Card</div>
+        <div style="font-size:30px;font-weight:800;margin-top:8px">250</div>
+        <div style="font-size:11px;opacity:.75">points · move your finger/mouse over me</div>
+      </div>
+    </div>
+
+    <div class="ic">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px">⚙️ 3D Controls</div>
+      <label style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bg2);font-size:14px;font-weight:600">3D Enabled <input type="checkbox" id="d3-enabled" checked style="width:22px;height:22px"></label>
+      <label style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bg2);font-size:14px;font-weight:600">Tilt on touch/mouse <input type="checkbox" id="d3-tilt" checked style="width:22px;height:22px"></label>
+      <label style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bg2);font-size:14px;font-weight:600">Floating depth orbs <input type="checkbox" id="d3-orbs" checked style="width:22px;height:22px"></label>
+      <label style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bg2);font-size:14px;font-weight:600">Glass surfaces <input type="checkbox" id="d3-glass" checked style="width:22px;height:22px"></label>
+      <label style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bg2);font-size:14px;font-weight:600">Barcode flip animation <input type="checkbox" id="d3-flip" checked style="width:22px;height:22px"></label>
+      <div style="padding:12px 0;border-bottom:1px solid var(--bg2)">
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">Depth intensity: <span id="d3-depth-val">1.0</span></div>
+        <input type="range" id="d3-depth" min="0.2" max="2" step="0.1" value="1" style="width:100%" oninput="document.getElementById('d3-depth-val').textContent=this.value">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:12px 0">
+        <div><div style="font-size:12px;font-weight:600;margin-bottom:4px">Primary</div><input type="color" id="d3-primary" value="#6366F1" style="width:100%;height:42px;border:none;border-radius:10px;cursor:pointer"></div>
+        <div><div style="font-size:12px;font-weight:600;margin-bottom:4px">Accent</div><input type="color" id="d3-accent" value="#8B5CF6" style="width:100%;height:42px;border:none;border-radius:10px;cursor:pointer"></div>
+        <div><div style="font-size:12px;font-weight:600;margin-bottom:4px">Glow</div><input type="color" id="d3-glow" value="#22d3ee" style="width:100%;height:42px;border:none;border-radius:10px;cursor:pointer"></div>
+      </div>
+      <button class="btn btn-purple" style="width:100%;margin-top:6px" onclick="saveTheme3D()">💾 Publish to All Apps</button>
+      <button class="btn" style="width:100%;margin-top:8px;background:var(--bg2)" onclick="resetTheme3D()">↺ Reset to Default</button>
+    </div>
+  </div>
+
   <!-- JOB APPROVALS -->
   <div class="screen" id="jobapprovals-screen">
     <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">💼 Job Unlock Approvals</div>
@@ -318,6 +353,11 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 
   <div class="screen" id="more-screen">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div onclick="switchTab('design3d')" style="background:linear-gradient(135deg,#6366F1,#8B5CF6);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">🎨</div>
+        <div style="font-size:13px;font-weight:700;margin-top:6px;color:#fff">3D Studio</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.7)">Live theme</div>
+      </div>
       <div onclick="switchTab('jobapprovals')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:26px">💼</div>
         <div style="font-size:13px;font-weight:700;margin-top:6px">Job Approvals</div>
@@ -1343,6 +1383,59 @@ function loadAuditLogs(){
   }).catch(()=>{});
 }
 
+// ===== 3D DESIGN STUDIO =====
+const D3_DEFAULT={enabled:true,depth:1,tilt:true,orbs:true,glass:true,flip:true,primary:'#6366F1',accent:'#8B5CF6',glow:'#22d3ee'};
+function loadTheme3DStudio(){
+  sget('app_settings','key=eq.theme3d').then(d=>{
+    let t={...D3_DEFAULT};
+    if(Array.isArray(d)&&d[0]&&d[0].value){try{t={...t,...JSON.parse(d[0].value)};}catch(e){}}
+    document.getElementById('d3-enabled').checked=!!t.enabled;
+    document.getElementById('d3-tilt').checked=!!t.tilt;
+    document.getElementById('d3-orbs').checked=!!t.orbs;
+    document.getElementById('d3-glass').checked=!!t.glass;
+    document.getElementById('d3-flip').checked=!!t.flip;
+    document.getElementById('d3-depth').value=t.depth||1;
+    document.getElementById('d3-depth-val').textContent=t.depth||1;
+    document.getElementById('d3-primary').value=t.primary||'#6366F1';
+    document.getElementById('d3-accent').value=t.accent||'#8B5CF6';
+    document.getElementById('d3-glow').value=t.glow||'#22d3ee';
+    initD3Preview();
+  }).catch(()=>initD3Preview());
+}
+function saveTheme3D(){
+  const t={
+    enabled:document.getElementById('d3-enabled').checked,
+    tilt:document.getElementById('d3-tilt').checked,
+    orbs:document.getElementById('d3-orbs').checked,
+    glass:document.getElementById('d3-glass').checked,
+    flip:document.getElementById('d3-flip').checked,
+    depth:parseFloat(document.getElementById('d3-depth').value)||1,
+    primary:document.getElementById('d3-primary').value,
+    accent:document.getElementById('d3-accent').value,
+    glow:document.getElementById('d3-glow').value
+  };
+  spost('app_settings',{key:'theme3d',value:JSON.stringify(t),updated_at:Date.now()},'key')
+  .then(()=>{T('🎨 3D theme published — customers & merchants get it on next app load','success');logAudit('publish_3d_theme','all apps',JSON.stringify(t));})
+  .catch(()=>T('Failed to publish','error'));
+}
+function resetTheme3D(){
+  spost('app_settings',{key:'theme3d',value:JSON.stringify(D3_DEFAULT),updated_at:Date.now()},'key')
+  .then(()=>{T('↺ Reset to default','success');loadTheme3DStudio();}).catch(()=>T('Failed','error'));
+}
+let _d3prevInit=false;
+function initD3Preview(){
+  if(_d3prevInit)return;_d3prevInit=true;
+  const el=document.getElementById('d3-preview');if(!el)return;
+  el.addEventListener('pointermove',e=>{
+    const b=el.getBoundingClientRect();
+    const px=(e.clientX-b.left)/b.width,py=(e.clientY-b.top)/b.height;
+    const d=(parseFloat(document.getElementById('d3-depth').value)||1)*12;
+    el.style.transform='rotateY('+((px-.5)*d).toFixed(2)+'deg) rotateX('+((.5-py)*d).toFixed(2)+'deg) translateZ(8px)';
+    el.style.background='linear-gradient(135deg,'+document.getElementById('d3-primary').value+','+document.getElementById('d3-accent').value+')';
+  });
+  el.addEventListener('pointerleave',()=>{el.style.transform='';});
+}
+
 function switchTab(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
@@ -1355,6 +1448,7 @@ function switchTab(name){
   if(name==='rewards')loadRewards();
   if(name==='jobapprovals')loadJobApprovals();
   if(name==='audit')loadAuditLogs();
+  if(name==='design3d')loadTheme3DStudio();
   if(name==='delivery')loadDelivery();
   if(name==='billing')loadBilling();
 }
