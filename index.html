@@ -521,6 +521,19 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
       <div style="font-size:14px;font-weight:700">Add Payment Card</div>
       <div style="font-size:12px;color:var(--sub);margin-top:2px">Visa, Mastercard, Amex</div>
     </div>
+    <!-- Digital wallets -->
+    <div style="padding:0 16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:var(--sub);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Digital Wallets</div>
+      <div id="wallet-applepay" onclick="connectWallet('applepay')" style="background:#000;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;color:#fff">&#63743;</span><span style="font-size:15px;font-weight:700;color:#fff">Apple Pay</span></div>
+        <span id="ap-status" style="font-size:12px;font-weight:700;color:#34d399">Connect</span>
+      </div>
+      <div id="wallet-googlepay" onclick="connectWallet('googlepay')" style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;font-weight:800;background:linear-gradient(90deg,#4285F4,#EA4335,#FBBC05,#34A853);-webkit-background-clip:text;background-clip:text;color:transparent">G</span><span style="font-size:15px;font-weight:700">Google Pay</span></div>
+        <span id="gp-status" style="font-size:12px;font-weight:700;color:var(--green)">Connect</span>
+      </div>
+    </div>
+    <div style="padding:0 16px;margin-bottom:8px"><div style="font-size:13px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px">Saved Cards</div></div>
     <div id="pay-cards-list"></div>
     <!-- Apple Pay-style button (shown when cards exist) -->
     <div id="apple-pay-section" style="display:none;padding:0 16px">
@@ -544,7 +557,11 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 
   <!-- ===== RECEIPTS ===== -->
   <div class="screen" id="receipts-screen">
-    <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">🧾 Receipt Archive</div>
+    <div style="padding:16px 16px 8px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:18px;font-weight:800">🧾 Receipt Archive</div>
+      <button onclick="document.getElementById('receipt-cam').click()" style="background:var(--purple);color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">📷 Scan Receipt</button>
+    </div>
+    <input type="file" id="receipt-cam" accept="image/*" capture="environment" style="display:none" onchange="scanReceipt(this)">
     <div style="margin:0 16px 12px;background:var(--green-bg);border-radius:12px;padding:10px 14px;font-size:12px;color:#065f46;font-weight:600">✅ Free storage: 12 months · Premium: unlimited + export (£1.99/mo)</div>
     <div id="receipts-list" style="padding:0 16px"></div>
   </div>
@@ -1543,11 +1560,13 @@ function loadPaymentCards(){
   }).catch(()=>{})
 }
 function renderPaymentCards(){
+  walletStatus();
   const el=document.getElementById('pay-cards-list');if(!el)return;
   const apSec=document.getElementById('apple-pay-section');
-  if(PAY_CARDS.length){
+  const REAL_CARDS=PAY_CARDS.filter(x=>x.network!=='applepay'&&x.network!=='googlepay');
+  if(REAL_CARDS.length){
     if(apSec)apSec.style.display='block';
-    el.innerHTML=PAY_CARDS.map(c=>`<div class="pay-card">
+    el.innerHTML=REAL_CARDS.map(c=>`<div class="pay-card">
       <div class="pay-card-net">${c.network==='visa'?'💳':c.network==='mastercard'?'🔵':'💳'}</div>
       <div style="position:absolute;top:16px;left:16px;font-size:11px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase">${c.network||'Card'}</div>
       <div class="pay-card-num">•••• •••• •••• ${c.last4||'****'}</div>
@@ -1648,7 +1667,7 @@ function loadJobs(){
   if(!el)return;
   el.innerHTML='<div class="spin"></div>';
   loadJobUnlocks().then(()=>get('jobs','active=eq.true&order=created_at.desc')).then(d=>{
-    const j=Array.isArray(d)?d:[];
+    const j=Array.isArray(d)?d:[];window._JOBS=j;
     if(!j.length){el.innerHTML='<div class="empty"><i>\ud83d\udcbc</i><p>No jobs posted yet</p></div>';return}
     const hasMonthly=JOB_UNLOCKS.some(u=>u.plan==='5'&&u.status==='approved');
     el.innerHTML=j.map(x=>{
@@ -1727,7 +1746,9 @@ function loadReceipts(){
   get('receipts','user_id=eq.'+UID+'&order=created_at.desc').then(d=>{
     RECEIPTS=Array.isArray(d)?d:[];
     if(!RECEIPTS.length){el.innerHTML='<div class="empty"><i>\ud83e\uddfe</i><p>No saved receipts yet.<br>Save receipts from completed orders.</p></div>';return}
-    el.innerHTML=RECEIPTS.map(r=>'<div class="ic" style="margin:0 0 10px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">\ud83e\uddfe '+(r.merchant_name||'Receipt')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.receipt_no||'')+' \u00b7 '+(r.created_at?new Date(r.created_at).toLocaleDateString():'')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.items||'')+'</div></div><div style="font-size:17px;font-weight:800;color:var(--purple)">\u00a3'+parseFloat(r.total||0).toFixed(2)+'</div></div></div>').join('');
+    el.innerHTML=RECEIPTS.map(r=>'<div class="ic" style="margin:0 0 10px">'
+      +(r.image_url?'<img src="'+r.image_url+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:10px" onerror="this.style.display=\'none\'" onclick="window.open(\''+r.image_url+'\',\'_blank\')">':'')
+      +'<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">\ud83e\uddfe '+(r.merchant_name||'Receipt')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.receipt_no||'')+' \u00b7 '+(r.created_at?new Date(r.created_at).toLocaleString().slice(0,17):'')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.items||'')+'</div></div><div style="font-size:17px;font-weight:800;color:var(--purple)">\u00a3'+parseFloat(r.total||0).toFixed(2)+'</div></div></div>').join('');
   }).catch(()=>{el.innerHTML='<div class="empty"><i>\u26a0\ufe0f</i><p>Could not load receipts</p></div>'});
 }
 function saveReceipt(orderId){
@@ -1736,15 +1757,90 @@ function saveReceipt(orderId){
   .then(()=>T('\ud83e\uddfe Receipt saved to archive!')).catch(()=>T('Save failed'));
 }
 
+// ===== RECEIPT CAMERA SCAN =====
+async function uploadReceiptImg(file){
+  const ext=(file.name||'img.jpg').split('.').pop().toLowerCase();
+  const name='receipts/'+UID+'_'+Date.now()+'.'+ext;
+  const res=await fetch(SU+'/storage/v1/object/stashlo-images/'+name,{method:'POST',headers:{'apikey':SK,'Authorization':'Bearer '+(TOK||SK),'Content-Type':file.type||'image/jpeg','x-upsert':'true'},body:file});
+  if(!res.ok)throw new Error('upload failed');
+  return SU+'/storage/v1/object/public/stashlo-images/'+name;
+}
+async function scanReceipt(input){
+  const file=input.files[0];if(!file)return;
+  input.value='';
+  if(file.size>5*1024*1024){T('Max 5MB image');return}
+  T('📷 Uploading receipt...');
+  try{
+    const url=await uploadReceiptImg(file);
+    const shop=prompt('Shop name on the receipt? (optional)','')||'Scanned receipt';
+    const totalStr=prompt('Total amount £? (optional)','')||'0';
+    const now=new Date();
+    await post('receipts',{user_id:UID,merchant_name:shop,items:'📷 Scanned '+now.toLocaleDateString()+' '+now.toLocaleTimeString().slice(0,5),total:parseFloat(totalStr)||0,receipt_no:'SCAN-'+Date.now().toString(36).toUpperCase(),image_url:url,created_at:Date.now()});
+    T('✅ Receipt saved with date & time!');loadReceipts();
+  }catch(e){T('⚠️ Upload failed — check storage bucket');}
+}
+
+// ===== DIGITAL WALLET CONNECT (Apple Pay / Google Pay) =====
+function walletStatus(){
+  const ap=PAY_CARDS.find(c=>c.network==='applepay'),gp=PAY_CARDS.find(c=>c.network==='googlepay');
+  const a=document.getElementById('ap-status'),g=document.getElementById('gp-status');
+  if(a)a.textContent=ap?'✓ Connected':'Connect';
+  if(g)g.textContent=gp?'✓ Connected':'Connect';
+}
+function connectWallet(net){
+  const exists=PAY_CARDS.find(c=>c.network===net);
+  const label=net==='applepay'?'Apple Pay':'Google Pay';
+  if(exists){
+    if(confirm('Disconnect '+label+'?'))del('payment_cards','id=eq.'+exists.id).then(()=>{T(label+' disconnected');loadPaymentCards();});
+    return;
+  }
+  T('🔐 Connecting '+label+'...');
+  post('payment_cards',{user_id:UID,holder:PROF.name||'Me',last4:net==='applepay'?'#AP':'#GP',network:net,expiry:'--/--',created_at:Date.now()},'user_id,last4')
+  .then(()=>{T('✅ '+label+' connected — one-tap pay enabled');loadPaymentCards();}).catch(()=>T('Connection failed'));
+}
+
 // ===== JOB UNLOCKS (pay to reveal contact) =====
 let JOB_UNLOCKS=[];
 function loadJobUnlocks(){return get('job_unlocks','user_id=eq.'+UID).then(d=>{JOB_UNLOCKS=Array.isArray(d)?d:[];}).catch(()=>{})}
+let JP={jobId:null,plan:'1',amount:1,method:null};
 function unlockJob(jobId,plan){
-  const amount=plan==='5'?5:1;
-  if(!confirm('Unlock job contact details for \u00a3'+amount+(plan==='5'?'/month (all jobs)':' (this job)')+'? Payment will be processed and admin will approve.'))return;
-  post('job_unlocks',{user_id:UID,job_id:jobId,plan,amount,status:'pending_approval',created_at:Date.now()},'user_id,job_id')
-  .then(()=>{T('\u2705 Payment received \u2014 pending admin approval');loadJobUnlocks().then(()=>loadJobs());})
-  .catch(()=>T('Payment failed'));
+  JP={jobId,plan,amount:plan==='5'?5:1,method:null};
+  const job=(window._JOBS||[]).find(j=>j.id===jobId)||{};
+  txt('jp-title',job.title||'Job listing');
+  txt('jp-plan-desc',plan==='5'?'Monthly pass \u2014 unlocks contact details on ALL jobs':'Single unlock \u2014 this job only');
+  txt('jp-amount','\u00a3'+JP.amount.toFixed(2));
+  renderJobPayMethods();
+  omo('jobPayMo');
+}
+function renderJobPayMethods(){
+  const el=document.getElementById('jp-methods');if(!el)return;
+  const ap=PAY_CARDS.find(x=>x.network==='applepay'),gp=PAY_CARDS.find(x=>x.network==='googlepay');
+  const cards=PAY_CARDS.filter(x=>x.network!=='applepay'&&x.network!=='googlepay');
+  let h='';
+  h+='<div class="shop-item" style="background:#000" onclick="selJobPay(\'applepay\',this)"><div class="shop-ico" style="background:#1a1a1a;color:#fff">\uf8ff</div><div class="shop-info"><div class="shop-name" style="color:#fff">Apple Pay</div><div class="shop-meta" style="color:#aaa">'+(ap?'One-tap \u00b7 connected':'Tap to use')+'</div></div><span class="jp-check" style="color:#34d399;font-weight:800"></span></div>';
+  h+='<div class="shop-item" onclick="selJobPay(\'googlepay\',this)"><div class="shop-ico">G</div><div class="shop-info"><div class="shop-name">Google Pay</div><div class="shop-meta">'+(gp?'One-tap \u00b7 connected':'Tap to use')+'</div></div><span class="jp-check" style="color:var(--green);font-weight:800"></span></div>';
+  cards.forEach(cd=>{h+='<div class="shop-item" onclick="selJobPay(\'card_'+cd.id+'\',this)"><div class="shop-ico">\ud83d\udcb3</div><div class="shop-info"><div class="shop-name">'+(cd.network||'Card')+' \u2022\u2022\u2022\u2022'+cd.last4+'</div><div class="shop-meta">'+(cd.holder||'')+'</div></div><span class="jp-check" style="color:var(--green);font-weight:800"></span></div>';});
+  h+='<div class="shop-item" onclick="cmo(\'jobPayMo\');goTab(\'pay\');openAddPayCard()"><div class="shop-ico">\u2795</div><div class="shop-info"><div class="shop-name">Add new card</div><div class="shop-meta">Visa, Mastercard, Amex</div></div></div>';
+  el.innerHTML=h;
+}
+function selJobPay(method,el){
+  JP.method=method;
+  document.querySelectorAll('#jp-methods .jp-check').forEach(x=>x.textContent='');
+  const chk=el.querySelector('.jp-check');if(chk)chk.textContent='\u2713';
+  const lbl=method==='applepay'?'\uf8ff Pay '+'\u00a3'+JP.amount.toFixed(2):method==='googlepay'?'G Pay \u00b7 \u00a3'+JP.amount.toFixed(2):'Pay \u00a3'+JP.amount.toFixed(2);
+  const b=document.getElementById('jp-paybtn');if(b)b.textContent=lbl;
+}
+function payJobNow(){
+  if(!JP.jobId)return;
+  if(!JP.method){T('Choose a payment method');return}
+  const b=document.getElementById('jp-paybtn');if(b){b.textContent='Processing\u2026';b.disabled=true;}
+  post('job_unlocks',{user_id:UID,job_id:JP.jobId,plan:JP.plan,amount:JP.amount,status:'pending_approval',created_at:Date.now()},'user_id,job_id')
+  .then(()=>{
+    if(b){b.disabled=false;}
+    cmo('jobPayMo');
+    T('\u2705 \u00a3'+JP.amount.toFixed(2)+' paid \u2014 pending admin approval');
+    loadJobUnlocks().then(()=>loadJobs());
+  }).catch(()=>{if(b){b.textContent='Pay now';b.disabled=false;}T('Payment failed')});
 }
 
 // ===== NAVIGATION =====

@@ -296,8 +296,10 @@ CREATE TABLE IF NOT EXISTS receipts (
   items text,
   total numeric DEFAULT 0,
   receipt_no text,
+  image_url text,
   created_at bigint
 );
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS image_url text;
 
 -- 21. job_unlocks
 CREATE TABLE IF NOT EXISTS job_unlocks (
