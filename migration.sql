@@ -342,7 +342,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
 -- Default 3D theme seed
 INSERT INTO app_settings (key, value) VALUES ('theme3d',
 '{"enabled":true,"depth":1,"tilt":true,"orbs":true,"glass":true,"flip":true,"primary":"#6366F1","accent":"#8B5CF6","glow":"#22d3ee"}')
-ON CONFLICT (key) DO NOTHING;
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 -- ============================================================
 -- RLS: enable + permissive policies on every table
@@ -364,12 +364,25 @@ BEGIN
 END $$;
 
 -- ============================================================
--- Storage bucket for images
+-- Storage bucket (exception-safe: skipped if SQL editor lacks
+-- permission — create bucket via Dashboard > Storage instead)
 -- ============================================================
-INSERT INTO storage.buckets (id, name, public, file_size_limit)
-VALUES ('stashlo-images', 'stashlo-images', true, 5242880)
-ON CONFLICT (id) DO UPDATE SET public = true;
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO storage.buckets (id, name, public, file_size_limit)
+    VALUES ('stashlo-images', 'stashlo-images', true, 5242880)
+    ON CONFLICT (id) DO UPDATE SET public = true;
+  EXCEPTION WHEN others THEN
+    RAISE NOTICE 'Skipped bucket creation: %', SQLERRM;
+  END;
+  BEGIN
+    EXECUTE 'DROP POLICY IF EXISTS "stashlo images public" ON storage.objects';
+    EXECUTE 'CREATE POLICY "stashlo images public" ON storage.objects FOR ALL TO anon, authenticated USING (bucket_id = ''stashlo-images'') WITH CHECK (bucket_id = ''stashlo-images'')';
+  EXCEPTION WHEN others THEN
+    RAISE NOTICE 'Skipped storage policy: %', SQLERRM;
+  END;
+END $$;
 
-DROP POLICY IF EXISTS "stashlo images public" ON storage.objects;
-CREATE POLICY "stashlo images public" ON storage.objects FOR ALL TO anon, authenticated
-USING (bucket_id = 'stashlo-images') WITH CHECK (bucket_id = 'stashlo-images');
+-- Verify key rows
+SELECT key, left(value, 60) AS value_preview FROM app_settings;
