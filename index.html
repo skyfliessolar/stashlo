@@ -1133,10 +1133,11 @@ function mSrch(q){
     }).catch(()=>{})
   }).catch(()=>{})
 }
+function closeShopModal(){cmo('shopSearchMo')}
 function renderShops(shops,el,hideModal){
   if(!shops||!shops.length){el.innerHTML='';return}
   el.innerHTML=shops.map(s=>`
-    <div class="shop-item" onclick="${hideModal?'':'cmo(\\'shopSearchMo\\');'}openShopById('${s.id}')">
+    <div class="shop-item" onclick="if(typeof closeShopModal!='undefined')closeShopModal();openShopById('${s.id}')">
       <div class="shop-ico">${s.logo_emoji||'🏪'}</div>
       <div class="shop-info"><div class="shop-name">${s.name}</div><div class="shop-meta">ID: ${s.shop_id||'—'} • ${fmtLoy(s).slice(0,40)}</div></div>
       <button class="shop-btn">View →</button>
