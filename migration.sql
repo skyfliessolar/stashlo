@@ -341,3 +341,73 @@ DROP POLICY IF EXISTS "stashlo images public" ON storage.objects;
 CREATE POLICY "stashlo images public" ON storage.objects FOR ALL TO anon, authenticated 
 USING (bucket_id = 'stashlo-images') WITH CHECK (bucket_id = 'stashlo-images');
 
+
+-- ===== v4 UPGRADE: FinTech features =====
+
+-- Short loyalty ID on users
+ALTER TABLE users ADD COLUMN IF NOT EXISTS loyalty_id text UNIQUE;
+
+-- Merchant status controls (admin super app)
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS suspended boolean DEFAULT false;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS restricted boolean DEFAULT false;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS approved boolean DEFAULT true;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS bank_account text;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS bank_sort_code text;
+
+-- Customer bank settings (admin editable)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_account text;
+
+-- Receipts (permanent customer storage)
+CREATE TABLE IF NOT EXISTS receipts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  merchant_name text,
+  order_id uuid,
+  items text,
+  total numeric DEFAULT 0,
+  receipt_no text,
+  created_at bigint DEFAULT (extract(epoch from now())*1000)::bigint
+);
+
+-- Job unlocks (pay £1/£5 -> admin approval -> contact revealed)
+CREATE TABLE IF NOT EXISTS job_unlocks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  job_id uuid REFERENCES jobs(id) ON DELETE CASCADE,
+  plan text DEFAULT '1',
+  amount numeric DEFAULT 1,
+  status text DEFAULT 'pending_approval',
+  created_at bigint DEFAULT (extract(epoch from now())*1000)::bigint,
+  UNIQUE(user_id, job_id)
+);
+
+-- Merchant-created rewards (e.g. free juice for 100 pts)
+CREATE TABLE IF NOT EXISTS merchant_rewards (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  merchant_id uuid REFERENCES merchants(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  emoji text DEFAULT '🎁',
+  points_cost integer DEFAULT 100,
+  active boolean DEFAULT true,
+  created_at bigint DEFAULT (extract(epoch from now())*1000)::bigint
+);
+
+-- Audit logs (all admin actions)
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_email text,
+  action text NOT NULL,
+  target text,
+  details text,
+  created_at bigint DEFAULT (extract(epoch from now())*1000)::bigint
+);
+
+-- RLS for new tables
+ALTER TABLE receipts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE job_unlocks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE merchant_rewards ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_all_receipts" ON receipts FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_job_unlocks" ON job_unlocks FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_merchant_rewards" ON merchant_rewards FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_audit_logs" ON audit_logs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);

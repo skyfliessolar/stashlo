@@ -357,6 +357,29 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
       </div>
     </div>
     <div class="setting-card">
+      <div class="setting-title">📊 Accounting</div>
+      <div class="setting-sub">Revenue, invoices &amp; payments</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0">
+        <div style="background:#f8fafc;border-radius:12px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--ink3)">Total revenue</div><div id="acc-rev" style="font-size:17px;font-weight:800;color:var(--purple)">£0</div></div>
+        <div style="background:#f8fafc;border-radius:12px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--ink3)">This month</div><div id="acc-rev-mo" style="font-size:17px;font-weight:800;color:var(--green)">£0</div></div>
+        <div style="background:#f8fafc;border-radius:12px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--ink3)">Order income</div><div id="acc-orders" style="font-size:17px;font-weight:800">£0</div></div>
+        <div style="background:#fef2f2;border-radius:12px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--ink3)">Fees due</div><div id="acc-due" style="font-size:17px;font-weight:800;color:var(--red)">£0</div></div>
+      </div>
+      <div class="setting-title" style="font-size:13px;margin-top:6px">🧾 Invoices from Stashlo</div>
+      <div id="invoice-list"></div>
+    </div>
+    <div class="setting-card">
+      <div class="setting-title">🎁 My Rewards</div>
+      <div class="setting-sub">Create rewards customers redeem with points (e.g. Free juice · 100 pts)</div>
+      <div style="display:flex;gap:8px;margin:10px 0">
+        <input id="mr-emoji" placeholder="🧃" maxlength="4" style="width:54px;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px;text-align:center">
+        <input id="mr-name" placeholder="Free juice" style="flex:1;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px">
+        <input id="mr-pts" type="number" placeholder="100" style="width:72px;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px">
+      </div>
+      <button class="btn btn-purple" style="width:100%" onclick="createMerchReward()">➕ Create Reward</button>
+      <div id="mrewards-list" style="margin-top:10px"></div>
+    </div>
+    <div class="setting-card">
       <div class="setting-title">💼 Post a Job</div>
       <div class="setting-sub">Find staff from the local community</div>
       <div class="field"><label class="field-label">Job Title ★</label><input id="job-title" placeholder="e.g. Part-time Barista"></div>
@@ -490,8 +513,12 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     </div>
     <div class="modal-body" id="order-detail-body"></div>
     <div class="modal-footer">
-      <button class="btn btn-green" style="flex:1" onclick="updateOrderSt('ready')">✅ Mark Ready</button>
-      <button class="btn btn-primary" style="flex:1" onclick="updateOrderSt('completed')">✓ Complete</button>
+      <button class="btn btn-green" style="flex:1" onclick="updateOrderSt('dispatched')">🚚 Dispatch</button>
+      <button class="btn btn-primary" style="flex:1" onclick="updateOrderSt('in_transit')">🛵 In Transit</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-gray" style="flex:1" onclick="updateOrderSt('out_for_delivery')">🏃 Out for Delivery</button>
+      <button class="btn btn-primary" style="flex:1" onclick="updateOrderSt('completed')">🎉 Delivered</button>
     </div>
     <div style="padding:0 16px 16px;display:flex;gap:8px">
       <button class="btn btn-red" style="flex:1" onclick="updateOrderSt('rejected')">✗ Reject</button>
@@ -509,7 +536,7 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     </div>
     <div id="chat-msgs" class="msg-wrap"></div>
     <div style="padding:12px;border-top:1px solid var(--bg2);display:flex;gap:8px;background:var(--white)">
-      <input id="chat-inp" style="flex:1;padding:12px 14px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px" placeholder="Reply to customer..." onkeydown="if(event.key==='Enter')sendChat()">
+      <button onclick="aiSuggestReply()" title="AI suggest" style="background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:12px;padding:10px 12px;font-size:14px;cursor:pointer">✨</button><input id="chat-inp" style="flex:1;padding:12px 14px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px" placeholder="Reply to customer..." onkeydown="if(event.key==='Enter')sendChat()">
       <button onclick="sendChat()" style="background:var(--purple);color:#fff;border-radius:var(--r12);padding:12px 18px;font-weight:700;font-size:14px">Send</button>
     </div>
   </div>
@@ -593,6 +620,7 @@ function loadAll(){loadMerchant();loadProducts();loadOrders();loadCustomers();lo
 function loadMerchant(){
   get("merchants","id=eq."+MID).then(d=>{
     MDATA=Array.isArray(d)&&d[0]?d[0]:{};
+    checkRestriction();
     txt("shop-name-top",MDATA.name||"My Shop");
     const sb=document.getElementById("shop-id-btn");if(sb)sb.textContent="📋 "+(MDATA.shop_id||"—");
     txt("loyalty-rule-text",fmtRule());txt("d-shopid",MDATA.shop_id||"—");
@@ -748,10 +776,25 @@ function updateOrderSt(s){
 
 let RC_DATA=null;
 function lookupCustomer(){
-  const ph=V("manual-phone")||SCAN_PHONE;if(!ph)return;SCAN_PHONE=ph;
+  const ph=V("scan-phone")||V("till-phone");
+  if(!ph){T("Enter a phone number or Stashlo ID","error");return}
+  const el=document.getElementById("scan-result")||document.getElementById("till-result");
+  if(!el)return;
+  el.innerHTML="<div style='text-align:center;padding:14px;color:var(--ink3);font-size:13px'>Searching...</div>";
+  if(/^SL-/i.test(ph)){
+    // Stashlo loyalty ID lookup -> users table -> their card for this shop
+    get("users","loyalty_id=eq."+ph.toUpperCase()).then(us=>{
+      const u=Array.isArray(us)&&us[0]?us[0]:null;
+      if(!u){el.innerHTML="<div class='ic'><div style='color:var(--ink3);font-size:13px'>No Stashlo member with ID <strong>"+ph.toUpperCase()+"</strong></div></div>";return}
+      get("cards","user_id=eq."+u.id+"&merchant_id=eq."+MID).then(cs=>{
+        const card=Array.isArray(cs)&&cs[0]?cs[0]:null;
+        el.innerHTML="<div class='ic'><div class='ic-name'>\u2705 "+(u.name||u.email||"Member")+"</div><div class='ic-sub'>"+ph.toUpperCase()+" \u00b7 "+(card?(card.points||0)+" pts at your shop":"No card for your shop yet")+"</div>"+(card?"<button class='btn-xs btn-purple' style='margin-top:8px' onclick=\"switchTab('till');document.getElementById('till-phone').value='"+ph.toUpperCase()+"'\">\u2192 Add points at Till</button>":"<div style='font-size:12px;color:var(--ink3);margin-top:6px'>Ask customer to add your shop in their Stashlo app</div>")+"</div>";
+      });
+    }).catch(()=>{el.innerHTML="<div class='ic'><div style='color:var(--red);font-size:13px'>Lookup failed</div></div>"});
+    return;
+  }
   get("merchant_customers","merchant_id=eq."+MID+"&phone=eq."+encodeURIComponent(ph)).then(d=>{
     const cu=Array.isArray(d)&&d[0]?d[0]:null;
-    const el=document.getElementById("customer-lookup-result");
     if(cu){el.innerHTML=`<div class="ic"><div class="ic-name">👤 ${cu.name||"Customer"}</div><div class="ic-sub">${cu.phone} · ${cu.points||0} pts · ${cu.visit_count||0} visits</div><button class="btn-xs btn-purple" style="margin-top:8px" onclick="switchTab('till');document.getElementById('till-phone').value='${cu.phone}'">→ Go to Till</button></div>`;}
     else{el.innerHTML=`<div class="ic"><div style="color:var(--ink3);font-size:13px;margin-bottom:10px">No record for <strong>${ph}</strong></div><div class="field" style="margin-bottom:10px"><label class="field-label">Customer name (optional)</label><input id="new-cust-name" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px" placeholder="e.g. John Smith"></div><button class="btn-xs btn-purple" onclick="addCustomerManually('${ph}')">➕ Add customer</button></div>`;}
   })
@@ -790,6 +833,85 @@ function sendChat(){
   .then(()=>{loadChatMsgs(CHAT_ORDER,false);inp.disabled=false}).catch(()=>{T("Send failed","error");inp.value=msg;inp.disabled=false})
 }
 function stopChatPoll(){if(CHAT_POLL){clearInterval(CHAT_POLL);CHAT_POLL=null;}}
+
+// ===== MERCHANT REWARDS (create rewards from points) =====
+let M_REWARDS=[];
+function loadMerchRewards(){
+  get("merchant_rewards","merchant_id=eq."+MID+"&order=created_at.desc").then(d=>{
+    M_REWARDS=Array.isArray(d)?d:[];
+    const el=document.getElementById("mrewards-list");if(!el)return;
+    el.innerHTML=M_REWARDS.length?M_REWARDS.map(r=>'<div class="ic"><div class="ic-row"><div><div class="ic-name">'+(r.emoji||"\ud83c\udf81")+' '+r.name+'</div><div class="ic-sub">'+(r.points_cost||0)+' points'+(r.active?'':' \u00b7 inactive')+'</div></div><button class="btn-xs btn-del" onclick="delMerchReward(\''+r.id+'\')">\u2715</button></div></div>').join("")
+    :'<div style="text-align:center;padding:16px;color:var(--ink3);font-size:13px">No rewards yet \u2014 create one like "Free juice \u00b7 100 pts"</div>';
+  }).catch(()=>{});
+}
+function createMerchReward(){
+  const name=V("mr-name"),pts=parseInt(document.getElementById("mr-pts").value||0),emoji=V("mr-emoji")||"\ud83c\udf81";
+  if(!name||pts<=0){T("Name and points required","error");return}
+  post("merchant_rewards",{merchant_id:MID,name,emoji,points_cost:pts,active:true,created_at:Date.now()})
+  .then(()=>{T("\u2705 Reward created!","success");document.getElementById("mr-name").value="";document.getElementById("mr-pts").value="";loadMerchRewards();}).catch(()=>T("Failed","error"));
+}
+function delMerchReward(id){if(!confirm("Delete this reward?"))return;del("merchant_rewards","id=eq."+id).then(()=>{T("Deleted","success");loadMerchRewards()}).catch(()=>T("Failed","error"))}
+
+// ===== ACCOUNTING DASHBOARD =====
+let M_INVOICES=[];
+function loadAccounting(){
+  const rev=TXNS.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
+  const mo=new Date();mo.setDate(1);mo.setHours(0,0,0,0);
+  const revMo=TXNS.filter(t=>(t.timestamp||0)>=mo.getTime()).reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
+  const ordRev=ORDERS.filter(o=>o.status==="completed").reduce((a,o)=>a+(parseFloat(o.total)||0),0);
+  txt("acc-rev","\u00a3"+rev.toFixed(2));txt("acc-rev-mo","\u00a3"+revMo.toFixed(2));txt("acc-orders","\u00a3"+ordRev.toFixed(2));
+  get("merchant_billing","merchant_id=eq."+MID+"&order=created_at.desc").then(d=>{
+    M_INVOICES=Array.isArray(d)?d:[];
+    const due=M_INVOICES.filter(i=>i.status==="pending").reduce((a,i)=>a+(parseFloat(i.amount)||0),0);
+    txt("acc-due","\u00a3"+due.toFixed(2));
+    const el=document.getElementById("invoice-list");if(!el)return;
+    el.innerHTML=M_INVOICES.length?M_INVOICES.map(i=>'<div class="ic"><div class="ic-row"><div><div class="ic-name">\ud83e\uddfe '+(i.description||"Invoice")+'</div><div class="ic-sub">'+(i.created_at?new Date(i.created_at).toLocaleDateString():"")+' \u00b7 '+(i.status==="paid"?"\u2705 Paid":"\u23f3 Pending")+'</div></div><div style="display:flex;align-items:center;gap:8px"><div style="font-weight:800;color:var(--purple)">\u00a3'+parseFloat(i.amount||0).toFixed(2)+'</div>'+(i.status==="pending"?'<button class="btn-xs btn-green" onclick="payInvoice(\''+i.id+'\','+(i.amount||0)+')">Pay</button>':"")+'</div></div></div>').join("")
+    :'<div style="text-align:center;padding:16px;color:var(--ink3);font-size:13px">No invoices from Stashlo yet</div>';
+  }).catch(()=>{});
+}
+function payInvoice(id,amount){
+  const method=prompt("Pay \u00a3"+amount+" via:\n1 = Apple Pay\n2 = Card\n3 = Bank Transfer","1");
+  if(!method)return;
+  const m={1:"Apple Pay",2:"Card",3:"Bank Transfer"}[method]||"Card";
+  pat("merchant_billing","id=eq."+id,{status:"paid"})
+  .then(()=>{T("\u2705 \u00a3"+amount+" paid via "+m,"success");loadAccounting();}).catch(()=>T("Payment failed","error"));
+}
+
+// ===== AI SUGGEST REPLY (auto-handle customer chats) =====
+async function aiSuggestReply(){
+  if(!CHAT_ORDER){T("Open a chat first","error");return}
+  const inp=document.getElementById("chat-inp");
+  inp.value="\u2728 AI is drafting...";inp.disabled=true;
+  try{
+    const msgs=await get("chats","conversation_id=eq.order_"+CHAT_ORDER+"&order=created_at.asc&limit=20");
+    const hist=(Array.isArray(msgs)?msgs:[]).map(m=>(m.sender_role==="customer"?"Customer: ":"Merchant: ")+m.message).join("\n");
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,system:"You are a friendly shop assistant for "+(MDATA.name||"a shop")+". Reply to the customer conversation concisely and helpfully in 1-2 sentences. If the issue is serious (refund dispute, complaint about safety, legal), start your reply with [ESCALATE].",messages:[{role:"user",content:hist+"\n\nDraft the next merchant reply:"}]})});
+    const data=await res.json();
+    let reply=data.content?.[0]?.text||"";
+    if(reply.startsWith("[ESCALATE]")){
+      reply=reply.replace("[ESCALATE]","").trim();
+      post("support_chats",{customer_id:null,customer_email:"escalation@"+(MDATA.shop_id||"shop"),sender_role:"customer",sender_name:"\u26a0\ufe0f Escalation from "+(MDATA.name||"Merchant"),message:"Order "+CHAT_ORDER+" needs admin attention: "+hist.slice(-300),created_at:Date.now()}).catch(()=>{});
+      T("\u26a0\ufe0f Escalated to Stashlo admin","error");
+    }
+    inp.value=reply;inp.disabled=false;inp.focus();
+  }catch(e){inp.value="";inp.disabled=false;T("AI unavailable","error");}
+}
+
+// ===== ACCESS RESTRICTION CHECK (unpaid fees) =====
+function checkRestriction(){
+  if(MDATA.suspended){
+    document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#0f172a"><div style="background:#1e293b;border-radius:20px;padding:32px;text-align:center;max-width:360px"><div style="font-size:48px">\u26d4</div><h2 style="color:#f87171;margin:12px 0 8px">Account Suspended</h2><p style="color:#94a3b8;font-size:14px">Your merchant account has been suspended by Stashlo. Contact support@stashlo.app</p></div></div>';
+    return true;
+  }
+  if(MDATA.restricted){
+    const ov=document.createElement('div');
+    ov.id='restrict-banner';
+    ov.style.cssText='position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:10px 16px;font-size:13px;font-weight:700;z-index:9999;text-align:center';
+    ov.innerHTML='\u26a0\ufe0f Account restricted \u2014 unpaid monthly fees. Pay in Settings \u2192 Accounting to restore full access.';
+    document.body.prepend(ov);
+  }
+  return false;
+}
 
 function openBroadcastModal(){openModal("notifyModal")}
 function sendNotification(){
@@ -908,6 +1030,7 @@ function switchTab(name){
   if(name==="customers")loadCustomers();
   if(name==="till")loadTxns();
   if(name==="inbox")loadInbox();
+  if(name==="settings"){loadAccounting();loadMerchRewards();}
   if(name==="settings")loadJobs();
 }
 

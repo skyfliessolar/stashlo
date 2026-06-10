@@ -320,6 +320,7 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
       </div>
       <div id="ai-err" class="err"></div>
       <button class="ab" onclick="doLogin()">Sign in</button>
+      <p style="text-align:center;margin-top:10px;font-size:12px"><span onclick="custResetPw()" style="color:var(--purple);cursor:pointer;font-weight:600">Forgot password?</span></p>
       <div class="auth-switch">Don't have an account? <span onclick="showSU()">Sign up</span></div>
     </div>
     <!-- Signup -->
@@ -384,6 +385,14 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
         <div class="hero-chip">📦 <span id="hs-o">0</span> orders</div>
         <div class="hero-chip">💰 £<span id="hs-spent">0.00</span> saved</div>
       </div>
+    </div>
+    <!-- My Loyalty ID strip -->
+    <div onclick="openMyQR()" style="margin:0 16px 12px;background:linear-gradient(135deg,#1a1a2e,#2d2d44);border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+      <div>
+        <div style="font-size:11px;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.5px">My Stashlo ID</div>
+        <div style="font-size:18px;font-weight:800;color:#fff;font-family:monospace;letter-spacing:1px" id="my-lid">SL-······</div>
+      </div>
+      <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:8px 12px;font-size:13px;color:#fff;font-weight:700">📱 Show QR</div>
     </div>
     <!-- Quick actions -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px;margin-bottom:16px">
@@ -511,6 +520,13 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
     <div id="inbox-list"></div>
   </div>
 
+  <!-- ===== RECEIPTS ===== -->
+  <div class="screen" id="receipts-screen">
+    <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">🧾 Receipt Archive</div>
+    <div style="margin:0 16px 12px;background:var(--green-bg);border-radius:12px;padding:10px 14px;font-size:12px;color:#065f46;font-weight:600">✅ Free storage: 12 months · Premium: unlimited + export (£1.99/mo)</div>
+    <div id="receipts-list" style="padding:0 16px"></div>
+  </div>
+
   <!-- ===== JOBS ===== -->
   <div class="screen" id="jobs-screen">
     <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">💼 Jobs & Recruitment</div>
@@ -556,6 +572,11 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
       <div class="menu-item" onclick="goTab('offers')">
         <div class="menu-ico" style="background:#FEF3C7">🎁</div>
         <div><div class="menu-label">My Rewards</div><div class="menu-sub">Redeem points</div></div>
+        <div class="menu-arr">›</div>
+      </div>
+      <div class="menu-item" onclick="goTab('receipts')">
+        <div class="menu-ico" style="background:var(--amber-bg)">🧾</div>
+        <div><div class="menu-label">Receipt Archive</div><div class="menu-sub">Saved receipts</div></div>
         <div class="menu-arr">›</div>
       </div>
       <div class="menu-item" onclick="goTab('jobs')">
@@ -880,6 +901,12 @@ window.addEventListener('load',()=>setTimeout(()=>{
 },900));
 function saveSess(tok,uid,email,exp){TOK=tok;UID=uid;UEMAIL=email;localStorage.setItem('sl_s',JSON.stringify({tok,uid,email,exp:Date.now()+(exp||3600)*1e3}))}
 function doLogout(){localStorage.removeItem('sl_s');location.reload()}
+function custResetPw(){
+  const email=V('ai-e');
+  if(!email){sErr('ai-err','Enter your email first, then tap Forgot password');return}
+  fetch(SU+'/auth/v1/recover',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email})})
+  .then(()=>sErr('ai-err','\u2705 Password reset email sent to '+email)).catch(()=>sErr('ai-err','Could not send reset email'));
+}
 function showSU(){document.getElementById('auth-login').style.display='none';document.getElementById('auth-su').style.display='block'}
 function showSI(){document.getElementById('auth-login').style.display='block';document.getElementById('auth-su').style.display='none'}
 
@@ -923,9 +950,12 @@ function boot(){
   setTimeout(()=>{loadInbox();startGPS();loadMyRewards();},2000);
   setInterval(()=>checkUnreadChats&&checkUnreadChats(),30000);
 }
+function genLoyaltyId(){const ch='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let s='SL-';for(let i=0;i<6;i++)s+=ch[Math.floor(Math.random()*ch.length)];return s}
 function loadProf(){
   get('users','id=eq.'+UID).then(d=>{
     PROF=Array.isArray(d)&&d[0]?d[0]:{};
+    if(!PROF.loyalty_id){const lid=genLoyaltyId();pat('users','id=eq.'+UID,{loyalty_id:lid}).then(()=>{PROF.loyalty_id=lid;renderLoyaltyId();}).catch(()=>{});}
+    else renderLoyaltyId();
     const n=PROF.name||(UEMAIL?UEMAIL.split('@')[0]:'there');
     txt('h-name',n+"'s wallet");txt('prof-name',PROF.name||'You');txt('prof-email',UEMAIL||'');
   }).catch(()=>{})
@@ -1249,6 +1279,22 @@ function selectPayMethod(){
       <div class="shop-info"><div class="shop-name">${c.network} ••••${c.last4}</div><div class="shop-meta">${c.holder}</div></div>
     </div>`).join(''):'';
   document.getElementById('pay-method-list').innerHTML=opts+`
+    <div class="shop-item" onclick="pickPayMethod('applepay','\uf8ff Apple Pay')">
+      <div class="shop-ico" style="background:#000;color:#fff">\uf8ff</div>
+      <div class="shop-info"><div class="shop-name">Apple Pay</div><div class="shop-meta">One-click secure payment</div></div>
+    </div>
+    <div class="shop-item" onclick="pickPayMethod('googlepay','G Pay')">
+      <div class="shop-ico" style="background:#fff;border:1px solid #ddd">G</div>
+      <div class="shop-info"><div class="shop-name">Google Pay</div><div class="shop-meta">One-click secure payment</div></div>
+    </div>
+    <div class="shop-item" onclick="pickPayMethod('bank','Bank transfer')">
+      <div class="shop-ico">🏦</div>
+      <div class="shop-info"><div class="shop-name">Bank Transfer</div><div class="shop-meta">Direct to merchant account</div></div>
+    </div>
+    <div class="shop-item" onclick="pickPayMethod('dd','Direct Debit')">
+      <div class="shop-ico">🔁</div>
+      <div class="shop-info"><div class="shop-name">Direct Debit</div><div class="shop-meta">For subscriptions</div></div>
+    </div>
     <div class="shop-item" onclick="pickPayMethod('cash','Cash on delivery')">
       <div class="shop-ico">💵</div>
       <div class="shop-info"><div class="shop-name">Cash on delivery</div><div class="shop-meta">Pay when it arrives</div></div>
@@ -1284,6 +1330,15 @@ function loadOrders(){
   }).catch(()=>{})
 }
 function statusTimeline(status){
+  const steps=['pending','confirmed','dispatched','in_transit','out_for_delivery','completed'];
+  const labels=['Placed','Confirmed','Dispatched','In Transit','Out for Delivery','Delivered'];
+  const icons=['\ud83d\udce6','\u2705','\ud83d\ude9a','\ud83d\udef5','\ud83c\udfc3','\ud83c\udf89'];
+  let idx=steps.indexOf(status);
+  if(status==='ready')idx=2;
+  if(idx<0)return '';
+  return '<div style="display:flex;align-items:center;gap:0;margin:10px 0 4px;overflow-x:auto">'+steps.map((s,i)=>'<div style="flex:1;text-align:center;min-width:44px"><div style="font-size:13px;opacity:'+(i<=idx?1:.3)+'">'+icons[i]+'</div><div style="font-size:8px;color:'+(i<=idx?'var(--purple)':'#ccc')+'">'+labels[i]+'</div></div>'+(i<steps.length-1?'<div style="flex:0 0 8px;height:2px;background:'+(i<idx?'var(--purple)':'#e5e7eb')+';border-radius:2px"></div>':'')).join('')+'</div>';
+}
+function statusTimelineOLD(status){
   const steps=['pending','confirmed','ready','completed'];
   const icons=['🕐','✅','📦','🎉'];
   const idx=steps.indexOf(status);
@@ -1306,6 +1361,7 @@ function renderOrders(){
       <div style="font-size:18px;font-weight:800;color:var(--purple)">£${parseFloat(o.total||0).toFixed(2)}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button onclick="openOrderChat('${o.id}','${(o.product_name||'Order').replace(/'/g,'')}')" style="background:var(--purple-bg);color:var(--purple);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">💬 Chat</button>
+        ${o.status==='completed'?`<button onclick="saveReceipt('${o.id}')" style="background:var(--green-bg);color:#065f46;border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">🧾 Receipt</button>`:''}
         ${(o.status==='pending'||o.status==='confirmed')?`<button onclick="cancelOrder('${o.id}','${(o.product_name||'Order').replace(/'/g,'')}')" style="background:var(--red-bg);color:var(--red);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">✕ Cancel</button>`:''}
         <div style="font-size:11px;color:#aaa;align-self:center">${o.created_at?new Date(o.created_at).toLocaleDateString():''}</div>
       </div>
@@ -1569,23 +1625,21 @@ function loadJobs(){
   const el=document.getElementById('jobs-list');
   if(!el)return;
   el.innerHTML='<div class="spin"></div>';
-  get('jobs','active=eq.true&order=created_at.desc').then(d=>{
+  loadJobUnlocks().then(()=>get('jobs','active=eq.true&order=created_at.desc')).then(d=>{
     const j=Array.isArray(d)?d:[];
-    if(!j.length){el.innerHTML='<div class="empty"><i>💼</i><p>No jobs posted yet</p></div>';return}
-    el.innerHTML=j.map(x=>`<div class="job-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <div class="job-title">${x.title}</div>
-        <span class="jc">${x.job_type||'Part-time'}</span>
-      </div>
-      <div class="job-shop">🏪 ${x.merchant_name||'Shop'}</div>
-      <div class="job-chips">
-        ${x.salary?'<span class="jc jc-green">💷 '+x.salary+'</span>':''}
-        ${x.location?'<span class="jc">📍 '+x.location+'</span>':''}
-      </div>
-      ${x.description?'<div style="font-size:13px;color:var(--sub);margin-top:4px;line-height:1.5">'+(x.description||'').slice(0,120)+'</div>':''}
-      ${x.contact_email?`<button onclick="applyJob('${x.contact_email}','${x.title.replace(/'/g,'').replace(/"/g,'')}',this)" style="margin-top:12px;background:var(--purple);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;width:100%">Apply Now</button>`:''}
-    </div>`).join('');
-  }).catch(()=>{el.innerHTML='<div class="empty"><i>⚠️</i><p>Could not load jobs</p></div>';})
+    if(!j.length){el.innerHTML='<div class="empty"><i>\ud83d\udcbc</i><p>No jobs posted yet</p></div>';return}
+    const hasMonthly=JOB_UNLOCKS.some(u=>u.plan==='5'&&u.status==='approved');
+    el.innerHTML=j.map(x=>{
+      const unlock=JOB_UNLOCKS.find(u=>u.job_id===x.id);
+      const unlocked=hasMonthly||(unlock&&unlock.status==='approved');
+      const pending=unlock&&unlock.status!=='approved';
+      return '<div class="job-card">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><div class="job-title">'+x.title+'</div><span class="jc">'+(x.job_type||'Part-time')+'</span></div>'
+      +(unlocked?'<div class="job-shop">\ud83c\udfea '+(x.merchant_name||'Shop')+'</div><div class="job-chips">'+(x.salary?'<span class="jc jc-green">\ud83d\udcb7 '+x.salary+'</span>':'')+(x.location?'<span class="jc">\ud83d\udccd '+x.location+'</span>':'')+'</div>'+(x.description?'<div style="font-size:13px;color:var(--sub);margin-top:4px;line-height:1.5">'+(x.description||'').slice(0,160)+'</div>':'')+(x.contact_email?'<div style="background:var(--green-bg);border-radius:10px;padding:10px;margin-top:10px;font-size:13px;font-weight:600;color:#065f46">\u2709\ufe0f '+x.contact_email+'</div><button onclick="applyJob(\''+x.contact_email+'\',\''+x.title.replace(/'/g,'').replace(/"/g,'')+'\',this)" style="margin-top:10px;background:var(--purple);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;width:100%">Apply Now</button>':'')
+      :pending?'<div style="background:var(--amber-bg);border-radius:10px;padding:10px;margin-top:8px;font-size:13px;font-weight:600;color:#92400e">\u23f3 Payment received \u2014 waiting for admin approval</div>'
+      :'<div style="font-size:12px;color:var(--sub);margin-top:4px">\ud83d\udd12 Contact details, address and salary are locked</div><div class="btn-row" style="margin-top:10px"><button class="btn btn-p" style="font-size:12px;padding:10px" onclick="unlockJob(\''+x.id+'\',\'1\')">\ud83d\udd13 Unlock \u00a31</button><button class="btn btn-gray" style="font-size:12px;padding:10px" onclick="unlockJob(\''+x.id+'\',\'5\')">\u2b50 All jobs \u00a35/mo</button></div>')
+      +'</div>'}).join('');
+  }).catch(()=>{el.innerHTML='<div class="empty"><i>\u26a0\ufe0f</i><p>Could not load jobs</p></div>';})
 }
 function applyJob(email,title,btn){
   if(btn){btn.textContent='Applied! ✅';btn.style.background='var(--green)';btn.disabled=true;}
@@ -1623,6 +1677,54 @@ function saveProf(){
   pat('users','id=eq.'+UID,{name:V('ep-n'),phone:V('ep-p')}).then(()=>{T('✅ Profile saved');cmo('editProfMo');loadProf();}).catch(()=>T('Save failed'))
 }
 
+// ===== MY LOYALTY ID (short universal ID + QR) =====
+function renderLoyaltyId(){
+  const el=document.getElementById('my-lid');
+  if(el&&PROF.loyalty_id)el.textContent=PROF.loyalty_id;
+}
+function openMyQR(){
+  if(!PROF.loyalty_id){T('Loyalty ID still generating...');return}
+  let m=document.getElementById('myQRMo');
+  if(!m){
+    m=document.createElement('div');m.id='myQRMo';m.className='mo';
+    m.innerHTML='<div class="mo-box-mid" style="text-align:center"><div class="mo-head"><span class="mo-title">My Stashlo ID</span><button class="mo-x" onclick="cmo(&quot;myQRMo&quot;)">\u2715</button></div><div style="background:linear-gradient(135deg,var(--purple),var(--purple2));border-radius:16px;padding:20px"><div style="font-size:13px;color:rgba(255,255,255,.8)">Show this at any Stashlo shop</div><div id="myqr-img" style="background:#fff;border-radius:12px;padding:14px;margin:12px auto;max-width:220px"></div><div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:2px;font-family:monospace" id="myqr-id"></div><div style="background:#fff;border-radius:10px;padding:8px;margin-top:12px"><svg id="myqr-bc"></svg></div></div><div style="font-size:12px;color:var(--sub);margin-top:12px">\ud83d\udd12 Merchants scan this to add points instantly</div></div>';
+    document.body.appendChild(m);
+    m.addEventListener('click',e=>{if(e.target===m)cmo('myQRMo')});
+  }
+  document.getElementById('myqr-id').textContent=PROF.loyalty_id;
+  document.getElementById('myqr-img').innerHTML='<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(PROF.loyalty_id)+'" style="width:100%;border-radius:8px" alt="QR">';
+  try{JsBarcode(document.getElementById('myqr-bc'),PROF.loyalty_id,{format:'CODE128',width:2,height:50,displayValue:true,fontSize:13,margin:4});}catch(e){}
+  omo('myQRMo');
+}
+
+// ===== RECEIPTS ARCHIVE =====
+let RECEIPTS=[];
+function loadReceipts(){
+  const el=document.getElementById('receipts-list');if(!el)return;
+  el.innerHTML='<div class="spin"></div>';
+  get('receipts','user_id=eq.'+UID+'&order=created_at.desc').then(d=>{
+    RECEIPTS=Array.isArray(d)?d:[];
+    if(!RECEIPTS.length){el.innerHTML='<div class="empty"><i>\ud83e\uddfe</i><p>No saved receipts yet.<br>Save receipts from completed orders.</p></div>';return}
+    el.innerHTML=RECEIPTS.map(r=>'<div class="ic" style="margin:0 0 10px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">\ud83e\uddfe '+(r.merchant_name||'Receipt')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.receipt_no||'')+' \u00b7 '+(r.created_at?new Date(r.created_at).toLocaleDateString():'')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.items||'')+'</div></div><div style="font-size:17px;font-weight:800;color:var(--purple)">\u00a3'+parseFloat(r.total||0).toFixed(2)+'</div></div></div>').join('');
+  }).catch(()=>{el.innerHTML='<div class="empty"><i>\u26a0\ufe0f</i><p>Could not load receipts</p></div>'});
+}
+function saveReceipt(orderId){
+  const o=ORDERS.find(x=>x.id===orderId);if(!o){T('Order not found');return}
+  post('receipts',{user_id:UID,merchant_name:o.product_name?'Order: '+o.product_name:'Receipt',order_id:o.id,items:(o.product_name||'')+' x'+(o.quantity||1),total:o.total||0,receipt_no:'RCP-'+(o.id||'').slice(0,8).toUpperCase(),created_at:Date.now()})
+  .then(()=>T('\ud83e\uddfe Receipt saved to archive!')).catch(()=>T('Save failed'));
+}
+
+// ===== JOB UNLOCKS (pay to reveal contact) =====
+let JOB_UNLOCKS=[];
+function loadJobUnlocks(){return get('job_unlocks','user_id=eq.'+UID).then(d=>{JOB_UNLOCKS=Array.isArray(d)?d:[];}).catch(()=>{})}
+function unlockJob(jobId,plan){
+  const amount=plan==='5'?5:1;
+  if(!confirm('Unlock job contact details for \u00a3'+amount+(plan==='5'?'/month (all jobs)':' (this job)')+'? Payment will be processed and admin will approve.'))return;
+  post('job_unlocks',{user_id:UID,job_id:jobId,plan,amount,status:'pending_approval',created_at:Date.now()},'user_id,job_id')
+  .then(()=>{T('\u2705 Payment received \u2014 pending admin approval');loadJobUnlocks().then(()=>loadJobs());})
+  .catch(()=>T('Payment failed'));
+}
+
 // ===== NAVIGATION =====
 function goTab(n){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
@@ -1639,6 +1741,7 @@ function goTab(n){
   if(n==='support'){loadSupportChat();}
   if(n==='cards'){renderAllCards();}
   if(n==='pay')loadPaymentCards();
+  if(n==='receipts')loadReceipts();
 }
 </script>
 </body>

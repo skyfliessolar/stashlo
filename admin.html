@@ -302,8 +302,32 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
   </div>
 
   <!-- MORE SCREEN (hub for secondary features) -->
+  <!-- JOB APPROVALS -->
+  <div class="screen" id="jobapprovals-screen">
+    <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">💼 Job Unlock Approvals</div>
+    <div style="margin:0 16px 12px;background:var(--purple3,#EEF2FF);border-radius:12px;padding:10px 14px;font-size:12px;font-weight:600">Customers paid £1/£5 to unlock job contacts — approve to reveal details</div>
+    <div id="job-approvals-list" style="padding:0 16px"></div>
+  </div>
+
+  <!-- AUDIT LOGS -->
+  <div class="screen" id="audit-screen">
+    <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">📜 Audit Logs</div>
+    <div style="margin:0 16px 12px;background:#f0fdf4;border-radius:12px;padding:10px 14px;font-size:12px;font-weight:600;color:#065f46">🔒 All admin actions are recorded for compliance</div>
+    <div id="audit-list" style="padding:0 16px"></div>
+  </div>
+
   <div class="screen" id="more-screen">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div onclick="switchTab('jobapprovals')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">💼</div>
+        <div style="font-size:13px;font-weight:700;margin-top:6px">Job Approvals</div>
+        <div style="font-size:11px;color:var(--ink3)" id="d-jobapprovals">—</div>
+      </div>
+      <div onclick="switchTab('audit')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">📜</div>
+        <div style="font-size:13px;font-weight:700;margin-top:6px">Audit Logs</div>
+        <div style="font-size:11px;color:var(--ink3)">Compliance</div>
+      </div>
       <div onclick="switchTab('products')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:32px;margin-bottom:8px">🛍️</div>
         <div style="font-weight:700;font-size:14px">Products</div>
@@ -712,14 +736,20 @@ function renderMerchants(list){
             ${m.logo_url?`<img src="${m.logo_url}" style="width:46px;height:46px;border-radius:var(--r12);object-fit:cover" onerror="this.style.display='none'">`:`${m.logo_emoji||'🏪'}`}
           </div>
           <div>
-            <div class="ic-name">${m.name||'Unnamed Shop'}</div>
+            <div class="ic-name">${m.name||'Unnamed Shop'} ${m.suspended?'<span style="background:#7f1d1d;color:#fca5a5;border-radius:6px;padding:1px 6px;font-size:9px;font-weight:800">SUSPENDED</span>':''}${m.restricted?'<span style="background:#713f12;color:#fde68a;border-radius:6px;padding:1px 6px;font-size:9px;font-weight:800">RESTRICTED</span>':''}</div>
             <div class="ic-sub">${m.shop_id||'—'} · ${m.email||'—'}</div>
             <div class="ic-sub">${m.loyalty_type||'points'} · ${m.address?m.address.slice(0,30):'no address'}</div>
           </div>
         </div>
-        <div class="ic-acts">
-          <button class="btn-xs btn-edit" onclick="event.stopPropagation();editMerch('${m.id}')">✏️</button>
-          <button class="btn-xs btn-del" onclick="event.stopPropagation();confirmDelMerch('${m.id}')">🗑</button>
+        <div class="ic-acts" style="flex-direction:column;gap:4px">
+          <div style="display:flex;gap:4px">
+            <button class="btn-xs btn-edit" onclick="event.stopPropagation();editMerch('${m.id}')">✏️</button>
+            <button class="btn-xs btn-del" onclick="event.stopPropagation();confirmDelMerch('${m.id}')">🗑</button>
+          </div>
+          <div style="display:flex;gap:4px">
+            <button class="btn-xs" style="background:${m.suspended?'#064e3b':'#7f1d1d'};color:#fff" onclick="event.stopPropagation();toggleMerchSuspend('${m.id}','${(m.name||'').replace(/'/g,'')}',${!!m.suspended})">${m.suspended?'▶':'⛔'}</button>
+            <button class="btn-xs" style="background:${m.restricted?'#064e3b':'#713f12'};color:#fff" onclick="event.stopPropagation();toggleMerchRestrict('${m.id}','${(m.name||'').replace(/'/g,'')}',${!!m.restricted})">${m.restricted?'🔓':'💰'}</button>
+          </div>
         </div>
       </div>
     </div>`).join('')
@@ -908,6 +938,7 @@ function openCust(id){
       <div class="info-row"><span class="info-label">${l}</span><span class="info-val">${v}</span></div>`).join('')}
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bg2)">
       <button class="btn-xs btn-green" onclick="quickGivePoints('${c.id}','${c.email||''}')">🎁 Give Points</button>
+      <button class="btn-xs" style="background:var(--purple);color:#fff;margin-left:6px" onclick="sendCustReset('${c.email||''}')">🔑 Send Password Reset</button>
     </div>`;
   openModal('customerModal');
 }
@@ -1253,6 +1284,65 @@ function previewUpload(input,prevId){
 }
 
 // ── NAVIGATION ──────────────────────────────────────────────
+// ===== AUDIT LOGGING (all admin actions) =====
+function logAudit(action,target,details){
+  spost('audit_logs',{actor_email:'admin',action,target:target||'',details:(details||'').slice(0,300),created_at:Date.now()}).catch(()=>{});
+}
+
+// ===== MERCHANT CONTROLS: approve / suspend / restrict =====
+function toggleMerchSuspend(id,name,curr){
+  if(!confirm((curr?'Unsuspend':'SUSPEND')+' merchant "'+name+'"?'+(curr?'':' They will lose all access.')))return;
+  spat('merchants','id=eq.'+id,{suspended:!curr})
+  .then(()=>{T(curr?'✅ Unsuspended':'⛔ Suspended','success');logAudit(curr?'unsuspend_merchant':'suspend_merchant',name);loadMerchants();}).catch(()=>T('Failed','error'));
+}
+function toggleMerchRestrict(id,name,curr){
+  if(!confirm((curr?'Remove restriction from':'RESTRICT')+' "'+name+'"?'+(curr?'':' They will see an unpaid-fees banner until invoices are paid.')))return;
+  spat('merchants','id=eq.'+id,{restricted:!curr})
+  .then(()=>{T(curr?'✅ Restriction removed':'⚠️ Restricted','success');logAudit(curr?'unrestrict_merchant':'restrict_merchant',name);loadMerchants();}).catch(()=>T('Failed','error'));
+}
+
+// ===== CUSTOMER PASSWORD RESET (secure flow via Supabase) =====
+function sendCustReset(email){
+  if(!email){T('No email on file','error');return}
+  if(!confirm('Send password reset email to '+email+'?'))return;
+  fetch(SU+'/auth/v1/recover',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email})})
+  .then(()=>{T('✅ Reset email sent to '+email,'success');logAudit('password_reset_sent',email);})
+  .catch(()=>T('Failed to send','error'));
+}
+
+// ===== JOB UNLOCK APPROVALS =====
+let JOB_APPROVALS=[];
+function loadJobApprovals(){
+  const el=document.getElementById('job-approvals-list');if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:14px;color:var(--ink3);font-size:13px">Loading...</div>';
+  Promise.all([sget('job_unlocks','order=created_at.desc&limit=50'),sget('jobs',''),sget('users','')]).then(([us,js,people])=>{
+    JOB_APPROVALS=Array.isArray(us)?us:[];
+    const jobs=Array.isArray(js)?js:[],ppl=Array.isArray(people)?people:[];
+    const pending=JOB_APPROVALS.filter(u=>u.status==='pending_approval');
+    txt('d-jobapprovals',pending.length);
+    el.innerHTML=JOB_APPROVALS.length?JOB_APPROVALS.map(u=>{
+      const job=jobs.find(j=>j.id===u.job_id)||{};
+      const person=ppl.find(p=>p.id===u.user_id)||{};
+      return '<div class="ic"><div class="ic-row"><div><div class="ic-name">💼 '+(job.title||'Job')+'</div><div class="ic-sub">'+(person.email||'Customer')+' · £'+(u.amount||1)+' · '+(u.plan==='5'?'Monthly all-jobs':'Single job')+'</div><div class="ic-sub">'+(u.status==='approved'?'✅ Approved':'⏳ Pending approval')+'</div></div>'+(u.status!=='approved'?'<button class="btn-xs btn-green" onclick="approveJobUnlock(\''+u.id+'\',\''+(person.email||'')+'\')">✓ Approve</button>':'')+'</div></div>';
+    }).join(''):'<div class="empty"><div class="empty-ico">💼</div><div class="empty-txt">No job unlock requests</div></div>';
+  }).catch(()=>{el.innerHTML='<div class="empty"><div class="empty-txt">Could not load</div></div>'});
+}
+function approveJobUnlock(id,email){
+  spat('job_unlocks','id=eq.'+id,{status:'approved'})
+  .then(()=>{T('✅ Unlock approved for '+email,'success');logAudit('approve_job_unlock',email);loadJobApprovals();}).catch(()=>T('Failed','error'));
+}
+
+// ===== AUDIT LOG VIEWER =====
+function loadAuditLogs(){
+  const el=document.getElementById('audit-list');if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:14px;color:var(--ink3);font-size:13px">Loading...</div>';
+  sget('audit_logs','order=created_at.desc&limit=100').then(d=>{
+    const logs=Array.isArray(d)?d:[];
+    el.innerHTML=logs.length?logs.map(l=>'<div class="ic" style="padding:10px 14px"><div style="font-size:13px;font-weight:700">'+l.action+' <span style="color:var(--ink3);font-weight:400">→ '+(l.target||'')+'</span></div><div style="font-size:11px;color:var(--ink4)">'+(l.created_at?new Date(l.created_at).toLocaleString():'')+'</div></div>').join('')
+    :'<div class="empty"><div class="empty-ico">📜</div><div class="empty-txt">No audit entries yet</div></div>';
+  }).catch(()=>{});
+}
+
 function switchTab(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
@@ -1263,6 +1353,8 @@ function switchTab(name){
   if(name==='support')loadSupport();
   if(name==='chats')loadChats();
   if(name==='rewards')loadRewards();
+  if(name==='jobapprovals')loadJobApprovals();
+  if(name==='audit')loadAuditLogs();
   if(name==='delivery')loadDelivery();
   if(name==='billing')loadBilling();
 }
