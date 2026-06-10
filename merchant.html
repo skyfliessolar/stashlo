@@ -395,7 +395,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
       <div class="setting-sub">Create rewards customers redeem with points (e.g. Free juice · 100 pts)</div>
       <div style="display:flex;gap:8px;margin:10px 0">
         <input id="mr-emoji" placeholder="🧃" maxlength="4" style="width:54px;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px;text-align:center">
-        <input id="mr-name" placeholder="Free juice" style="flex:1;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px">
+        <input id="mr-name" placeholder="Free juice" oninput="autoEmoji(&#39;mr-name&#39;,&#39;mr-emoji&#39;)" style="flex:1;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px">
         <input id="mr-pts" type="number" placeholder="100" style="width:72px;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px">
       </div>
       <button class="btn btn-purple" style="width:100%" onclick="createMerchReward()">➕ Create Reward</button>
@@ -473,7 +473,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
     </div>
     <div class="modal-body">
       <input type="hidden" id="edit-prod-id">
-      <div class="field"><label class="field-label">Product Name ★</label><input id="p-name" placeholder="e.g. Large Oat Latte"></div>
+      <div class="field"><label class="field-label">Product Name ★</label><input id="p-name" oninput="autoEmoji(&#39;p-name&#39;,&#39;p-emoji&#39;)" placeholder="e.g. Large Oat Latte"></div>
       <div class="field"><label class="field-label">Price (£) ★</label><input id="p-price" type="number" step="0.01" min="0" placeholder="0.00"></div>
       <div class="field"><label class="field-label">Emoji Icon</label><input id="p-emoji" placeholder="☕" maxlength="4"></div>
       <div class="field"><label class="field-label">Category</label>
@@ -769,7 +769,7 @@ function saveProd(){
   const name=V("p-name"),price=parseFloat(document.getElementById("p-price").value||0),eid=V("edit-prod-id");
   if(!name||price<=0){const e=document.getElementById("p-err");if(e){e.textContent="Name and price required";e.style.display="block";}return}
   const btn=document.querySelector("#prodModal .btn-primary");if(btn){btn.textContent="Saving...";btn.disabled=true;}
-  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||"🛍️",category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked};
+  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked};
   const action=eid?pat("products","id=eq."+eid,data):post("products",{...data,created_at:Date.now()});
   action.then(()=>{T("✅ "+name+" saved!","success");closeModal("prodModal");loadProducts();if(btn){btn.textContent="💾 Save Product";btn.disabled=false}})
   .catch(()=>{const e=document.getElementById("p-err");if(e){e.textContent="Save failed — try again";e.style.display="block";}if(btn){btn.textContent="💾 Save Product";btn.disabled=false}})
@@ -856,6 +856,41 @@ function sendChat(){
 }
 function stopChatPoll(){if(CHAT_POLL){clearInterval(CHAT_POLL);CHAT_POLL=null;}}
 
+// ===== AUTO-EMOJI: detects product/reward type from name =====
+const EMOJI_MAP=[
+ [['crisp','chips','snack'],'\ud83c\udf5f'],[['alcohol','beer','lager','ale'],'\ud83c\udf7a'],
+ [['wine','prosecco','champagne'],'\ud83c\udf77'],[['vodka','whisky','whiskey','gin','rum','spirit'],'\ud83e\udd43'],
+ [['car','auto','vehicle','tyre','tire','wiper','accessor'],'\ud83d\ude97'],[['fuel','petrol','diesel'],'\u26fd'],
+ [['juice','smoothie'],'\ud83e\uddc3'],[['coffee','latte','espresso','cappuccino'],'\u2615'],
+ [['tea','chai'],'\ud83c\udf75'],[['pizza'],'\ud83c\udf55'],[['burger'],'\ud83c\udf54'],
+ [['chocolate','choco'],'\ud83c\udf6b'],[['sweet','candy','gummy'],'\ud83c\udf6c'],
+ [['ice cream','icecream','gelato'],'\ud83c\udf66'],[['cake','pastry','muffin'],'\ud83c\udf70'],
+ [['sandwich','sub','wrap'],'\ud83e\udd6a'],[['bread','bakery','loaf','baguette'],'\ud83c\udf5e'],
+ [['milk','dairy'],'\ud83e\udd5b'],[['egg'],'\ud83e\udd5a'],[['fruit','apple','banana'],'\ud83c\udf4e'],
+ [['veg','salad','greens'],'\ud83e\udd57'],[['meat','chicken','beef','lamb'],'\ud83c\udf57'],
+ [['fish','seafood'],'\ud83d\udc1f'],[['water','soda','cola','drink','pop'],'\ud83e\udd64'],
+ [['energy','redbull','monster'],'\u26a1'],[['cigarette','tobacco','smoke'],'\ud83d\udeac'],
+ [['vape','e-liquid','eliquid'],'\ud83d\udca8'],[['phone','mobile','charger','cable','usb','type c','typec'],'\ud83d\udcf1'],
+ [['lottery','scratch'],'\ud83c\udfb0'],[['newspaper','magazine'],'\ud83d\udcf0'],
+ [['flower','bouquet'],'\ud83d\udc90'],[['medicine','pharmacy','paracetamol'],'\ud83d\udc8a'],
+ [['toy','game'],'\ud83e\uddf8'],[['book'],'\ud83d\udcda'],[['clean','detergent','soap'],'\ud83e\uddfc'],
+ [['pet','dog','cat'],'\ud83d\udc36'],[['haircut','barber','salon'],'\ud83d\udc87'],
+ [['wash','valet'],'\ud83e\uddfd'],[['breakfast'],'\ud83c\udf73'],[['kebab'],'\ud83e\udd59'],
+ [['donut','doughnut'],'\ud83c\udf69']
+];
+function detectEmoji(name){
+  const n=(name||'').toLowerCase();
+  if(!n)return null;
+  for(const pair of EMOJI_MAP){for(const k of pair[0]){if(n.includes(k))return pair[1];}}
+  return null;
+}
+function autoEmoji(nameInputId,emojiInputId){
+  const nEl=document.getElementById(nameInputId),eEl=document.getElementById(emojiInputId);
+  if(!nEl||!eEl)return;
+  const emo=detectEmoji(nEl.value);
+  if(emo)eEl.value=emo;
+}
+
 // ===== MERCHANT REWARDS (create rewards from points) =====
 let M_REWARDS=[];
 function loadMerchRewards(){
@@ -867,7 +902,7 @@ function loadMerchRewards(){
   }).catch(()=>{});
 }
 function createMerchReward(){
-  const name=V("mr-name"),pts=parseInt(document.getElementById("mr-pts").value||0),emoji=V("mr-emoji")||"\ud83c\udf81";
+  const name=V("mr-name"),pts=parseInt(document.getElementById("mr-pts").value||0),emoji=V("mr-emoji")||detectEmoji(name)||"\ud83c\udf81";
   if(!name||pts<=0){T("Name and points required","error");return}
   post("merchant_rewards",{merchant_id:MID,name,emoji,points_cost:pts,active:true,created_at:Date.now()})
   .then(()=>{T("\u2705 Reward created!","success");document.getElementById("mr-name").value="";document.getElementById("mr-pts").value="";loadMerchRewards();}).catch(()=>T("Failed","error"));

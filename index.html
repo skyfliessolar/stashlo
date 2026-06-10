@@ -408,6 +408,15 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
         <div class="hero-chip">💰 £<span id="hs-spent">0.00</span> saved</div>
       </div>
     </div>
+    <!-- Stashlo Credit teaser -->
+    <div onclick="omo('creditMo')" style="margin:0 16px 12px;background:linear-gradient(120deg,#0f172a,#1e1b4b 60%,#4338ca);border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;position:relative;overflow:hidden">
+      <div>
+        <div style="font-size:11px;color:#a5b4fc;font-weight:700;text-transform:uppercase;letter-spacing:.6px">Coming soon</div>
+        <div style="font-size:16px;font-weight:800;color:#fff">💳 Stashlo Credit</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.7)">Flexible credit built on your loyalty</div>
+      </div>
+      <div style="background:rgba(255,255,255,.14);border-radius:10px;padding:8px 12px;font-size:12px;color:#fff;font-weight:700">Learn more</div>
+    </div>
     <!-- My Loyalty ID strip -->
     <div onclick="openMyQR()" style="margin:0 16px 12px;background:linear-gradient(135deg,#1a1a2e,#2d2d44);border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
       <div>
@@ -464,6 +473,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
     </div>
     <!-- National section -->
     <div id="n-sec">
+      <div style="padding:0 16px;margin-bottom:10px"><button onclick="open3DStack()" style="width:100%;background:linear-gradient(120deg,#1e1b4b,#4338ca);color:#fff;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer">🃏 View all cards in 3D</button></div>
       <div class="sh" style="margin-top:4px">
         <span class="sh-t">National Cards</span>
         <button onclick="openAddNat()" style="background:var(--purple);color:#fff;border:none;border-radius:10px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">+ Add Card</button>
@@ -1755,6 +1765,37 @@ function saveReceipt(orderId){
   const o=ORDERS.find(x=>x.id===orderId);if(!o){T('Order not found');return}
   post('receipts',{user_id:UID,merchant_name:o.product_name?'Order: '+o.product_name:'Receipt',order_id:o.id,items:(o.product_name||'')+' x'+(o.quantity||1),total:o.total||0,receipt_no:'RCP-'+(o.id||'').slice(0,8).toUpperCase(),created_at:Date.now()})
   .then(()=>T('\ud83e\uddfe Receipt saved to archive!')).catch(()=>T('Save failed'));
+}
+
+// ===== 3D CARD STACK (all loyalty cards in one 3D wallet) =====
+function open3DStack(){
+  let ov=document.getElementById('stack3d');
+  if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.id='stack3d';
+  ov.style.cssText='position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,#1e1b4b,#0f172a);z-index:600;overflow-y:auto;padding:20px 0 60px;perspective:1100px';
+  let inner='<div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px;margin-bottom:18px"><div style="color:#fff;font-size:18px;font-weight:800">\ud83c\udccf My 3D Wallet</div><button onclick="document.getElementById(\'stack3d\').remove()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer">\u2715</button></div>';
+  inner+='<div style="color:rgba(255,255,255,.5);font-size:12px;text-align:center;margin-bottom:16px">'+CARDS.length+' loyalty cards \u00b7 tap any card to open it</div>';
+  inner+='<div style="transform-style:preserve-3d;padding:0 28px">';
+  CARDS.forEach((cd,i)=>{
+    const pts=cd.points||0;
+    inner+='<div onclick="document.getElementById(\'stack3d\').remove();openCardDet(\''+(cd.card_id||cd.id)+'\')" style="background:'+(cd.color||'#6366F1')+';border-radius:18px;padding:18px;margin-top:'+(i===0?'0':'-56px')+';position:relative;cursor:pointer;transform:rotateX(12deg) translateZ('+(i*-14)+'px);transform-style:preserve-3d;box-shadow:0 -10px 30px rgba(0,0,0,.45);transition:transform .25s;min-height:108px" onmouseover="this.style.transform=\'rotateX(0deg) translateZ(30px) translateY(-14px)\'" onmouseout="this.style.transform=\'rotateX(12deg) translateZ('+(i*-14)+'px)\'">'
+      +'<div style="display:flex;justify-content:space-between"><div style="font-size:14px;font-weight:800;color:#fff">'+(cd.emoji||'\ud83d\udecd\ufe0f')+' '+(cd.shopName||cd.name)+'</div><div style="font-size:13px">'+(cd.type==='national'?'\ud83c\uddec\ud83c\udde7':'\ud83c\udfea')+'</div></div>'
+      +'<div style="font-size:24px;font-weight:800;color:#fff;margin-top:6px">'+pts.toLocaleString()+' <span style="font-size:12px;font-weight:600;opacity:.7">pts</span></div>'
+      +'</div>';
+  });
+  inner+='</div>';
+  if(!CARDS.length)inner+='<div style="text-align:center;color:rgba(255,255,255,.6);padding:50px 20px">No cards yet \u2014 add one first</div>';
+  ov.innerHTML=inner;
+  document.body.appendChild(ov);
+}
+
+// ===== STASHLO CREDIT WAITLIST =====
+function joinCreditWaitlist(){
+  const b=document.getElementById('credit-wl-btn');
+  post('credit_waitlist',{user_id:UID,email:UEMAIL,name:PROF.name||'',created_at:Date.now()},'user_id')
+  .then(()=>{if(b){b.textContent='\u2705 You\u2019re on the list!';b.disabled=true;}T('\ud83d\udd14 We\u2019ll notify you at launch');})
+  .catch(()=>T('Could not join \u2014 try again'));
 }
 
 // ===== RECEIPT CAMERA SCAN =====

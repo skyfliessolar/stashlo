@@ -388,3 +388,14 @@ END $$;
 
 -- Verify key rows
 SELECT key, left(value, 60) AS value_preview FROM app_settings;
+
+-- v6.1: credit waitlist (future Stashlo Credit service)
+CREATE TABLE IF NOT EXISTS credit_waitlist (
+  user_id text PRIMARY KEY,
+  email text,
+  name text,
+  created_at bigint
+);
+ALTER TABLE credit_waitlist ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "allow_all_credit_waitlist" ON credit_waitlist;
+CREATE POLICY "allow_all_credit_waitlist" ON credit_waitlist FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
