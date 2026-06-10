@@ -1166,7 +1166,7 @@ function openShopById(mid){
   }).catch(()=>T('Could not load shop'))
 }
 function pCard(p,shop){
-  const safe=JSON.stringify({id:p.id,name:p.name,price:p.price,emoji:p.emoji||'🛍️',collect:p.collect,delivery:p.delivery,merchant_id:p.merchant_id||(shop?shop.id:''),shopName:shop?shop.name:'Shop',loyalty_type:shop?shop.loyalty_type:'',loyalty_threshold:shop?shop.loyalty_threshold:100}).replace(/'/g,"&#39;");
+  const safe=JSON.stringify({id:p.id,name:p.name,price:p.price,emoji:p.emoji||'🛍️',collect:p.collect,delivery:p.delivery,merchant_id:p.merchant_id||(shop?shop.id:''),shopName:shop?shop.name:'Shop',loyalty_type:shop?shop.loyalty_type:'',loyalty_threshold:shop?shop.loyalty_threshold:100}).replace(/'/g,"'");
   return`<div class="prod-card" onclick="openOrder('${encodeURIComponent(safe)}')">
     <div class="prod-ico">${p.emoji||'🛍️'}</div>
     <div class="prod-name">${p.name}</div>
@@ -1377,7 +1377,7 @@ function loadOrderChat(orderId,silent){
     const isNew=msgs.length>CHAT_CNT;CHAT_CNT=msgs.length;
     el.innerHTML=msgs.length?msgs.map(m=>`<div style="display:flex;flex-direction:${m.sender_role==='customer'?'row-reverse':'row'};gap:8px;margin-bottom:4px">
       <div class="bubble ${m.sender_role==='customer'?'bubble-me':m.sender_role==='admin'?'bubble-admin':'bubble-them'}">
-        <div>${(m.message||'').replace(/</g,'&lt;')}</div>
+        <div>${(m.message||'').replace(/</g,'\u003c')}</div>
         <div class="bubble-time">${m.sender_name||m.sender_role} · ${m.created_at?new Date(m.created_at).toLocaleTimeString().slice(0,5):''}</div>
       </div></div>`).join(''):'<div class="empty"><i>💬</i><p>No messages yet. Start the conversation!</p></div>';
     if(wasAtBottom||isNew)el.scrollTop=el.scrollHeight;
@@ -1601,7 +1601,7 @@ function loadSupportChat(){
     const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<80;
     el.innerHTML=m.length?m.map(x=>`<div style="display:flex;flex-direction:${x.sender_role==='customer'?'row-reverse':'row'};gap:8px;margin-bottom:4px">
       <div class="bubble ${x.sender_role==='customer'?'bubble-me':x.sender_role==='admin'?'bubble-admin':'bubble-them'}">
-        <div>${(x.message||'').replace(/</g,'&lt;')}</div>
+        <div>${(x.message||'').replace(/</g,'\u003c')}</div>
         <div class="bubble-time">${x.sender_role==='admin'?'Support':'You'} · ${x.created_at?new Date(x.created_at).toLocaleTimeString().slice(0,5):''}</div>
       </div></div>`).join(''):'<div class="empty" style="margin:20px 0"><i>💬</i><p>Welcome! How can we help?</p></div>';
     if(wasAtBottom)el.scrollTop=el.scrollHeight;
