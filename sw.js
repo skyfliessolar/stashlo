@@ -1,14 +1,16 @@
-// Stashlo SW v3 - cache bust
-self.addEventListener('install', function(e) {
-  self.skipWaiting();
+// Stashlo SW v11 - network-first: users always get the latest build
+const CACHE='stashlo-v11';
+self.addEventListener('install',e=>{self.skipWaiting()});
+self.addEventListener('activate',e=>{
+  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
 });
-self.addEventListener('activate', function(e) {
-  e.waitUntil(
-    caches.keys().then(function(keys) {
-      return Promise.all(keys.map(function(k) { return caches.delete(k); }));
-    }).then(function() { return self.clients.claim(); })
+self.addEventListener('fetch',e=>{
+  if(e.request.method!=='GET')return;
+  e.respondWith(
+    fetch(e.request).then(res=>{
+      const copy=res.clone();
+      caches.open(CACHE).then(c=>c.put(e.request,copy)).catch(()=>{});
+      return res;
+    }).catch(()=>caches.match(e.request))
   );
-});
-self.addEventListener('fetch', function(e) {
-  e.respondWith(fetch(e.request));
 });

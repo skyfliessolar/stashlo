@@ -1071,6 +1071,31 @@ function haversine(a,b,c,d){const R=6371000,f=(c-a)*Math.PI/180,g=(d-b)*Math.PI/
   }catch(e){}
 })();
 
+// ===== CRASH-PROOF GUARDS (senior fintech: never a blank page) =====
+window.onerror=function(msg,src,line){
+  try{
+    if(document.getElementById('err-banner'))return;
+    var b=document.createElement('div');b.id='err-banner';
+    b.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#7f1d1d;color:#fff;padding:10px 14px;font-size:12px;z-index:99999;font-family:monospace';
+    b.textContent='⚠️ '+msg+' (line '+line+') — pull down to refresh';
+    document.body.appendChild(b);
+  }catch(e){}
+};
+// kill stale service-worker caches so users always get the newest build
+try{
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.update()})});
+    if(window.caches)caches.keys().then(function(ks){ks.forEach(function(k){if(k!=='stashlo-v11')caches.delete(k)})});
+  }
+}catch(e){}
+// auth visibility failsafe: even if animations fail, the form MUST appear
+setTimeout(function(){
+  try{
+    var a=document.querySelector('.auth-fade');if(a)a.style.opacity='1';
+    var pc=document.querySelector('.pocket-card');if(pc)pc.style.transform='translateY(-46px)';
+  }catch(e){}
+},1600);
+
 // ===== SESSION =====
 window.addEventListener('load',()=>setTimeout(()=>{
   const s=JSON.parse(localStorage.getItem('sl_s')||'null');
