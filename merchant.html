@@ -1850,7 +1850,7 @@ function posDayEnd(){
       +'VAT collected: <b>£'+vat.toFixed(2)+'</b> · Refunds: <b style="color:#ef4444">£'+refunds.toFixed(2)+'</b><br>'
       +'Waste/write-offs: <b>'+wasteN+' items</b><br>'
       +'Gross: <b style="color:var(--purple)">£'+(cash+card).toFixed(2)+'</b> · <span style="background:#f0fdf4;border-radius:8px;padding:2px 8px">💰 Profit: <b style="color:#059669">£'+profit.toFixed(2)+'</b></span><br>'
-      +'<span style="font-size:11px;color:var(--ink4)">Profit uses each product&#39;s cost price - set costs in Stock for accuracy</span>';
+      +'<span style="font-size:11px;color:var(--ink4)">Profit uses each product cost prices - set costs in Stock for accuracy</span>';
   }).catch(function(){T('Could not load','error');});
 }
 function posExportCSV(){
