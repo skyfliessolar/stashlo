@@ -374,6 +374,13 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 .walk-scene{height:196px;margin-bottom:18px}
 .pc-delayed{animation-delay:.12s!important}
 .auth-fade{animation-delay:.4s!important;animation-duration:.45s!important}
+
+/* CRITICAL: screens must be visible even when animations are disabled
+   (reduced-motion / battery saver killed entrance animations -> opacity stuck 0) */
+.screen{animation-fill-mode:forwards!important}
+@media (prefers-reduced-motion:reduce){
+  .screen,.auth-card,.auth-fade,.lc,.ic,.home-hero,.pocket-card{opacity:1!important;transform:none!important}
+}
 </style>
 </head>
 <body>
@@ -1088,6 +1095,15 @@ try{
     if(window.caches)caches.keys().then(function(ks){ks.forEach(function(k){if(k!=='stashlo-v11')caches.delete(k)})});
   }
 }catch(e){}
+// screen visibility failsafe (reduced-motion devices)
+setInterval(function(){
+  try{
+    var vis=document.querySelector('.screen[style*="block"], .screen.on, .screen.active');
+    document.querySelectorAll('#app .screen').forEach(function(s){
+      if(getComputedStyle(s).display!=='none'&&parseFloat(getComputedStyle(s).opacity)<0.05){s.style.opacity='1';}
+    });
+  }catch(e){}
+},700);
 // auth visibility failsafe: even if animations fail, the form MUST appear
 setTimeout(function(){
   try{
@@ -2071,6 +2087,7 @@ function payJobNow(){
 
 // ===== NAVIGATION =====
 function goTab(n){
+  setTimeout(function(){var sc=document.getElementById(n+'-screen');if(sc){sc.style.opacity='1';}},350);
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
   const scr=document.getElementById(n+'-screen');
