@@ -386,6 +386,24 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
    inline styles (animations beat inline CSS). Screens now NEVER animate
    opacity - visibility is controlled by display only. Bulletproof. */
 #app .screen{opacity:1!important;animation:none!important;transform:none!important;transition:none!important}
+
+/* ===== CINEMATIC SPLASH (premium, 2.6s, tap to skip) ===== */
+#cine{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 30%,#1e1b4b,#0a0a14 70%);z-index:1200;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;animation:cineOut .5s ease 2.6s forwards;cursor:pointer}
+@keyframes cineOut{to{opacity:0;visibility:hidden;pointer-events:none}}
+.cine-particles{position:absolute;inset:0;background-image:radial-gradient(2px 2px at 20% 30%,rgba(139,92,246,.7),transparent),radial-gradient(2px 2px at 70% 20%,rgba(34,211,238,.6),transparent),radial-gradient(1.5px 1.5px at 40% 70%,rgba(255,255,255,.5),transparent),radial-gradient(2px 2px at 85% 60%,rgba(139,92,246,.5),transparent),radial-gradient(1.5px 1.5px at 15% 80%,rgba(34,211,238,.4),transparent);animation:partFloat 4s ease-in-out infinite alternate}
+@keyframes partFloat{to{transform:translateY(-14px)}}
+.cine-logo{font-size:38px;font-weight:800;background:linear-gradient(120deg,#a5b4fc,#fff,#8B5CF6);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-1px;animation:logoDepth .9s cubic-bezier(.2,.8,.25,1) both;filter:drop-shadow(0 0 24px rgba(139,92,246,.6))}
+@keyframes logoDepth{from{transform:scale(.3) translateZ(-200px);opacity:0;filter:blur(8px)}to{transform:scale(1);opacity:1;filter:blur(0) drop-shadow(0 0 24px rgba(139,92,246,.6))}}
+.cine-wallet{position:relative;width:200px;height:120px;margin-top:26px;perspective:600px}
+.cine-card{position:absolute;left:10%;right:10%;height:96px;border-radius:16px;opacity:0}
+.cc1{background:linear-gradient(135deg,#f59e0b,#d97706);animation:cardRise .55s ease .8s both;top:18px}
+.cc2{background:linear-gradient(135deg,#10b981,#059669);animation:cardRise .55s ease 1.0s both;top:9px}
+.cc3{background:linear-gradient(135deg,#6366F1,#8B5CF6);animation:cardRise .55s ease 1.2s both;top:0;display:flex;align-items:center;justify-content:center;box-shadow:0 16px 40px rgba(99,102,241,.5)}
+@keyframes cardRise{from{transform:translateY(70px) rotateX(-40deg);opacity:0}to{transform:translateY(0) rotateX(0);opacity:1}}
+.cine-qr{width:54px;height:54px;border-radius:8px;background:#fff;background-image:linear-gradient(90deg,#1e1b4b 2px,transparent 2px),linear-gradient(#1e1b4b 2px,transparent 2px);background-size:8px 8px;animation:qrIn .4s ease 1.7s both}
+@keyframes qrIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.cine-tag{margin-top:24px;font-size:13px;color:rgba(199,210,254,.8);font-weight:600;letter-spacing:.4px;animation:qrIn .5s ease 2s both}
+@media (prefers-reduced-motion:reduce){#cine{display:none}}
 </style>
 </head>
 <body>
@@ -468,6 +486,18 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
   </div>
 </div>
 
+</div>
+
+<!-- CINEMATIC SPLASH -->
+<div id="cine" onclick="this.remove()">
+  <div class="cine-particles"></div>
+  <div class="cine-logo">Stashlo</div>
+  <div class="cine-wallet">
+    <div class="cine-card cc1"></div>
+    <div class="cine-card cc2"></div>
+    <div class="cine-card cc3"><div class="cine-qr"></div></div>
+  </div>
+  <div class="cine-tag">Every loyalty card. One wallet.</div>
 </div>
 
 <!-- APP -->
@@ -1089,6 +1119,7 @@ function haversine(a,b,c,d){const R=6371000,f=(c-a)*Math.PI/180,g=(d-b)*Math.PI/
   }catch(e){}
 })();
 
+setTimeout(function(){var ci=document.getElementById('cine');if(ci)ci.remove();},3400);
 // structure guard: #app must NEVER live inside #auth
 try{var _app=document.getElementById&&null}catch(e){}
 document.addEventListener('DOMContentLoaded',function(){
@@ -1868,7 +1899,7 @@ function loadJobs(){
   const el=document.getElementById('jobs-list');
   if(!el)return;
   el.innerHTML='<div class="spin"></div>';
-  loadJobUnlocks().then(()=>get('jobs','active=eq.true&order=created_at.desc')).then(d=>{
+  loadJobUnlocks().then(function(){checkJobApprovalToast();return get('jobs','active=eq.true&order=created_at.desc')}).then(d=>{
     const j=Array.isArray(d)?d:[];window._JOBS=j;
     if(!j.length){el.innerHTML='<div class="empty"><i>\ud83d\udcbc</i><p>No jobs posted yet</p></div>';return}
     const hasMonthly=JOB_UNLOCKS.some(u=>u.plan==='5'&&u.status==='approved');
@@ -2365,6 +2396,24 @@ function walletAction(net){
   }
 }
 
+
+// ===== ANIMATED COUNTERS (premium feel) =====
+function countUpEl(el,target){
+  if(!el)return;var steps=22,i=0,cur=0,inc=target/steps;
+  var t=setInterval(function(){i++;cur+=inc;if(i>=steps){cur=target;clearInterval(t);}el.textContent=Math.round(cur).toLocaleString();},30);
+}
+
+// ===== JOB APPROVAL TOAST (admin approve now visible instantly) =====
+function checkJobApprovalToast(){
+  try{
+    var ap=JOB_UNLOCKS.filter(function(u){return u.status==='approved'});
+    var seen=JSON.parse(localStorage.getItem('sl_jobok_'+UID)||'[]');
+    ap.forEach(function(u){
+      if(seen.indexOf(u.id)<0){T('🎉 Admin approved your job unlock — contact details are now visible!');seen.push(u.id);}
+    });
+    localStorage.setItem('sl_jobok_'+UID,JSON.stringify(seen));
+  }catch(e){}
+}
 
 // ===== SCAN PLASTIC LOYALTY CARD -> auto number + custom name =====
 function scanCardToAdd(){
