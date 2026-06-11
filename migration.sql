@@ -435,3 +435,6 @@ CREATE TABLE IF NOT EXISTS merchant_checklists (
 ALTER TABLE merchant_checklists ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "allow_all_merchant_checklists" ON merchant_checklists;
 CREATE POLICY "allow_all_merchant_checklists" ON merchant_checklists FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- v8.1: first-time-only OTP flag
+ALTER TABLE users ADD COLUMN IF NOT EXISTS otp_verified boolean DEFAULT false;

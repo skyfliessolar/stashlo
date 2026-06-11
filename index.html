@@ -341,6 +341,10 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 .nearby-chip{flex:0 0 auto;background:var(--card);border-radius:14px;padding:10px 14px;box-shadow:var(--shadow);cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
 .bubble-ai{background:linear-gradient(135deg,#4b0082,#8a2be2);color:#fff;align-self:flex-start}
 .brand-mono{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;margin:0 auto}
+
+#auth{flex-direction:column}
+.auth-fade{opacity:0;animation:authIn .55s cubic-bezier(.2,.8,.25,1) .85s forwards}
+@keyframes authIn{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
 <body>
@@ -355,7 +359,12 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 
 <!-- AUTH -->
 <div id="auth">
-  <div class="auth-card">
+  <div style="width:100%;max-width:380px;padding:0 16px">
+    <div class="pocket-wrap" style="margin-bottom:34px">
+      <div class="pocket-card"><div style="font-size:15px;font-weight:800">Stashlo</div><div style="font-size:11px;opacity:.85;margin-top:2px">QR + Barcode Loyalty ID</div><div style="font-size:12px;opacity:.7;margin-top:26px">Every loyalty card. One wallet.</div></div>
+      <div class="pocket"></div>
+    </div>
+  <div class="auth-card auth-fade" style="width:100%">
     <div class="auth-logo">
       <span class="al-i">💳</span>
       <span class="al-n">Stashlo</span>
@@ -1016,7 +1025,13 @@ function doLogin(){
   .then(r=>r.json()).then(d=>{
     b.textContent='Sign in';b.disabled=false;
     if(!d.access_token){sErr('ai-err',d.error_code==='invalid_credentials'?'Wrong email or password':d.error_description||'Sign in failed');return}
-    if(needOTP(d.user.id)){document.getElementById('auth').style.display='none';showOTP({tok:d.access_token,uid:d.user.id,email:d.user.email,exp:d.expires_in});return}
+    checkOtpVerified(d.access_token,d.user.id).then(function(v){
+      if(!v){document.getElementById('auth').style.display='none';showOTP({tok:d.access_token,uid:d.user.id,email:d.user.email,exp:d.expires_in});return}
+      saveSess(d.access_token,d.user.id,d.user.email,d.expires_in);
+      post('users',{id:d.user.id,email:d.user.email,created_at:Date.now(),total_points:0},'id').catch(function(){});
+      boot();
+    });
+    return;
     saveSess(d.access_token,d.user.id,d.user.email,d.expires_in);
     post('users',{id:d.user.id,email:d.user.email,created_at:Date.now(),total_points:0},'id').catch(()=>{});
     boot();
@@ -2006,7 +2021,11 @@ function initTilt3D(){
 
 // ===== OTP VERIFICATION (new device logins) =====
 let OTP_PEND=null,_otpFails=0;
-function needOTP(uid){try{return !localStorage.getItem('sl_dev_'+uid)}catch(e){return false}}
+function checkOtpVerified(tok,uid){
+  try{if(localStorage.getItem('sl_otpok_'+uid))return Promise.resolve(true);}catch(e){}
+  return fetch(SU+'/rest/v1/users?id=eq.'+uid+'&select=otp_verified',{headers:{'apikey':SK,'Authorization':'Bearer '+tok}})
+  .then(function(r){return r.json()}).then(function(d){return Array.isArray(d)&&d[0]&&d[0].otp_verified===true}).catch(function(){return false});
+}
 function buildOtpBoxes(){
   const box=document.getElementById('otp-box');
   box.innerHTML='';
@@ -2042,9 +2061,10 @@ function verifyOTP(){
   }).catch(function(){_otpFails++;sErr('otp-err','Verification failed');if(_otpFails>=2)document.getElementById('otp-skip').style.display='inline';});
 }
 function otpPass(){
-  try{localStorage.setItem('sl_dev_'+OTP_PEND.uid,'1')}catch(e){}
+  try{localStorage.setItem('sl_otpok_'+OTP_PEND.uid,'1')}catch(e){}
   document.getElementById('otp-overlay').style.display='none';
   saveSess(OTP_PEND.tok,OTP_PEND.uid,OTP_PEND.email,OTP_PEND.exp);
+  pat('users','id=eq.'+OTP_PEND.uid,{otp_verified:true}).catch(function(){});
   boot();
 }
 function otpSkip(){otpPass();}
