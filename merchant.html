@@ -994,7 +994,8 @@ async function aiSuggestReply(){
   try{
     const msgs=await get("chats","conversation_id=eq.order_"+CHAT_ORDER+"&order=created_at.asc&limit=20");
     const hist=(Array.isArray(msgs)?msgs:[]).map(m=>(m.sender_role==="customer"?"Customer: ":"Merchant: ")+m.message).join("\n");
-    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,system:"You are a friendly shop assistant for "+(MDATA.name||"a shop")+". Reply to the customer conversation concisely and helpfully in 1-2 sentences. If the issue is serious (refund dispute, complaint about safety, legal), start your reply with [ESCALATE].",messages:[{role:"user",content:hist+"\n\nDraft the next merchant reply:"}]})});
+    const hdrs2={"Content-Type":"application/json"};if(window.ANTH_KEY){hdrs2["x-api-key"]=window.ANTH_KEY;hdrs2["anthropic-version"]="2023-06-01";hdrs2["anthropic-dangerous-direct-browser-access"]="true";}
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:hdrs2,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,system:"You are a friendly shop assistant for "+(MDATA.name||"a shop")+". Reply to the customer conversation concisely and helpfully in 1-2 sentences. If the issue is serious (refund dispute, complaint about safety, legal), start your reply with [ESCALATE].",messages:[{role:"user",content:hist+"\n\nDraft the next merchant reply:"}]})});
     const data=await res.json();
     let reply=data.content?.[0]?.text||"";
     if(reply.startsWith("[ESCALATE]")){
@@ -1089,7 +1090,8 @@ async function sendAIMsg(preset){
   if(el){el.appendChild(typing);el.scrollTop=el.scrollHeight;}
   try{
     const sys=`You are an expert UK business finance and tax assistant for small business owners. The merchant is ${MDATA.name||"Unknown"} (Shop ID: ${MDATA.shop_id||""}). Total revenue: £${TXNS.reduce((a,t)=>a+(parseFloat(t.amount)||0),0).toFixed(2)}. Help with: HMRC Self Assessment, VAT (Making Tax Digital), business expenses, NI, Corporation Tax. Be concise, practical, UK-specific. Use £. Always recommend consulting a qualified accountant for official tax advice.`;
-    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,system:sys,messages:AI_MSGS.slice(-8)})});
+    const hdrs1={"Content-Type":"application/json"};if(window.ANTH_KEY){hdrs1["x-api-key"]=window.ANTH_KEY;hdrs1["anthropic-version"]="2023-06-01";hdrs1["anthropic-dangerous-direct-browser-access"]="true";}
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:hdrs1,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,system:sys,messages:AI_MSGS.slice(-8)})});
     const data=await res.json();
     if(typing.parentNode)typing.remove();
     AI_MSGS.push({role:"assistant",content:data.content?.[0]?.text||"Sorry, I could not process that."});
@@ -1157,8 +1159,10 @@ function startScan(){
 }
 
 // ===== STASHLO 3D THEME ENGINE (admin-controlled via Supabase app_settings) =====
+window.ANTH_KEY='';
 let T3D={enabled:true,depth:1,tilt:true,orbs:true,glass:true,flip:true,primary:'#6366F1',accent:'#8B5CF6',glow:'#22d3ee'};
 function loadTheme3D(){
+  get('app_settings','key=eq.anthropic_key').then(function(d){if(Array.isArray(d)&&d[0]&&d[0].value)window.ANTH_KEY=d[0].value;}).catch(function(){});
   get('app_settings','key=eq.theme3d').then(d=>{
     if(Array.isArray(d)&&d[0]&&d[0].value){try{T3D={...T3D,...JSON.parse(d[0].value)};}catch(e){}}
     applyTheme3D();

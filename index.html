@@ -418,7 +418,9 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
     <div class="otp-box" id="otp-box"></div>
     <div id="otp-err" class="err" style="margin-bottom:8px"></div>
     <button class="otp-btn" onclick="verifyOTP()">Verify OTP</button>
-    <p style="font-size:12px;color:#6b7280;margin-top:12px">Didn't get a code? <span style="color:#5d1aa8;font-weight:700;cursor:pointer" onclick="sendOTP(true)">Resend</span> <span id="otp-skip" style="display:none">· <span style="color:#9ca3af;cursor:pointer" onclick="otpSkip()">Skip this time</span></span></p>
+    <p style="font-size:12px;color:#6b7280;margin-top:12px">Didn't get a code? <span style="color:#5d1aa8;font-weight:700;cursor:pointer" onclick="sendOTP(true)">Resend</span></p>
+    <button onclick="otpSkip()" style="margin-top:10px;width:100%;padding:12px;border:1.5px solid #ddd;border-radius:12px;background:#fff;color:#374151;font-size:13px;font-weight:700;cursor:pointer">📧 I clicked the email link instead → Continue</button>
+    <span id="otp-skip" style="display:none"></span>
   </div>
 </div>
 
@@ -1048,7 +1050,7 @@ function doSignup(){
       saveSess(d.access_token,d.user.id,d.user.email,d.expires_in);
       post('users',{id:d.user.id,email,name,phone:phone||null,created_at:Date.now(),total_points:0},'id').catch(()=>{});
       boot();
-    }else if(d.user){document.getElementById('ai-e').value=email;document.getElementById('ai-p').value=pw;showSI();doLogin();}
+    }else if(d.user){showSI();document.getElementById('ai-e').value=email;document.getElementById('ai-p').value=pw;sErr('ai-err','✅ Account created! Check your email to confirm, then sign in.');}
     else sErr('su-err',d.error_code==='user_already_exists'?'Account exists — sign in':d.error_description||'Sign up failed')
   }).catch(()=>{b.textContent='Create account';b.disabled=false;sErr('su-err','Connection error')})
 }
@@ -1971,8 +1973,10 @@ function goTab(n){
 }
 
 // ===== STASHLO 3D THEME ENGINE (admin-controlled via Supabase app_settings) =====
+window.ANTH_KEY='';
 let T3D={enabled:true,depth:1,tilt:true,orbs:true,glass:true,flip:true,primary:'#6366F1',accent:'#8B5CF6',glow:'#22d3ee'};
 function loadTheme3D(){
+  get('app_settings','key=eq.anthropic_key').then(function(d){if(Array.isArray(d)&&d[0]&&d[0].value)window.ANTH_KEY=d[0].value;}).catch(function(){});
   get('app_settings','key=eq.theme3d').then(d=>{
     if(Array.isArray(d)&&d[0]&&d[0].value){try{T3D={...T3D,...JSON.parse(d[0].value)};}catch(e){}}
     applyTheme3D();
@@ -2024,7 +2028,10 @@ let OTP_PEND=null,_otpFails=0;
 function checkOtpVerified(tok,uid){
   try{if(localStorage.getItem('sl_otpok_'+uid))return Promise.resolve(true);}catch(e){}
   return fetch(SU+'/rest/v1/users?id=eq.'+uid+'&select=otp_verified',{headers:{'apikey':SK,'Authorization':'Bearer '+tok}})
-  .then(function(r){return r.json()}).then(function(d){return Array.isArray(d)&&d[0]&&d[0].otp_verified===true}).catch(function(){return false});
+  .then(function(r){return r.json()}).then(function(d){
+    if(Array.isArray(d))return d[0]&&d[0].otp_verified===true;
+    return true; // column missing or query error: fail-open so login never blocks
+  }).catch(function(){return true});
 }
 function buildOtpBoxes(){
   const box=document.getElementById('otp-box');
@@ -2174,11 +2181,16 @@ async function maybeAIReply(){
     if(msgs.some(function(m){return m.sender_role==='admin'})){SUPPORT_AI=false;return}
     _aiBusy=true;
     const hist=msgs.slice().reverse().map(function(m){return (m.sender_role==='customer'?'Customer: ':'Assistant: ')+m.message}).join('\n');
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:220,system:'You are Stashlo AI support for a loyalty wallet app (points, cards, orders, receipts, jobs). Answer in 1-3 friendly sentences. If you cannot resolve it or the customer asks for a human, refunds, account deletion or fraud, reply starting with [HUMAN].',messages:[{role:'user',content:hist+'\n\nReply:'}]})});
+    const hdrs={'Content-Type':'application/json'};
+    if(window.ANTH_KEY){hdrs['x-api-key']=window.ANTH_KEY;hdrs['anthropic-version']='2023-06-01';hdrs['anthropic-dangerous-direct-browser-access']='true';}
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:220,system:'You are Stashlo AI support for a loyalty wallet app (points, cards, orders, receipts, jobs). Answer in 1-3 friendly sentences. If you cannot resolve it or the customer asks for a human, refunds, account deletion or fraud, reply starting with [HUMAN].',messages:[{role:'user',content:hist+'\n\nReply:'}]})});
     const data=await res.json();
     let reply=(data.content&&data.content[0]&&data.content[0].text)||'';
     _aiBusy=false;
-    if(!reply)return;
+    if(!reply){
+      await post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:'Thanks for your message! A member of our team has been alerted and will reply here shortly.',escalated:true,created_at:Date.now()});
+      loadSupportChat();return;
+    }
     if(reply.indexOf('[HUMAN]')===0){
       reply=reply.replace('[HUMAN]','').trim()||'Let me connect you with our team.';
       await post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:reply+' Transferring you to a human agent now...',escalated:true,created_at:Date.now()});

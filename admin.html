@@ -353,6 +353,11 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 
   <div class="screen" id="more-screen">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div onclick="setAIKey()" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">🤖</div>
+        <div style="font-size:13px;font-weight:700;margin-top:6px">AI Key</div>
+        <div style="font-size:11px;color:var(--ink3)">Enable live AI</div>
+      </div>
       <div onclick="switchTab('design3d')" style="background:linear-gradient(135deg,#6366F1,#8B5CF6);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:26px">🎨</div>
         <div style="font-size:13px;font-weight:700;margin-top:6px;color:#fff">3D Studio</div>
@@ -1457,6 +1462,18 @@ function switchTab(name){
   if(name==='design3d')loadTheme3DStudio();
   if(name==='delivery')loadDelivery();
   if(name==='billing')loadBilling();
+}
+
+// ===== AI KEY SETTING (enables AI in production) =====
+function setAIKey(){
+  sget('app_settings','key=eq.anthropic_key').then(function(d){
+    const cur=(Array.isArray(d)&&d[0]&&d[0].value)?d[0].value:'';
+    const k=prompt('Anthropic API key (sk-ant-...) — powers AI support + merchant AI in the live apps. Leave empty to remove.',cur);
+    if(k===null)return;
+    spost('app_settings',{key:'anthropic_key',value:k.trim(),updated_at:Date.now()},'key')
+    .then(function(){T(k.trim()?'AI key saved — AI features now live':'AI key removed','success');logAudit('set_ai_key',k.trim()?'updated':'removed');})
+    .catch(function(){T('Failed','error')});
+  });
 }
 
 // ===== SUPPORT ALARM (rings until admin joins) =====
