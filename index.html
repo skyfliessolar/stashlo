@@ -2257,6 +2257,34 @@ function walletAction(net){
   }
 }
 
+
+// ===== FREE STASHLO AI (no API key needed - instant knowledge-base bot) =====
+function freeBotReply(q){
+  q=(q||'').toLowerCase();
+  function has(){for(var i=0;i<arguments.length;i++){if(q.indexOf(arguments[i])>=0)return true}return false}
+  if(has('refund','money back','chargeback','charged twice'))return '[HUMAN]Refunds need a human review - I am transferring you to our team now.';
+  if(has('delete my account','close my account','remove my data','gdpr'))return '[HUMAN]Account and data requests need a human agent - transferring you now.';
+  if(has('fraud','stolen','hack','scam','unauthoris','unauthorized'))return '[HUMAN]This is a priority issue - connecting you to a human agent immediately.';
+  if(has('human','agent','real person','someone'))return '[HUMAN]Of course - transferring you to a human agent now.';
+  if(has('point'))return 'You earn points whenever a merchant scans your Stashlo ID at the till (usually 1 point per £1). Each card shows your progress to the next reward, and you can spend points in the Rewards section. 🎯';
+  if(has('stashlo id','my id','my qr','barcode','qr code'))return 'Tap "My Stashlo ID" on the Home screen - your card pulls out of the pocket with a QR code and barcode. Swipe between them and let the merchant scan either one. 📱';
+  if(has('add card','add a card','national card','tesco','nectar','boots'))return 'Go to Cards → National → + Add Card, then search any UK brand. For local shops, tap Local Shops → Find Shop or just visit the Shop tab and search by name. 💳';
+  if(has('order','collect','delivery status','track'))return 'Your orders live in the Orders tab with a live tracking timeline: Placed → Confirmed → Dispatched → In Transit → Out for Delivery → Delivered. Tap Chat on any order to message the shop directly. 📦';
+  if(has('cancel'))return 'You can cancel an order while it is still Pending or Confirmed - open the Orders tab and tap the Cancel button on that order. After dispatch, message the shop via the order Chat. ❌';
+  if(has('receipt','tax','hmrc','expense'))return 'Open Me → Receipt Archive. Scan paper receipts with 📷, save digital ones from completed orders, filter by year, and tap "Tax CSV" to export everything for HMRC or your accountant. 🧾';
+  if(has('apple pay','google pay','wallet','payment method','add a card to pay','pay with'))return 'Open the Pay Wallet (Me → Pay Wallet): connect Apple Pay or Google Pay with one tap, or add a card - we only ever store the last 4 digits, never your full number or CVV. 🔒';
+  if(has('job'))return 'The Jobs section shows local roles posted by Stashlo shops. Titles are free to browse; unlock contact details for £1 per job or £5/month for all jobs - unlocks activate after a quick admin approval. 💼';
+  if(has('reward','redeem','free coffee','voucher'))return 'Check the Rewards section for offers you can redeem with points, and look at each shop card for its reward target (e.g. free item at 100 pts). Redeem at the till by showing your Stashlo ID. 🎁';
+  if(has('password','sign in','log in','login','cant get in'))return 'On the sign-in screen tap "Forgot password?" and we will email you a secure reset link. Click it and you can set a new password right in the app. 🔑';
+  if(has('otp','code','verify'))return 'On your first login we email a 6-digit code (or a sign-in link - tapping the link works too). After that first verification you will not be asked again. ✅';
+  if(has('nearby','near me','close to me','around me'))return 'Open the Shop tab - the Nearby Shops strip shows the closest Stashlo shops sorted by distance. Allow location access for the best results. 📍';
+  if(has('credit','bnpl','pay later'))return 'Stashlo Credit is coming soon - flexible credit built on your loyalty history, with FCA-regulated standards. Tap the Stashlo Credit banner on Home to join the waitlist! 💳';
+  if(has('3d','design','theme'))return 'The 3D effects (tilting cards, glass surfaces, floating orbs) are part of the Stashlo design - try moving your finger over a loyalty card, or tilt your phone! ✨';
+  if(has('hello','hi','hey','good morning','good afternoon','good evening'))return 'Hello! 👋 I can help with points, cards, orders, receipts, the wallet, jobs and more. What would you like to know?';
+  if(has('thank','cheers','great','perfect'))return 'You are very welcome! Anything else I can help with? 💜';
+  return null;
+}
+
 // ===== AI-FIRST SUPPORT =====
 let SUPPORT_AI=true,_aiBusy=false;
 async function maybeAIReply(){
@@ -2268,6 +2296,19 @@ async function maybeAIReply(){
     if(msgs[0].sender_role!=='customer')return;
     if(msgs.some(function(m){return m.sender_role==='admin'})){SUPPORT_AI=false;return}
     _aiBusy=true;
+    // FREE BOT path (no API key required)
+    if(!window.ANTH_KEY){
+      var fr=freeBotReply(msgs[0].message);
+      _aiBusy=false;
+      if(fr&&fr.indexOf('[HUMAN]')===0){
+        await post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:fr.replace('[HUMAN]','')+' 🔔 An admin has been alerted.',escalated:true,created_at:Date.now()});
+        SUPPORT_AI=false;
+      }else{
+        await post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:fr||('I am not 100% sure about that one yet! Try rephrasing, or tap the 🙋 button and a human agent will help you.'),created_at:Date.now()});
+      }
+      loadSupportChat();
+      return;
+    }
     const hist=msgs.slice().reverse().map(function(m){return (m.sender_role==='customer'?'Customer: ':'Assistant: ')+m.message}).join('\n');
     const hdrs={'Content-Type':'application/json'};
     if(window.ANTH_KEY){hdrs['x-api-key']=window.ANTH_KEY;hdrs['anthropic-version']='2023-06-01';hdrs['anthropic-dangerous-direct-browser-access']='true';}

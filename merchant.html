@@ -1087,6 +1087,27 @@ function confirmDelJob(id,title){
   openModal("confirmModal");
 }
 
+
+// ===== FREE FINANCE BOT (no API key needed) =====
+function freeFinanceReply(q){
+  q=(q||'').toLowerCase();
+  function has(){for(var i=0;i<arguments.length;i++){if(q.indexOf(arguments[i])>=0)return true}return false}
+  var rev=TXNS.reduce(function(a,t){return a+(parseFloat(t.amount)||0)},0);
+  if(has('vat rate','what vat','which vat'))return '**UK VAT rates:** Standard **20%** (most goods, alcohol, vapes, snacks) · Reduced **5%** (home energy, some safety products) · **Zero 0%** (most food staples, books, kids clothes) · **Exempt** (lottery, postage). Set each product\u2019s rate in Stock → edit product → VAT rate, and your POS receipts + HMRC CSV will calculate it automatically.';
+  if(has('vat threshold','register for vat','vat registration'))return 'You must register for VAT once your rolling 12-month taxable turnover passes **£90,000** (2024+ threshold). Below that, registration is optional. Once registered, file via Making Tax Digital software quarterly. Your Stashlo HMRC CSV gives your accountant everything they need.';
+  if(has('vat return','making tax digital','mtd'))return 'VAT returns are filed quarterly under Making Tax Digital. Use POS → Reports → **HMRC CSV** to export every sale with Net/VAT/Gross columns - hand that to your accountant or import into your MTD software (Xero, QuickBooks, FreeAgent).';
+  if(has('self assessment','sole trader','income tax'))return 'Sole traders file Self Assessment by **31 January** each year for the previous tax year (6 Apr–5 Apr). Keep your Stashlo day-end reports and HMRC CSVs - they evidence your takings. Personal allowance is £12,570; basic rate 20% above that. Always confirm with a qualified accountant.';
+  if(has('expense','deduct','claim'))return 'Common deductible expenses: stock purchases, rent, utilities, staff wages, insurance, card fees, your Stashlo subscription, equipment, and business mileage (45p/mile first 10k). Keep receipts - your customers do it in Stashlo, you should too! 😄';
+  if(has('day end','day-end','cash up','close till'))return 'Tap POS → 📊 **Day-End** for today\u2019s totals: cash vs card takings, VAT collected and gross. Do it at close each day, match cash in the drawer, then export the HMRC CSV weekly for your records.';
+  if(has('profit'))return 'Your recorded revenue so far is **£'+rev.toFixed(2)+'**. For true profit, set each product\u2019s **cost price** in Stock - then profit per sale = selling price − cost. Review your Accounting card in Settings for monthly totals.';
+  if(has('corporation tax','limited company','ltd'))return 'Limited companies pay Corporation Tax (19% small profits rate up to £50k, 25% main rate above £250k, marginal relief between). File accounts to Companies House within 9 months of year end. Speak to an accountant - it usually pays for itself.';
+  if(has('pos','epos','till','subscription'))return 'Your EPOS is **£15/month**: tap-to-sell product grid, VAT engine, receipt printing, day-end reports and HMRC exports. Manage it in the POS tab; invoices appear under Settings → Accounting.';
+  if(has('receipt','print'))return 'After every sale the POS offers to print a receipt (works with Bluetooth/USB receipt printers via your device\u2019s print dialog). Set your **VAT number** and footer message in POS → POS Settings so they appear on every receipt.';
+  if(has('hello','hi','hey'))return 'Hello! 👋 Ask me about VAT rates, registration, Self Assessment, expenses, day-end cashing up, or profit tracking.';
+  if(has('thank'))return 'Anytime! 📊 Remember: for official tax filings, always have a qualified accountant give it a final check.';
+  return 'I can help with: **VAT rates & registration**, **Making Tax Digital returns**, **Self Assessment**, **expenses you can claim**, **day-end reports** and **profit tracking**. Try one of those - or ask your admin to add an AI key in the admin app for full conversational answers. (Always confirm official filings with a qualified accountant.)';
+}
+
 let AI_MSGS=[{role:"assistant",content:"Hi! I'm your AI Finance Agent. I can help with HMRC Self Assessment, VAT returns, expense categorisation, and tax advice. What do you need help with today?"}];
 async function sendAIMsg(preset){
   const inp=document.getElementById("ai-inp");const msg=preset||inp?.value?.trim();if(!msg)return;
@@ -1097,6 +1118,14 @@ async function sendAIMsg(preset){
   const typing=document.createElement("div");
   typing.className="ai-msg bot";typing.innerHTML="<span>Thinking</span><span style='animation:sdot 1.2s infinite'> ...</span>";
   if(el){el.appendChild(typing);el.scrollTop=el.scrollHeight;}
+  if(!window.ANTH_KEY){
+    setTimeout(function(){
+      if(typing.parentNode)typing.remove();
+      AI_MSGS.push({role:"assistant",content:freeFinanceReply(msg)});
+      renderAI();
+    },650);
+    return;
+  }
   try{
     const sys=`You are an expert UK business finance and tax assistant for small business owners. The merchant is ${MDATA.name||"Unknown"} (Shop ID: ${MDATA.shop_id||""}). Total revenue: £${TXNS.reduce((a,t)=>a+(parseFloat(t.amount)||0),0).toFixed(2)}. Help with: HMRC Self Assessment, VAT (Making Tax Digital), business expenses, NI, Corporation Tax. Be concise, practical, UK-specific. Use £. Always recommend consulting a qualified accountant for official tax advice.`;
     const hdrs1={"Content-Type":"application/json"};if(window.ANTH_KEY){hdrs1["x-api-key"]=window.ANTH_KEY;hdrs1["anthropic-version"]="2023-06-01";hdrs1["anthropic-dangerous-direct-browser-access"]="true";}
