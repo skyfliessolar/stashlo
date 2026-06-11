@@ -438,3 +438,7 @@ CREATE POLICY "allow_all_merchant_checklists" ON merchant_checklists FOR ALL TO 
 
 -- v8.1: first-time-only OTP flag
 ALTER TABLE users ADD COLUMN IF NOT EXISTS otp_verified boolean DEFAULT false;
+
+-- v9: POS receipt settings
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS receipt_vat_no text;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS receipt_footer text;

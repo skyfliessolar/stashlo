@@ -794,8 +794,7 @@ function renderMerchants(list){
           <div style="display:flex;gap:4px">
             <button class="btn-xs" style="background:${m.suspended?'#064e3b':'#7f1d1d'};color:#fff" onclick="event.stopPropagation();toggleMerchSuspend('${m.id}','${(m.name||'').replace(/'/g,'')}',${!!m.suspended})">${m.suspended?'▶':'⛔'}</button>
             <button class="btn-xs" style="background:${m.restricted?'#064e3b':'#713f12'};color:#fff" onclick="event.stopPropagation();toggleMerchRestrict('${m.id}','${(m.name||'').replace(/'/g,'')}',${!!m.restricted})">${m.restricted?'🔓':'💰'}</button>
-            ${m.pos_requested&&!m.pos_enabled?`<button class="btn-xs" style="background:#6366F1;color:#fff" onclick="event.stopPropagation();approvePOS('${m.id}','${(m.name||'').replace(/'/g,'')}')">🖥✓</button>`:''}
-            ${m.pos_enabled?`<button class="btn-xs" style="background:#334155;color:#fff" onclick="event.stopPropagation();revokePOS('${m.id}','${(m.name||'').replace(/'/g,'')}')">🖥✕</button>`:''}
+            ${!m.pos_enabled?`<button class="btn-xs" style="background:#6366F1;color:#fff" title="Activate EPOS" onclick="event.stopPropagation();approvePOS('${m.id}','${(m.name||'').replace(/'/g,'')}')">🖥✓</button>`:`<button class="btn-xs" style="background:#334155;color:#fff" title="Revoke EPOS" onclick="event.stopPropagation();revokePOS('${m.id}','${(m.name||'').replace(/'/g,'')}')">🖥✕</button>`}
           </div>
         </div>
       </div>
@@ -1517,7 +1516,12 @@ setTimeout(pollSupportAlarm,4000);
 function approvePOS(id,name){
   if(!confirm('Activate EPOS for "'+name+'"? They have paid the subscription.'))return;
   spat('merchants','id=eq.'+id,{pos_enabled:true,pos_requested:false})
-  .then(function(){T('EPOS activated for '+name,'success');logAudit('approve_pos',name);loadMerchants();}).catch(function(){T('Failed','error');});
+  .then(function(){T('🖥️ EPOS activated for '+name,'success');logAudit('approve_pos',name);loadMerchants();})
+  .catch(function(){
+    spat('merchants','id=eq.'+id,{pos_enabled:true})
+    .then(function(){T('🖥️ EPOS activated for '+name,'success');logAudit('approve_pos',name);loadMerchants();})
+    .catch(function(){T('DB missing pos_enabled column — run migration.sql first','error');});
+  });
 }
 function revokePOS(id,name){
   if(!confirm('Revoke EPOS access for "'+name+'"?'))return;

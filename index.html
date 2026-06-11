@@ -345,6 +345,24 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 #auth{flex-direction:column}
 .auth-fade{opacity:0;animation:authIn .55s cubic-bezier(.2,.8,.25,1) .85s forwards}
 @keyframes authIn{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+
+/* Walking man fintech intro */
+.walk-scene{position:relative;height:230px;margin-bottom:26px}
+.walk-floor{position:absolute;bottom:-6px;left:8%;right:8%;height:8px;background:radial-gradient(ellipse at center,rgba(0,0,0,.28),transparent 70%);border-radius:50%}
+.walk-man{position:absolute;bottom:-14px;left:0;font-size:74px;z-index:5;animation:manWalk 1.5s ease-out forwards;filter:drop-shadow(0 6px 8px rgba(0,0,0,.3))}
+@keyframes manWalk{
+  0%{transform:translateX(-90px) translateY(0)}
+  15%{transform:translateX(-50px) translateY(-5px)}
+  30%{transform:translateX(-14px) translateY(0)}
+  45%{transform:translateX(22px) translateY(-5px)}
+  60%{transform:translateX(54px) translateY(0)}
+  78%{transform:translateX(78px) translateY(-3px)}
+  100%{transform:translateX(92px) translateY(0)}
+}
+.pc-delayed{animation-delay:1.45s!important;transform:translateY(90px) rotate(-8deg)}
+.walk-scene .pocket-wrap{position:absolute;left:50%;transform:translateX(-50%);bottom:0}
+.auth-fade{animation-delay:2.35s!important}
+@media (prefers-reduced-motion:reduce){.walk-man{animation-duration:.1s}.pc-delayed{animation-delay:.2s!important}.auth-fade{animation-delay:.4s!important}}
 </style>
 </head>
 <body>
@@ -360,9 +378,13 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 <!-- AUTH -->
 <div id="auth">
   <div style="width:100%;max-width:380px;padding:0 16px">
-    <div class="pocket-wrap" style="margin-bottom:34px">
-      <div class="pocket-card"><div style="font-size:15px;font-weight:800">Stashlo</div><div style="font-size:11px;opacity:.85;margin-top:2px">QR + Barcode Loyalty ID</div><div style="font-size:12px;opacity:.7;margin-top:26px">Every loyalty card. One wallet.</div></div>
-      <div class="pocket"></div>
+    <div class="walk-scene">
+      <div class="walk-man">🚶‍♂️</div>
+      <div class="pocket-wrap" style="margin:0 auto">
+        <div class="pocket-card pc-delayed"><div style="font-size:15px;font-weight:800">Stashlo</div><div style="font-size:11px;opacity:.85;margin-top:2px">QR + Barcode Loyalty ID</div><div style="font-size:12px;opacity:.7;margin-top:26px">Every loyalty card. One wallet.</div></div>
+        <div class="pocket"></div>
+      </div>
+      <div class="walk-floor"></div>
     </div>
   <div class="auth-card auth-fade" style="width:100%">
     <div class="auth-logo">
@@ -629,7 +651,15 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
       <button onclick="document.getElementById('receipt-cam').click()" style="background:var(--purple);color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">📷 Scan Receipt</button>
     </div>
     <input type="file" id="receipt-cam" accept="image/*" capture="environment" style="display:none" onchange="scanReceipt(this)">
-    <div style="margin:0 16px 12px;background:var(--green-bg);border-radius:12px;padding:10px 14px;font-size:12px;color:#065f46;font-weight:600">✅ Free storage: 12 months · Premium: unlimited + export (£1.99/mo)</div>
+    <div style="margin:0 16px 10px;display:flex;gap:8px;align-items:center">
+      <select id="rcp-year" onchange="loadReceipts()" style="flex:1;padding:11px;border:1.5px solid var(--border);border-radius:12px;font-size:13px;font-weight:700;background:var(--card)"></select>
+      <button onclick="exportReceiptsCSV()" style="background:var(--purple);color:#fff;border:none;border-radius:12px;padding:11px 14px;font-size:13px;font-weight:700;cursor:pointer">⬇️ Tax CSV</button>
+    </div>
+    <div style="margin:0 16px 10px;background:linear-gradient(120deg,#1e1b4b,#4338ca);border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:11px;color:#a5b4fc;font-weight:700">TOTAL THIS PERIOD</div><div id="rcp-total" style="font-size:22px;font-weight:800;color:#fff">£0.00</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:#a5b4fc;font-weight:700" id="rcp-count">0 receipts</div><div style="font-size:10px;color:rgba(255,255,255,.55)">HMRC-ready export</div></div>
+    </div>
+    <div style="margin:0 16px 12px;background:var(--green-bg);border-radius:12px;padding:10px 14px;font-size:12px;color:#065f46;font-weight:600">💼 SaaS Pro (£1.99/mo): unlimited years, PDF bundles &amp; accountant share — current year free</div>
     <div id="receipts-list" style="padding:0 16px"></div>
   </div>
 
@@ -1849,16 +1879,44 @@ function openMyQR(){
 
 // ===== RECEIPTS ARCHIVE =====
 let RECEIPTS=[];
+function rcpYearInit(){
+  const sel=document.getElementById('rcp-year');if(!sel||sel.options.length)return;
+  const y=new Date().getFullYear();
+  const opts=[['all','All time'],[String(y),String(y)+' (this year)'],[String(y-1),String(y-1)],[String(y-2),String(y-2)]];
+  sel.innerHTML=opts.map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>'}).join('');
+  sel.value=String(y);
+}
 function loadReceipts(){
+  rcpYearInit();
   const el=document.getElementById('receipts-list');if(!el)return;
   el.innerHTML='<div class="spin"></div>';
-  get('receipts','user_id=eq.'+UID+'&order=created_at.desc').then(d=>{
-    RECEIPTS=Array.isArray(d)?d:[];
-    if(!RECEIPTS.length){el.innerHTML='<div class="empty"><i>\ud83e\uddfe</i><p>No saved receipts yet.<br>Save receipts from completed orders.</p></div>';return}
-    el.innerHTML=RECEIPTS.map(r=>'<div class="ic" style="margin:0 0 10px">'
-      +(r.image_url?'<img src="'+r.image_url+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:10px" onerror="this.style.display=\'none\'" onclick="window.open(\''+r.image_url+'\',\'_blank\')">':'')
-      +'<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">\ud83e\uddfe '+(r.merchant_name||'Receipt')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.receipt_no||'')+' \u00b7 '+(r.created_at?new Date(r.created_at).toLocaleString().slice(0,17):'')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.items||'')+'</div></div><div style="font-size:17px;font-weight:800;color:var(--purple)">\u00a3'+parseFloat(r.total||0).toFixed(2)+'</div></div></div>').join('');
-  }).catch(()=>{el.innerHTML='<div class="empty"><i>\u26a0\ufe0f</i><p>Could not load receipts</p></div>'});
+  get('receipts','user_id=eq.'+UID+'&order=created_at.desc').then(function(d){
+    let all=Array.isArray(d)?d:[];
+    const yr=(document.getElementById('rcp-year')||{}).value||'all';
+    RECEIPTS=yr==='all'?all:all.filter(function(r){return new Date(r.created_at||0).getFullYear()===parseInt(yr)});
+    const tot=RECEIPTS.reduce(function(a,r){return a+parseFloat(r.total||0)},0);
+    txt('rcp-total','£'+tot.toFixed(2));txt('rcp-count',RECEIPTS.length+' receipts');
+    if(!RECEIPTS.length){el.innerHTML='<div class="empty"><i>🧾</i><p>No receipts in this period.<br>Scan one with 📷 or save from completed orders.</p></div>';return}
+    el.innerHTML=RECEIPTS.map(function(r){return '<div class="ic" style="margin:0 0 10px">'
+      +(r.image_url?'<img src="'+r.image_url+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:10px" onclick="window.open(String.fromCharCode(39)+r.image_url" onerror="this.style.display=String.fromCharCode(39)+String.fromCharCode(39)">':'')
+      +'<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">🧾 '+(r.merchant_name||'Receipt')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.receipt_no||'')+' · '+(r.created_at?new Date(r.created_at).toLocaleString().slice(0,17):'')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.items||'')+'</div></div><div style="font-size:17px;font-weight:800;color:var(--purple)">£'+parseFloat(r.total||0).toFixed(2)+'</div></div></div>'}).join('');
+    // fix image handlers cleanly
+    Array.prototype.forEach.call(el.querySelectorAll('img'),function(im,i){
+      im.onclick=function(){window.open(RECEIPTS[i]&&RECEIPTS[i].image_url||'#','_blank')};
+      im.onerror=function(){this.style.display='none'};
+    });
+  }).catch(function(){el.innerHTML='<div class="empty"><i>⚠️</i><p>Could not load receipts</p></div>'});
+}
+function exportReceiptsCSV(){
+  if(!RECEIPTS.length){T('No receipts in this period');return}
+  const Q2=String.fromCharCode(34);
+  let rows=[['Date','Time','Merchant','Receipt No','Items','Total GBP']];
+  RECEIPTS.forEach(function(r){const dt=new Date(r.created_at||0);rows.push([dt.toLocaleDateString(),dt.toLocaleTimeString().slice(0,5),r.merchant_name||'',r.receipt_no||'',r.items||'',parseFloat(r.total||0).toFixed(2)]);});
+  const tot=RECEIPTS.reduce(function(a,r){return a+parseFloat(r.total||0)},0);
+  rows.push(['','','','','TOTAL',tot.toFixed(2)]);
+  const csv=rows.map(function(r){return r.map(function(cl){return Q2+String(cl).split(Q2).join(Q2+Q2)+Q2}).join(',')}).join(String.fromCharCode(10));
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='stashlo-receipts-tax.csv';a.click();
+  T('📊 Tax CSV downloaded — ready for HMRC/your accountant');
 }
 function saveReceipt(orderId){
   const o=ORDERS.find(x=>x.id===orderId);if(!o){T('Order not found');return}

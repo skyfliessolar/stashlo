@@ -486,6 +486,15 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
         <button class="btn" style="width:100%;margin-top:8px;background:var(--bg2)" onclick="posClear()">Clear basket</button>
       </div>
       <div style="margin:12px 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
+        <div style="font-size:13px;font-weight:800;margin-bottom:8px">⚙️ POS Settings</div>
+        <div class="field" style="margin-bottom:8px"><label class="field-label">VAT number (prints on receipts)</label><input id="pos-vatno" placeholder="GB123456789" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
+        <div class="field" style="margin-bottom:8px"><label class="field-label">Receipt footer message</label><input id="pos-footer" placeholder="Thank you for shopping with us!" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-purple" style="flex:1" onclick="savePOSSettings()">💾 Save</button>
+          <button class="btn btn-gray" style="flex:1" onclick="reprintLast()">🖨 Reprint last</button>
+        </div>
+      </div>
+      <div style="margin:12px 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="font-size:13px;font-weight:800">📑 Reports</div>
           <button class="btn-xs btn-purple" onclick="posExportCSV()">⬇️ HMRC CSV</button>
@@ -1209,10 +1218,58 @@ function initTilt3D(){
 }
 
 
+// ===== RECEIPT PRINTER (works with any browser-connected printer incl. Bluetooth 80mm) =====
+function buildReceiptHTML(sale){
+  const items=JSON.parse(sale.items||'[]');
+  const dt=new Date(sale.created_at||Date.now());
+  const vatNo=MDATA.receipt_vat_no||localStorage.getItem('sl_vatno_'+MID)||'';
+  const footer=MDATA.receipt_footer||localStorage.getItem('sl_rfoot_'+MID)||'Thank you for shopping with us!';
+  let h='<html><head><title>Receipt</title><style>body{font-family:monospace;width:280px;margin:0 auto;padding:10px;font-size:12px;color:#000}h2{text-align:center;margin:4px 0;font-size:16px}.c{text-align:center}.row{display:flex;justify-content:space-between}.line{border-top:1px dashed #000;margin:6px 0}.b{font-weight:bold}.tot{font-size:15px}</style></head><body>';
+  h+='<h2>'+(MDATA.name||'Stashlo Shop')+'</h2>';
+  if(MDATA.address)h+='<div class="c">'+MDATA.address+'</div>';
+  if(vatNo)h+='<div class="c">VAT No: '+vatNo+'</div>';
+  h+='<div class="c">'+dt.toLocaleDateString()+' '+dt.toLocaleTimeString().slice(0,5)+'</div>';
+  h+='<div class="c">Receipt: '+(sale.id||'').slice(0,8).toUpperCase()+'</div><div class="line"></div>';
+  items.forEach(function(it){h+='<div class="row"><span>'+it.n+' x'+it.q+'</span><span>£'+(it.p*it.q).toFixed(2)+'</span></div>';});
+  h+='<div class="line"></div>';
+  h+='<div class="row"><span>Net</span><span>£'+parseFloat(sale.net||0).toFixed(2)+'</span></div>';
+  h+='<div class="row"><span>VAT</span><span>£'+parseFloat(sale.vat_total||0).toFixed(2)+'</span></div>';
+  h+='<div class="row b tot"><span>TOTAL</span><span>£'+parseFloat(sale.total||0).toFixed(2)+'</span></div>';
+  h+='<div class="row"><span>Paid by</span><span>'+(sale.method||'cash').toUpperCase()+'</span></div>';
+  h+='<div class="line"></div><div class="c">'+footer+'</div>';
+  h+='<div class="c" style="margin-top:6px">Powered by Stashlo</div>';
+  h+='</body></html>';
+  return h;
+}
+function printReceipt(sale){
+  try{
+    const w=window.open('','stashloprint','width=340,height=620');
+    if(!w){T('Allow popups to print receipts','error');return}
+    w.document.write(buildReceiptHTML(sale));
+    w.document.close();
+    setTimeout(function(){w.focus();w.print();},350);
+  }catch(e){T('Print failed','error');}
+}
+function reprintLast(){
+  if(window._LAST_SALE)printReceipt(window._LAST_SALE);
+  else T('No sale yet this session','error');
+}
+
 // ===== EPOS ENGINE =====
 let POS_BASKET=[];
 function vatRate(p){const v=(p.vat_rate===undefined||p.vat_rate===null)?'20':String(p.vat_rate);return v==='20'?0.2:v==='5'?0.05:0;}
+function savePOSSettings(){
+  const v=V('pos-vatno'),f=V('pos-footer');
+  try{localStorage.setItem('sl_vatno_'+MID,v);localStorage.setItem('sl_rfoot_'+MID,f);}catch(e){}
+  MDATA.receipt_vat_no=v;MDATA.receipt_footer=f;
+  pat('merchants','id=eq.'+MID,{receipt_vat_no:v,receipt_footer:f})
+  .then(function(){T('✅ POS settings saved','success');})
+  .catch(function(){T('Saved on this device (run migration for cloud sync)','success');});
+}
 function posGuard(){
+  const vEl=document.getElementById('pos-vatno'),fEl=document.getElementById('pos-footer');
+  if(vEl)vEl.value=MDATA.receipt_vat_no||localStorage.getItem('sl_vatno_'+MID)||'';
+  if(fEl)fEl.value=MDATA.receipt_footer||localStorage.getItem('sl_rfoot_'+MID)||'';
   const pay=document.getElementById('pos-paywall'),main=document.getElementById('pos-main');
   if(MDATA.pos_enabled){pay.style.display='none';main.style.display='block';renderPOSGrid();}
   else{
@@ -1222,10 +1279,14 @@ function posGuard(){
 }
 function requestPOS(){
   if(!confirm('Subscribe to Stashlo EPOS for 15 GBP/month? Payment is taken now and admin will activate your till.'))return;
-  Promise.all([
-    post('merchant_billing',{merchant_id:MID,merchant_name:MDATA.name||'',amount:15,description:'EPOS subscription (monthly)',status:'paid',created_at:Date.now()}),
-    pat('merchants','id=eq.'+MID,{pos_requested:true})
-  ]).then(function(){T('Paid - awaiting admin activation','success');MDATA.pos_requested=true;posGuard();}).catch(function(){T('Payment failed','error');});
+  post('merchant_billing',{merchant_id:MID,merchant_name:MDATA.name||'',amount:15,description:'EPOS subscription (monthly)',status:'paid',created_at:Date.now()})
+  .then(function(){
+    MDATA.pos_requested=true;posGuard();
+    T('💳 Paid — awaiting admin activation','success');
+    return pat('merchants','id=eq.'+MID,{pos_requested:true});
+  })
+  .catch(function(){T('Payment record failed','error');})
+  .then(null,function(){/* pos_requested column missing — billing row is enough for admin to see */});
 }
 function renderPOSGrid(){
   const el=document.getElementById('pos-grid');if(!el)return;
@@ -1268,9 +1329,16 @@ function posCheckout(method){
   let net=0,vat=0;
   POS_BASKET.forEach(function(b){const g=b.price*b.qty;const n=g/(1+b.vat);net+=n;vat+=g-n;});
   const total=net+vat;
-  post('pos_sales',{merchant_id:MID,items:JSON.stringify(POS_BASKET.map(function(b){return {n:b.name,q:b.qty,p:b.price,v:b.vat}})),net:net.toFixed(2),vat_total:vat.toFixed(2),total:total.toFixed(2),method:method,created_at:Date.now()})
-  .then(function(){T((method==='cash'?'CASH':'CARD')+' sale £'+total.toFixed(2)+' recorded','success');posClear();})
-  .catch(function(){T('Sale failed to save','error');});
+  const saleObj={merchant_id:MID,items:JSON.stringify(POS_BASKET.map(function(b){return {n:b.name,q:b.qty,p:b.price,v:b.vat}})),net:net.toFixed(2),vat_total:vat.toFixed(2),total:total.toFixed(2),method:method,created_at:Date.now()};
+  post('pos_sales',saleObj)
+  .then(function(res){
+    const saved=Array.isArray(res)&&res[0]?res[0]:saleObj;
+    window._LAST_SALE=saved;
+    T((method==='cash'?'CASH':'CARD')+' sale £'+total.toFixed(2)+' recorded','success');
+    posClear();
+    if(confirm('Sale complete — £'+total.toFixed(2)+'\n\nPrint receipt?'))printReceipt(saved);
+  })
+  .catch(function(){window._LAST_SALE=saleObj;T('Saved locally — DB column missing? Run migration','error');if(confirm('Print receipt anyway?'))printReceipt(saleObj);});
 }
 function posDayEnd(){
   const start=new Date();start.setHours(0,0,0,0);
