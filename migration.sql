@@ -399,3 +399,39 @@ CREATE TABLE IF NOT EXISTS credit_waitlist (
 ALTER TABLE credit_waitlist ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "allow_all_credit_waitlist" ON credit_waitlist;
 CREATE POLICY "allow_all_credit_waitlist" ON credit_waitlist FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- ===== v8: EPOS + OTP-era columns =====
+ALTER TABLE products ADD COLUMN IF NOT EXISTS vat_rate text DEFAULT '20';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS cost_price numeric DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS pos_category text DEFAULT 'general';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS barcode text;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS pos_enabled boolean DEFAULT false;
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS pos_requested boolean DEFAULT false;
+ALTER TABLE support_chats ADD COLUMN IF NOT EXISTS escalated boolean DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS pos_sales (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  merchant_id text,
+  items text,
+  net numeric DEFAULT 0,
+  vat_total numeric DEFAULT 0,
+  total numeric DEFAULT 0,
+  method text DEFAULT 'cash',
+  shift text,
+  created_at bigint
+);
+ALTER TABLE pos_sales ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "allow_all_pos_sales" ON pos_sales;
+CREATE POLICY "allow_all_pos_sales" ON pos_sales FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS merchant_checklists (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  merchant_id text,
+  date text,
+  item text,
+  done boolean DEFAULT false,
+  created_at bigint
+);
+ALTER TABLE merchant_checklists ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "allow_all_merchant_checklists" ON merchant_checklists;
+CREATE POLICY "allow_all_merchant_checklists" ON merchant_checklists FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);

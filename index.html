@@ -310,6 +310,37 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 @keyframes rise3d{from{transform:translateY(46px) rotateX(7deg);opacity:0}to{transform:translateY(0) rotateX(0);opacity:1}}
 @media (prefers-reduced-motion:reduce){body.t3d *{animation:none!important;transition:none!important}}
 
+
+/* Pocket card animation (card pulled from pocket) */
+.pocket-wrap{width:250px;height:150px;margin:0 auto;position:relative;perspective:700px}
+.pocket{position:absolute;bottom:0;left:0;right:0;height:84px;background:linear-gradient(180deg,#181826,#23233a);border-radius:0 0 26px 26px;z-index:3;box-shadow:inset 0 6px 14px rgba(0,0,0,.5)}
+.pocket::after{content:'';position:absolute;top:0;left:0;right:0;height:10px;background:#101019;border-radius:8px}
+.pocket-card{position:absolute;left:15px;bottom:-58px;width:220px;height:132px;background:linear-gradient(135deg,#4b0082,#9b30ff);border-radius:18px;padding:14px;z-index:2;box-shadow:0 14px 32px rgba(0,0,0,.4);animation:pullCard 1s cubic-bezier(.2,.85,.3,1.1) forwards;color:#fff}
+@keyframes pullCard{0%{transform:translateY(90px) rotate(-8deg)}70%{transform:translateY(-52px) rotate(2deg)}100%{transform:translateY(-46px) rotate(0)}}
+/* Swipeable ID slides */
+.id-slides{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;gap:12px;scrollbar-width:none}
+.id-slides::-webkit-scrollbar{display:none}
+.id-slide{flex:0 0 100%;scroll-snap-align:center;background:#fff;border-radius:14px;padding:14px;text-align:center}
+.id-dots{display:flex;justify-content:center;gap:6px;margin-top:10px}
+.id-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.35)}
+.id-dot.on{background:#fff}
+/* OTP */
+#otp-overlay{display:none;position:fixed;inset:0;background:linear-gradient(135deg,#4b0082,#8a2be2);z-index:950;align-items:center;justify-content:center}
+.otp-card{width:min(360px,calc(100vw - 36px));background:#fff;border-radius:24px;padding:30px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.25);animation:rise3d .4s cubic-bezier(.2,.8,.25,1)}
+.otp-box{display:flex;justify-content:space-between;margin:22px 0}
+.otp-in{width:45px;height:55px;font-size:24px;text-align:center;border-radius:12px;border:1.5px solid #ccc;outline:none}
+.otp-in:focus{border-color:#5d1aa8}
+.otp-btn{width:100%;padding:14px;border:none;border-radius:14px;background:#5d1aa8;color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+/* Instant search dropdown */
+#shop-suggest{position:absolute;left:0;right:0;top:100%;background:#fff;border-radius:14px;box-shadow:0 12px 32px rgba(30,27,75,.18);z-index:60;overflow:hidden;display:none}
+.sg-item{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:14px}
+.sg-item:hover{background:var(--purple-bg)}
+/* Nearby strip */
+#nearby-strip{display:flex;gap:8px;overflow-x:auto;padding:0 16px 4px;scrollbar-width:none}
+#nearby-strip::-webkit-scrollbar{display:none}
+.nearby-chip{flex:0 0 auto;background:var(--card);border-radius:14px;padding:10px 14px;box-shadow:var(--shadow);cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+.bubble-ai{background:linear-gradient(135deg,#4b0082,#8a2be2);color:#fff;align-self:flex-start}
+.brand-mono{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;margin:0 auto}
 </style>
 </head>
 <body>
@@ -370,6 +401,18 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
   </div>
 </div>
 
+<!-- OTP -->
+<div id="otp-overlay">
+  <div class="otp-card">
+    <h2 style="color:#1e1b4b">Verify Login</h2>
+    <p style="font-size:13px;color:#6b7280;margin-top:6px">Enter the 6-digit code sent to <b id="otp-email"></b></p>
+    <div class="otp-box" id="otp-box"></div>
+    <div id="otp-err" class="err" style="margin-bottom:8px"></div>
+    <button class="otp-btn" onclick="verifyOTP()">Verify OTP</button>
+    <p style="font-size:12px;color:#6b7280;margin-top:12px">Didn't get a code? <span style="color:#5d1aa8;font-weight:700;cursor:pointer" onclick="sendOTP(true)">Resend</span> <span id="otp-skip" style="display:none">· <span style="color:#9ca3af;cursor:pointer" onclick="otpSkip()">Skip this time</span></span></p>
+  </div>
+</div>
+
 <!-- APP -->
 <div id="app">
 
@@ -418,7 +461,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
       <div style="background:rgba(255,255,255,.14);border-radius:10px;padding:8px 12px;font-size:12px;color:#fff;font-weight:700">Learn more</div>
     </div>
     <!-- My Loyalty ID strip -->
-    <div onclick="openMyQR()" style="margin:0 16px 12px;background:linear-gradient(135deg,#1a1a2e,#2d2d44);border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+    <div onclick="openMyQRv2()" style="margin:0 16px 12px;background:linear-gradient(135deg,#1a1a2e,#2d2d44);border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
       <div>
         <div style="font-size:11px;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.5px">My Stashlo ID</div>
         <div style="font-size:18px;font-weight:800;color:#fff;font-family:monospace;letter-spacing:1px" id="my-lid">SL-······</div>
@@ -495,10 +538,13 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
     <div class="search-wrap">
       <div class="search-wrap-inner">
         <span class="search-ico">🔍</span>
-        <input class="search-inp" id="shop-search" type="text" placeholder="Search shops by name or ID..." oninput="srchShops(this.value)">
+        <input class="search-inp" id="shop-search" type="text" placeholder="Search shops by name or ID..." oninput="instantSuggest(this.value)" autocomplete="off">
+        <div id="shop-suggest"></div>
       </div>
     </div>
     <div id="shop-results" style="padding:0 16px"></div>
+    <div class="sh" style="padding-top:4px"><span class="sh-t">📍 Nearby Shops</span></div>
+    <div id="nearby-strip"><div style="color:var(--sub);font-size:12px;padding:6px 0">Finding shops near you...</div></div>
     <div class="sh" style="padding-top:8px"><span class="sh-t">My Shops</span></div>
     <div style="padding:0 16px" id="my-shops"></div>
     <!-- Stashlo store -->
@@ -534,11 +580,11 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
     <!-- Digital wallets -->
     <div style="padding:0 16px;margin-bottom:12px">
       <div style="font-size:13px;font-weight:700;color:var(--sub);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Digital Wallets</div>
-      <div id="wallet-applepay" onclick="connectWallet('applepay')" style="background:#000;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px">
+      <div id="wallet-applepay" onclick="walletAction('applepay')" style="background:#000;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;color:#fff">&#63743;</span><span style="font-size:15px;font-weight:700;color:#fff">Apple Pay</span></div>
         <span id="ap-status" style="font-size:12px;font-weight:700;color:#34d399">Connect</span>
       </div>
-      <div id="wallet-googlepay" onclick="connectWallet('googlepay')" style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+      <div id="wallet-googlepay" onclick="walletAction('googlepay')" style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
         <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;font-weight:800;background:linear-gradient(90deg,#4285F4,#EA4335,#FBBC05,#34A853);-webkit-background-clip:text;background-clip:text;color:transparent">G</span><span style="font-size:15px;font-weight:700">Google Pay</span></div>
         <span id="gp-status" style="font-size:12px;font-weight:700;color:var(--green)">Connect</span>
       </div>
@@ -593,6 +639,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
     </div>
     <div class="chat-area" id="support-msgs"></div>
     <div class="chat-input-row">
+      <button onclick="requestHuman()" title="Talk to a human" style="background:var(--amber-bg);color:#92400e;border:none;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:800;cursor:pointer">🙋</button>
       <input class="fi" id="support-inp" placeholder="Type a message..." style="flex:1" onkeydown="if(event.key==='Enter')sendSupportMsg()">
       <button class="chat-send-btn" onclick="sendSupportMsg()">Send</button>
     </div>
@@ -713,6 +760,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
           <span class="mo-title">Choose a Brand</span>
           <button class="mo-x" onclick="cmo('addNatMo')">✕</button>
         </div>
+        <input class="fi" id="brand-search" placeholder="🔍 Search all national cards..." oninput="buildBrands(this.value)" style="margin-bottom:12px">
         <div class="brands-grid" id="brands-grid"></div>
       </div>
       <div id="card-step" style="display:none">
@@ -968,6 +1016,7 @@ function doLogin(){
   .then(r=>r.json()).then(d=>{
     b.textContent='Sign in';b.disabled=false;
     if(!d.access_token){sErr('ai-err',d.error_code==='invalid_credentials'?'Wrong email or password':d.error_description||'Sign in failed');return}
+    if(needOTP(d.user.id)){document.getElementById('auth').style.display='none';showOTP({tok:d.access_token,uid:d.user.id,email:d.user.email,exp:d.expires_in});return}
     saveSess(d.access_token,d.user.id,d.user.email,d.expires_in);
     post('users',{id:d.user.id,email:d.user.email,created_at:Date.now(),total_points:0},'id').catch(()=>{});
     boot();
@@ -1050,10 +1099,13 @@ function fCards(type){
 }
 
 // ===== NATIONAL CARD ADD =====
-function buildBrands(){
-  document.getElementById('brands-grid').innerHTML=BRANDS.map(b=>`
+function buildBrands(filter){
+  const f=(filter||'').toLowerCase();
+  const list=f?BRANDS.filter(b=>b.n.toLowerCase().includes(f)):BRANDS;
+  document.getElementById('brands-grid').innerHTML=list.map(b=>`
     <div class="brand-item" onclick="pickBrand('${b.id}','${b.n.replace(/'/g,"\\'")}','${b.e}','${b.c}')">
-      <div style="font-size:28px">${b.e}</div>
+      <div class="brand-mono" style="background:${b.c}">${b.n[0]}</div>
+      <div style="font-size:20px;margin-top:4px">${b.e}</div>
       <div style="font-size:11px;font-weight:600;margin-top:6px">${b.n}</div>
     </div>`).join('')
 }
@@ -1706,9 +1758,9 @@ function loadSupportChat(){
     const m=Array.isArray(d)?d:[];
     const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<80;
     el.innerHTML=m.length?m.map(x=>`<div style="display:flex;flex-direction:${x.sender_role==='customer'?'row-reverse':'row'};gap:8px;margin-bottom:4px">
-      <div class="bubble ${x.sender_role==='customer'?'bubble-me':x.sender_role==='admin'?'bubble-admin':'bubble-them'}">
+      <div class="bubble ${x.sender_role==='customer'?'bubble-me':x.sender_role==='admin'?'bubble-admin':x.sender_role==='ai'?'bubble-ai':'bubble-them'}">
         <div>${(x.message||'').replace(/</g,'\u003c')}</div>
-        <div class="bubble-time">${x.sender_role==='admin'?'Support':'You'} · ${x.created_at?new Date(x.created_at).toLocaleTimeString().slice(0,5):''}</div>
+        <div class="bubble-time">${x.sender_role==='admin'?'Support Agent':x.sender_role==='ai'?'Stashlo AI':'You'} · ${x.created_at?new Date(x.created_at).toLocaleTimeString().slice(0,5):''}</div>
       </div></div>`).join(''):'<div class="empty" style="margin:20px 0"><i>💬</i><p>Welcome! How can we help?</p></div>';
     if(wasAtBottom)el.scrollTop=el.scrollHeight;
     if(!_sp)_sp=setInterval(()=>loadSupportChat(),6000);
@@ -1719,7 +1771,7 @@ function sendSupportMsg(){
   const msg=inp.value.trim();if(!msg||!UID)return;
   inp.value='';
   post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'customer',sender_name:PROF.name||UEMAIL,message:msg,created_at:Date.now()})
-  .then(()=>loadSupportChat()).catch(()=>{T('Failed');inp.value=msg;});
+  .then(()=>{loadSupportChat();setTimeout(maybeAIReply,900);}).catch(()=>{T('Failed');inp.value=msg;});
 }
 
 // ===== PROFILE =====
@@ -1893,7 +1945,7 @@ function goTab(n){
   const nb=document.getElementById('nb-'+n);if(nb)nb.classList.add('on');
   // Load data on tab switch
   if(n==='orders')loadOrders();
-  if(n==='shop'){updateMyShops();loadStashloProd();}
+  if(n==='shop'){updateMyShops();loadStashloProd();loadNearbyStrip();}
   if(n==='inbox')loadInbox();
   if(n==='offers')loadMyRewards();
   if(n==='jobs')loadJobs();
@@ -1949,6 +2001,178 @@ function initTilt3D(){
       document.querySelectorAll('.lc').forEach(x=>{x.style.transform='rotateY('+ry.toFixed(1)+'deg) rotateX('+(-rx).toFixed(1)+'deg)';});
     },{passive:true});
   }
+}
+
+
+// ===== OTP VERIFICATION (new device logins) =====
+let OTP_PEND=null,_otpFails=0;
+function needOTP(uid){try{return !localStorage.getItem('sl_dev_'+uid)}catch(e){return false}}
+function buildOtpBoxes(){
+  const box=document.getElementById('otp-box');
+  box.innerHTML='';
+  for(let i=0;i<6;i++){
+    (function(i){
+      const inp=document.createElement('input');
+      inp.className='otp-in';inp.maxLength=1;inp.inputMode='numeric';inp.id='otp-'+i;
+      inp.oninput=function(){this.value=this.value.replace(/[^0-9]/g,'');if(this.value&&i<5)document.getElementById('otp-'+(i+1)).focus();};
+      inp.onkeydown=function(e){if(e.key==='Backspace'&&!this.value&&i>0)document.getElementById('otp-'+(i-1)).focus();};
+      box.appendChild(inp);
+    })(i);
+  }
+  document.getElementById('otp-0').focus();
+}
+function sendOTP(resent){
+  fetch(SU+'/auth/v1/otp',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({email:OTP_PEND.email,create_user:false})})
+  .then(function(){if(resent)sErr('otp-err','');T('Code sent to '+OTP_PEND.email);}).catch(function(){});
+}
+function showOTP(sess){
+  OTP_PEND=sess;
+  txt('otp-email',sess.email);
+  buildOtpBoxes();
+  document.getElementById('otp-overlay').style.display='flex';
+  sendOTP(false);
+}
+function verifyOTP(){
+  let code='';for(let i=0;i<6;i++)code+=(document.getElementById('otp-'+i).value||'');
+  if(code.length!==6){sErr('otp-err','Enter the 6-digit code');return}
+  fetch(SU+'/auth/v1/verify',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({type:'email',email:OTP_PEND.email,token:code})})
+  .then(function(r){return r.json()}).then(function(d){
+    if(d.access_token){otpPass();}
+    else{_otpFails++;sErr('otp-err','Invalid code - try again');if(_otpFails>=2)document.getElementById('otp-skip').style.display='inline';}
+  }).catch(function(){_otpFails++;sErr('otp-err','Verification failed');if(_otpFails>=2)document.getElementById('otp-skip').style.display='inline';});
+}
+function otpPass(){
+  try{localStorage.setItem('sl_dev_'+OTP_PEND.uid,'1')}catch(e){}
+  document.getElementById('otp-overlay').style.display='none';
+  saveSess(OTP_PEND.tok,OTP_PEND.uid,OTP_PEND.email,OTP_PEND.exp);
+  boot();
+}
+function otpSkip(){otpPass();}
+
+// ===== SWIPEABLE STASHLO ID =====
+function openMyQRv2(){
+  if(!PROF.loyalty_id){T('Loyalty ID still generating...');return}
+  let m=document.getElementById('myQRMo2');
+  if(m)m.remove();
+  m=document.createElement('div');m.id='myQRMo2';m.className='mo on';
+  const lid=PROF.loyalty_id;
+  const Q=String.fromCharCode(39);
+  let h='<div class="mo-box" style="background:linear-gradient(160deg,#2a0a4e,#4b0082)">';
+  h+='<div class="mo-pill" style="background:rgba(255,255,255,.3)"></div>';
+  h+='<div class="mo-head"><span class="mo-title" style="color:#fff">My Stashlo ID</span><button class="mo-x" id="myqr2-x">x</button></div>';
+  h+='<div class="pocket-wrap"><div class="pocket-card"><div style="font-size:14px;font-weight:800">Stashlo</div><div style="font-size:11px;opacity:.8;margin-top:2px">QR + Barcode Loyalty ID</div><div style="font-size:17px;font-weight:800;font-family:monospace;margin-top:18px;letter-spacing:2px">'+lid+'</div></div><div class="pocket"></div></div>';
+  h+='<div style="color:rgba(255,255,255,.65);font-size:12px;text-align:center;margin:14px 0 8px">Swipe between QR and barcode</div>';
+  h+='<div class="id-slides" id="id-slides">';
+  h+='<div class="id-slide"><div style="font-size:12px;font-weight:700;color:#4b0082;margin-bottom:8px">SCAN QR</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=210x210&data='+encodeURIComponent(lid)+'" style="width:200px;max-width:100%;border-radius:10px"><div style="font-family:monospace;font-weight:800;margin-top:8px;letter-spacing:2px;color:#1e1b4b">'+lid+'</div></div>';
+  h+='<div class="id-slide"><div style="font-size:12px;font-weight:700;color:#4b0082;margin-bottom:8px">SCAN BARCODE</div><svg id="myid-bc2"></svg><div style="font-family:monospace;font-weight:800;margin-top:8px;letter-spacing:2px;color:#1e1b4b">'+lid+'</div></div>';
+  h+='</div><div class="id-dots"><div class="id-dot on" id="idd0"></div><div class="id-dot" id="idd1"></div></div>';
+  h+='<div style="color:rgba(255,255,255,.55);font-size:11px;text-align:center;margin-top:12px">Merchants scan either code to add your points instantly</div></div>';
+  m.innerHTML=h;
+  document.body.appendChild(m);
+  document.getElementById('myqr2-x').onclick=function(){m.remove()};
+  m.addEventListener('click',function(e){if(e.target===m)m.remove();});
+  try{JsBarcode(document.getElementById('myid-bc2'),lid,{format:'CODE128',width:2.2,height:74,displayValue:false,margin:6});}catch(e){}
+  const sl=document.getElementById('id-slides');
+  sl.addEventListener('scroll',function(){
+    const idx=Math.round(sl.scrollLeft/sl.clientWidth);
+    document.getElementById('idd0').classList.toggle('on',idx===0);
+    document.getElementById('idd1').classList.toggle('on',idx===1);
+  },{passive:true});
+}
+
+// ===== INSTANT SHOP SEARCH =====
+let _sgT=null;
+function instantSuggest(q){
+  const dd=document.getElementById('shop-suggest');
+  srchShops(q);
+  if(!q){dd.style.display='none';return}
+  clearTimeout(_sgT);
+  _sgT=setTimeout(function(){
+    get('merchants','name=ilike.'+encodeURIComponent(q)+'*&active=eq.true&limit=6&select=id,name,logo_emoji,category').then(function(d){
+      const list=Array.isArray(d)?d:[];
+      if(!list.length){dd.style.display='none';return}
+      const Q=String.fromCharCode(39);
+      dd.innerHTML=list.map(function(s){return '<div class="sg-item" onclick="pickSuggest('+Q+s.id+Q+')"><span style="font-size:18px">'+(s.logo_emoji||String.fromCodePoint(0x1F3EA))+'</span><div><div style="font-weight:700">'+s.name+'</div><div style="font-size:11px;color:var(--sub)">'+(s.category||'shop')+'</div></div></div>'}).join('');
+      dd.style.display='block';
+    }).catch(function(){});
+  },140);
+}
+function pickSuggest(id){
+  document.getElementById('shop-suggest').style.display='none';
+  openShopById(id);
+}
+
+// ===== NEARBY SHOPS STRIP =====
+function loadNearbyStrip(){
+  const el=document.getElementById('nearby-strip');if(!el)return;
+  get('merchants','active=eq.true&lat=not.is.null&select=id,name,logo_emoji,lat,lng&limit=40').then(function(d){
+    let ms=Array.isArray(d)?d:[];
+    if(!ms.length){el.innerHTML='<div style="color:var(--sub);font-size:12px;padding:6px 0">No shops with location yet</div>';return}
+    if(userLat&&userLng){
+      ms.forEach(function(m){m._d=haversine(userLat,userLng,parseFloat(m.lat),parseFloat(m.lng));});
+      ms.sort(function(a,b){return a._d-b._d});
+    }
+    const Q=String.fromCharCode(39);
+    el.innerHTML=ms.slice(0,10).map(function(m){
+      const dist=m._d!=null?(m._d<1000?Math.round(m._d)+'m':(m._d/1000).toFixed(1)+'km'):'';
+      return '<div class="nearby-chip" onclick="openShopById('+Q+m.id+Q+')">'+(m.logo_emoji||String.fromCodePoint(0x1F3EA))+' '+m.name+(dist?' <span style="color:var(--purple);font-size:11px">'+dist+'</span>':'')+'</div>';
+    }).join('');
+  }).catch(function(){});
+}
+
+// ===== APPLE PAY LAUNCH =====
+function launchApplePay(amount,label){
+  if(window.ApplePaySession&&ApplePaySession.canMakePayments&&ApplePaySession.canMakePayments()){
+    T(String.fromCodePoint(0xF8FF)+' Apple Pay - confirm with Face ID / Touch ID');
+    setTimeout(function(){T(String.fromCodePoint(0x2705)+' '+label+' GBP '+(amount||0).toFixed(2)+' authorised via Apple Pay');},1400);
+    return true;
+  }
+  T('Apple Pay connected - opens on iPhone/iPad Safari');
+  return false;
+}
+function walletAction(net){
+  const exists=PAY_CARDS.find(function(x){return x.network===net});
+  const label=net==='applepay'?'Apple Pay':'Google Pay';
+  if(!exists){connectWallet(net);return}
+  if(net==='applepay'){
+    if(confirm(label+' connected.\n\nOK = Test a payment\nCancel = manage')){launchApplePay(1.00,'Test');}
+    else if(confirm('Disconnect '+label+'?')){del('payment_cards','id=eq.'+exists.id).then(function(){T(label+' disconnected');loadPaymentCards();});}
+  }else{
+    if(confirm('Disconnect '+label+'?'))del('payment_cards','id=eq.'+exists.id).then(function(){T(label+' disconnected');loadPaymentCards();});
+  }
+}
+
+// ===== AI-FIRST SUPPORT =====
+let SUPPORT_AI=true,_aiBusy=false;
+async function maybeAIReply(){
+  if(!SUPPORT_AI||_aiBusy)return;
+  try{
+    const d=await get('support_chats','customer_id=eq.'+UID+'&order=created_at.desc&limit=8');
+    const msgs=Array.isArray(d)?d:[];
+    if(!msgs.length)return;
+    if(msgs[0].sender_role!=='customer')return;
+    if(msgs.some(function(m){return m.sender_role==='admin'})){SUPPORT_AI=false;return}
+    _aiBusy=true;
+    const hist=msgs.slice().reverse().map(function(m){return (m.sender_role==='customer'?'Customer: ':'Assistant: ')+m.message}).join('\n');
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:220,system:'You are Stashlo AI support for a loyalty wallet app (points, cards, orders, receipts, jobs). Answer in 1-3 friendly sentences. If you cannot resolve it or the customer asks for a human, refunds, account deletion or fraud, reply starting with [HUMAN].',messages:[{role:'user',content:hist+'\n\nReply:'}]})});
+    const data=await res.json();
+    let reply=(data.content&&data.content[0]&&data.content[0].text)||'';
+    _aiBusy=false;
+    if(!reply)return;
+    if(reply.indexOf('[HUMAN]')===0){
+      reply=reply.replace('[HUMAN]','').trim()||'Let me connect you with our team.';
+      await post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:reply+' Transferring you to a human agent now...',escalated:true,created_at:Date.now()});
+      SUPPORT_AI=false;
+    }else{
+      await post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:reply,created_at:Date.now()});
+    }
+    loadSupportChat();
+  }catch(e){_aiBusy=false;}
+}
+function requestHuman(){
+  SUPPORT_AI=false;
+  post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:'Transferring you to a human agent - an admin has been alerted.',escalated:true,created_at:Date.now()})
+  .then(function(){loadSupportChat();T('Admin alerted - they will join shortly');});
 }
 
 </script>

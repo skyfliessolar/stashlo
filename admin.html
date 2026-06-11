@@ -776,7 +776,7 @@ function renderMerchants(list){
             ${m.logo_url?`<img src="${m.logo_url}" style="width:46px;height:46px;border-radius:var(--r12);object-fit:cover" onerror="this.style.display='none'">`:`${m.logo_emoji||'🏪'}`}
           </div>
           <div>
-            <div class="ic-name">${m.name||'Unnamed Shop'} ${m.suspended?'<span style="background:#7f1d1d;color:#fca5a5;border-radius:6px;padding:1px 6px;font-size:9px;font-weight:800">SUSPENDED</span>':''}${m.restricted?'<span style="background:#713f12;color:#fde68a;border-radius:6px;padding:1px 6px;font-size:9px;font-weight:800">RESTRICTED</span>':''}</div>
+            <div class="ic-name">${m.name||'Unnamed Shop'} ${m.suspended?'<span style="background:#7f1d1d;color:#fca5a5;border-radius:6px;padding:1px 6px;font-size:9px;font-weight:800">SUSPENDED</span>':''}${m.restricted?'<span style="background:#713f12;color:#fde68a;border-radius:6px;padding:1px 6px;font-size:9px;font-weight:800">RESTRICTED</span>':''}${m.pos_requested&&!m.pos_enabled?'<span style="background:#1e3a8a;color:#93c5fd;border-radius:6px;padding:1px 6px;font-size:9px;font-weight:800">POS PENDING</span>':''}${m.pos_enabled?'<span style="background:#064e3b;color:#34d399;border-radius:6px;padding:1px 6px;font-size:9px;font-weight:800">POS</span>':''}</div>
             <div class="ic-sub">${m.shop_id||'—'} · ${m.email||'—'}</div>
             <div class="ic-sub">${m.loyalty_type||'points'} · ${m.address?m.address.slice(0,30):'no address'}</div>
           </div>
@@ -789,6 +789,8 @@ function renderMerchants(list){
           <div style="display:flex;gap:4px">
             <button class="btn-xs" style="background:${m.suspended?'#064e3b':'#7f1d1d'};color:#fff" onclick="event.stopPropagation();toggleMerchSuspend('${m.id}','${(m.name||'').replace(/'/g,'')}',${!!m.suspended})">${m.suspended?'▶':'⛔'}</button>
             <button class="btn-xs" style="background:${m.restricted?'#064e3b':'#713f12'};color:#fff" onclick="event.stopPropagation();toggleMerchRestrict('${m.id}','${(m.name||'').replace(/'/g,'')}',${!!m.restricted})">${m.restricted?'🔓':'💰'}</button>
+            ${m.pos_requested&&!m.pos_enabled?`<button class="btn-xs" style="background:#6366F1;color:#fff" onclick="event.stopPropagation();approvePOS('${m.id}','${(m.name||'').replace(/'/g,'')}')">🖥✓</button>`:''}
+            ${m.pos_enabled?`<button class="btn-xs" style="background:#334155;color:#fff" onclick="event.stopPropagation();revokePOS('${m.id}','${(m.name||'').replace(/'/g,'')}')">🖥✕</button>`:''}
           </div>
         </div>
       </div>
@@ -1125,7 +1127,11 @@ function openSupportChat(custId,custEmail){
   SUPPORT_POLL=setInterval(()=>loadSupportMsgs(custId,true),4000);
 }
 
+function markSupportRead(custId){
+  spat('support_chats','customer_id=eq.'+custId+'&read_by_admin=eq.false',{read_by_admin:true}).then(function(){stopAlarm();}).catch(function(){});
+}
 function loadSupportMsgs(custId,silent){
+  if(!silent)markSupportRead(custId);
   const el=document.getElementById('support-msgs');if(!el)return;
   if(!silent)el.innerHTML='<div style="text-align:center;font-size:12px;color:var(--ink3);padding:20px">Loading...</div>';
   sget('support_chats','customer_id=eq.'+custId+'&order=created_at.asc&limit=100').then(d=>{
@@ -1452,6 +1458,56 @@ function switchTab(name){
   if(name==='delivery')loadDelivery();
   if(name==='billing')loadBilling();
 }
+
+// ===== SUPPORT ALARM (rings until admin joins) =====
+let _alarmOsc=null,_alarmCtx=null,_alarmInt=null;
+function startAlarm(){
+  if(_alarmInt)return;
+  try{
+    _alarmCtx=_alarmCtx||new (window.AudioContext||window.webkitAudioContext)();
+    _alarmInt=setInterval(function(){
+      try{
+        const o=_alarmCtx.createOscillator(),g=_alarmCtx.createGain();
+        o.frequency.value=880;g.gain.value=0.12;
+        o.connect(g);g.connect(_alarmCtx.destination);
+        o.start();setTimeout(function(){o.frequency.value=660;},180);
+        setTimeout(function(){o.stop()},360);
+      }catch(e){}
+    },1400);
+  }catch(e){}
+  let b=document.getElementById('alarm-banner');
+  if(!b){
+    b=document.createElement('div');b.id='alarm-banner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:11px 16px;font-size:13px;font-weight:800;z-index:9999;text-align:center;cursor:pointer;animation:pulse 1s infinite';
+    b.textContent='NEW SUPPORT CHAT - tap to open';
+    b.onclick=function(){switchTab('support');stopAlarm();};
+    document.body.prepend(b);
+  }
+}
+function stopAlarm(){
+  if(_alarmInt){clearInterval(_alarmInt);_alarmInt=null;}
+  const b=document.getElementById('alarm-banner');if(b)b.remove();
+}
+function pollSupportAlarm(){
+  sget('support_chats','sender_role=eq.customer&read_by_admin=eq.false&limit=1').then(function(d){
+    if(Array.isArray(d)&&d.length)startAlarm();else stopAlarm();
+  }).catch(function(){});
+}
+setInterval(pollSupportAlarm,12000);
+setTimeout(pollSupportAlarm,4000);
+
+// ===== POS APPROVAL =====
+function approvePOS(id,name){
+  if(!confirm('Activate EPOS for "'+name+'"? They have paid the subscription.'))return;
+  spat('merchants','id=eq.'+id,{pos_enabled:true,pos_requested:false})
+  .then(function(){T('EPOS activated for '+name,'success');logAudit('approve_pos',name);loadMerchants();}).catch(function(){T('Failed','error');});
+}
+function revokePOS(id,name){
+  if(!confirm('Revoke EPOS access for "'+name+'"?'))return;
+  spat('merchants','id=eq.'+id,{pos_enabled:false})
+  .then(function(){T('EPOS revoked','success');logAudit('revoke_pos',name);loadMerchants();}).catch(function(){T('Failed','error');});
+}
+
 </script>
 </body>
 </html>

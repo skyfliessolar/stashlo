@@ -451,10 +451,54 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
   </div>
 
   <!-- BOTTOM NAV -->
-  <div class="bottomnav">
+  
+  <!-- ===== EPOS / POS SCREEN ===== -->
+  <div class="screen" id="pos-screen">
+    <div style="padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:18px;font-weight:800">🖥️ EPOS Till</div>
+      <button class="btn-xs btn-purple" onclick="posDayEnd()">📊 Day-End</button>
+    </div>
+    <div id="pos-paywall" style="display:none;margin:12px 16px;background:linear-gradient(135deg,#1e1b4b,#4338ca);border-radius:18px;padding:22px;text-align:center">
+      <div style="font-size:38px">🖥️</div>
+      <div style="font-size:17px;font-weight:800;color:#fff;margin-top:8px">Stashlo EPOS</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.75);margin-top:6px;line-height:1.6">Turn this phone/tablet into a full till.<br>Scan · sell · VAT reports · HMRC exports</div>
+      <div style="font-size:22px;font-weight:800;color:#fff;margin-top:10px">£15<span style="font-size:13px;font-weight:600">/month</span></div>
+      <button class="btn btn-green" style="width:100%;margin-top:12px" id="pos-req-btn" onclick="requestPOS()">💳 Subscribe &amp; request activation</button>
+      <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:8px">Admin approval required after payment</div>
+    </div>
+    <div id="pos-main" style="display:none">
+      <div style="padding:0 16px;margin-bottom:8px">
+        <input id="pos-scan" placeholder="🔍 Scan barcode or type product name + Enter" style="width:100%;padding:13px;border:2px solid var(--bg2);border-radius:14px;font-size:14px" onkeydown="if(event.key==='Enter')posScanAdd(this.value)">
+      </div>
+      <div id="pos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:10px"></div>
+      <div style="margin:0 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
+        <div style="font-size:13px;font-weight:800;margin-bottom:8px">🧺 Basket</div>
+        <div id="pos-basket"><div style="color:var(--ink3);font-size:13px;text-align:center;padding:8px">Tap products to add</div></div>
+        <div style="border-top:1.5px dashed var(--bg2);margin-top:10px;padding-top:10px;font-size:13px">
+          <div style="display:flex;justify-content:space-between"><span>Net</span><b id="pos-net">£0.00</b></div>
+          <div style="display:flex;justify-content:space-between"><span>VAT</span><b id="pos-vat">£0.00</b></div>
+          <div style="display:flex;justify-content:space-between;font-size:17px;margin-top:4px"><span style="font-weight:800">TOTAL</span><b id="pos-total" style="color:var(--purple)">£0.00</b></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-green" style="flex:1" onclick="posCheckout('cash')">💵 CASH</button>
+          <button class="btn btn-purple" style="flex:1" onclick="posCheckout('card')">💳 CARD</button>
+        </div>
+        <button class="btn" style="width:100%;margin-top:8px;background:var(--bg2)" onclick="posClear()">Clear basket</button>
+      </div>
+      <div style="margin:12px 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;font-weight:800">📑 Reports</div>
+          <button class="btn-xs btn-purple" onclick="posExportCSV()">⬇️ HMRC CSV</button>
+        </div>
+        <div id="pos-report" style="font-size:13px;color:var(--ink3);margin-top:8px">Tap Day-End for today's totals</div>
+      </div>
+    </div>
+  </div>
+<div class="bottomnav">
     <div class="nb on" id="nb-overview" onclick="switchTab('overview')"><span class="nb-ico">📊</span><span class="nb-lab">Overview</span></div>
     <div class="nb" id="nb-scan" onclick="switchTab('scan')"><span class="nb-ico">📷</span><span class="nb-lab">Scan</span></div>
     <div class="nb" id="nb-till" onclick="switchTab('till')"><span class="nb-ico">💰</span><span class="nb-lab">Till</span></div>
+    <div class="nb" id="nb-pos" onclick="switchTab('pos')"><span class="nb-ico">🖥️</span><span class="nb-lab">POS</span></div>
     <div class="nb" id="nb-products" onclick="switchTab('products')"><span class="nb-ico">🛍️</span><span class="nb-lab">Stock</span></div>
     <div class="nb" id="nb-orders" onclick="switchTab('orders')"><span class="nb-ico">📦</span><span class="nb-lab">Orders</span></div>
     <div class="nb" id="nb-customers" onclick="switchTab('customers')"><span class="nb-ico">👥</span><span class="nb-lab">Members</span></div>
@@ -475,6 +519,11 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
       <input type="hidden" id="edit-prod-id">
       <div class="field"><label class="field-label">Product Name ★</label><input id="p-name" oninput="autoEmoji(&#39;p-name&#39;,&#39;p-emoji&#39;)" placeholder="e.g. Large Oat Latte"></div>
       <div class="field"><label class="field-label">Price (£) ★</label><input id="p-price" type="number" step="0.01" min="0" placeholder="0.00"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field"><label class="field-label">VAT rate</label><select id="p-vat" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"><option value="20">Standard 20%</option><option value="5">Reduced 5%</option><option value="0">Zero-rated 0%</option><option value="exempt">Non-VAT / exempt</option></select></div>
+        <div class="field"><label class="field-label">Cost price £</label><input id="p-cost" type="number" step="0.01" placeholder="0.00" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"></div>
+      </div>
+      <div class="field"><label class="field-label">POS category</label><select id="p-cat" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"><option value="general">General</option><option value="grocery">Grocery</option><option value="crisps">Crisps & snacks</option><option value="juice">Juice & drinks</option><option value="alcohol">Alcohol</option><option value="vapes">Vapes</option><option value="tobacco">Tobacco</option><option value="cigarettes">Cigarettes</option><option value="car">Car accessories</option></select></div>
       <div class="field"><label class="field-label">Emoji Icon</label><input id="p-emoji" placeholder="☕" maxlength="4"></div>
       <div class="field"><label class="field-label">Category</label>
         <select id="p-cat"><option value="drinks">Drinks</option><option value="food">Food</option><option value="snacks">Snacks</option><option value="retail">Retail</option><option value="service">Service</option><option value="other">Other</option></select>
@@ -748,6 +797,9 @@ function openAddProd(){
   document.getElementById("p-price").value="";document.getElementById("p-emoji").value="";
   document.getElementById("p-collect").checked=true;document.getElementById("p-delivery").checked=false;document.getElementById("p-active").checked=true;
   const pe=document.getElementById("p-err");if(pe)pe.style.display="none";
+  const pv=document.getElementById("p-vat");if(pv)pv.value=(p&&p.vat_rate!=null)?String(p.vat_rate):"20";
+  const pc=document.getElementById("p-cost");if(pc)pc.value=(p&&p.cost_price)||"";
+  const pcat=document.getElementById("p-cat");if(pcat)pcat.value=(p&&p.pos_category)||"general";
   openModal("prodModal");
 }
 function editProd(id){
@@ -769,7 +821,7 @@ function saveProd(){
   const name=V("p-name"),price=parseFloat(document.getElementById("p-price").value||0),eid=V("edit-prod-id");
   if(!name||price<=0){const e=document.getElementById("p-err");if(e){e.textContent="Name and price required";e.style.display="block";}return}
   const btn=document.querySelector("#prodModal .btn-primary");if(btn){btn.textContent="Saving...";btn.disabled=true;}
-  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked};
+  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked};
   const action=eid?pat("products","id=eq."+eid,data):post("products",{...data,created_at:Date.now()});
   action.then(()=>{T("✅ "+name+" saved!","success");closeModal("prodModal");loadProducts();if(btn){btn.textContent="💾 Save Product";btn.disabled=false}})
   .catch(()=>{const e=document.getElementById("p-err");if(e){e.textContent="Save failed — try again";e.style.display="block";}if(btn){btn.textContent="💾 Save Product";btn.disabled=false}})
@@ -1088,6 +1140,7 @@ function switchTab(name){
   if(name==="till")loadTxns();
   if(name==="inbox")loadInbox();
   if(name==="settings"){loadAccounting();loadMerchRewards();}
+  if(name==="pos")posGuard();
   if(name==="settings")loadJobs();
 }
 
@@ -1149,6 +1202,93 @@ function initTilt3D(){
       document.querySelectorAll('.lc').forEach(x=>{x.style.transform='rotateY('+ry.toFixed(1)+'deg) rotateX('+(-rx).toFixed(1)+'deg)';});
     },{passive:true});
   }
+}
+
+
+// ===== EPOS ENGINE =====
+let POS_BASKET=[];
+function vatRate(p){const v=(p.vat_rate===undefined||p.vat_rate===null)?'20':String(p.vat_rate);return v==='20'?0.2:v==='5'?0.05:0;}
+function posGuard(){
+  const pay=document.getElementById('pos-paywall'),main=document.getElementById('pos-main');
+  if(MDATA.pos_enabled){pay.style.display='none';main.style.display='block';renderPOSGrid();}
+  else{
+    pay.style.display='block';main.style.display='none';
+    if(MDATA.pos_requested){const b=document.getElementById('pos-req-btn');b.textContent='Pending admin approval...';b.disabled=true;}
+  }
+}
+function requestPOS(){
+  if(!confirm('Subscribe to Stashlo EPOS for 15 GBP/month? Payment is taken now and admin will activate your till.'))return;
+  Promise.all([
+    post('merchant_billing',{merchant_id:MID,merchant_name:MDATA.name||'',amount:15,description:'EPOS subscription (monthly)',status:'paid',created_at:Date.now()}),
+    pat('merchants','id=eq.'+MID,{pos_requested:true})
+  ]).then(function(){T('Paid - awaiting admin activation','success');MDATA.pos_requested=true;posGuard();}).catch(function(){T('Payment failed','error');});
+}
+function renderPOSGrid(){
+  const el=document.getElementById('pos-grid');if(!el)return;
+  const Q=String.fromCharCode(39);
+  el.innerHTML=PRODUCTS.filter(function(p){return p.active!==false}).map(function(p){
+    return '<div onclick="posAdd('+Q+p.id+Q+')" style="background:var(--white);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;box-shadow:var(--sh)"><div style="font-size:20px">'+(p.emoji||String.fromCodePoint(0x1F6CD))+'</div><div style="font-size:11px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div><div style="font-size:12px;font-weight:800;color:var(--purple)">'+Number(p.price||0).toFixed(2)+'</div></div>';
+  }).join('')||'<div style="grid-column:1/-1;color:var(--ink3);font-size:13px;text-align:center;padding:10px">Add products in Stock first</div>';
+}
+function posAdd(pid){
+  const p=PRODUCTS.find(function(x){return x.id===pid});if(!p)return;
+  const ex=POS_BASKET.find(function(b){return b.id===pid});
+  if(ex)ex.qty++;else POS_BASKET.push({id:p.id,name:p.name,price:parseFloat(p.price||0),vat:vatRate(p),qty:1,emoji:p.emoji||''});
+  renderBasket();
+}
+function posScanAdd(q){
+  q=(q||'').trim().toLowerCase();if(!q)return;
+  const p=PRODUCTS.find(function(x){return (x.name||'').toLowerCase().indexOf(q)>=0||(x.barcode||'')===q});
+  document.getElementById('pos-scan').value='';
+  if(p)posAdd(p.id);else T('No product matching: '+q,'error');
+}
+function posQty(pid,d){
+  const b=POS_BASKET.find(function(x){return x.id===pid});if(!b)return;
+  b.qty+=d;if(b.qty<=0)POS_BASKET=POS_BASKET.filter(function(x){return x.id!==pid});
+  renderBasket();
+}
+function renderBasket(){
+  const el=document.getElementById('pos-basket');if(!el)return;
+  const Q=String.fromCharCode(39);
+  if(!POS_BASKET.length){el.innerHTML='<div style="color:var(--ink3);font-size:13px;text-align:center;padding:8px">Tap products to add</div>';}
+  else el.innerHTML=POS_BASKET.map(function(b){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bg2);font-size:13px"><div>'+b.emoji+' <b>'+b.name+'</b><span style="color:var(--ink3)"> x'+b.qty+'</span></div><div style="display:flex;align-items:center;gap:8px"><button onclick="posQty('+Q+b.id+Q+',-1)" style="width:26px;height:26px;border-radius:50%;border:1.5px solid var(--bg2);background:#fff;cursor:pointer">-</button><button onclick="posQty('+Q+b.id+Q+',1)" style="width:26px;height:26px;border-radius:50%;border:1.5px solid var(--bg2);background:#fff;cursor:pointer">+</button><b>'+(b.price*b.qty).toFixed(2)+'</b></div></div>';
+  }).join('');
+  let net=0,vat=0;
+  POS_BASKET.forEach(function(b){const gross=b.price*b.qty;const n=gross/(1+b.vat);net+=n;vat+=gross-n;});
+  txt('pos-net','£'+net.toFixed(2));txt('pos-vat','£'+vat.toFixed(2));txt('pos-total','£'+(net+vat).toFixed(2));
+}
+function posClear(){POS_BASKET=[];renderBasket();}
+function posCheckout(method){
+  if(!POS_BASKET.length){T('Basket empty','error');return}
+  let net=0,vat=0;
+  POS_BASKET.forEach(function(b){const g=b.price*b.qty;const n=g/(1+b.vat);net+=n;vat+=g-n;});
+  const total=net+vat;
+  post('pos_sales',{merchant_id:MID,items:JSON.stringify(POS_BASKET.map(function(b){return {n:b.name,q:b.qty,p:b.price,v:b.vat}})),net:net.toFixed(2),vat_total:vat.toFixed(2),total:total.toFixed(2),method:method,created_at:Date.now()})
+  .then(function(){T((method==='cash'?'CASH':'CARD')+' sale £'+total.toFixed(2)+' recorded','success');posClear();})
+  .catch(function(){T('Sale failed to save','error');});
+}
+function posDayEnd(){
+  const start=new Date();start.setHours(0,0,0,0);
+  get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+start.getTime()+'&order=created_at.desc').then(function(d){
+    const s=Array.isArray(d)?d:[];
+    let cash=0,card=0,vat=0;
+    s.forEach(function(x){const t=parseFloat(x.total||0);if(x.method==='cash')cash+=t;else card+=t;vat+=parseFloat(x.vat_total||0);});
+    window._POS_TODAY=s;
+    document.getElementById('pos-report').innerHTML='<b>Today ('+s.length+' sales)</b><br>Cash: <b>£'+cash.toFixed(2)+'</b> · Card: <b>£'+card.toFixed(2)+'</b><br>VAT collected: <b>£'+vat.toFixed(2)+'</b> · Gross: <b style="color:var(--purple)">£'+(cash+card).toFixed(2)+'</b>';
+  }).catch(function(){T('Could not load','error');});
+}
+function posExportCSV(){
+  get('pos_sales','merchant_id=eq.'+MID+'&order=created_at.desc&limit=500').then(function(d){
+    const s=Array.isArray(d)?d:[];
+    if(!s.length){T('No sales yet','error');return}
+    const Q2=String.fromCharCode(34);
+    let rows=[['Date','Time','Receipt','Net','VAT','Gross','Method']];
+    s.forEach(function(x){const dt=new Date(x.created_at);rows.push([dt.toLocaleDateString(),dt.toLocaleTimeString().slice(0,5),(x.id||'').slice(0,8),x.net||'',x.vat_total||'',x.total||'',x.method||'']);});
+    const csv=rows.map(function(r){return r.map(function(cl){return Q2+String(cl)+Q2}).join(',')}).join(String.fromCharCode(10));
+    const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='stashlo-pos-hmrc.csv';a.click();
+    T('HMRC CSV downloaded','success');
+  });
 }
 
 </script>
