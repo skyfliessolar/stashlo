@@ -442,3 +442,8 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS otp_verified boolean DEFAULT false;
 -- v9: POS receipt settings
 ALTER TABLE merchants ADD COLUMN IF NOT EXISTS receipt_vat_no text;
 ALTER TABLE merchants ADD COLUMN IF NOT EXISTS receipt_footer text;
+
+-- v10: PRO POS (inventory, discounts, refunds)
+ALTER TABLE products ADD COLUMN IF NOT EXISTS stock integer;
+ALTER TABLE pos_sales ADD COLUMN IF NOT EXISTS discount numeric DEFAULT 0;
+ALTER TABLE pos_sales ADD COLUMN IF NOT EXISTS refund boolean DEFAULT false;

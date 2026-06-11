@@ -368,6 +368,12 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 .walk-scene .pocket-wrap{position:absolute;left:50%;transform:translateX(-50%);bottom:0}
 .auth-fade{animation-delay:1.55s!important}
 @media (prefers-reduced-motion:reduce){.man,.m-arm,.m-leg{animation-duration:.01s!important;animation-iteration-count:1!important}.pc-delayed{animation-delay:.1s!important}.auth-fade{animation-delay:.2s!important}}
+
+/* v10: clean instant login - man removed, no blank flash */
+.man{display:none!important}
+.walk-scene{height:196px;margin-bottom:18px}
+.pc-delayed{animation-delay:.12s!important}
+.auth-fade{animation-delay:.4s!important;animation-duration:.45s!important}
 </style>
 </head>
 <body>
@@ -384,15 +390,6 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 <div id="auth">
   <div style="width:100%;max-width:380px;padding:0 16px">
     <div class="walk-scene">
-      <div class="man">
-        <div class="m-head"></div>
-        <div class="m-torso">
-          <div class="m-arm al"></div>
-          <div class="m-arm ar"></div>
-        </div>
-        <div class="m-leg ll"></div>
-        <div class="m-leg lr"></div>
-      </div>
       <div class="pocket-wrap" style="margin:0 auto">
         <div class="pocket-card pc-delayed"><div style="font-size:15px;font-weight:800">Stashlo</div><div style="font-size:11px;opacity:.85;margin-top:2px">QR + Barcode Loyalty ID</div><div style="font-size:12px;opacity:.7;margin-top:26px">Every loyalty card. One wallet.</div></div>
         <div class="pocket"></div>

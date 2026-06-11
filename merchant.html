@@ -467,13 +467,20 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
       <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:8px">Admin approval required after payment</div>
     </div>
     <div id="pos-main" style="display:none">
-      <div style="padding:0 16px;margin-bottom:8px">
-        <input id="pos-scan" placeholder="🔍 Scan barcode or type product name + Enter" style="width:100%;padding:13px;border:2px solid var(--bg2);border-radius:14px;font-size:14px" onkeydown="if(event.key==='Enter')posScanAdd(this.value)">
+      <div style="padding:0 16px;margin-bottom:8px;display:flex;gap:8px">
+        <input id="pos-scan" placeholder="🔍 Search / barcode + Enter" style="flex:1;padding:13px;border:2px solid var(--bg2);border-radius:14px;font-size:14px" onkeydown="if(event.key==='Enter')posScanAdd(this.value)" oninput="renderPOSGrid()">
+        <button onclick="openPOSScanner()" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:14px;padding:0 18px;font-size:15px;font-weight:800;cursor:pointer">📷 Scan</button>
       </div>
+      <div id="pos-cats" style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none"></div>
       <div id="pos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:10px"></div>
       <div style="margin:0 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
         <div style="font-size:13px;font-weight:800;margin-bottom:8px">🧺 Basket</div>
         <div id="pos-basket"><div style="color:var(--ink3);font-size:13px;text-align:center;padding:8px">Tap products to add</div></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+          <span style="font-size:12px;font-weight:700;color:var(--ink3)">Discount £</span>
+          <input id="pos-disc" type="number" step="0.01" min="0" value="" placeholder="0.00" oninput="renderBasket()" style="width:84px;padding:8px;border:2px solid var(--bg2);border-radius:10px;font-size:13px">
+          <span id="pos-disc-note" style="font-size:11px;color:var(--green);font-weight:700"></span>
+        </div>
         <div style="border-top:1.5px dashed var(--bg2);margin-top:10px;padding-top:10px;font-size:13px">
           <div style="display:flex;justify-content:space-between"><span>Net</span><b id="pos-net">£0.00</b></div>
           <div style="display:flex;justify-content:space-between"><span>VAT</span><b id="pos-vat">£0.00</b></div>
@@ -484,6 +491,22 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
           <button class="btn btn-purple" style="flex:1" onclick="posCheckout('card')">💳 CARD</button>
         </div>
         <button class="btn" style="width:100%;margin-top:8px;background:var(--bg2)" onclick="posClear()">Clear basket</button>
+      </div>
+      <!-- Cash change modal -->
+      <div class="modal" id="cashModal"><div class="modal-box" style="max-width:340px">
+        <div style="font-size:16px;font-weight:800;margin-bottom:4px">💵 Cash Payment</div>
+        <div style="font-size:13px;color:var(--ink3)">Total due: <b id="cm-due" style="color:var(--purple);font-size:16px">£0.00</b></div>
+        <div class="field" style="margin:12px 0"><label class="field-label">Cash tendered £</label>
+        <input id="cm-tendered" type="number" step="0.01" inputmode="decimal" oninput="cmChange()" style="width:100%;padding:14px;border:2px solid var(--bg2);border-radius:12px;font-size:18px;font-weight:800"></div>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <button class="btn-xs btn-gray" onclick="cmQuick(5)">£5</button><button class="btn-xs btn-gray" onclick="cmQuick(10)">£10</button><button class="btn-xs btn-gray" onclick="cmQuick(20)">£20</button><button class="btn-xs btn-gray" onclick="cmQuick(50)">£50</button><button class="btn-xs btn-purple" onclick="cmExact()">Exact</button>
+        </div>
+        <div style="background:#f0fdf4;border-radius:12px;padding:12px;text-align:center;margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:#065f46">CHANGE DUE</div><div id="cm-change" style="font-size:26px;font-weight:800;color:#059669">£0.00</div></div>
+        <div style="display:flex;gap:8px"><button class="btn btn-gray" style="flex:1" onclick="closeModal('cashModal')">Cancel</button><button class="btn btn-green" style="flex:1" onclick="cmComplete()">✓ Complete Sale</button></div>
+      </div></div>
+      <div style="margin:12px 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:13px;font-weight:800">🧾 Recent Transactions</div><button class="btn-xs btn-gray" onclick="loadPOSSales()">↻</button></div>
+        <div id="pos-history" style="font-size:13px;color:var(--ink3)">Loading...</div>
       </div>
       <div style="margin:12px 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
         <div style="font-size:13px;font-weight:800;margin-bottom:8px">⚙️ POS Settings</div>
@@ -531,6 +554,10 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="field"><label class="field-label">VAT rate</label><select id="p-vat" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"><option value="20">Standard 20%</option><option value="5">Reduced 5%</option><option value="0">Zero-rated 0%</option><option value="exempt">Non-VAT / exempt</option></select></div>
         <div class="field"><label class="field-label">Cost price £</label><input id="p-cost" type="number" step="0.01" placeholder="0.00" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field"><label class="field-label">Barcode (scan or type)</label><input id="p-barcode" placeholder="5012345678900" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"></div>
+        <div class="field"><label class="field-label">Stock count</label><input id="p-stock" type="number" placeholder="0" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"></div>
       </div>
       <div class="field"><label class="field-label">POS category</label><select id="p-cat" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"><option value="general">General</option><option value="grocery">Grocery</option><option value="crisps">Crisps & snacks</option><option value="juice">Juice & drinks</option><option value="alcohol">Alcohol</option><option value="vapes">Vapes</option><option value="tobacco">Tobacco</option><option value="cigarettes">Cigarettes</option><option value="car">Car accessories</option></select></div>
       <div class="field"><label class="field-label">Emoji Icon</label><input id="p-emoji" placeholder="☕" maxlength="4"></div>
@@ -809,6 +836,8 @@ function openAddProd(){
   const pv=document.getElementById("p-vat");if(pv)pv.value=(p&&p.vat_rate!=null)?String(p.vat_rate):"20";
   const pc=document.getElementById("p-cost");if(pc)pc.value=(p&&p.cost_price)||"";
   const pcat=document.getElementById("p-cat");if(pcat)pcat.value=(p&&p.pos_category)||"general";
+  const pbc=document.getElementById("p-barcode");if(pbc)pbc.value=(p&&p.barcode)||"";
+  const pst=document.getElementById("p-stock");if(pst)pst.value=(p&&p.stock!=null)?p.stock:"";
   openModal("prodModal");
 }
 function editProd(id){
@@ -830,7 +859,7 @@ function saveProd(){
   const name=V("p-name"),price=parseFloat(document.getElementById("p-price").value||0),eid=V("edit-prod-id");
   if(!name||price<=0){const e=document.getElementById("p-err");if(e){e.textContent="Name and price required";e.style.display="block";}return}
   const btn=document.querySelector("#prodModal .btn-primary");if(btn){btn.textContent="Saving...";btn.disabled=true;}
-  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked};
+  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",barcode:V("p-barcode")||null,stock:parseInt(document.getElementById("p-stock").value||0),category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked};
   const action=eid?pat("products","id=eq."+eid,data):post("products",{...data,created_at:Date.now()});
   action.then(()=>{T("✅ "+name+" saved!","success");closeModal("prodModal");loadProducts();if(btn){btn.textContent="💾 Save Product";btn.disabled=false}})
   .catch(()=>{const e=document.getElementById("p-err");if(e){e.textContent="Save failed — try again";e.style.display="block";}if(btn){btn.textContent="💾 Save Product";btn.disabled=false}})
@@ -1247,6 +1276,149 @@ function initTilt3D(){
 }
 
 
+
+// ===== PRO POS: camera scanner, categories, stock, discount, change calc, refunds =====
+let POS_CAT='all',_scanStream=null,_scanRAF=null,_PEND_METHOD=null;
+function beepPOS(){try{var a=new (window.AudioContext||window.webkitAudioContext)();var o=a.createOscillator(),g=a.createGain();o.frequency.value=1245;g.gain.value=.16;o.connect(g);g.connect(a.destination);o.start();setTimeout(function(){o.stop();a.close()},130);}catch(e){}}
+function openPOSScanner(){
+  if(!('BarcodeDetector' in window)){T('Camera scanning needs Chrome on Android - type the barcode instead','error');var i=document.getElementById('pos-scan');if(i)i.focus();return}
+  var ov=document.createElement('div');ov.id='scan-ov';
+  ov.style.cssText='position:fixed;inset:0;background:#000;z-index:900;display:flex;flex-direction:column';
+  ov.innerHTML='<video id="scan-vid" autoplay playsinline muted style="flex:1;width:100%;object-fit:cover"></video>'
+    +'<button id="scan-x" style="position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:18px;cursor:pointer">X</button>'
+    +'<div style="position:absolute;top:38%;left:8%;right:8%;height:110px;border:3px solid #34d399;border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div>'
+    +'<div id="scan-hint" style="position:absolute;bottom:34px;left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:15px;text-shadow:0 2px 6px #000">Point camera at a barcode</div>';
+  document.body.appendChild(ov);
+  document.getElementById('scan-x').onclick=closePOSScanner;
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(st){
+    _scanStream=st;
+    var v=document.getElementById('scan-vid');v.srcObject=st;
+    var det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code']});
+    var last='',lastT=0;
+    function loop(){
+      if(!document.getElementById('scan-ov'))return;
+      det.detect(v).then(function(codes){
+        if(codes&&codes.length){
+          var val=codes[0].rawValue;
+          if(val&&(val!==last||Date.now()-lastT>1600)){last=val;lastT=Date.now();posScanHit(val);}
+        }
+      }).catch(function(){});
+      _scanRAF=requestAnimationFrame(loop);
+    }
+    v.onloadedmetadata=loop;
+  }).catch(function(){T('Camera permission needed for scanning','error');closePOSScanner();});
+}
+function closePOSScanner(){
+  if(_scanRAF)cancelAnimationFrame(_scanRAF);_scanRAF=null;
+  if(_scanStream){_scanStream.getTracks().forEach(function(t){t.stop()});_scanStream=null;}
+  var o=document.getElementById('scan-ov');if(o)o.remove();
+}
+function posScanHit(code){
+  var p=PRODUCTS.find(function(x){return String(x.barcode||'')===String(code)});
+  var hint=document.getElementById('scan-hint');
+  if(p){
+    if(p.stock!=null&&p.stock<=0){if(hint)hint.textContent='⛔ '+p.name+' is OUT OF STOCK';return}
+    beepPOS();posAdd(p.id);
+    if(hint)hint.textContent='✅ '+p.name+' added — keep scanning';
+  }else{
+    if(hint)hint.textContent='❓ '+code+' — not found. Add it in Stock with this barcode.';
+  }
+}
+function posCats(){
+  var el=document.getElementById('pos-cats');if(!el)return;
+  var cats=['all'];
+  PRODUCTS.forEach(function(p){var ct=p.pos_category||'general';if(cats.indexOf(ct)<0)cats.push(ct)});
+  var Q=String.fromCharCode(39);
+  el.innerHTML=cats.map(function(ct){
+    var on=POS_CAT===ct;
+    return '<button onclick="POS_CAT='+Q+ct+Q+';renderPOSGrid();posCats()" style="flex:0 0 auto;padding:7px 14px;border-radius:20px;border:none;font-size:12px;font-weight:800;cursor:pointer;background:'+(on?'var(--purple)':'var(--bg2)')+';color:'+(on?'#fff':'var(--ink2)')+'">'+(ct==='all'?'All':ct.charAt(0).toUpperCase()+ct.slice(1))+'</button>';
+  }).join('');
+}
+function posStockBadge(p){
+  if(p.stock==null)return '';
+  if(p.stock<=0)return '<div style="font-size:9px;font-weight:800;color:#fff;background:#64748b;border-radius:8px;padding:1px 6px;margin-top:2px">OUT</div>';
+  if(p.stock<=5)return '<div style="font-size:9px;font-weight:800;color:#fff;background:#ef4444;border-radius:8px;padding:1px 6px;margin-top:2px">'+p.stock+' left</div>';
+  return '<div style="font-size:9px;color:var(--ink3);margin-top:2px">'+p.stock+' in stock</div>';
+}
+function cmQuick(n){document.getElementById('cm-tendered').value=n;cmChange();}
+function cmExact(){document.getElementById('cm-tendered').value=window._POS_DUE.toFixed(2);cmChange();}
+function cmChange(){
+  var t=parseFloat(document.getElementById('cm-tendered').value||0);
+  var ch=t-(window._POS_DUE||0);
+  document.getElementById('cm-change').textContent='£'+(ch>=0?ch:0).toFixed(2);
+  document.getElementById('cm-change').style.color=ch>=0?'#059669':'#ef4444';
+}
+function cmComplete(){
+  var t=parseFloat(document.getElementById('cm-tendered').value||0);
+  if(t<window._POS_DUE-0.001){T('Tendered less than total','error');return}
+  closeModal('cashModal');
+  finalizeSale('cash');
+}
+function loadPOSSales(){
+  var el=document.getElementById('pos-history');if(!el)return;
+  get('pos_sales','merchant_id=eq.'+MID+'&order=created_at.desc&limit=12').then(function(d){
+    var s=Array.isArray(d)?d:[];
+    if(!s.length){el.innerHTML='No sales yet today';return}
+    var Q=String.fromCharCode(39);
+    el.innerHTML=s.map(function(x){
+      var dt=new Date(x.created_at||0);var neg=parseFloat(x.total||0)<0;
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bg2)">'
+        +'<div><b style="color:'+(neg?'#ef4444':'var(--ink)')+'">'+(neg?'↩️ REFUND ':'')+'£'+Math.abs(parseFloat(x.total||0)).toFixed(2)+'</b> <span style="color:var(--ink3)">'+(x.method||'').toUpperCase()+'</span><div style="font-size:11px;color:var(--ink4)">'+dt.toLocaleDateString()+' '+dt.toLocaleTimeString().slice(0,5)+' · '+(x.id||'').slice(0,8)+'</div></div>'
+        +'<div style="display:flex;gap:6px">'
+        +'<button class="btn-xs btn-gray" onclick="reprintSale('+Q+x.id+Q+')">🖨</button>'
+        +(!neg?'<button class="btn-xs" style="background:#fef2f2;color:#ef4444" onclick="posRefund('+Q+x.id+Q+')">↩️</button>':'')
+        +'</div></div>';
+    }).join('');
+    window._POS_HIST=s;
+  }).catch(function(){el.innerHTML='Could not load';});
+}
+function reprintSale(id){
+  var s=(window._POS_HIST||[]).find(function(x){return x.id===id});
+  if(s)printReceipt(s);
+}
+function posRefund(id){
+  var s=(window._POS_HIST||[]).find(function(x){return x.id===id});
+  if(!s)return;
+  if(!confirm('Refund £'+parseFloat(s.total||0).toFixed(2)+' ('+(s.method||'').toUpperCase()+')? Stock will be restored.'))return;
+  post('pos_sales',{merchant_id:MID,items:s.items,net:(-parseFloat(s.net||0)).toFixed(2),vat_total:(-parseFloat(s.vat_total||0)).toFixed(2),total:(-parseFloat(s.total||0)).toFixed(2),method:s.method,refund:true,created_at:Date.now()})
+  .then(function(){
+    try{JSON.parse(s.items||'[]').forEach(function(it){
+      var p=PRODUCTS.find(function(x){return x.name===it.n});
+      if(p&&p.stock!=null){p.stock+=it.q;pat('products','id=eq.'+p.id,{stock:p.stock}).catch(function(){});}
+    });}catch(e){}
+    T('↩️ Refund recorded & stock restored','success');loadPOSSales();renderPOSGrid();
+  }).catch(function(){T('Refund failed — pos_sales.refund column missing? Run migration','error');});
+}
+function finalizeSale(method){
+  var net=0,vat=0;
+  POS_BASKET.forEach(function(b){var g=b.price*b.qty;var n=g/(1+b.vat);net+=n;vat+=g-n;});
+  var gross=net+vat;
+  var disc=Math.min(parseFloat((document.getElementById('pos-disc')||{}).value||0)||0,gross);
+  if(disc>0){var f=(gross-disc)/gross;net*=f;vat*=f;gross-=disc;}
+  var saleObj={merchant_id:MID,items:JSON.stringify(POS_BASKET.map(function(b){return {n:b.name,q:b.qty,p:b.price,v:b.vat}})),net:net.toFixed(2),vat_total:vat.toFixed(2),total:gross.toFixed(2),method:method,discount:disc.toFixed(2),refund:false,created_at:Date.now()};
+  post('pos_sales',saleObj).then(function(res){
+    var saved=Array.isArray(res)&&res[0]?res[0]:saleObj;
+    window._LAST_SALE=saved;
+    // stock decrement
+    POS_BASKET.forEach(function(b){
+      var p=PRODUCTS.find(function(x){return x.id===b.id});
+      if(p&&p.stock!=null){p.stock=Math.max(0,p.stock-b.qty);pat('products','id=eq.'+p.id,{stock:p.stock}).catch(function(){});}
+    });
+    T((method==='cash'?'💵 CASH':'💳 CARD')+' sale £'+gross.toFixed(2)+' recorded','success');
+    posClear();var de=document.getElementById('pos-disc');if(de)de.value='';
+    renderPOSGrid();loadPOSSales();
+    if(confirm('Sale complete — £'+gross.toFixed(2)+'\n\nPrint receipt?'))printReceipt(saved);
+  }).catch(function(){
+    // retry without new columns
+    delete saleObj.discount;delete saleObj.refund;
+    post('pos_sales',saleObj).then(function(res2){
+      var saved2=Array.isArray(res2)&&res2[0]?res2[0]:saleObj;window._LAST_SALE=saved2;
+      T('Sale £'+gross.toFixed(2)+' recorded','success');posClear();loadPOSSales();
+      if(confirm('Print receipt?'))printReceipt(saved2);
+    }).catch(function(){T('Sale failed to save','error');});
+  });
+}
+
 // ===== RECEIPT PRINTER (works with any browser-connected printer incl. Bluetooth 80mm) =====
 function buildReceiptHTML(sale){
   const items=JSON.parse(sale.items||'[]');
@@ -1300,7 +1472,7 @@ function posGuard(){
   if(vEl)vEl.value=MDATA.receipt_vat_no||localStorage.getItem('sl_vatno_'+MID)||'';
   if(fEl)fEl.value=MDATA.receipt_footer||localStorage.getItem('sl_rfoot_'+MID)||'';
   const pay=document.getElementById('pos-paywall'),main=document.getElementById('pos-main');
-  if(MDATA.pos_enabled){pay.style.display='none';main.style.display='block';renderPOSGrid();}
+  if(MDATA.pos_enabled){pay.style.display='none';main.style.display='block';renderPOSGrid();loadPOSSales();}
   else{
     pay.style.display='block';main.style.display='none';
     if(MDATA.pos_requested){const b=document.getElementById('pos-req-btn');b.textContent='Pending admin approval...';b.disabled=true;}
@@ -1319,10 +1491,19 @@ function requestPOS(){
 }
 function renderPOSGrid(){
   const el=document.getElementById('pos-grid');if(!el)return;
+  posCats();
+  var q=((document.getElementById('pos-scan')||{}).value||'').toLowerCase();
   const Q=String.fromCharCode(39);
-  el.innerHTML=PRODUCTS.filter(function(p){return p.active!==false}).map(function(p){
-    return '<div onclick="posAdd('+Q+p.id+Q+')" style="background:var(--white);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;box-shadow:var(--sh)"><div style="font-size:20px">'+(p.emoji||String.fromCodePoint(0x1F6CD))+'</div><div style="font-size:11px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div><div style="font-size:12px;font-weight:800;color:var(--purple)">'+Number(p.price||0).toFixed(2)+'</div></div>';
-  }).join('')||'<div style="grid-column:1/-1;color:var(--ink3);font-size:13px;text-align:center;padding:10px">Add products in Stock first</div>';
+  var list=PRODUCTS.filter(function(p){
+    if(p.active===false)return false;
+    if(POS_CAT!=='all'&&(p.pos_category||'general')!==POS_CAT)return false;
+    if(q&&(p.name||'').toLowerCase().indexOf(q)<0&&String(p.barcode||'').indexOf(q)<0)return false;
+    return true;
+  });
+  el.innerHTML=list.map(function(p){
+    var out=p.stock!=null&&p.stock<=0;
+    return '<div onclick="'+(out?'':'posAdd('+Q+p.id+Q+')')+'" style="background:var(--white);border-radius:12px;padding:10px 6px;text-align:center;cursor:'+(out?'not-allowed':'pointer')+';box-shadow:var(--sh);opacity:'+(out?'.45':'1')+'"><div style="font-size:20px">'+(p.emoji||String.fromCodePoint(0x1F6CD))+'</div><div style="font-size:11px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div><div style="font-size:12px;font-weight:800;color:var(--purple)">'+Number(p.price||0).toFixed(2)+'</div>'+posStockBadge(p)+'</div>';
+  }).join('')||'<div style="grid-column:1/-1;color:var(--ink3);font-size:13px;text-align:center;padding:10px">No matching products</div>';
 }
 function posAdd(pid){
   const p=PRODUCTS.find(function(x){return x.id===pid});if(!p)return;
@@ -1350,24 +1531,30 @@ function renderBasket(){
   }).join('');
   let net=0,vat=0;
   POS_BASKET.forEach(function(b){const gross=b.price*b.qty;const n=gross/(1+b.vat);net+=n;vat+=gross-n;});
+  var gross0=net+vat;
+  var disc=Math.min(parseFloat((document.getElementById('pos-disc')||{}).value||0)||0,gross0);
+  var note=document.getElementById('pos-disc-note');
+  if(disc>0){var f=(gross0-disc)/Math.max(gross0,0.01);net*=f;vat*=f;if(note)note.textContent='−£'+disc.toFixed(2)+' applied';}
+  else if(note)note.textContent='';
   txt('pos-net','£'+net.toFixed(2));txt('pos-vat','£'+vat.toFixed(2));txt('pos-total','£'+(net+vat).toFixed(2));
 }
 function posClear(){POS_BASKET=[];renderBasket();}
 function posCheckout(method){
   if(!POS_BASKET.length){T('Basket empty','error');return}
-  let net=0,vat=0;
-  POS_BASKET.forEach(function(b){const g=b.price*b.qty;const n=g/(1+b.vat);net+=n;vat+=g-n;});
-  const total=net+vat;
-  const saleObj={merchant_id:MID,items:JSON.stringify(POS_BASKET.map(function(b){return {n:b.name,q:b.qty,p:b.price,v:b.vat}})),net:net.toFixed(2),vat_total:vat.toFixed(2),total:total.toFixed(2),method:method,created_at:Date.now()};
-  post('pos_sales',saleObj)
-  .then(function(res){
-    const saved=Array.isArray(res)&&res[0]?res[0]:saleObj;
-    window._LAST_SALE=saved;
-    T((method==='cash'?'CASH':'CARD')+' sale £'+total.toFixed(2)+' recorded','success');
-    posClear();
-    if(confirm('Sale complete — £'+total.toFixed(2)+'\n\nPrint receipt?'))printReceipt(saved);
-  })
-  .catch(function(){window._LAST_SALE=saleObj;T('Saved locally — DB column missing? Run migration','error');if(confirm('Print receipt anyway?'))printReceipt(saleObj);});
+  var net=0,vat=0;
+  POS_BASKET.forEach(function(b){var g=b.price*b.qty;var n=g/(1+b.vat);net+=n;vat+=g-n;});
+  var gross=net+vat;
+  var disc=Math.min(parseFloat((document.getElementById('pos-disc')||{}).value||0)||0,gross);
+  window._POS_DUE=gross-disc;
+  if(method==='cash'){
+    document.getElementById('cm-due').textContent='£'+window._POS_DUE.toFixed(2);
+    document.getElementById('cm-tendered').value='';
+    document.getElementById('cm-change').textContent='£0.00';
+    openModal('cashModal');
+    setTimeout(function(){document.getElementById('cm-tendered').focus()},250);
+    return;
+  }
+  finalizeSale(method);
 }
 function posDayEnd(){
   const start=new Date();start.setHours(0,0,0,0);
