@@ -468,6 +468,8 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
   </div>
 </div>
 
+</div>
+
 <!-- APP -->
 <div id="app">
 
@@ -1083,6 +1085,14 @@ function haversine(a,b,c,d){const R=6371000,f=(c-a)*Math.PI/180,g=(d-b)*Math.PI/
   }catch(e){}
 })();
 
+// structure guard: #app must NEVER live inside #auth
+try{var _app=document.getElementById&&null}catch(e){}
+document.addEventListener('DOMContentLoaded',function(){
+  try{
+    var app=document.getElementById('app'),auth=document.getElementById('auth');
+    if(app&&auth&&auth.contains(app)){document.body.appendChild(app);}
+  }catch(e){}
+});
 // ===== CRASH-PROOF GUARDS (senior fintech: never a blank page) =====
 window.onerror=function(msg,src,line){
   try{
