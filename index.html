@@ -381,6 +381,11 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 @media (prefers-reduced-motion:reduce){
   .screen,.auth-card,.auth-fade,.lc,.ic,.home-hero,.pocket-card{opacity:1!important;transform:none!important}
 }
+
+/* FINAL FIX: a stuck entrance animation held screens at opacity 0 even over
+   inline styles (animations beat inline CSS). Screens now NEVER animate
+   opacity - visibility is controlled by display only. Bulletproof. */
+#app .screen{opacity:1!important;animation:none!important;transform:none!important;transition:none!important}
 </style>
 </head>
 <body>
