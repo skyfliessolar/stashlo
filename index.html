@@ -1001,6 +1001,36 @@ function greet(){const h=new Date().getHours();return h<12?'Good morning ☀️'
 function fmtLoy(m){if(!m||!m.loyalty_type)return'Earn loyalty points on every visit';const t=m.loyalty_type,v=m.loyalty_value||1,th=m.loyalty_threshold||100;if(t==='points')return`⭐ Earn ${v} pt per £1 • Reward at ${th} pts`;if(t==='percentage')return`💸 ${v}% cashback`;if(t==='stamp')return`🎫 Stamp card — reward every ${th} visits`;if(t==='discount')return`💷 £${v} off when you spend £${th}`;return'Earn loyalty points'}
 function haversine(a,b,c,d){const R=6371000,f=(c-a)*Math.PI/180,g=(d-b)*Math.PI/180,h=Math.sin(f/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(g/2)**2;return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))}
 
+// ===== MAGIC LINK / EMAIL CONFIRM / RECOVERY HANDLER =====
+// Fixes 'magic links not working': any Supabase email link redirects back with
+// #access_token=... — we catch it, sign the user in, and clean the URL.
+(function(){
+  try{
+    if(!location.hash||location.hash.indexOf('access_token')<0)return;
+    var p=new URLSearchParams(location.hash.slice(1));
+    var at=p.get('access_token'),type=p.get('type'),exp=parseInt(p.get('expires_in')||'3600');
+    if(!at)return;
+    var payload=JSON.parse(atob(at.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    var uid=payload.sub,email=payload.email||'';
+    history.replaceState(null,'',location.pathname+location.search);
+    if(type==='recovery'){
+      setTimeout(function(){
+        var np=prompt('Welcome back! Set your new password (min 6 chars):');
+        if(np&&np.length>=6){
+          fetch(SU+'/auth/v1/user',{method:'PUT',headers:{'apikey':SK,'Authorization':'Bearer '+at,'Content-Type':'application/json'},body:JSON.stringify({password:np})})
+          .then(function(){alert('Password updated! Sign in with your new password.');location.reload();})
+          .catch(function(){alert('Could not update password - request a new reset email.');});
+        }
+      },600);
+      return;
+    }
+    // Magic link / signup confirmation -> sign in directly, OTP satisfied
+    saveSess(at,uid,email,exp);
+    try{localStorage.setItem('sl_otpok_'+uid,'1')}catch(e){}
+    fetch(SU+'/rest/v1/users',{method:'POST',headers:{'apikey':SK,'Authorization':'Bearer '+at,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({id:uid,email:email,otp_verified:true,created_at:Date.now()})}).catch(function(){});
+  }catch(e){}
+})();
+
 // ===== SESSION =====
 window.addEventListener('load',()=>setTimeout(()=>{
   const s=JSON.parse(localStorage.getItem('sl_s')||'null');
