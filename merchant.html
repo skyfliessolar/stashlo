@@ -481,8 +481,11 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
       </div>
       <div style="display:flex;gap:8px;padding:0 16px;margin-bottom:8px">
         <button id="stockin-btn" onclick="toggleStockIn()" style="flex:1;background:var(--bg2);color:var(--ink2);border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">📦 Stock In: OFF</button>
+        <button onclick="aiInvoiceScan()" style="flex:1;background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">📄 AI Invoice</button>
         <button onclick="openManualPrice()" style="flex:1;background:#1e1b4b;color:#fff;border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">£ Manual Price</button>
+        <button onclick="toggleWaste()" id="waste-btn" style="flex:1;background:var(--bg2);color:var(--ink2);border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">📉 Reduce/Waste</button>
       </div>
+      <div style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none" id="dept-keys"></div>
       <div id="pos-cats" style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none"></div>
       <div id="pos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:10px"></div>
       <div style="margin:0 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
@@ -510,7 +513,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
         <div class="field" style="margin-bottom:10px"><label class="field-label">Item name (optional)</label>
         <input id="mp-name" placeholder="Misc item" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:12px;font-size:14px"></div>
         <div class="field" style="margin-bottom:10px"><label class="field-label">Price £</label>
-        <input id="mp-price" type="number" step="0.01" inputmode="decimal" placeholder="0.00" style="width:100%;padding:14px;border:2px solid var(--bg2);border-radius:12px;font-size:20px;font-weight:800"></div>
+        <input id="mp-price" type="number" step="0.01" inputmode="decimal" placeholder="0.00" onkeydown="if(event.key==&#39;Enter&#39;)addManualItem()" style="width:100%;padding:14px;border:2px solid var(--bg2);border-radius:12px;font-size:20px;font-weight:800"></div>
         <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">VAT</div>
         <div style="display:flex;gap:6px;margin-bottom:14px">
           <button class="mp-vat btn-xs btn-purple" data-v="0.2" onclick="mpVat(this)">20%</button>
@@ -1346,6 +1349,88 @@ function calcMargin(){
   }else el.style.display='none';
 }
 
+// ===== DEPARTMENT QUICK KEYS =====
+var DEPTS=[['💨','Vapes','vapes'],['🚬','Tobacco','tobacco'],['🥤','Drinks','juice'],['🍟','Crisps','crisps'],['🏠','Home','general'],['💄','Beauty','general'],['🍼','Baby','general'],['🛒','Grocery','grocery']];
+function renderDeptKeys(){
+  var el=document.getElementById('dept-keys');if(!el||el.children.length)return;
+  var Q=String.fromCharCode(39);
+  el.innerHTML=DEPTS.map(function(d,i){
+    return '<button onclick="openManualPrice('+i+')" style="flex:0 0 auto;background:var(--white);border:1.5px solid var(--bg2);border-radius:12px;padding:9px 13px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:var(--sh)">'+d[0]+' '+d[1]+'</button>';
+  }).join('');
+}
+
+// ===== WASTE / REDUCE-TO-CLEAR MODE (damaged, out of date, markdowns) =====
+var WASTE_MODE=false;
+function toggleWaste(){
+  WASTE_MODE=!WASTE_MODE;if(WASTE_MODE&&STOCK_IN)toggleStockIn();
+  var b=document.getElementById('waste-btn');
+  if(b){b.textContent=WASTE_MODE?'📉 Waste: ON — tap a product':'📉 Reduce/Waste';b.style.background=WASTE_MODE?'#b45309':'var(--bg2)';b.style.color=WASTE_MODE?'#fff':'var(--ink2)';}
+  if(WASTE_MODE)T('Tap any product: mark damaged / out-of-date / reduce to clear','success');
+}
+function wasteProduct(p){
+  var ch=prompt('📉 '+p.name+'\n\n1 = Damaged (write off stock)\n2 = Out of date (write off stock)\n3 = Reduce to clear (set new price)\n\nEnter 1, 2 or 3:','1');
+  if(ch===null)return;
+  if(ch==='3'){
+    var np=parseFloat(prompt('New clearance price £ (was £'+Number(p.price||0).toFixed(2)+'):','')||0);
+    if(!(np>0))return;
+    p.price=np;
+    pat('products','id=eq.'+p.id,{price:np}).then(function(){T('🔻 '+p.name+' reduced to £'+np.toFixed(2),'success');renderPOSGrid();}).catch(function(){T('Failed','error');});
+    return;
+  }
+  var reason=ch==='2'?'out_of_date':'damaged';
+  var q=parseInt(prompt('Quantity to write off:','1')||0);if(q<=0)return;
+  if(p.stock!=null){p.stock=Math.max(0,p.stock-q);pat('products','id=eq.'+p.id,{stock:p.stock}).catch(function(){});}
+  post('pos_sales',{merchant_id:MID,items:JSON.stringify([{n:p.name,q:q,p:0,v:0,reason:reason}]),net:0,vat_total:0,total:0,method:'waste',refund:false,created_at:Date.now()})
+  .then(function(){T('📉 '+q+' x '+p.name+' written off ('+reason.replace('_',' ')+')','success');renderPOSGrid();loadPOSSales();})
+  .catch(function(){T('Logged stock only (run migration for waste log)','success');renderPOSGrid();});
+}
+
+// ===== AI INVOICE SCAN (pallet delivery note -> stock added in seconds) =====
+function aiInvoiceScan(){
+  if(!window.ANTH_KEY){T('🤖 Add your AI key first: Admin app → More → AI Key (then invoice scanning activates)','error');return}
+  var inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.capture='environment';
+  inp.onchange=function(){
+    var f=inp.files[0];if(!f)return;
+    T('🤖 AI reading your invoice...');
+    var r=new FileReader();
+    r.onload=function(){
+      var b64=String(r.result).split(',')[1];
+      fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':window.ANTH_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:f.type||'image/jpeg',data:b64}},{type:'text',text:'This is a supplier delivery invoice for a UK retail shop. Extract every product line. Respond with ONLY a JSON array, no markdown: [{"name":"...","qty":2,"price":1.99}] where price is unit selling estimate if visible else omit.'}]}]})})
+      .then(function(res){return res.json()})
+      .then(function(data){
+        var txt=(data.content&&data.content[0]&&data.content[0].text)||'[]';
+        txt=txt.replace(/```json|```/g,'').trim();
+        var items=[];try{items=JSON.parse(txt)}catch(e){T('AI could not read the invoice clearly - try a sharper photo','error');return}
+        if(!items.length){T('No products found on that image','error');return}
+        var added=0,created=0,done=0;
+        items.forEach(function(it){
+          var name=(it.name||'').trim();if(!name){done++;return}
+          var qty=parseInt(it.qty)||1;
+          var p=PRODUCTS.find(function(x){return (x.name||'').toLowerCase()===name.toLowerCase()||((x.name||'').toLowerCase().indexOf(name.toLowerCase())>=0&&name.length>3)});
+          if(p){
+            p.stock=(p.stock||0)+qty;added++;
+            pat('products','id=eq.'+p.id,{stock:p.stock}).catch(function(){}).then(function(){done++;finish();});
+          }else{
+            var price=parseFloat(it.price)||1;
+            post('products',{merchant_id:MID,name:name,price:price,emoji:detectEmoji(name)||'🛍️',category:'other',vat_rate:'20',cost_price:0,pos_category:'general',stock:qty,collect:true,delivery:false,active:true,created_at:Date.now()})
+            .then(function(res2){var s=Array.isArray(res2)&&res2[0];if(s)PRODUCTS.push(s);created++;done++;finish();})
+            .catch(function(){done++;finish();});
+          }
+        });
+        function finish(){
+          if(done>=items.length){
+            renderPOSGrid();
+            T('🤖 Invoice processed: +stock on '+added+' products, '+created+' new products created','success');
+          }
+        }
+      }).catch(function(){T('AI request failed','error');});
+    };
+    r.readAsDataURL(f);
+  };
+  inp.click();
+}
+
 // ===== ZXING FALLBACK SCANNER (iPhone/iPad/desktop Safari - works EVERYWHERE) =====
 function openZXingScanner(){
   loadZXing(function(){
@@ -1356,7 +1441,9 @@ function openZXingScanner(){
       +'<div style="position:absolute;top:38%;left:8%;right:8%;height:110px;border:3px solid #34d399;border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div>'
       +'<div id="scan-hint" style="position:absolute;bottom:34px;left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:15px;text-shadow:0 2px 6px #000">Point camera at a barcode</div>';
     document.body.appendChild(ov);
-    var reader=new ZXing.BrowserMultiFormatReader();
+    var hints=new Map();
+    try{hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39,ZXing.BarcodeFormat.ITF]);}catch(e){}
+    var reader=new ZXing.BrowserMultiFormatReader(hints);
     var lastV='',lastT=0;
     document.getElementById('scan-x').onclick=function(){try{reader.reset()}catch(e){}ov.remove();};
     reader.decodeFromVideoDevice(null,'scan-vid',function(result,err){
@@ -1391,8 +1478,10 @@ function mpVat(btn){
   Array.prototype.forEach.call(document.querySelectorAll('.mp-vat'),function(b){b.className='mp-vat btn-xs btn-gray'});
   btn.className='mp-vat btn-xs btn-purple';
 }
-function openManualPrice(){
-  document.getElementById('mp-name').value='';
+function openManualPrice(di){
+  var d=(typeof di==='number')?DEPTS[di]:null;
+  document.getElementById('mp-name').value=d?d[1]:'';
+  window._MP_CAT=d?d[2]:'general';
   document.getElementById('mp-price').value='';
   openModal('manualModal');
   setTimeout(function(){document.getElementById('mp-price').focus()},250);
@@ -1431,7 +1520,7 @@ function openPOSScanner(){
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(st){
     _scanStream=st;
     var v=document.getElementById('scan-vid');v.srcObject=st;
-    var det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code']});
+    var det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf']});
     var last='',lastT=0;
     function loop(){
       if(!document.getElementById('scan-ov'))return;
@@ -1560,7 +1649,7 @@ function finalizeSale(method){
   var gross=net+vat;
   var disc=Math.min(parseFloat((document.getElementById('pos-disc')||{}).value||0)||0,gross);
   if(disc>0){var f=(gross-disc)/gross;net*=f;vat*=f;gross-=disc;}
-  var saleObj={merchant_id:MID,items:JSON.stringify(POS_BASKET.map(function(b){return {n:b.name,q:b.qty,p:b.price,v:b.vat}})),net:net.toFixed(2),vat_total:vat.toFixed(2),total:gross.toFixed(2),method:method,discount:disc.toFixed(2),refund:false,created_at:Date.now()};
+  var saleObj={merchant_id:MID,items:JSON.stringify(POS_BASKET.map(function(b){return {n:b.name,q:b.qty,p:b.price,v:b.vat,c:b.cost||0}})),net:net.toFixed(2),vat_total:vat.toFixed(2),total:gross.toFixed(2),method:method,discount:disc.toFixed(2),refund:false,created_at:Date.now()};
   post('pos_sales',saleObj).then(function(res){
     var saved=Array.isArray(res)&&res[0]?res[0]:saleObj;
     window._LAST_SALE=saved;
@@ -1635,13 +1724,20 @@ function savePOSSettings(){
   .then(function(){T('✅ POS settings saved','success');})
   .catch(function(){T('Saved on this device (run migration for cloud sync)','success');});
 }
+function rehomeModals(){
+  ['manualModal','cashModal'].forEach(function(id){
+    var m=document.getElementById(id);
+    if(m&&m.parentElement!==document.body)document.body.appendChild(m);
+  });
+}
 function posGuard(){
+  rehomeModals();
   const vEl=document.getElementById('pos-vatno'),fEl=document.getElementById('pos-footer');
   if(vEl)vEl.value=MDATA.receipt_vat_no||localStorage.getItem('sl_vatno_'+MID)||'';
   if(fEl)fEl.value=MDATA.receipt_footer||localStorage.getItem('sl_rfoot_'+MID)||'';
   var sEl=document.getElementById('pos-stripe');if(sEl)sEl.value=MDATA.stripe_link||localStorage.getItem('sl_stripe_'+MID)||'';
   const pay=document.getElementById('pos-paywall'),main=document.getElementById('pos-main');
-  if(MDATA.pos_enabled){pay.style.display='none';main.style.display='block';renderPOSGrid();loadPOSSales();}
+  if(MDATA.pos_enabled){pay.style.display='none';main.style.display='block';renderPOSGrid();loadPOSSales();renderDeptKeys();}
   else{
     pay.style.display='block';main.style.display='none';
     if(MDATA.pos_requested){const b=document.getElementById('pos-req-btn');b.textContent='Pending admin approval...';b.disabled=true;}
@@ -1677,8 +1773,9 @@ function renderPOSGrid(){
 function posAdd(pid){
   const p=PRODUCTS.find(function(x){return x.id===pid});if(!p)return;
   if(STOCK_IN){stockInAdd(p);return}
+  if(WASTE_MODE){wasteProduct(p);return}
   const ex=POS_BASKET.find(function(b){return b.id===pid});
-  if(ex)ex.qty++;else POS_BASKET.push({id:p.id,name:p.name,price:parseFloat(p.price||0),vat:vatRate(p),qty:1,emoji:p.emoji||''});
+  if(ex)ex.qty++;else POS_BASKET.push({id:p.id,name:p.name,price:parseFloat(p.price||0),vat:vatRate(p),qty:1,emoji:p.emoji||'',cost:parseFloat(p.cost_price||0)});
   renderBasket();
 }
 function posScanAdd(q){
@@ -1734,13 +1831,26 @@ function posCheckout(method){
   finalizeSale(method);
 }
 function posDayEnd(){
-  const start=new Date();start.setHours(0,0,0,0);
+  var start=new Date();start.setHours(0,0,0,0);
   get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+start.getTime()+'&order=created_at.desc').then(function(d){
-    const s=Array.isArray(d)?d:[];
-    let cash=0,card=0,vat=0;
-    s.forEach(function(x){const t=parseFloat(x.total||0);if(x.method==='cash')cash+=t;else card+=t;vat+=parseFloat(x.vat_total||0);});
+    var s=Array.isArray(d)?d:[];
+    var cash=0,card=0,vat=0,profit=0,sold=0,wasteN=0,refunds=0;
+    s.forEach(function(x){
+      var t=parseFloat(x.total||0);
+      if(x.method==='waste'){try{JSON.parse(x.items||'[]').forEach(function(it){wasteN+=it.q||0})}catch(e){}return}
+      if(t<0){refunds+=Math.abs(t);}
+      if(x.method==='cash')cash+=t;else card+=t;
+      vat+=parseFloat(x.vat_total||0);
+      try{JSON.parse(x.items||'[]').forEach(function(it){var sign=t<0?-1:1;sold+=sign*(it.q||0);profit+=sign*(((it.p||0)-(it.c||0))*(it.q||0));});}catch(e){}
+    });
     window._POS_TODAY=s;
-    document.getElementById('pos-report').innerHTML='<b>Today ('+s.length+' sales)</b><br>Cash: <b>£'+cash.toFixed(2)+'</b> · Card: <b>£'+card.toFixed(2)+'</b><br>VAT collected: <b>£'+vat.toFixed(2)+'</b> · Gross: <b style="color:var(--purple)">£'+(cash+card).toFixed(2)+'</b>';
+    document.getElementById('pos-report').innerHTML='<b>📊 Day-End · '+new Date().toLocaleDateString()+'</b><br>'
+      +'Sales: <b>'+s.filter(function(x){return x.method!=='waste'&&parseFloat(x.total)>0}).length+'</b> · Items sold: <b>'+sold+'</b><br>'
+      +'Cash: <b>£'+cash.toFixed(2)+'</b> · Card: <b>£'+card.toFixed(2)+'</b><br>'
+      +'VAT collected: <b>£'+vat.toFixed(2)+'</b> · Refunds: <b style="color:#ef4444">£'+refunds.toFixed(2)+'</b><br>'
+      +'Waste/write-offs: <b>'+wasteN+' items</b><br>'
+      +'Gross: <b style="color:var(--purple)">£'+(cash+card).toFixed(2)+'</b> · <span style="background:#f0fdf4;border-radius:8px;padding:2px 8px">💰 Profit: <b style="color:#059669">£'+profit.toFixed(2)+'</b></span><br>'
+      +'<span style="font-size:11px;color:var(--ink4)">Profit uses each product&#39;s cost price - set costs in Stock for accuracy</span>';
   }).catch(function(){T('Could not load','error');});
 }
 function posExportCSV(){
