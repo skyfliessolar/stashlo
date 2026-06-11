@@ -344,10 +344,26 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     <div id="job-approvals-list" style="padding:0 16px"></div>
   </div>
 
+  <!-- RECEIPTS ADMIN -->
+  <div class="screen" id="admreceipts-screen">
+    <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">🧾 Receipts Control</div>
+    <div style="margin:0 16px 10px;display:flex;gap:8px">
+      <input id="admrcp-q" placeholder="🔍 Search shop / receipt no / user..." oninput="loadAdminReceipts()" style="flex:1;padding:11px;border-radius:12px;border:1.5px solid var(--bg2);font-size:13px">
+    </div>
+    <div style="margin:0 16px 12px;background:var(--white);border-radius:14px;padding:12px;box-shadow:var(--sh);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:12px;font-weight:800">Free limit:</span>
+      <input id="admrcp-limit" type="number" style="width:70px;padding:8px;border-radius:10px;border:1.5px solid var(--bg2)">
+      <button class="btn-xs btn-purple" onclick="saveReceiptLimit()">Save</button>
+      <button class="btn-xs btn-green" onclick="grantUserReceipts()">💳 Grant paid storage</button>
+    </div>
+    <div id="admrcp-list" style="padding:0 16px"></div>
+  </div>
+
   <!-- AUDIT LOGS -->
   <div class="screen" id="audit-screen">
     <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">📜 Audit Logs</div>
     <div style="margin:0 16px 12px;background:#f0fdf4;border-radius:12px;padding:10px 14px;font-size:12px;font-weight:600;color:#065f46">🔒 All admin actions are recorded for compliance</div>
+    <div style="margin:0 16px 10px"><input id="audit-q" placeholder="🔍 Search audit logs (action, target)..." oninput="filterAudit()" style="width:100%;padding:11px;border-radius:12px;border:1.5px solid var(--bg2);font-size:13px"></div>
     <div id="audit-list" style="padding:0 16px"></div>
   </div>
 
@@ -362,6 +378,11 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
         <div style="font-size:26px">🎨</div>
         <div style="font-size:13px;font-weight:700;margin-top:6px;color:#fff">3D Studio</div>
         <div style="font-size:11px;color:rgba(255,255,255,.7)">Live theme</div>
+      </div>
+      <div onclick="switchTab('admreceipts')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">🧾</div>
+        <div style="font-size:13px;font-weight:700;margin-top:6px">Receipts</div>
+        <div style="font-size:11px;color:var(--ink3)">Restore · limits</div>
       </div>
       <div onclick="switchTab('jobapprovals')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:26px">💼</div>
@@ -1396,6 +1417,12 @@ function approveJobUnlock(id,email){
 }
 
 // ===== AUDIT LOG VIEWER =====
+function filterAudit(){
+  var q=((document.getElementById('audit-q')||{}).value||'').toLowerCase();
+  document.querySelectorAll('#audit-list .ic').forEach(function(el){
+    el.style.display=!q||el.textContent.toLowerCase().indexOf(q)>=0?'':'none';
+  });
+}
 function loadAuditLogs(){
   const el=document.getElementById('audit-list');if(!el)return;
   el.innerHTML='<div style="text-align:center;padding:14px;color:var(--ink3);font-size:13px">Loading...</div>';
@@ -1459,6 +1486,61 @@ function initD3Preview(){
   el.addEventListener('pointerleave',()=>{el.style.transform='';});
 }
 
+// ===== GLOBAL BACK (no dead-end screens) =====
+function ensureBackBtns(){
+  document.querySelectorAll('.screen').forEach(function(s){
+    if(s.id==='overview-screen'||s.querySelector('.back-pill'))return;
+    var b=document.createElement('button');
+    b.className='back-pill';
+    b.style.cssText='margin:10px 16px 0;background:var(--bg2);border:none;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:800;cursor:pointer;color:var(--ink2)';
+    b.textContent='← Back';
+    b.onclick=function(){switchTab('overview')};
+    s.prepend(b);
+  });
+}
+document.addEventListener('DOMContentLoaded',function(){setTimeout(ensureBackBtns,400)});
+
+// ===== RECEIPTS ADMIN (view all, restore deleted, set limits) =====
+function loadAdminReceipts(){
+  var el=document.getElementById('admrcp-list');if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:14px;color:var(--ink3)">Loading...</div>';
+  Promise.all([sget('receipts','order=created_at.desc&limit=100'),sget('app_settings','key=eq.receipt_free_limit')]).then(function(res){
+    var rs=Array.isArray(res[0])?res[0]:[];
+    var lim=(Array.isArray(res[1])&&res[1][0]&&res[1][0].value)||'10';
+    var li=document.getElementById('admrcp-limit');if(li)li.value=lim;
+    var q=((document.getElementById('admrcp-q')||{}).value||'').toLowerCase();
+    if(q)rs=rs.filter(function(r){return ((r.merchant_name||'')+(r.receipt_no||'')+(r.user_id||'')).toLowerCase().indexOf(q)>=0});
+    var Q=String.fromCharCode(39);
+    el.innerHTML=rs.length?rs.map(function(r){
+      return '<div class="ic"><div class="ic-row"><div><div class="ic-name">🧾 '+(r.merchant_name||'Receipt')+' £'+parseFloat(r.total||0).toFixed(2)+(r.deleted?' <span style="background:#7f1d1d;color:#fca5a5;border-radius:6px;padding:1px 6px;font-size:9px;font-weight:800">DELETED</span>':'')+'</div><div class="ic-sub">'+(r.receipt_no||'')+' · '+(r.created_at?new Date(r.created_at).toLocaleString().slice(0,17):'')+' · user '+(r.user_id||'').slice(0,8)+'</div></div>'
+      +(r.deleted?'<button class="btn-xs btn-green" onclick="restoreReceipt('+Q+r.id+Q+')">↩ Restore</button>':'')
+      +'</div></div>';
+    }).join(''):'<div class="empty"><div class="empty-txt">No receipts</div></div>';
+  }).catch(function(){el.innerHTML='<div class="empty"><div class="empty-txt">Could not load</div></div>'});
+}
+function restoreReceipt(id){
+  spat('receipts','id=eq.'+id,{deleted:false})
+  .then(function(){T('↩ Receipt restored to customer','success');logAudit('restore_receipt',id);loadAdminReceipts();})
+  .catch(function(){T('Failed - receipts.deleted column missing?','error');});
+}
+function saveReceiptLimit(){
+  var v=(document.getElementById('admrcp-limit')||{}).value||'10';
+  spost('app_settings',{key:'receipt_free_limit',value:String(parseInt(v)||10),updated_at:Date.now()},'key')
+  .then(function(){T('Free receipt limit set to '+v,'success');logAudit('set_receipt_limit',v);})
+  .catch(function(){T('Failed','error');});
+}
+function grantUserReceipts(){
+  var em=prompt('Customer email to grant extra receipt storage:');if(!em)return;
+  var n=prompt('New receipt limit for this customer (e.g. 25 / 50 / 100):','25');if(!n)return;
+  sget('users','email=eq.'+encodeURIComponent(em)).then(function(d){
+    var u=Array.isArray(d)&&d[0];
+    if(!u){T('No customer with that email','error');return}
+    spat('users','id=eq.'+u.id,{receipt_limit:parseInt(n)||25})
+    .then(function(){T('✅ '+em+' can now store '+n+' receipts','success');logAudit('grant_receipt_storage',em+' -> '+n);})
+    .catch(function(){T('users.receipt_limit column missing - run SQL','error');});
+  });
+}
+
 function switchTab(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
@@ -1473,6 +1555,7 @@ function switchTab(name){
   if(name==='jobapprovals')loadJobApprovals();
   if(name==='audit')loadAuditLogs();
   if(name==='design3d')loadTheme3DStudio();
+  if(name==='admreceipts')loadAdminReceipts();
   if(name==='delivery')loadDelivery();
   if(name==='billing')loadBilling();
 }

@@ -825,6 +825,10 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
           <span class="mo-title">Choose a Brand</span>
           <button class="mo-x" onclick="cmo('addNatMo')">✕</button>
         </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button onclick="scanCardToAdd()" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:800;cursor:pointer">📷 Scan my plastic card</button>
+          <button onclick="manualBrandAdd()" style="flex:1;background:#1e1b4b;color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:800;cursor:pointer">➕ Brand not listed</button>
+        </div>
         <input class="fi" id="brand-search" placeholder="🔍 Search all national cards..." oninput="buildBrands(this.value)" style="margin-bottom:12px">
         <div class="brands-grid" id="brands-grid"></div>
       </div>
@@ -1754,7 +1758,7 @@ function savePayCard(){
 }
 function loadPaymentCards(){
   get('payment_cards','user_id=eq.'+UID+'&order=created_at.desc').then(d=>{
-    PAY_CARDS=Array.isArray(d)?d:[];renderPaymentCards();
+    PAY_CARDS=Array.isArray(d)?d:[];cacheCards();renderPaymentCards();
   }).catch(()=>{})
 }
 function renderPaymentCards(){
@@ -1887,6 +1891,16 @@ function applyJob(email,title,btn){
 }
 
 // ===== SUPPORT CHAT (polling, working) =====
+function chatStatus(msgs){
+  var el=document.getElementById('chat-status');if(!el)return;
+  var hasAdmin=msgs.some(function(m){return m.sender_role==='admin'});
+  var esc=msgs.some(function(m){return m.escalated});
+  var resolved=msgs.length&&/resolved|closed/i.test(msgs[msgs.length-1].message||'')&&msgs[msgs.length-1].sender_role==='admin';
+  if(resolved){el.textContent='✅ Resolved';el.style.background='#f0fdf4';el.style.color='#059669';}
+  else if(hasAdmin){el.textContent='🧑‍💼 Admin Joined';el.style.background='#f0fdf4';el.style.color='#059669';}
+  else if(esc){el.textContent='⏳ Waiting for Admin';el.style.background='#fffbeb';el.style.color='#b45309';}
+  else{el.textContent='🤖 Bot';el.style.background='var(--purple-bg)';el.style.color='var(--purple)';}
+}
 function loadSupportChat(){
   if(!UID)return;
   const el=document.getElementById('support-msgs');if(!el)return;
@@ -1949,22 +1963,55 @@ function loadReceipts(){
   rcpYearInit();
   const el=document.getElementById('receipts-list');if(!el)return;
   el.innerHTML='<div class="spin"></div>';
-  get('receipts','user_id=eq.'+UID+'&order=created_at.desc').then(function(d){
+  get('receipts','user_id=eq.'+UID+'&deleted=not.is.true&order=created_at.desc').then(function(d){
     let all=Array.isArray(d)?d:[];
     const yr=(document.getElementById('rcp-year')||{}).value||'all';
     RECEIPTS=yr==='all'?all:all.filter(function(r){return new Date(r.created_at||0).getFullYear()===parseInt(yr)});
     const tot=RECEIPTS.reduce(function(a,r){return a+parseFloat(r.total||0)},0);
     txt('rcp-total','£'+tot.toFixed(2));txt('rcp-count',RECEIPTS.length+' receipts');
     if(!RECEIPTS.length){el.innerHTML='<div class="empty"><i>🧾</i><p>No receipts in this period.<br>Scan one with 📷 or save from completed orders.</p></div>';return}
-    el.innerHTML=RECEIPTS.map(function(r){return '<div class="ic" style="margin:0 0 10px">'
+    el.innerHTML=RECEIPTS.map(function(r,i){return '<div class="ic" style="margin:0 0 10px">'
       +(r.image_url?'<img src="'+r.image_url+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:10px" onclick="window.open(String.fromCharCode(39)+r.image_url" onerror="this.style.display=String.fromCharCode(39)+String.fromCharCode(39)">':'')
-      +'<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">🧾 '+(r.merchant_name||'Receipt')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.receipt_no||'')+' · '+(r.created_at?new Date(r.created_at).toLocaleString().slice(0,17):'')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.items||'')+'</div></div><div style="font-size:17px;font-weight:800;color:var(--purple)">£'+parseFloat(r.total||0).toFixed(2)+'</div></div></div>'}).join('');
+      +'<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">🧾 '+(r.merchant_name||'Receipt')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.receipt_no||'')+' · '+(r.created_at?new Date(r.created_at).toLocaleString().slice(0,17):'')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.items||'')+'</div></div><div style="text-align:right"><div style="font-size:17px;font-weight:800;color:var(--purple)">£'+parseFloat(r.total||0).toFixed(2)+'</div><div style="margin-top:6px"><button onclick="downloadReceiptPDF('+i+')" style="background:var(--purple-bg);color:var(--purple);border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">⬇ PDF</button> <button onclick="deleteReceipt('+i+')" style="background:#fef2f2;color:#ef4444;border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">🗑</button></div></div></div></div>'}).join('');
     // fix image handlers cleanly
     Array.prototype.forEach.call(el.querySelectorAll('img'),function(im,i){
       im.onclick=function(){window.open(RECEIPTS[i]&&RECEIPTS[i].image_url||'#','_blank')};
       im.onerror=function(){this.style.display='none'};
     });
   }).catch(function(){el.innerHTML='<div class="empty"><i>⚠️</i><p>Could not load receipts</p></div>'});
+}
+function downloadReceiptPDF(i){
+  var r=RECEIPTS[i];if(!r)return;
+  var w=window.open('','rpdf','width=380,height=640');
+  if(!w){T('Allow popups to download PDF');return}
+  w.document.write('<html><head><title>'+(r.receipt_no||'Receipt')+'</title><style>body{font-family:monospace;width:300px;margin:20px auto;font-size:13px;color:#000}.c{text-align:center}.row{display:flex;justify-content:space-between}.line{border-top:1px dashed #000;margin:8px 0}</style></head><body>'
+   +'<h2 class="c">'+(r.merchant_name||'Receipt')+'</h2>'
+   +'<div class="c">'+(r.created_at?new Date(r.created_at).toLocaleString():'')+'</div>'
+   +'<div class="c">'+(r.receipt_no||'')+'</div><div class="line"></div>'
+   +'<div>'+(r.items||'')+'</div><div class="line"></div>'
+   +'<div class="row"><b>TOTAL</b><b>£'+parseFloat(r.total||0).toFixed(2)+'</b></div>'
+   +(r.image_url?'<img src="'+r.image_url+'" style="width:100%;margin-top:10px">':'')
+   +'<div class="c" style="margin-top:14px">Stashlo Receipt Archive</div></body></html>');
+  w.document.close();
+  setTimeout(function(){w.print();},400);
+}
+function deleteReceipt(i){
+  var r=RECEIPTS[i];if(!r)return;
+  if(!confirm('Delete this receipt from your archive? (Stashlo keeps a secure copy for audit - admin can restore it for you)'))return;
+  pat('receipts','id=eq.'+r.id,{deleted:true})
+  .then(function(){T('Receipt removed - recoverable via support');loadReceipts();})
+  .catch(function(){T('Delete failed');});
+}
+async function receiptLimitOK(){
+  try{
+    var s=await get('app_settings','key=eq.receipt_free_limit');
+    var lim=parseInt((Array.isArray(s)&&s[0]&&s[0].value)||'10');
+    if(PROF.receipt_limit)lim=Math.max(lim,parseInt(PROF.receipt_limit));
+    var mine=await get('receipts','user_id=eq.'+UID+'&deleted=not.is.true&select=id');
+    var n=Array.isArray(mine)?mine.length:0;
+    if(n>=lim){T('🧾 Free limit reached ('+lim+'). Upgrade storage: 25/£0.99, 50/£1.79, 100/£2.99 per month - request in Support');return false}
+    return true;
+  }catch(e){return true}
 }
 function exportReceiptsCSV(){
   if(!RECEIPTS.length){T('No receipts in this period');return}
@@ -2026,6 +2073,7 @@ async function scanReceipt(input){
   const file=input.files[0];if(!file)return;
   input.value='';
   if(file.size>5*1024*1024){T('Max 5MB image');return}
+  if(!(await receiptLimitOK()))return;
   T('📷 Uploading receipt...');
   try{
     const url=await uploadReceiptImg(file);
@@ -2317,6 +2365,52 @@ function walletAction(net){
   }
 }
 
+
+// ===== SCAN PLASTIC LOYALTY CARD -> auto number + custom name =====
+function scanCardToAdd(){
+  if(!('BarcodeDetector' in window)){T('Camera scan needs Chrome Android - type the number instead');return}
+  var ov=document.createElement('div');ov.id='cscan-ov';
+  ov.style.cssText='position:fixed;inset:0;background:#000;z-index:950;display:flex;flex-direction:column';
+  ov.innerHTML='<video id="cscan-vid" autoplay playsinline muted style="flex:1;width:100%;object-fit:cover"></video><button id="cscan-x" style="position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:18px">X</button><div style="position:absolute;top:40%;left:8%;right:8%;height:100px;border:3px solid #34d399;border-radius:14px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div><div style="position:absolute;bottom:34px;left:0;right:0;text-align:center;color:#fff;font-weight:800">Point at the barcode on your loyalty card</div>';
+  document.body.appendChild(ov);
+  var stream=null,raf=null;
+  function stop(){if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(function(t){t.stop()});ov.remove();}
+  document.getElementById('cscan-x').onclick=stop;
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(st){
+    stream=st;var v=document.getElementById('cscan-vid');v.srcObject=st;
+    var det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','codabar','qr_code']});
+    function loop(){
+      if(!document.getElementById('cscan-ov'))return;
+      det.detect(v).then(function(codes){
+        if(codes&&codes.length&&codes[0].rawValue){
+          var num=codes[0].rawValue;stop();
+          var name=prompt('✅ Card number captured: '+num+'\n\nGive this card a name (e.g. Esso, Costa):','My loyalty card');
+          if(name===null)return;
+          var colors=['#0061f2','#e4003b','#00754a','#7c3aed','#f59e0b','#0f766e'];
+          post('cards',{user_id:UID,card_id:'SCAN-'+Date.now().toString(36).toUpperCase(),name:name||'My card',shop_name:name||'My card',card_number:num,type:'national',emoji:'💳',color:colors[Math.floor(Math.random()*colors.length)],points:0,added_at:Date.now()},'user_id,card_id')
+          .then(function(){T('💳 '+name+' added to your wallet!');cmo('addNatMo');loadCards();})
+          .catch(function(){T('Could not save card');});
+          return;
+        }
+        raf=requestAnimationFrame(loop);
+      }).catch(function(){raf=requestAnimationFrame(loop)});
+    }
+    v.onloadedmetadata=loop;
+  }).catch(function(){T('Camera permission needed');stop();});
+}
+function manualBrandAdd(){
+  var name=prompt('Brand / shop name (e.g. Esso, Shell, local butcher):');if(!name)return;
+  var num=prompt('Loyalty card number (from your card):')||'';
+  var colors={esso:'#0c2577',shell:'#fbce07',bp:'#009b00',texaco:'#d50000'};
+  var col=colors[(name||'').toLowerCase()]||'#4338ca';
+  post('cards',{user_id:UID,card_id:'MAN-'+Date.now().toString(36).toUpperCase(),name:name,shop_name:name,card_number:num,type:'national',emoji:'⛽',color:col,points:0,added_at:Date.now()},'user_id,card_id')
+  .then(function(){T('💳 '+name+' added!');cmo('addNatMo');loadCards();})
+  .catch(function(){T('Could not save');});
+}
+
+// ===== OFFLINE LOYALTY CACHE (cards work with no signal) =====
+function cacheCards(){try{localStorage.setItem('sl_cards_'+UID,JSON.stringify(CARDS))}catch(e){}}
+function loadCachedCards(){try{var d=JSON.parse(localStorage.getItem('sl_cards_'+UID)||'null');if(Array.isArray(d)&&d.length){CARDS=d;return true}}catch(e){}return false}
 
 // ===== FREE STASHLO AI (no API key needed - instant knowledge-base bot) =====
 function freeBotReply(q){

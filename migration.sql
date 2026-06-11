@@ -447,3 +447,13 @@ ALTER TABLE merchants ADD COLUMN IF NOT EXISTS receipt_footer text;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS stock integer;
 ALTER TABLE pos_sales ADD COLUMN IF NOT EXISTS discount numeric DEFAULT 0;
 ALTER TABLE pos_sales ADD COLUMN IF NOT EXISTS refund boolean DEFAULT false;
+
+-- v11: receipts governance, Stripe, delivery, roles
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS deleted boolean DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS receipt_limit integer;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role text DEFAULT 'customer';
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS stripe_link text;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_name text;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_lat numeric;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_lng numeric;
+INSERT INTO app_settings (key,value) VALUES ('receipt_free_limit','10') ON CONFLICT (key) DO NOTHING;

@@ -539,6 +539,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
       <div style="margin:12px 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
         <div style="font-size:13px;font-weight:800;margin-bottom:8px">⚙️ POS Settings</div>
         <div class="field" style="margin-bottom:8px"><label class="field-label">VAT number (prints on receipts)</label><input id="pos-vatno" placeholder="GB123456789" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
+        <div class="field" style="margin-bottom:8px"><label class="field-label">Stripe Payment Link (card payments)</label><input id="pos-stripe" placeholder="https://buy.stripe.com/..." style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
         <div class="field" style="margin-bottom:8px"><label class="field-label">Receipt footer message</label><input id="pos-footer" placeholder="Thank you for shopping with us!" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-purple" style="flex:1" onclick="savePOSSettings()">💾 Save</button>
@@ -588,13 +589,14 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
     <div class="modal-body">
       <input type="hidden" id="edit-prod-id">
       <div class="field"><label class="field-label">Product Name ★</label><input id="p-name" oninput="autoEmoji(&#39;p-name&#39;,&#39;p-emoji&#39;)" placeholder="e.g. Large Oat Latte"></div>
-      <div class="field"><label class="field-label">Price (£) ★</label><input id="p-price" type="number" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="field"><label class="field-label">Price (£) ★</label><input id="p-price" oninput="calcMargin()" type="number" step="0.01" min="0" placeholder="0.00"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="field"><label class="field-label">VAT rate</label><select id="p-vat" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"><option value="20">Standard 20%</option><option value="5">Reduced 5%</option><option value="0">Zero-rated 0%</option><option value="exempt">Non-VAT / exempt</option></select></div>
-        <div class="field"><label class="field-label">Cost price £</label><input id="p-cost" type="number" step="0.01" placeholder="0.00" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"></div>
+        <div class="field"><label class="field-label">Cost price £</label><input id="p-cost" type="number" step="0.01" placeholder="0.00" oninput="calcMargin()" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="field"><label class="field-label">Barcode (scan or type)</label><input id="p-barcode" placeholder="5012345678900" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"></div>
+        <div id="p-margin" style="display:none;background:#f0fdf4;border-radius:10px;padding:9px 12px;font-size:12px;font-weight:800;color:#065f46;margin-bottom:10px"></div>
+      <div class="field"><label class="field-label">Barcode (scan or type)</label><input id="p-barcode" placeholder="5012345678900" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"></div>
         <div class="field"><label class="field-label">Stock count</label><input id="p-stock" type="number" placeholder="0" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"></div>
       </div>
       <div class="field"><label class="field-label">POS category</label><select id="p-cat" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"><option value="general">General</option><option value="grocery">Grocery</option><option value="crisps">Crisps & snacks</option><option value="juice">Juice & drinks</option><option value="alcohol">Alcohol</option><option value="vapes">Vapes</option><option value="tobacco">Tobacco</option><option value="cigarettes">Cigarettes</option><option value="car">Car accessories</option></select></div>
@@ -658,7 +660,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
     </div>
     <div class="modal-body" id="order-detail-body"></div>
     <div class="modal-footer">
-      <button class="btn btn-green" style="flex:1" onclick="updateOrderSt('dispatched')">🚚 Dispatch</button>
+      <button class="btn btn-green" style="flex:1" onclick="assignDriverAndDispatch()">🚚 Dispatch</button>
       <button class="btn btn-primary" style="flex:1" onclick="updateOrderSt('in_transit')">🛵 In Transit</button>
     </div>
     <div style="display:flex;gap:8px;margin-top:8px">
@@ -1316,6 +1318,29 @@ function initTilt3D(){
 
 
 
+// ===== DELIVERY: driver assignment =====
+function assignDriverAndDispatch(){
+  var drv=prompt('🚚 Driver name for this delivery (shown to customer):','Stashlo Driver');
+  if(drv===null)return;
+  pat('orders','id=eq.'+CUR_ORDER,{driver_name:drv||'Driver'}).catch(function(){});
+  updateOrderSt('dispatched');
+}
+
+// ===== LIVE PROFIT MARGIN =====
+function calcMargin(){
+  var sp=parseFloat((document.getElementById('p-price')||{}).value||0);
+  var cp=parseFloat((document.getElementById('p-cost')||{}).value||0);
+  var el=document.getElementById('p-margin');if(!el)return;
+  if(sp>0&&cp>0){
+    var prof=sp-cp,marg=(prof/sp*100);
+    var vr=(document.getElementById('p-vat')||{}).value||'20';
+    var vp=vr==='20'?0.2:vr==='5'?0.05:0;
+    var vat=sp-sp/(1+vp);
+    el.style.display='block';
+    el.innerHTML='💰 Profit: £'+prof.toFixed(2)+' ('+marg.toFixed(1)+'% margin) · VAT in price: £'+vat.toFixed(2);
+  }else el.style.display='none';
+}
+
 // ===== STOCK-IN MODE (scan goods in, add quantity to stock) =====
 let STOCK_IN=false,_MP_VAT=0.2;
 function toggleStockIn(){
@@ -1545,7 +1570,10 @@ function reprintLast(){
 let POS_BASKET=[];
 function vatRate(p){const v=(p.vat_rate===undefined||p.vat_rate===null)?'20':String(p.vat_rate);return v==='20'?0.2:v==='5'?0.05:0;}
 function savePOSSettings(){
-  const v=V('pos-vatno'),f=V('pos-footer');
+  const v=V('pos-vatno'),f=V('pos-footer'),sl=V('pos-stripe');
+  try{localStorage.setItem('sl_stripe_'+MID,sl)}catch(e){}
+  MDATA.stripe_link=sl;
+  pat('merchants','id=eq.'+MID,{stripe_link:sl}).catch(function(){});
   try{localStorage.setItem('sl_vatno_'+MID,v);localStorage.setItem('sl_rfoot_'+MID,f);}catch(e){}
   MDATA.receipt_vat_no=v;MDATA.receipt_footer=f;
   pat('merchants','id=eq.'+MID,{receipt_vat_no:v,receipt_footer:f})
@@ -1556,6 +1584,7 @@ function posGuard(){
   const vEl=document.getElementById('pos-vatno'),fEl=document.getElementById('pos-footer');
   if(vEl)vEl.value=MDATA.receipt_vat_no||localStorage.getItem('sl_vatno_'+MID)||'';
   if(fEl)fEl.value=MDATA.receipt_footer||localStorage.getItem('sl_rfoot_'+MID)||'';
+  var sEl=document.getElementById('pos-stripe');if(sEl)sEl.value=MDATA.stripe_link||localStorage.getItem('sl_stripe_'+MID)||'';
   const pay=document.getElementById('pos-paywall'),main=document.getElementById('pos-main');
   if(MDATA.pos_enabled){pay.style.display='none';main.style.display='block';renderPOSGrid();loadPOSSales();}
   else{
@@ -1639,6 +1668,13 @@ function posCheckout(method){
     openModal('cashModal');
     setTimeout(function(){document.getElementById('cm-tendered').focus()},250);
     return;
+  }
+  if(method==='card'){
+    var link=MDATA.stripe_link||localStorage.getItem('sl_stripe_'+MID)||'';
+    if(link){
+      window.open(link,'_blank');
+      if(!confirm('Stripe payment page opened.\n\nOK once the customer has PAID on the card terminal/page.'))return;
+    }
   }
   finalizeSale(method);
 }
