@@ -189,6 +189,14 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 @keyframes rise3d{from{transform:translateY(46px) rotateX(7deg);opacity:0}to{transform:translateY(0) rotateX(0);opacity:1}}
 @media (prefers-reduced-motion:reduce){body.t3d *{animation:none!important;transition:none!important}}
 
+
+/* Computer-POS layout on tablets/desktop */
+@media(min-width:760px){
+  #pos-main{max-width:1100px;margin:0 auto}
+  #pos-grid{grid-template-columns:repeat(5,1fr)!important}
+}
+@media(min-width:1024px){#pos-grid{grid-template-columns:repeat(6,1fr)!important}}
+#stockin-btn.on{background:#f59e0b!important;color:#fff!important}
 </style>
 </head>
 <body>
@@ -471,6 +479,10 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
         <input id="pos-scan" placeholder="🔍 Search / barcode + Enter" style="flex:1;padding:13px;border:2px solid var(--bg2);border-radius:14px;font-size:14px" onkeydown="if(event.key==='Enter')posScanAdd(this.value)" oninput="renderPOSGrid()">
         <button onclick="openPOSScanner()" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:14px;padding:0 18px;font-size:15px;font-weight:800;cursor:pointer">📷 Scan</button>
       </div>
+      <div style="display:flex;gap:8px;padding:0 16px;margin-bottom:8px">
+        <button id="stockin-btn" onclick="toggleStockIn()" style="flex:1;background:var(--bg2);color:var(--ink2);border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">📦 Stock In: OFF</button>
+        <button onclick="openManualPrice()" style="flex:1;background:#1e1b4b;color:#fff;border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">£ Manual Price</button>
+      </div>
       <div id="pos-cats" style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none"></div>
       <div id="pos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:10px"></div>
       <div style="margin:0 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
@@ -492,6 +504,22 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
         </div>
         <button class="btn" style="width:100%;margin-top:8px;background:var(--bg2)" onclick="posClear()">Clear basket</button>
       </div>
+      <!-- Manual price modal (open-price key like real tills) -->
+      <div class="modal" id="manualModal"><div class="modal-box" style="max-width:340px">
+        <div style="font-size:16px;font-weight:800;margin-bottom:10px">£ Manual Item</div>
+        <div class="field" style="margin-bottom:10px"><label class="field-label">Item name (optional)</label>
+        <input id="mp-name" placeholder="Misc item" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:12px;font-size:14px"></div>
+        <div class="field" style="margin-bottom:10px"><label class="field-label">Price £</label>
+        <input id="mp-price" type="number" step="0.01" inputmode="decimal" placeholder="0.00" style="width:100%;padding:14px;border:2px solid var(--bg2);border-radius:12px;font-size:20px;font-weight:800"></div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">VAT</div>
+        <div style="display:flex;gap:6px;margin-bottom:14px">
+          <button class="mp-vat btn-xs btn-purple" data-v="0.2" onclick="mpVat(this)">20%</button>
+          <button class="mp-vat btn-xs btn-gray" data-v="0.05" onclick="mpVat(this)">5%</button>
+          <button class="mp-vat btn-xs btn-gray" data-v="0" onclick="mpVat(this)">0%</button>
+          <button class="mp-vat btn-xs btn-gray" data-v="0" onclick="mpVat(this)">No VAT</button>
+        </div>
+        <div style="display:flex;gap:8px"><button class="btn btn-gray" style="flex:1" onclick="closeModal('manualModal')">Cancel</button><button class="btn btn-purple" style="flex:1" onclick="addManualItem()">➕ Add to basket</button></div>
+      </div></div>
       <!-- Cash change modal -->
       <div class="modal" id="cashModal"><div class="modal-box" style="max-width:340px">
         <div style="font-size:16px;font-weight:800;margin-bottom:4px">💵 Cash Payment</div>
@@ -1277,6 +1305,44 @@ function initTilt3D(){
 
 
 
+// ===== STOCK-IN MODE (scan goods in, add quantity to stock) =====
+let STOCK_IN=false,_MP_VAT=0.2;
+function toggleStockIn(){
+  STOCK_IN=!STOCK_IN;
+  var b=document.getElementById('stockin-btn');
+  if(b){b.textContent=STOCK_IN?'📦 Stock In: ON — scan/tap products':'📦 Stock In: OFF';b.classList.toggle('on',STOCK_IN);}
+  T(STOCK_IN?'Stock-In mode: scan or tap a product, then enter quantity received':'Back to selling mode','success');
+}
+function stockInAdd(p){
+  var q=prompt('📦 Quantity received for: '+p.name+'\n(current stock: '+(p.stock!=null?p.stock:'untracked')+')','1');
+  if(q===null)return;
+  q=parseInt(q)||0;if(q<=0){T('Enter a quantity above 0','error');return}
+  p.stock=(p.stock||0)+q;
+  pat('products','id=eq.'+p.id,{stock:p.stock})
+  .then(function(){T('📦 +'+q+' '+p.name+' — stock now '+p.stock,'success');renderPOSGrid();})
+  .catch(function(){T('Stock column missing — run migration v10','error');});
+}
+function mpVat(btn){
+  _MP_VAT=parseFloat(btn.getAttribute('data-v'))||0;
+  Array.prototype.forEach.call(document.querySelectorAll('.mp-vat'),function(b){b.className='mp-vat btn-xs btn-gray'});
+  btn.className='mp-vat btn-xs btn-purple';
+}
+function openManualPrice(){
+  document.getElementById('mp-name').value='';
+  document.getElementById('mp-price').value='';
+  openModal('manualModal');
+  setTimeout(function(){document.getElementById('mp-price').focus()},250);
+}
+function addManualItem(){
+  var price=parseFloat(document.getElementById('mp-price').value||0);
+  if(price<=0){T('Enter a price','error');return}
+  var name=V('mp-name')||'Misc item';
+  POS_BASKET.push({id:'manual_'+Date.now(),name:name,price:price,vat:_MP_VAT,qty:1,emoji:'🏷️'});
+  closeModal('manualModal');
+  renderBasket();
+  T('🏷️ '+name+' £'+price.toFixed(2)+' added','success');
+}
+
 // ===== PRO POS: camera scanner, categories, stock, discount, change calc, refunds =====
 let POS_CAT='all',_scanStream=null,_scanRAF=null,_PEND_METHOD=null;
 function beepPOS(){try{var a=new (window.AudioContext||window.webkitAudioContext)();var o=a.createOscillator(),g=a.createGain();o.frequency.value=1245;g.gain.value=.16;o.connect(g);g.connect(a.destination);o.start();setTimeout(function(){o.stop();a.close()},130);}catch(e){}}
@@ -1317,6 +1383,7 @@ function posScanHit(code){
   var p=PRODUCTS.find(function(x){return String(x.barcode||'')===String(code)});
   var hint=document.getElementById('scan-hint');
   if(p){
+    if(STOCK_IN){beepPOS();closePOSScanner();stockInAdd(p);return}
     if(p.stock!=null&&p.stock<=0){if(hint)hint.textContent='⛔ '+p.name+' is OUT OF STOCK';return}
     beepPOS();posAdd(p.id);
     if(hint)hint.textContent='✅ '+p.name+' added — keep scanning';
@@ -1502,11 +1569,12 @@ function renderPOSGrid(){
   });
   el.innerHTML=list.map(function(p){
     var out=p.stock!=null&&p.stock<=0;
-    return '<div onclick="'+(out?'':'posAdd('+Q+p.id+Q+')')+'" style="background:var(--white);border-radius:12px;padding:10px 6px;text-align:center;cursor:'+(out?'not-allowed':'pointer')+';box-shadow:var(--sh);opacity:'+(out?'.45':'1')+'"><div style="font-size:20px">'+(p.emoji||String.fromCodePoint(0x1F6CD))+'</div><div style="font-size:11px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div><div style="font-size:12px;font-weight:800;color:var(--purple)">'+Number(p.price||0).toFixed(2)+'</div>'+posStockBadge(p)+'</div>';
+    return '<div onclick="posAdd('+Q+p.id+Q+')" style="background:var(--white);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;box-shadow:var(--sh);opacity:'+(out?'.45':'1')+'"><div style="font-size:20px">'+(p.emoji||String.fromCodePoint(0x1F6CD))+'</div><div style="font-size:11px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div><div style="font-size:12px;font-weight:800;color:var(--purple)">'+Number(p.price||0).toFixed(2)+'</div>'+posStockBadge(p)+'</div>';
   }).join('')||'<div style="grid-column:1/-1;color:var(--ink3);font-size:13px;text-align:center;padding:10px">No matching products</div>';
 }
 function posAdd(pid){
   const p=PRODUCTS.find(function(x){return x.id===pid});if(!p)return;
+  if(STOCK_IN){stockInAdd(p);return}
   const ex=POS_BASKET.find(function(b){return b.id===pid});
   if(ex)ex.qty++;else POS_BASKET.push({id:p.id,name:p.name,price:parseFloat(p.price||0),vat:vatRate(p),qty:1,emoji:p.emoji||''});
   renderBasket();
