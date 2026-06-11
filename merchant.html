@@ -556,15 +556,25 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
   </div>
 <div class="bottomnav">
     <div class="nb on" id="nb-overview" onclick="switchTab('overview')"><span class="nb-ico">📊</span><span class="nb-lab">Overview</span></div>
-    <div class="nb" id="nb-scan" onclick="switchTab('scan')"><span class="nb-ico">📷</span><span class="nb-lab">Scan</span></div>
-    <div class="nb" id="nb-till" onclick="switchTab('till')"><span class="nb-ico">💰</span><span class="nb-lab">Till</span></div>
     <div class="nb" id="nb-pos" onclick="switchTab('pos')"><span class="nb-ico">🖥️</span><span class="nb-lab">POS</span></div>
-    <div class="nb" id="nb-products" onclick="switchTab('products')"><span class="nb-ico">🛍️</span><span class="nb-lab">Stock</span></div>
+    <div class="nb" id="nb-scan" onclick="switchTab('scan')"><span class="nb-ico">📷</span><span class="nb-lab">Scan</span></div>
     <div class="nb" id="nb-orders" onclick="switchTab('orders')"><span class="nb-ico">📦</span><span class="nb-lab">Orders</span></div>
-    <div class="nb" id="nb-customers" onclick="switchTab('customers')"><span class="nb-ico">👥</span><span class="nb-lab">Members</span></div>
-    <div class="nb" id="nb-settings" onclick="switchTab('settings')"><span class="nb-ico">⚙️</span><span class="nb-lab">Settings</span></div>
-    <div class="nb" id="nb-ai" onclick="switchTab('ai')"><span class="nb-ico">🤖</span><span class="nb-lab">AI Agent</span></div>
-    <div class="nb" id="nb-inbox" onclick="switchTab('inbox')"><span class="nb-ico">📬</span><span class="nb-lab" id="m-inbox-lab">Inbox</span></div>
+    <div class="nb" id="nb-more-btn" onclick="openMoreDrawer()"><span class="nb-ico">⋯</span><span class="nb-lab">More</span></div>
+  </div>
+  <div id="more-bd" onclick="closeMoreDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:298"></div>
+  <div id="more-drawer" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--white);border-radius:20px 20px 0 0;z-index:299;padding-bottom:env(safe-area-inset-bottom,16px);box-shadow:0 -8px 40px rgba(0,0,0,.2)">
+    <div style="width:40px;height:4px;background:var(--bg2);border-radius:4px;margin:12px auto 6px"></div>
+    <div style="padding:6px 20px 18px">
+      <div style="font-size:11px;font-weight:800;color:var(--ink4);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">More</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div onclick="switchTab('till');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">💰</div><div style="font-size:11px;font-weight:700">Loyalty Till</div></div>
+        <div onclick="switchTab('products');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🛍️</div><div style="font-size:11px;font-weight:700">Stock</div></div>
+        <div onclick="switchTab('customers');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">👥</div><div style="font-size:11px;font-weight:700">Members</div></div>
+        <div onclick="switchTab('settings');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">⚙️</div><div style="font-size:11px;font-weight:700">Settings</div></div>
+        <div onclick="switchTab('ai');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🤖</div><div style="font-size:11px;font-weight:700">AI Agent</div></div>
+        <div onclick="switchTab('inbox');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">📬</div><div style="font-size:11px;font-weight:700" id="m-inbox-lab2">Inbox</div></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1239,6 +1249,7 @@ function switchTab(name){
   if(name==="settings"){loadAccounting();loadMerchRewards();}
   if(name==="pos")posGuard();
   if(name==="settings")loadJobs();
+  if(["till","products","customers","settings","ai","inbox"].includes(name)){const mb=document.getElementById("nb-more-btn");if(mb)mb.classList.add("on");}
 }
 
 let scanActive=false;
@@ -1457,6 +1468,13 @@ function posRefund(id){
   }).catch(function(){T('Refund failed — pos_sales.refund column missing? Run migration','error');});
 }
 function finalizeSale(method){
+  /* Save receipt to shared archive (customer app + admin audit) */
+  try{
+    var _it=POS_BASKET.map(function(b){return{n:b.name,p:b.price,q:b.qty,v:Math.round((b.vat||0)*100)}});
+    var _net=0,_vat=0;POS_BASKET.forEach(function(b){var g=b.price*b.qty;var n=g/(1+(b.vat||0));_net+=n;_vat+=g-n;});
+    var _disc=Math.min(parseFloat((document.getElementById('pos-disc')||{}).value||0)||0,_net+_vat);
+    post("receipts",{merchant_id:MID,shop_name:(MDATA&&MDATA.name)||"Shop",customer_email:(window.POS_CUST_EMAIL||null),items:JSON.stringify(_it),subtotal:+_net.toFixed(2),vat:+_vat.toFixed(2),total:+((_net+_vat)-_disc).toFixed(2),payment_method:method||"cash",deleted:false,created_at:Date.now()}).catch(function(){});
+  }catch(e){}
   var net=0,vat=0;
   POS_BASKET.forEach(function(b){var g=b.price*b.qty;var n=g/(1+b.vat);net+=n;vat+=g-n;});
   var gross=net+vat;
@@ -1647,6 +1665,9 @@ function posExportCSV(){
   });
 }
 
+
+function openMoreDrawer(){document.getElementById("more-bd").style.display="block";document.getElementById("more-drawer").style.display="block";}
+function closeMoreDrawer(){document.getElementById("more-bd").style.display="none";document.getElementById("more-drawer").style.display="none";}
 </script>
 </body>
 </html>
