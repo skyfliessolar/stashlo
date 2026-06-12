@@ -652,6 +652,15 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
   <!-- ===== OFFERS/REWARDS ===== -->
   <div class="screen" id="offers-screen">
     <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">🎁 My Rewards</div>
+    <div class="ic" style="margin:0 16px 12px;background:linear-gradient(120deg,#1e1b4b,#4338ca);color:#fff">
+      <div style="font-size:14px;font-weight:800">🎁 Got a scratch code?</div>
+      <div style="font-size:12px;opacity:.8;margin:4px 0 10px">From a Stashlo product? Enter it to claim your prize</div>
+      <div style="display:flex;gap:8px">
+        <input id="scratch-in" placeholder="e.g. STX-7K2M9Q" style="flex:1;padding:12px;border:none;border-radius:12px;font-size:14px;font-weight:800;text-transform:uppercase">
+        <button onclick="claimScratch()" style="background:#22d3ee;color:#0a0a14;border:none;border-radius:12px;padding:0 18px;font-weight:800;cursor:pointer">Claim</button>
+      </div>
+      <div id="scratch-mine" style="margin-top:10px;font-size:12px"></div>
+    </div>
     <div id="rewards-list" style="padding:0 16px"></div>
   </div>
 
@@ -2396,6 +2405,35 @@ function walletAction(net){
   }
 }
 
+
+// ===== SCRATCH CODE REWARDS =====
+function claimScratch(){
+  var code=((document.getElementById('scratch-in')||{}).value||'').trim().toUpperCase();
+  if(!code){T('Enter your scratch code');return}
+  get('scratch_codes','code=eq.'+encodeURIComponent(code)).then(function(d){
+    var sc=Array.isArray(d)&&d[0];
+    if(!sc){T('❌ Code not recognised - check and try again');return}
+    if(sc.claimed_by){T(sc.claimed_by===UID?'You already claimed this one!':'❌ This code has already been used');return}
+    if(sc.expiry&&Date.now()>sc.expiry){T('⌛ This code has expired');return}
+    pat('scratch_codes','id=eq.'+sc.id+'&claimed_by=is.null',{claimed_by:UID,claimed_at:Date.now(),status:'pending'})
+    .then(function(){
+      T('🎉 Claimed! '+(sc.reward||'Your prize')+' - admin will approve shortly');
+      document.getElementById('scratch-in').value='';
+      loadMyScratch();
+    }).catch(function(){T('Claim failed - try again');});
+  }).catch(function(){T('Could not check code');});
+}
+function loadMyScratch(){
+  var el=document.getElementById('scratch-mine');if(!el)return;
+  get('scratch_codes','claimed_by=eq.'+UID+'&order=claimed_at.desc&limit=5').then(function(d){
+    var s=Array.isArray(d)?d:[];
+    if(!s.length){el.innerHTML='';return}
+    el.innerHTML=s.map(function(x){
+      var col=x.status==='approved'||x.status==='paid'?'#34d399':x.status==='rejected'?'#f87171':'#fbbf24';
+      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid rgba(255,255,255,.15)"><span>'+(x.reward||'Reward')+(x.value?' £'+x.value:'')+'</span><b style="color:'+col+'">'+(x.status||'pending').toUpperCase()+'</b></div>';
+    }).join('');
+  }).catch(function(){});
+}
 
 // ===== ANIMATED COUNTERS (premium feel) =====
 function countUpEl(el,target){

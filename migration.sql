@@ -457,3 +457,11 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_name text;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_lat numeric;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_lng numeric;
 INSERT INTO app_settings (key,value) VALUES ('receipt_free_limit','10') ON CONFLICT (key) DO NOTHING;
+
+-- v12: scratch-code rewards
+CREATE TABLE IF NOT EXISTS scratch_codes (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), code text UNIQUE, reward text, value numeric DEFAULT 0, status text DEFAULT 'unclaimed', claimed_by uuid, claimed_at bigint, expiry bigint, created_at bigint);
+ALTER TABLE scratch_codes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS scratch_read ON scratch_codes;
+CREATE POLICY scratch_read ON scratch_codes FOR SELECT TO anon USING (true);
+DROP POLICY IF EXISTS scratch_claim ON scratch_codes;
+CREATE POLICY scratch_claim ON scratch_codes FOR UPDATE TO anon USING (claimed_by IS NULL);

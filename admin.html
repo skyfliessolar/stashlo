@@ -344,6 +344,23 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     <div id="job-approvals-list" style="padding:0 16px"></div>
   </div>
 
+  <!-- SCRATCH CODES -->
+  <div class="screen" id="scratch-screen">
+    <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">🎟 Scratch Code Rewards</div>
+    <div style="margin:0 16px 12px;background:var(--white);border-radius:14px;padding:12px;box-shadow:var(--sh)">
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Generate codes</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="scg-n" type="number" value="10" style="width:64px;padding:9px;border-radius:10px;border:1.5px solid var(--bg2)">
+        <input id="scg-reward" placeholder="Reward (e.g. £5 cashback)" style="flex:1;min-width:140px;padding:9px;border-radius:10px;border:1.5px solid var(--bg2)">
+        <input id="scg-value" type="number" placeholder="£" style="width:70px;padding:9px;border-radius:10px;border:1.5px solid var(--bg2)">
+        <button class="btn-xs btn-purple" onclick="genScratch()">Generate</button>
+      </div>
+      <div id="scg-out" style="margin-top:8px;font-size:11px;font-family:monospace;color:var(--ink3);max-height:120px;overflow:auto"></div>
+    </div>
+    <div style="padding:0 16px 8px;font-size:14px;font-weight:800">Claims</div>
+    <div id="scratch-claims" style="padding:0 16px"></div>
+  </div>
+
   <!-- RECEIPTS ADMIN -->
   <div class="screen" id="admreceipts-screen">
     <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">🧾 Receipts Control</div>
@@ -378,6 +395,11 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
         <div style="font-size:26px">🎨</div>
         <div style="font-size:13px;font-weight:700;margin-top:6px;color:#fff">3D Studio</div>
         <div style="font-size:11px;color:rgba(255,255,255,.7)">Live theme</div>
+      </div>
+      <div onclick="switchTab('scratch')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">🎟</div>
+        <div style="font-size:13px;font-weight:700;margin-top:6px">Scratch Codes</div>
+        <div style="font-size:11px;color:var(--ink3)">Generate · claims</div>
       </div>
       <div onclick="switchTab('admreceipts')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:26px">🧾</div>
@@ -1500,6 +1522,34 @@ function ensureBackBtns(){
 }
 document.addEventListener('DOMContentLoaded',function(){setTimeout(ensureBackBtns,400)});
 
+// ===== SCRATCH CODES =====
+function genScratch(){
+  var n=parseInt((document.getElementById('scg-n')||{}).value||10),codes=[];
+  var reward=(document.getElementById('scg-reward')||{}).value||'Reward';
+  var val=parseFloat((document.getElementById('scg-value')||{}).value||0);
+  var chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  for(var i=0;i<n;i++){var cd='STX-';for(var j=0;j<6;j++)cd+=chars[Math.floor(Math.random()*chars.length)];codes.push({code:cd,reward:reward,value:val,status:'unclaimed',expiry:Date.now()+90*86400000,created_at:Date.now()});}
+  spost('scratch_codes',codes).then(function(){
+    document.getElementById('scg-out').textContent=codes.map(function(x){return x.code}).join('  ');
+    T(n+' codes generated - print these on your products','success');logAudit('gen_scratch',n+' codes');
+  }).catch(function(){T('scratch_codes table missing - run SQL v12','error');});
+}
+function loadScratchClaims(){
+  var el=document.getElementById('scratch-claims');if(!el)return;
+  sget('scratch_codes','claimed_by=not.is.null&order=claimed_at.desc&limit=50').then(function(d){
+    var s=Array.isArray(d)?d:[];var Q=String.fromCharCode(39);
+    el.innerHTML=s.length?s.map(function(x){
+      return '<div class="ic"><div class="ic-row"><div><div class="ic-name">'+x.code+' · '+(x.reward||'')+(x.value?' £'+x.value:'')+'</div><div class="ic-sub">user '+(x.claimed_by||'').slice(0,8)+' · '+(x.claimed_at?new Date(x.claimed_at).toLocaleString().slice(0,17):'')+' · <b>'+(x.status||'pending').toUpperCase()+'</b></div></div><div style="display:flex;gap:6px">'
+      +(x.status==='pending'?'<button class="btn-xs btn-green" onclick="setScratch('+Q+x.id+Q+',&quot;approved&quot;)">✓</button><button class="btn-xs" style="background:#fef2f2;color:#ef4444" onclick="setScratch('+Q+x.id+Q+',&quot;rejected&quot;)">✕</button>':'')
+      +(x.status==='approved'?'<button class="btn-xs btn-purple" onclick="setScratch('+Q+x.id+Q+',&quot;paid&quot;)">💰 Paid</button>':'')
+      +'</div></div></div>';
+    }).join(''):'<div class="empty"><div class="empty-txt">No claims yet</div></div>';
+  }).catch(function(){el.innerHTML='<div class="empty"><div class="empty-txt">Run SQL v12 first</div></div>'});
+}
+function setScratch(id,st){
+  spat('scratch_codes','id=eq.'+id,{status:st}).then(function(){T('Claim '+st,'success');logAudit('scratch_'+st,id);loadScratchClaims();});
+}
+
 // ===== RECEIPTS ADMIN (view all, restore deleted, set limits) =====
 function loadAdminReceipts(){
   var el=document.getElementById('admrcp-list');if(!el)return;
@@ -1556,6 +1606,7 @@ function switchTab(name){
   if(name==='audit')loadAuditLogs();
   if(name==='design3d')loadTheme3DStudio();
   if(name==='admreceipts')loadAdminReceipts();
+  if(name==='scratch')loadScratchClaims();
   if(name==='delivery')loadDelivery();
   if(name==='billing')loadBilling();
 }

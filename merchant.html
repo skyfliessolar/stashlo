@@ -1613,11 +1613,25 @@ function loadPOSSales(){
         +'<div><b style="color:'+(neg?'#ef4444':'var(--ink)')+'">'+(neg?'↩️ REFUND ':'')+'£'+Math.abs(parseFloat(x.total||0)).toFixed(2)+'</b> <span style="color:var(--ink3)">'+(x.method||'').toUpperCase()+'</span><div style="font-size:11px;color:var(--ink4)">'+dt.toLocaleDateString()+' '+dt.toLocaleTimeString().slice(0,5)+' · '+(x.id||'').slice(0,8)+'</div></div>'
         +'<div style="display:flex;gap:6px">'
         +'<button class="btn-xs btn-gray" onclick="reprintSale('+Q+x.id+Q+')">🖨</button>'
+        +'<button class="btn-xs" style="background:#eef2ff;color:#4338ca" onclick="sendReceiptToCustomer('+Q+x.id+Q+')">📲</button>'
         +(!neg?'<button class="btn-xs" style="background:#fef2f2;color:#ef4444" onclick="posRefund('+Q+x.id+Q+')">↩️</button>':'')
         +'</div></div>';
     }).join('');
     window._POS_HIST=s;
   }).catch(function(){el.innerHTML='Could not load';});
+}
+function sendReceiptToCustomer(id){
+  var s=(window._POS_HIST||[]).find(function(x){return x.id===id});if(!s)return;
+  var lid=prompt('📲 Send digital receipt\n\nCustomer Stashlo ID (on their home screen, e.g. SL-448JXW):');
+  if(!lid)return;lid=lid.trim().toUpperCase();
+  get('users','loyalty_id=eq.'+encodeURIComponent(lid)+'&select=id,email').then(function(d){
+    var u=Array.isArray(d)&&d[0];
+    if(!u){T('No customer with ID '+lid,'error');return}
+    var items='';try{items=JSON.parse(s.items||'[]').map(function(it){return it.n+' x'+it.q}).join(', ')}catch(e){}
+    post('receipts',{user_id:u.id,merchant_name:MDATA.name||'Shop',receipt_no:'POS-'+(s.id||'').slice(0,8).toUpperCase(),items:items,total:s.total,created_at:Date.now()})
+    .then(function(){T('📲 Receipt sent to '+lid+' - it is now in their archive','success');})
+    .catch(function(){T('Send failed','error');});
+  }).catch(function(){T('Lookup failed - users.loyalty_id column needed','error');});
 }
 function reprintSale(id){
   var s=(window._POS_HIST||[]).find(function(x){return x.id===id});
@@ -1737,7 +1751,19 @@ function posGuard(){
   if(fEl)fEl.value=MDATA.receipt_footer||localStorage.getItem('sl_rfoot_'+MID)||'';
   var sEl=document.getElementById('pos-stripe');if(sEl)sEl.value=MDATA.stripe_link||localStorage.getItem('sl_stripe_'+MID)||'';
   const pay=document.getElementById('pos-paywall'),main=document.getElementById('pos-main');
-  if(MDATA.pos_enabled){pay.style.display='none';main.style.display='block';renderPOSGrid();loadPOSSales();renderDeptKeys();}
+  var trialMs=30*24*3600*1000;
+  var createdAt=MDATA.created_at?(typeof MDATA.created_at==='number'?MDATA.created_at:new Date(MDATA.created_at).getTime()):0;
+  var inTrial=!MDATA.pos_enabled&&createdAt&&(Date.now()-createdAt)<trialMs&&!MDATA.pos_trial_used;
+  if(MDATA.pos_enabled||inTrial){
+    pay.style.display='none';main.style.display='block';renderPOSGrid();loadPOSSales();renderDeptKeys();
+    if(inTrial&&!document.getElementById('trial-banner')){
+      var days=Math.ceil((trialMs-(Date.now()-createdAt))/86400000);
+      var tb=document.createElement('div');tb.id='trial-banner';
+      tb.style.cssText='margin:0 16px 10px;background:linear-gradient(120deg,#065f46,#059669);color:#fff;border-radius:12px;padding:10px 14px;font-size:12px;font-weight:800';
+      tb.innerHTML='🆓 FREE TRIAL - '+days+' days left. Subscribe (£15/mo) anytime to keep the till after trial.';
+      main.prepend(tb);
+    }
+  }
   else{
     pay.style.display='block';main.style.display='none';
     if(MDATA.pos_requested){const b=document.getElementById('pos-req-btn');b.textContent='Pending admin approval...';b.disabled=true;}
