@@ -1442,7 +1442,7 @@ function openZXingScanner(){
     ov.style.cssText='position:fixed;inset:0;background:#000;z-index:900;display:flex;flex-direction:column';
     ov.innerHTML='<video id="scan-vid" autoplay playsinline muted style="flex:1;width:100%;object-fit:cover"></video>'
       +'<button id="scan-x" style="position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:18px;cursor:pointer">X</button>'
-      +'<div style="position:absolute;top:38%;left:8%;right:8%;height:110px;border:3px solid #34d399;border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div>'
+      +'<div style="position:absolute;top:28%;left:5%;right:5%;height:230px;border:3px solid #34d399;border-radius:18px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div>'
       +'<div id="scan-hint" style="position:absolute;bottom:34px;left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:15px;text-shadow:0 2px 6px #000">Point camera at a barcode</div>';
     document.body.appendChild(ov);
     var hints=new Map();
@@ -1519,7 +1519,7 @@ function openPOSScanner(){
   ov.style.cssText='position:fixed;inset:0;background:#000;z-index:900;display:flex;flex-direction:column';
   ov.innerHTML='<video id="scan-vid" autoplay playsinline muted style="flex:1;width:100%;object-fit:cover"></video>'
     +'<button id="scan-x" style="position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:18px;cursor:pointer">X</button>'
-    +'<div style="position:absolute;top:38%;left:8%;right:8%;height:110px;border:3px solid #34d399;border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div>'
+    +'<div style="position:absolute;top:28%;left:5%;right:5%;height:230px;border:3px solid #34d399;border-radius:18px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div>'
     +'<div id="scan-hint" style="position:absolute;bottom:34px;left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:15px;text-shadow:0 2px 6px #000">Point camera at a barcode</div>';
   document.body.appendChild(ov);
   document.getElementById('scan-x').onclick=closePOSScanner;
@@ -1948,6 +1948,206 @@ function posExportCSV(){
 
 function openMoreDrawer(){document.getElementById("more-bd").style.display="block";document.getElementById("more-drawer").style.display="block";}
 function closeMoreDrawer(){document.getElementById("more-bd").style.display="none";document.getElementById("more-drawer").style.display="none";}
+
+/* ================= v16 OVERRIDES: bulletproof till (self-contained overlays) ================= */
+function slOverlay(inner,maxw){
+  var ov=document.createElement('div');
+  ov.className='sl-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(10,10,20,.66);z-index:960;display:flex;align-items:flex-end;justify-content:center';
+  var box=document.createElement('div');
+  box.style.cssText='background:#fff;width:100%;max-width:'+(maxw||440)+'px;border-radius:22px 22px 0 0;padding:18px;max-height:88vh;overflow-y:auto;box-shadow:0 -12px 50px rgba(0,0,0,.4)';
+  box.innerHTML=inner;ov.appendChild(box);
+  ov.addEventListener('click',function(e){if(e.target===ov)ov.remove()});
+  document.body.appendChild(ov);
+  return ov;
+}
+function slClose(){var o=document.querySelector('.sl-ov');if(o)o.remove();}
+
+/* ---- DEPT KEYS (merchant-editable) ---- */
+function getDepts(){
+  try{var d=JSON.parse(localStorage.getItem('sl_depts_'+MID)||'null');if(Array.isArray(d)&&d.length)return d;}catch(e){}
+  return ['💨 Vapes','🚬 Tobacco','🥤 Drinks','🍟 Crisps','🏠 Home','💄 Beauty','🍼 Baby','🛒 Grocery'];
+}
+function renderDeptKeys(){
+  var el=document.getElementById('dept-keys');if(!el)return;
+  var ds=getDepts();
+  el.innerHTML=ds.map(function(d,i){
+    return '<button onclick="openManualPrice('+i+')" style="flex:0 0 auto;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06)">'+d+'</button>';
+  }).join('')+'<button onclick="editDepts()" style="flex:0 0 auto;background:#eef2ff;color:#4338ca;border:none;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:800;cursor:pointer">✏️</button>';
+}
+function editDepts(){
+  var cur=getDepts().join(', ');
+  var nv=prompt('Edit your quick sections (comma separated):',cur);
+  if(nv===null)return;
+  var arr=nv.split(',').map(function(s){return s.trim()}).filter(Boolean).slice(0,12);
+  try{localStorage.setItem('sl_depts_'+MID,JSON.stringify(arr))}catch(e){}
+  renderDeptKeys();T('Sections updated','success');
+}
+
+/* ---- MANUAL PRICE (overlay, dept-aware, Enter to add) ---- */
+function openManualPrice(di){
+  var dept=(typeof di==='number')?getDepts()[di]:null;
+  var dname=dept?dept.replace(/^[^A-Za-z0-9]+/,'').trim():'';
+  window._MPV=0.2;
+  var ov=slOverlay(
+    '<div style="font-size:17px;font-weight:800;margin-bottom:10px">'+(dept||'£ Manual Item')+'</div>'
+    +'<input id="ov-name" placeholder="Item name (optional)" value="'+(dname?dname+' item':'')+'" style="width:100%;padding:13px;border:2px solid #e2e8f0;border-radius:12px;font-size:14px;margin-bottom:10px;box-sizing:border-box">'
+    +'<input id="ov-price" type="number" step="0.01" inputmode="decimal" placeholder="0.00" style="width:100%;padding:15px;border:2px solid #6366F1;border-radius:12px;font-size:22px;font-weight:800;margin-bottom:10px;box-sizing:border-box">'
+    +'<div style="display:flex;gap:6px;margin-bottom:14px">'
+    +['20%','5%','0%','No VAT'].map(function(l,i){var v=[0.2,0.05,0,0][i];return '<button class="ov-vat" data-v="'+v+'" style="flex:1;padding:10px;border:none;border-radius:10px;font-weight:800;cursor:pointer;background:'+(i===0?'#6366F1':'#f1f5f9')+';color:'+(i===0?'#fff':'#334155')+'">'+l+'</button>'}).join('')
+    +'</div>'
+    +'<div style="display:flex;gap:8px"><button onclick="slClose()" style="flex:1;padding:14px;border:none;border-radius:12px;background:#f1f5f9;font-weight:800;cursor:pointer">Cancel</button><button onclick="ovAddManual()" style="flex:2;padding:14px;border:none;border-radius:12px;background:#6366F1;color:#fff;font-weight:800;cursor:pointer">➕ Add to basket</button></div>'
+  );
+  Array.prototype.forEach.call(ov.querySelectorAll('.ov-vat'),function(b){
+    b.onclick=function(){window._MPV=parseFloat(b.getAttribute('data-v'))||0;
+      Array.prototype.forEach.call(ov.querySelectorAll('.ov-vat'),function(x){x.style.background='#f1f5f9';x.style.color='#334155'});
+      b.style.background='#6366F1';b.style.color='#fff';};
+  });
+  var pi=ov.querySelector('#ov-price');
+  pi.addEventListener('keydown',function(e){if(e.key==='Enter')ovAddManual()});
+  setTimeout(function(){pi.focus()},120);
+  window._MP_CAT=dname?dname.toLowerCase():'general';
+}
+function ovAddManual(){
+  var price=parseFloat((document.getElementById('ov-price')||{}).value||0);
+  if(!(price>0)){T('Enter a price','error');return}
+  var name=(document.getElementById('ov-name')||{}).value||'Misc item';
+  POS_BASKET.push({id:'manual_'+Date.now(),name:name,price:price,vat:(window._MPV!=null?window._MPV:0.2),qty:1,emoji:'🏷️',cost:0,cat:window._MP_CAT||'general'});
+  slClose();renderBasket();T('🏷️ '+name+' £'+price.toFixed(2)+' added','success');
+}
+
+/* ---- CHECKOUT: cash drawer overlay with change ---- */
+function posCheckout(method){
+  if(!POS_BASKET.length){T('Basket empty','error');return}
+  var net=0,vat=0;
+  POS_BASKET.forEach(function(b){var g=b.price*b.qty;var n=g/(1+b.vat);net+=n;vat+=g-n;});
+  var gross=net+vat;
+  var disc=Math.min(parseFloat((document.getElementById('pos-disc')||{}).value||0)||0,gross);
+  var due=gross-disc;window._POS_DUE=due;
+  if(method==='card'){
+    var link=(MDATA&&MDATA.stripe_link)||localStorage.getItem('sl_stripe_'+MID)||'';
+    var inner='<div style="font-size:17px;font-weight:800;margin-bottom:6px">💳 Card Payment</div>'
+      +'<div style="font-size:28px;font-weight:800;color:#6366F1;margin-bottom:14px">£'+due.toFixed(2)+'</div>'
+      +'<button onclick="slClose();finalizeSale(String.fromCharCode(99,97,114,100))" style="width:100%;padding:15px;border:none;border-radius:12px;background:#0f172a;color:#fff;font-weight:800;cursor:pointer;margin-bottom:8px">🖥 Card machine — paid, complete sale</button>'
+      +(link?'<button onclick="window.open(String.fromCharCode(39)+String.fromCharCode(39),String.fromCharCode(39)+String.fromCharCode(39))" id="ov-stripe" style="width:100%;padding:15px;border:none;border-radius:12px;background:#635bff;color:#fff;font-weight:800;cursor:pointer;margin-bottom:8px">📱 Stripe on this phone (tap to pay)</button>':'<div style="font-size:12px;color:#64748b;margin-bottom:8px">💡 Add a Stripe Payment Link in POS Settings to take cards on this phone like SumUp</div>')
+      +'<button onclick="slClose()" style="width:100%;padding:13px;border:none;border-radius:12px;background:#f1f5f9;font-weight:800;cursor:pointer">Cancel</button>';
+    var ov=slOverlay(inner);
+    var sb=ov.querySelector('#ov-stripe');
+    if(sb)sb.onclick=function(){window.open(link,'_blank');setTimeout(function(){if(confirm('Customer paid on Stripe?')){slClose();finalizeSale('card');}},800)};
+    return;
+  }
+  var inner2='<div style="font-size:17px;font-weight:800;margin-bottom:4px">💵 Cash Payment</div>'
+    +'<div style="font-size:13px;color:#64748b">Total due</div>'
+    +'<div style="font-size:30px;font-weight:800;color:#6366F1;margin-bottom:12px">£'+due.toFixed(2)+'</div>'
+    +'<input id="ov-tendered" type="number" step="0.01" inputmode="decimal" placeholder="Cash given by customer £" style="width:100%;padding:15px;border:2px solid #10b981;border-radius:12px;font-size:22px;font-weight:800;margin-bottom:8px;box-sizing:border-box">'
+    +'<div style="display:flex;gap:6px;margin-bottom:10px">'+[5,10,20,50].map(function(n){return '<button onclick="ovTender('+n+')" style="flex:1;padding:11px;border:none;border-radius:10px;background:#f1f5f9;font-weight:800;cursor:pointer">£'+n+'</button>'}).join('')+'<button onclick="ovTender('+due.toFixed(2)+')" style="flex:1;padding:11px;border:none;border-radius:10px;background:#6366F1;color:#fff;font-weight:800;cursor:pointer">Exact</button></div>'
+    +'<div style="background:#f0fdf4;border-radius:14px;padding:13px;text-align:center;margin-bottom:12px"><div style="font-size:11px;font-weight:800;color:#065f46">CHANGE DUE</div><div id="ov-change" style="font-size:30px;font-weight:800;color:#059669">£0.00</div></div>'
+    +'<div style="display:flex;gap:8px"><button onclick="slClose()" style="flex:1;padding:14px;border:none;border-radius:12px;background:#f1f5f9;font-weight:800;cursor:pointer">Cancel</button><button onclick="ovCashDone()" style="flex:2;padding:14px;border:none;border-radius:12px;background:#10b981;color:#fff;font-weight:800;cursor:pointer">✓ Complete sale</button></div>';
+  var ov2=slOverlay(inner2);
+  var ti=ov2.querySelector('#ov-tendered');
+  ti.addEventListener('input',ovCalcChange);
+  ti.addEventListener('keydown',function(e){if(e.key==='Enter')ovCashDone()});
+  setTimeout(function(){ti.focus()},120);
+}
+function ovTender(n){var t=document.getElementById('ov-tendered');if(t){t.value=n;ovCalcChange();}}
+function ovCalcChange(){
+  var t=parseFloat((document.getElementById('ov-tendered')||{}).value||0);
+  var ch=t-(window._POS_DUE||0);
+  var el=document.getElementById('ov-change');
+  if(el){el.textContent='£'+(ch>=0?ch:0).toFixed(2);el.style.color=ch>=0?'#059669':'#ef4444';}
+}
+function ovCashDone(){
+  var t=parseFloat((document.getElementById('ov-tendered')||{}).value||0);
+  if(t<(window._POS_DUE||0)-0.001){T('Customer gave less than the total','error');return}
+  var ch=t-(window._POS_DUE||0);
+  slClose();finalizeSale('cash');
+  if(ch>0.004)setTimeout(function(){T('💵 Give change: £'+ch.toFixed(2),'success')},700);
+}
+
+/* ---- DAY-END: full report overlay (EvoPOS style) ---- */
+function posDayEnd(){
+  var start=new Date();start.setHours(0,0,0,0);
+  T('Building Day-End...');
+  get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+start.getTime()+'&order=created_at.desc').then(function(d){
+    var s=Array.isArray(d)?d:[];
+    var cash=0,card=0,vat=0,profit=0,sold=0,wasteN=0,refunds=0,salesN=0,discTot=0;
+    var byCat={};
+    s.forEach(function(x){
+      var t=parseFloat(x.total||0);
+      if(x.method==='waste'){try{JSON.parse(x.items||'[]').forEach(function(it){wasteN+=it.q||0})}catch(e){}return}
+      var sign=t<0?-1:1;
+      if(t<0)refunds+=Math.abs(t);else salesN++;
+      if(x.method==='cash')cash+=t;else card+=t;
+      vat+=parseFloat(x.vat_total||0);
+      discTot+=parseFloat(x.discount||0)*sign;
+      try{JSON.parse(x.items||'[]').forEach(function(it){
+        sold+=sign*(it.q||0);
+        profit+=sign*(((it.p||0)-(it.c||0))*(it.q||0));
+        var k=it.k||'general';byCat[k]=byCat[k]||{r:0,q:0};byCat[k].r+=sign*(it.p||0)*(it.q||0);byCat[k].q+=sign*(it.q||0);
+      });}catch(e){}
+    });
+    var cats=Object.keys(byCat).sort(function(a,b){return byCat[b].r-byCat[a].r});
+    var catRows=cats.map(function(k){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #e2e8f0"><span>'+k.charAt(0).toUpperCase()+k.slice(1)+' <span style="color:#94a3b8">x'+byCat[k].q+'</span></span><b>£'+byCat[k].r.toFixed(2)+'</b></div>'}).join('')||'<div style="color:#94a3b8">No category data yet</div>';
+    function row(l,v,col){return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f1f5f9"><span>'+l+'</span><b style="color:'+(col||'#0f172a')+'">'+v+'</b></div>'}
+    slOverlay(
+      '<div style="font-size:18px;font-weight:800;margin-bottom:2px">📊 Day-End Report</div>'
+      +'<div style="font-size:12px;color:#64748b;margin-bottom:12px">'+new Date().toLocaleDateString()+' · '+(MDATA.name||'')+'</div>'
+      +row('Transactions',salesN)+row('Items sold',sold)
+      +row('Cash takings','£'+cash.toFixed(2))+row('Card / EFT takings','£'+card.toFixed(2))
+      +row('Discounts given','£'+discTot.toFixed(2),'#b45309')
+      +row('Refunds','£'+refunds.toFixed(2),'#ef4444')
+      +row('Waste / write-offs',wasteN+' items','#b45309')
+      +row('VAT collected','£'+vat.toFixed(2))
+      +row('GROSS','£'+(cash+card).toFixed(2),'#6366F1')
+      +row('💰 NET PROFIT','£'+profit.toFixed(2),'#059669')
+      +'<div style="font-size:13px;font-weight:800;margin:14px 0 6px">📈 Sales by section</div>'+catRows
+      +'<div style="display:flex;gap:8px;margin-top:16px"><button onclick="posExportCSV()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#6366F1;color:#fff;font-weight:800;cursor:pointer">⬇ HMRC CSV</button><button onclick="printDayEnd()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#0f172a;color:#fff;font-weight:800;cursor:pointer">🖨 Print / PDF</button><button onclick="slClose()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#f1f5f9;font-weight:800;cursor:pointer">Close</button></div>'
+      +'<div style="font-size:11px;color:#94a3b8;margin-top:10px">Older than 30 days auto-archives to Stashlo HQ — admin holds the master copy for HMRC. Save the CSV monthly for your accountant.</div>'
+    ,520);
+    window._POS_TODAY=s;window._DE={cash:cash,card:card,vat:vat,profit:profit,gross:cash+card};
+  }).catch(function(){T('Could not load sales - check internet','error')});
+}
+function printDayEnd(){
+  var de=window._DE||{};
+  var w=window.open('','de','width=360,height=640');if(!w){T('Allow popups','error');return}
+  w.document.write('<html><body style="font-family:monospace;width:280px;margin:14px auto"><h3 style="text-align:center">DAY-END '+new Date().toLocaleDateString()+'</h3><p>Cash: £'+(de.cash||0).toFixed(2)+'<br>Card: £'+(de.card||0).toFixed(2)+'<br>VAT: £'+(de.vat||0).toFixed(2)+'<br>GROSS: £'+(de.gross||0).toFixed(2)+'<br>PROFIT: £'+(de.profit||0).toFixed(2)+'</p><p style="text-align:center">Stashlo EPOS</p></body></html>');
+  w.document.close();setTimeout(function(){w.print()},350);
+}
+
+/* ---- CSV: Blob download (works in mobile/PWA Downloads) ---- */
+function posExportCSV(){
+  var s=window._POS_TODAY;
+  function go(rows){
+    var csv=rows.map(function(r){return r.map(function(x){return String(x).indexOf(',')>=0?JSON.stringify(String(x)):x}).join(',')}).join(String.fromCharCode(10));
+    var blob=new Blob([csv],{type:'text/csv'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='stashlo-dayend-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a);a.click();a.remove();
+    T('⬇ CSV saved to your Downloads','success');
+  }
+  function build(list){
+    var rows=[['Date','Time','Method','Net','VAT','Total','Discount','Items']];
+    (list||[]).forEach(function(x){var dt=new Date(x.created_at||0);var its='';try{its=JSON.parse(x.items||'[]').map(function(i){return i.n+' x'+i.q}).join('; ')}catch(e){}
+      rows.push([dt.toLocaleDateString(),dt.toLocaleTimeString().slice(0,5),x.method,x.net,x.vat_total,x.total,x.discount||0,its]);});
+    go(rows);
+  }
+  if(s){build(s);return}
+  var start=new Date();start.setHours(0,0,0,0);
+  get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+start.getTime()).then(build).catch(function(){T('Could not load','error')});
+}
+
+/* ---- nav alignment + version ---- */
+window.STASHLO_V='v16';
+(function(){
+  var st=document.createElement('style');
+  st.textContent='.bottomnav{display:flex!important;justify-content:space-around!important;align-items:center!important;left:0!important;right:0!important;width:100%!important;padding:6px 2px env(safe-area-inset-bottom,8px)!important;box-sizing:border-box}.bottomnav .nb{flex:1 1 0!important;display:flex!important;flex-direction:column!important;align-items:center!important;gap:2px;min-width:0}.bottomnav .nb-lab{font-size:10px!important;white-space:nowrap}';
+  document.head.appendChild(st);
+  var vb=document.createElement('div');
+  vb.textContent='Stashlo EPOS v16';
+  vb.style.cssText='position:fixed;top:6px;right:8px;font-size:9px;color:rgba(255,255,255,.5);z-index:50;pointer-events:none';
+  document.body.appendChild(vb);
+})();
+
 </script>
 </body>
 </html>
