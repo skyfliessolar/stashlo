@@ -2148,6 +2148,247 @@ window.STASHLO_V='v16';
   document.body.appendChild(vb);
 })();
 
+
+/* ============ v17: PWA-safe dialogs (no prompt/confirm), fullscreen scanner, back office ============ */
+window.STASHLO_V='v17';
+
+/* top toasts - never hidden by keyboard/scroll */
+function T(msg,type){
+  var t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;top:64px;left:50%;transform:translateX(-50%);max-width:92vw;background:'+(type==='error'?'#7f1d1d':'#0f172a')+';color:#fff;padding:12px 18px;border-radius:14px;font-size:13px;font-weight:800;z-index:1200;box-shadow:0 10px 30px rgba(0,0,0,.35);text-align:center';
+  document.body.appendChild(t);
+  setTimeout(function(){t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(function(){t.remove()},350)},2600);
+}
+
+/* generic overlay form: slForm(title,[{id,label,value,type,placeholder}],buttons:[{label,style,cb}]) */
+function slForm(title,fields,buttons,note){
+  var html='<div style="font-size:17px;font-weight:800;margin-bottom:10px">'+title+'</div>';
+  fields.forEach(function(f){
+    if(f.type==='textarea'){html+='<textarea id="'+f.id+'" placeholder="'+(f.placeholder||'')+'" style="width:100%;min-height:110px;padding:12px;border:2px solid #e2e8f0;border-radius:12px;font-size:13px;margin-bottom:10px;box-sizing:border-box">'+(f.value||'')+'</textarea>';}
+    else{html+=(f.label?'<div style="font-size:12px;font-weight:800;color:#64748b;margin-bottom:4px">'+f.label+'</div>':'')+'<input id="'+f.id+'" type="'+(f.type||'text')+'" inputmode="'+(f.type==='number'?'decimal':'text')+'" value="'+(f.value!=null?f.value:'')+'" placeholder="'+(f.placeholder||'')+'" style="width:100%;padding:13px;border:2px solid #e2e8f0;border-radius:12px;font-size:15px;font-weight:700;margin-bottom:10px;box-sizing:border-box">';}
+  });
+  if(note)html+='<div style="font-size:11px;color:#94a3b8;margin-bottom:10px">'+note+'</div>';
+  html+='<div style="display:flex;gap:8px">';
+  buttons.forEach(function(b,i){html+='<button id="slf-b'+i+'" style="flex:'+(b.primary?2:1)+';padding:14px;border:none;border-radius:12px;font-weight:800;cursor:pointer;background:'+(b.bg||(b.primary?'#6366F1':'#f1f5f9'))+';color:'+(b.fg||(b.primary?'#fff':'#334155'))+'">'+b.label+'</button>'});
+  html+='</div>';
+  var ov=slOverlay(html,460);
+  buttons.forEach(function(b,i){ov.querySelector('#slf-b'+i).onclick=function(){var vals={};fields.forEach(function(f){vals[f.id]=(ov.querySelector('#'+f.id)||{}).value||''});if(b.cb)b.cb(vals);if(!b.keep)ov.remove();};});
+  var fi=ov.querySelector('input,textarea');if(fi)setTimeout(function(){fi.focus()},120);
+  return ov;
+}
+
+/* edit dept sections - overlay */
+function editDepts(){
+  slForm('✏️ Edit your quick sections',[{id:'dl',type:'textarea',value:getDepts().join(', '),placeholder:'Vapes, Tobacco, Drinks...'}],
+  [{label:'Cancel'},{label:'💾 Save',primary:true,cb:function(v){
+    var arr=v.dl.split(',').map(function(s){return s.trim()}).filter(Boolean).slice(0,12);
+    try{localStorage.setItem('sl_depts_'+MID,JSON.stringify(arr))}catch(e){}
+    renderDeptKeys();T('Sections updated','success');
+  }}],'Comma separated. These become your one-tap price keys.');
+}
+
+/* stock-in qty - overlay */
+function stockInAdd(p){
+  slForm('📦 Stock In: '+p.name,[{id:'q',label:'Quantity received (current: '+(p.stock!=null?p.stock:'untracked')+')',type:'number',value:'1'}],
+  [{label:'Cancel'},{label:'➕ Add stock',primary:true,bg:'#10b981',cb:function(v){
+    var q=parseInt(v.q)||0;if(q<=0){T('Enter quantity','error');return}
+    p.stock=(p.stock||0)+q;
+    pat('products','id=eq.'+p.id,{stock:p.stock}).then(function(){T('📦 +'+q+' '+p.name+' (now '+p.stock+')','success');renderPOSGrid();}).catch(function(){T('Run migration for stock column','error')});
+  }}]);
+}
+
+/* unknown barcode quick-add - overlay */
+function quickAddScanned(code){
+  slForm('🆕 New product · barcode '+code,
+  [{id:'n',label:'Product name',placeholder:'e.g. Lost Mary BM600'},{id:'p',label:'Selling price £ (inc VAT)',type:'number',placeholder:'4.99'},{id:'s',label:'Stock on shelf',type:'number',value:'10'}],
+  [{label:'Cancel'},{label:'➕ Create & add to basket',primary:true,cb:function(v){
+    var price=parseFloat(v.p)||0;if(!(price>0)){T('Price needed','error');return}
+    var prod={merchant_id:MID,name:v.n||'New item',price:price,emoji:(typeof detectEmoji==='function'?detectEmoji(v.n):'')||'🛍️',category:'other',vat_rate:'20',cost_price:0,pos_category:'general',barcode:code,stock:parseInt(v.s)||0,collect:true,delivery:false,active:true,created_at:Date.now()};
+    post('products',prod).then(function(res){var s2=Array.isArray(res)&&res[0];if(s2){PRODUCTS.push(s2);renderPOSGrid();posAdd(s2.id);T('🆕 '+prod.name+' in basket','success');}})
+    .catch(function(){delete prod.barcode;delete prod.stock;post('products',prod).then(function(r2){var s3=Array.isArray(r2)&&r2[0];if(s3){PRODUCTS.push(s3);renderPOSGrid();posAdd(s3.id);T('🆕 created','success');}}).catch(function(){T('Create failed','error')});});
+  }}]);
+}
+
+/* waste / reduce - overlay */
+function wasteProduct(p){
+  var html='<div style="font-size:17px;font-weight:800;margin-bottom:12px">📉 '+p.name+'</div>'
+    +'<button id="wz1" style="width:100%;padding:14px;border:none;border-radius:12px;background:#fef2f2;color:#b91c1c;font-weight:800;cursor:pointer;margin-bottom:8px">💔 Damaged — write off stock</button>'
+    +'<button id="wz2" style="width:100%;padding:14px;border:none;border-radius:12px;background:#fffbeb;color:#b45309;font-weight:800;cursor:pointer;margin-bottom:8px">📅 Out of date — write off stock</button>'
+    +'<button id="wz3" style="width:100%;padding:14px;border:none;border-radius:12px;background:#eef2ff;color:#4338ca;font-weight:800;cursor:pointer;margin-bottom:8px">🔻 Reduce to clear — new price</button>'
+    +'<button id="wz0" style="width:100%;padding:13px;border:none;border-radius:12px;background:#f1f5f9;font-weight:800;cursor:pointer">Cancel</button>';
+  var ov=slOverlay(html,460);
+  ov.querySelector('#wz0').onclick=function(){ov.remove()};
+  function writeOff(reason){
+    ov.remove();
+    slForm(reason==='damaged'?'💔 Damaged: '+p.name:'📅 Out of date: '+p.name,[{id:'q',label:'Quantity to write off',type:'number',value:'1'}],
+    [{label:'Cancel'},{label:'Write off',primary:true,bg:'#b45309',cb:function(v){
+      var q=parseInt(v.q)||0;if(q<=0)return;
+      if(p.stock!=null){p.stock=Math.max(0,p.stock-q);pat('products','id=eq.'+p.id,{stock:p.stock}).catch(function(){});}
+      post('pos_sales',{merchant_id:MID,items:JSON.stringify([{n:p.name,q:q,p:0,v:0,reason:reason}]),net:0,vat_total:0,total:0,method:'waste',refund:false,created_at:Date.now()})
+      .then(function(){T('📉 '+q+' x '+p.name+' written off','success');renderPOSGrid();loadPOSSales();}).catch(function(){renderPOSGrid();});
+    }}]);
+  }
+  ov.querySelector('#wz1').onclick=function(){writeOff('damaged')};
+  ov.querySelector('#wz2').onclick=function(){writeOff('out_of_date')};
+  ov.querySelector('#wz3').onclick=function(){
+    ov.remove();
+    slForm('🔻 Reduce to clear: '+p.name,[{id:'np',label:'New clearance price £ (was £'+Number(p.price||0).toFixed(2)+')',type:'number'}],
+    [{label:'Cancel'},{label:'Set price',primary:true,cb:function(v){
+      var np=parseFloat(v.np)||0;if(!(np>0))return;
+      p.price=np;pat('products','id=eq.'+p.id,{price:np}).then(function(){T('🔻 now £'+np.toFixed(2),'success');renderPOSGrid();});
+    }}]);
+  };
+}
+
+/* send receipt: overlay with SCAN + type-ID options, ZXing QR fallback */
+function sendReceiptToCustomer(id){
+  var html='<div style="font-size:17px;font-weight:800;margin-bottom:12px">📲 Send receipt to customer</div>'
+    +'<button id="sr-scan" style="width:100%;padding:15px;border:none;border-radius:12px;background:#0f172a;color:#fff;font-weight:800;cursor:pointer;margin-bottom:10px">📷 Scan customer QR / barcode</button>'
+    +'<div style="font-size:12px;color:#94a3b8;text-align:center;margin-bottom:8px">or type their Stashlo ID</div>'
+    +'<input id="sr-id" placeholder="SL-448JXW" style="width:100%;padding:13px;border:2px solid #e2e8f0;border-radius:12px;font-size:16px;font-weight:800;text-transform:uppercase;margin-bottom:10px;box-sizing:border-box">'
+    +'<div style="display:flex;gap:8px"><button id="sr-x" style="flex:1;padding:13px;border:none;border-radius:12px;background:#f1f5f9;font-weight:800;cursor:pointer">Cancel</button><button id="sr-go" style="flex:2;padding:13px;border:none;border-radius:12px;background:#6366F1;color:#fff;font-weight:800;cursor:pointer">Send</button></div>';
+  var ov=slOverlay(html,440);
+  ov.querySelector('#sr-x').onclick=function(){ov.remove()};
+  ov.querySelector('#sr-go').onclick=function(){var lid=(ov.querySelector('#sr-id').value||'').trim().toUpperCase();if(!lid){T('Type the ID or use scan','error');return}ov.remove();deliverReceipt(id,lid);};
+  ov.querySelector('#sr-scan').onclick=function(){ov.remove();scanCustomerQR(id);};
+}
+function scanCustomerQR(saleId){
+  function ui(decodeStart){
+    var ov=document.createElement('div');ov.id='cqr-ov';
+    ov.style.cssText='position:fixed;inset:0;background:#000;z-index:980;display:flex;flex-direction:column';
+    ov.innerHTML='<video id="cqr-vid" autoplay playsinline muted style="flex:1;width:100%;height:100%;object-fit:cover"></video>'
+      +'<button id="cqr-x" style="position:absolute;top:16px;right:16px;width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:19px">X</button>'
+      +'<div style="position:absolute;bottom:30px;left:0;right:0;text-align:center;color:#fff;font-weight:800;text-shadow:0 2px 6px #000">Scan the customer Stashlo QR or barcode</div>';
+    document.body.appendChild(ov);
+    return ov;
+  }
+  function got(raw,cleanup){
+    var m=String(raw).match(/SL-[A-Z0-9]+/i);var lid=(m?m[0]:String(raw)).toUpperCase();
+    cleanup();deliverReceipt(saleId,lid);
+  }
+  if('BarcodeDetector' in window){
+    var ov=ui();var stream=null,raf=null;
+    function stop(){if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(function(t){t.stop()});ov.remove();}
+    ov.querySelector('#cqr-x').onclick=stop;
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}}).then(function(st){
+      stream=st;var v=ov.querySelector('#cqr-vid');v.srcObject=st;
+      var det=new BarcodeDetector({formats:['qr_code','code_128','ean_13']});
+      function loop(){if(!document.getElementById('cqr-ov'))return;
+        det.detect(v).then(function(cs){if(cs&&cs.length&&cs[0].rawValue){got(cs[0].rawValue,stop);return}raf=requestAnimationFrame(loop);}).catch(function(){raf=requestAnimationFrame(loop)});}
+      v.onloadedmetadata=loop;
+    }).catch(function(){T('Camera permission needed','error');stop();});
+  }else{
+    loadZXing(function(){
+      var ov=ui();var reader=new ZXing.BrowserMultiFormatReader();
+      function stop(){try{reader.reset()}catch(e){}ov.remove();}
+      ov.querySelector('#cqr-x').onclick=stop;
+      reader.decodeFromVideoDevice(null,'cqr-vid',function(res){if(res&&res.text)got(res.text,stop);}).catch(function(){T('Camera needed','error');stop();});
+    });
+  }
+}
+
+/* FULLSCREEN long-range product scanner (hi-res, edge-to-edge) */
+function openPOSScanner(){
+  if(!('BarcodeDetector' in window)){openZXingScanner();return}
+  var ov=document.createElement('div');ov.id='scan-ov';
+  ov.style.cssText='position:fixed;inset:0;background:#000;z-index:900';
+  ov.innerHTML='<video id="scan-vid" autoplay playsinline muted style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
+    +'<div style="position:absolute;inset:0;border:3px solid rgba(52,211,153,.9);border-radius:0;pointer-events:none"></div>'
+    +'<div style="position:absolute;top:50%;left:4%;right:4%;height:2px;background:rgba(52,211,153,.85);box-shadow:0 0 12px #34d399;pointer-events:none"></div>'
+    +'<button id="scan-x" style="position:absolute;top:16px;right:16px;width:48px;height:48px;border-radius:50%;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:20px;cursor:pointer">X</button>'
+    +'<div id="scan-hint" style="position:absolute;bottom:30px;left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:15px;text-shadow:0 2px 6px #000">Point anywhere on screen at a barcode — long range OK</div>';
+  document.body.appendChild(ov);
+  document.getElementById('scan-x').onclick=closePOSScanner;
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}}).then(function(st){
+    _scanStream=st;
+    var v=document.getElementById('scan-vid');v.srcObject=st;
+    try{var tr=st.getVideoTracks()[0];var caps=tr.getCapabilities?tr.getCapabilities():{};if(caps.zoom){tr.applyConstraints({advanced:[{zoom:Math.min(2,caps.zoom.max||1)}]}).catch(function(){});}}catch(e){}
+    var det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf']});
+    var last='',lastT=0;
+    function loop(){
+      if(!document.getElementById('scan-ov'))return;
+      det.detect(v).then(function(codes){
+        if(codes&&codes.length){var val=codes[0].rawValue;
+          if(val&&(val!==last||Date.now()-lastT>1500)){last=val;lastT=Date.now();posScanHit(val);}}
+      }).catch(function(){});
+      _scanRAF=requestAnimationFrame(loop);
+    }
+    v.onloadedmetadata=loop;
+  }).catch(function(){T('Camera permission needed','error');closePOSScanner();});
+}
+
+/* AI invoice: image OR PDF; keyless fallback = fast bulk-add overlay */
+function aiInvoiceScan(){
+  if(!window.ANTH_KEY){
+    slForm('📄 Pallet bulk stock-in (no AI key set)',
+    [{id:'bulk',type:'textarea',placeholder:'One product per line:\nLost Mary BM600, 24, 4.99\nWalkers Cheese 32g, 48, 1.10\n(name, qty, price)'}],
+    [{label:'Cancel'},{label:'➕ Add all',primary:true,cb:function(v){
+      var lines=(v.bulk||'').split(String.fromCharCode(10)).map(function(s){return s.trim()}).filter(Boolean);
+      var done=0,added=0,created=0;
+      if(!lines.length){T('Nothing to add','error');return}
+      lines.forEach(function(ln){
+        var parts=ln.split(',').map(function(s){return s.trim()});
+        var name=parts[0],qty=parseInt(parts[1])||1,price=parseFloat(parts[2])||1;
+        var p=PRODUCTS.find(function(x){return (x.name||'').toLowerCase()===String(name).toLowerCase()});
+        function fin(){done++;if(done>=lines.length){renderPOSGrid();T('📦 +stock on '+added+', '+created+' new products','success');}}
+        if(p){p.stock=(p.stock||0)+qty;added++;pat('products','id=eq.'+p.id,{stock:p.stock}).catch(function(){}).then(fin);}
+        else{post('products',{merchant_id:MID,name:name,price:price,emoji:'🛍️',category:'other',vat_rate:'20',cost_price:0,pos_category:'general',stock:qty,collect:true,delivery:false,active:true,created_at:Date.now()}).then(function(r){var s=Array.isArray(r)&&r[0];if(s)PRODUCTS.push(s);created++;fin();}).catch(fin);}
+      });
+    }}],'Tip: ask Admin to add an AI key (Admin → More → 🤖 AI Key) and this becomes photo-the-invoice automatic.');
+    return;
+  }
+  var inp=document.createElement('input');inp.type='file';inp.accept='image/*,application/pdf';
+  inp.onchange=function(){
+    var f=inp.files[0];if(!f)return;
+    T('🤖 AI reading your invoice...');
+    var r=new FileReader();
+    r.onload=function(){
+      var b64=String(r.result).split(',')[1];
+      var isPdf=(f.type==='application/pdf');
+      var block=isPdf?{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}}:{type:'image',source:{type:'base64',media_type:f.type||'image/jpeg',data:b64}};
+      fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':window.ANTH_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:[block,{type:'text',text:'Supplier delivery invoice for a UK shop. Extract every product line. ONLY a JSON array: [{"name":"...","qty":2,"price":1.99}]'}]}]})})
+      .then(function(res){return res.json()})
+      .then(function(data){
+        var txt=(data.content&&data.content[0]&&data.content[0].text)||'[]';
+        txt=txt.replace(/```json|```/g,'').trim();
+        var items=[];try{items=JSON.parse(txt)}catch(e){T('Could not read - try a sharper photo','error');return}
+        if(!items.length){T('No products found','error');return}
+        var done=0,added=0,created=0;
+        items.forEach(function(it){
+          var name=(it.name||'').trim();var qty=parseInt(it.qty)||1;
+          function fin(){done++;if(done>=items.length){renderPOSGrid();T('🤖 +stock on '+added+', '+created+' new','success');}}
+          if(!name){fin();return}
+          var p=PRODUCTS.find(function(x){return (x.name||'').toLowerCase()===name.toLowerCase()||((x.name||'').toLowerCase().indexOf(name.toLowerCase())>=0&&name.length>3)});
+          if(p){p.stock=(p.stock||0)+qty;added++;pat('products','id=eq.'+p.id,{stock:p.stock}).catch(function(){}).then(fin);}
+          else{post('products',{merchant_id:MID,name:name,price:parseFloat(it.price)||1,emoji:'🛍️',category:'other',vat_rate:'20',cost_price:0,pos_category:'general',stock:qty,collect:true,delivery:false,active:true,created_at:Date.now()}).then(function(r2){var s=Array.isArray(r2)&&r2[0];if(s)PRODUCTS.push(s);created++;fin();}).catch(fin);}
+        });
+      }).catch(function(){T('AI request failed','error')});
+    };
+    r.readAsDataURL(f);
+  };
+  inp.click();
+}
+
+/* BACK OFFICE hub injected above dept keys */
+var _rdk=renderDeptKeys;
+renderDeptKeys=function(){
+  _rdk();
+  if(document.getElementById('backoffice-card'))return;
+  var dk=document.getElementById('dept-keys');if(!dk)return;
+  var bo=document.createElement('div');
+  bo.id='backoffice-card';
+  bo.style.cssText='margin:0 16px 10px;background:#0f172a;border-radius:16px;padding:12px';
+  bo.innerHTML='<div style="font-size:12px;font-weight:800;color:#94a3b8;margin-bottom:8px">🏢 BACK OFFICE</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'
+    +'<button onclick="switchTab(String.fromCharCode(115,116,111,99,107))" style="background:#1e293b;color:#fff;border:none;border-radius:12px;padding:11px 4px;font-size:11px;font-weight:800;cursor:pointer">📦<br>Products<br>&amp; Prices</button>'
+    +'<button onclick="aiInvoiceScan()" style="background:#1e293b;color:#fff;border:none;border-radius:12px;padding:11px 4px;font-size:11px;font-weight:800;cursor:pointer">📄<br>Pallet<br>Invoice</button>'
+    +'<button onclick="posDayEnd()" style="background:#1e293b;color:#fff;border:none;border-radius:12px;padding:11px 4px;font-size:11px;font-weight:800;cursor:pointer">📊<br>Day-End<br>Report</button>'
+    +'<button onclick="posExportCSV()" style="background:#1e293b;color:#fff;border:none;border-radius:12px;padding:11px 4px;font-size:11px;font-weight:800;cursor:pointer">⬇<br>HMRC<br>CSV</button>'
+    +'</div>';
+  dk.parentElement.insertBefore(bo,dk);
+};
+
 </script>
 </body>
 </html>
