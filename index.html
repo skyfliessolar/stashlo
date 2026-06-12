@@ -1137,6 +1137,7 @@ document.addEventListener('DOMContentLoaded',function(){
     if(app&&auth&&auth.contains(app)){document.body.appendChild(app);}
   }catch(e){}
 });
+window.STASHLO_V='v15';
 // ===== CRASH-PROOF GUARDS (senior fintech: never a blank page) =====
 window.onerror=function(msg,src,line){
   try{
@@ -1904,6 +1905,14 @@ function checkUnreadChats(){
 }
 
 // ===== JOBS =====
+function jobAlertCheck(jobs){
+  try{
+    var seen=JSON.parse(localStorage.getItem('sl_jobseen_'+UID)||'[]');
+    var fresh=jobs.filter(function(j){return seen.indexOf(j.id)<0});
+    if(fresh.length&&seen.length)T('💼 '+fresh.length+' new job'+(fresh.length>1?'s':'')+' posted near you - check Jobs!');
+    localStorage.setItem('sl_jobseen_'+UID,JSON.stringify(jobs.map(function(j){return j.id})));
+  }catch(e){}
+}
 function loadJobs(){
   const el=document.getElementById('jobs-list');
   if(!el)return;

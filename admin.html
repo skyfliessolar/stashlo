@@ -1592,6 +1592,7 @@ function grantUserReceipts(){
 }
 
 function switchTab(name){
+  if(!document.getElementById(name+'-screen')){T('Section coming soon');name='overview';}
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
   const sc=document.getElementById(name+'-screen');if(sc)sc.classList.add('on');

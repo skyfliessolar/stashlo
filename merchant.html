@@ -494,6 +494,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
         <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
           <span style="font-size:12px;font-weight:700;color:var(--ink3)">Discount £</span>
           <input id="pos-disc" type="number" step="0.01" min="0" value="" placeholder="0.00" oninput="renderBasket()" style="width:84px;padding:8px;border:2px solid var(--bg2);border-radius:10px;font-size:13px">
+          <button onclick="applyStaffDisc()" style="background:#fef3c7;color:#b45309;border:none;border-radius:10px;padding:8px 11px;font-size:11px;font-weight:800;cursor:pointer">👔 Staff</button>
           <span id="pos-disc-note" style="font-size:11px;color:var(--green);font-weight:700"></span>
         </div>
         <div style="border-top:1.5px dashed var(--bg2);margin-top:10px;padding-top:10px;font-size:13px">
@@ -542,6 +543,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
       <div style="margin:12px 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
         <div style="font-size:13px;font-weight:800;margin-bottom:8px">⚙️ POS Settings</div>
         <div class="field" style="margin-bottom:8px"><label class="field-label">VAT number (prints on receipts)</label><input id="pos-vatno" placeholder="GB123456789" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
+        <div class="field" style="margin-bottom:8px"><label class="field-label">Staff discount %</label><input id="pos-staffdisc" type="number" placeholder="10" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
         <div class="field" style="margin-bottom:8px"><label class="field-label">Stripe Payment Link (card payments)</label><input id="pos-stripe" placeholder="https://buy.stripe.com/..." style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
         <div class="field" style="margin-bottom:8px"><label class="field-label">Receipt footer message</label><input id="pos-footer" placeholder="Thank you for shopping with us!" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
         <div style="display:flex;gap:8px">
@@ -772,6 +774,7 @@ function countUp(id,target,prefix){
   var cur=0,steps=24,inc=target/steps,i=0;
   var t=setInterval(function(){i++;cur+=inc;if(i>=steps){cur=target;clearInterval(t);}el.textContent=(prefix||'')+cur.toFixed(2);},28);
 }
+window.STASHLO_V='v15';console.log('STASHLO build',window.STASHLO_V);
 function loadMerchant(){
   get("merchants","id=eq."+MID).then(d=>{
     MDATA=Array.isArray(d)&&d[0]?d[0]:{};
@@ -1247,6 +1250,7 @@ function downloadCSV(type){
 function markMsgsRead(){txt("m-inbox-lab","Inbox")}
 
 function switchTab(name){
+  if(!document.getElementById(name+'-screen')){T('That section is coming soon');name='overview';}
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
   document.querySelectorAll(".nb").forEach(b=>b.classList.remove("on"));
   const sc=document.getElementById(name+"-screen");if(sc)sc.classList.add("on");
@@ -1459,6 +1463,7 @@ function openZXingScanner(){
 // ===== STOCK-IN MODE (scan goods in, add quantity to stock) =====
 let STOCK_IN=false,_MP_VAT=0.2;
 function toggleStockIn(){
+  rehomeModals();
   STOCK_IN=!STOCK_IN;
   var b=document.getElementById('stockin-btn');
   if(b){b.textContent=STOCK_IN?'📦 Stock In: ON — scan/tap products':'📦 Stock In: OFF';b.classList.toggle('on',STOCK_IN);}
@@ -1479,6 +1484,7 @@ function mpVat(btn){
   btn.className='mp-vat btn-xs btn-purple';
 }
 function openManualPrice(di){
+  rehomeModals();
   var d=(typeof di==='number')?DEPTS[di]:null;
   document.getElementById('mp-name').value=d?d[1]:'';
   window._MP_CAT=d?d[2]:'general';
@@ -1490,7 +1496,7 @@ function addManualItem(){
   var price=parseFloat(document.getElementById('mp-price').value||0);
   if(price<=0){T('Enter a price','error');return}
   var name=V('mp-name')||'Misc item';
-  POS_BASKET.push({id:'manual_'+Date.now(),name:name,price:price,vat:_MP_VAT,qty:1,emoji:'🏷️'});
+  POS_BASKET.push({id:'manual_'+Date.now(),name:name,price:price,vat:_MP_VAT,qty:1,emoji:'🏷️',cost:0,cat:window._MP_CAT||'general'});
   closeModal('manualModal');
   renderBasket();
   T('🏷️ '+name+' £'+price.toFixed(2)+' added','success');
@@ -1587,6 +1593,14 @@ function posStockBadge(p){
   if(p.stock<=5)return '<div style="font-size:9px;font-weight:800;color:#fff;background:#ef4444;border-radius:8px;padding:1px 6px;margin-top:2px">'+p.stock+' left</div>';
   return '<div style="font-size:9px;color:var(--ink3);margin-top:2px">'+p.stock+' in stock</div>';
 }
+function applyStaffDisc(){
+  var pct=parseFloat(localStorage.getItem('sl_staffd_'+MID)||0);
+  if(!(pct>0)){T('Set Staff discount % in POS Settings first','error');return}
+  var net=0,vat=0;POS_BASKET.forEach(function(b){var g=b.price*b.qty;var n=g/(1+b.vat);net+=n;vat+=g-n;});
+  var gross=net+vat;
+  document.getElementById('pos-disc').value=(gross*pct/100).toFixed(2);
+  renderBasket();T('👔 Staff discount '+pct+'% applied','success');
+}
 function cmQuick(n){document.getElementById('cm-tendered').value=n;cmChange();}
 function cmExact(){document.getElementById('cm-tendered').value=window._POS_DUE.toFixed(2);cmChange();}
 function cmChange(){
@@ -1603,7 +1617,7 @@ function cmComplete(){
 }
 function loadPOSSales(){
   var el=document.getElementById('pos-history');if(!el)return;
-  get('pos_sales','merchant_id=eq.'+MID+'&order=created_at.desc&limit=12').then(function(d){
+  get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+(Date.now()-30*86400000)+'&order=created_at.desc&limit=12').then(function(d){
     var s=Array.isArray(d)?d:[];
     if(!s.length){el.innerHTML='No sales yet today';return}
     var Q=String.fromCharCode(39);
@@ -1620,18 +1634,48 @@ function loadPOSSales(){
     window._POS_HIST=s;
   }).catch(function(){el.innerHTML='Could not load';});
 }
-function sendReceiptToCustomer(id){
-  var s=(window._POS_HIST||[]).find(function(x){return x.id===id});if(!s)return;
-  var lid=prompt('📲 Send digital receipt\n\nCustomer Stashlo ID (on their home screen, e.g. SL-448JXW):');
-  if(!lid)return;lid=lid.trim().toUpperCase();
-  get('users','loyalty_id=eq.'+encodeURIComponent(lid)+'&select=id,email').then(function(d){
+function scanCustomerQR(saleId){
+  var ov=document.createElement('div');ov.id='cqr-ov';
+  ov.style.cssText='position:fixed;inset:0;background:#000;z-index:920;display:flex;flex-direction:column';
+  ov.innerHTML='<video id="cqr-vid" autoplay playsinline muted style="flex:1;width:100%;object-fit:cover"></video><button id="cqr-x" style="position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:18px">X</button><div style="position:absolute;top:34%;left:18%;right:18%;aspect-ratio:1;border:3px solid #22d3ee;border-radius:18px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div><div style="position:absolute;bottom:34px;left:0;right:0;text-align:center;color:#fff;font-weight:800">Scan the customer Stashlo QR</div>';
+  document.body.appendChild(ov);
+  var stream=null,raf=null;
+  function stop(){if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(function(t){t.stop()});ov.remove();}
+  document.getElementById('cqr-x').onclick=stop;
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(st){
+    stream=st;var v=document.getElementById('cqr-vid');v.srcObject=st;
+    var det=new BarcodeDetector({formats:['qr_code','code_128']});
+    function loop(){
+      if(!document.getElementById('cqr-ov'))return;
+      det.detect(v).then(function(codes){
+        if(codes&&codes.length&&codes[0].rawValue){
+          var raw=codes[0].rawValue;var mch=raw.match(/SL-[A-Z0-9]+/i);
+          var lid=(mch?mch[0]:raw).toUpperCase();
+          stop();deliverReceipt(saleId,lid);return;
+        }
+        raf=requestAnimationFrame(loop);
+      }).catch(function(){raf=requestAnimationFrame(loop)});
+    }
+    v.onloadedmetadata=loop;
+  }).catch(function(){T('Camera permission needed','error');stop();});
+}
+function deliverReceipt(saleId,lid){
+  var s=(window._POS_HIST||[]).find(function(x){return x.id===saleId});if(!s){T('Sale not found','error');return}
+  get('users','loyalty_id=eq.'+encodeURIComponent(lid)+'&select=id').then(function(d){
     var u=Array.isArray(d)&&d[0];
     if(!u){T('No customer with ID '+lid,'error');return}
     var items='';try{items=JSON.parse(s.items||'[]').map(function(it){return it.n+' x'+it.q}).join(', ')}catch(e){}
     post('receipts',{user_id:u.id,merchant_name:MDATA.name||'Shop',receipt_no:'POS-'+(s.id||'').slice(0,8).toUpperCase(),items:items,total:s.total,created_at:Date.now()})
-    .then(function(){T('📲 Receipt sent to '+lid+' - it is now in their archive','success');})
+    .then(function(){T('📲 Receipt sent to '+lid,'success');})
     .catch(function(){T('Send failed','error');});
-  }).catch(function(){T('Lookup failed - users.loyalty_id column needed','error');});
+  });
+}
+function sendReceiptToCustomer(id){
+  var s=(window._POS_HIST||[]).find(function(x){return x.id===id});if(!s)return;
+  if(('BarcodeDetector' in window)&&confirm('📲 Send digital receipt\n\nOK = SCAN the customer QR (their home screen)\nCancel = type their Stashlo ID')){scanCustomerQR(id);return}
+  var lid=prompt('Customer Stashlo ID (e.g. SL-448JXW):');
+  if(!lid)return;lid=lid.trim().toUpperCase();
+  deliverReceipt(id,lid);
 }
 function reprintSale(id){
   var s=(window._POS_HIST||[]).find(function(x){return x.id===id});
@@ -1663,7 +1707,7 @@ function finalizeSale(method){
   var gross=net+vat;
   var disc=Math.min(parseFloat((document.getElementById('pos-disc')||{}).value||0)||0,gross);
   if(disc>0){var f=(gross-disc)/gross;net*=f;vat*=f;gross-=disc;}
-  var saleObj={merchant_id:MID,items:JSON.stringify(POS_BASKET.map(function(b){return {n:b.name,q:b.qty,p:b.price,v:b.vat,c:b.cost||0}})),net:net.toFixed(2),vat_total:vat.toFixed(2),total:gross.toFixed(2),method:method,discount:disc.toFixed(2),refund:false,created_at:Date.now()};
+  var saleObj={merchant_id:MID,items:JSON.stringify(POS_BASKET.map(function(b){return {n:b.name,q:b.qty,p:b.price,v:b.vat,c:b.cost||0,k:b.cat||'general'}})),net:net.toFixed(2),vat_total:vat.toFixed(2),total:gross.toFixed(2),method:method,discount:disc.toFixed(2),refund:false,created_at:Date.now()};
   post('pos_sales',saleObj).then(function(res){
     var saved=Array.isArray(res)&&res[0]?res[0]:saleObj;
     window._LAST_SALE=saved;
@@ -1729,6 +1773,7 @@ let POS_BASKET=[];
 function vatRate(p){const v=(p.vat_rate===undefined||p.vat_rate===null)?'20':String(p.vat_rate);return v==='20'?0.2:v==='5'?0.05:0;}
 function savePOSSettings(){
   const v=V('pos-vatno'),f=V('pos-footer'),sl=V('pos-stripe');
+  try{localStorage.setItem('sl_staffd_'+MID,V('pos-staffdisc')||'')}catch(e){}
   try{localStorage.setItem('sl_stripe_'+MID,sl)}catch(e){}
   MDATA.stripe_link=sl;
   pat('merchants','id=eq.'+MID,{stripe_link:sl}).catch(function(){});
@@ -1750,6 +1795,7 @@ function posGuard(){
   if(vEl)vEl.value=MDATA.receipt_vat_no||localStorage.getItem('sl_vatno_'+MID)||'';
   if(fEl)fEl.value=MDATA.receipt_footer||localStorage.getItem('sl_rfoot_'+MID)||'';
   var sEl=document.getElementById('pos-stripe');if(sEl)sEl.value=MDATA.stripe_link||localStorage.getItem('sl_stripe_'+MID)||'';
+  var sdEl=document.getElementById('pos-staffdisc');if(sdEl)sdEl.value=localStorage.getItem('sl_staffd_'+MID)||'';
   const pay=document.getElementById('pos-paywall'),main=document.getElementById('pos-main');
   var trialMs=30*24*3600*1000;
   var createdAt=MDATA.created_at?(typeof MDATA.created_at==='number'?MDATA.created_at:new Date(MDATA.created_at).getTime()):0;
@@ -1801,7 +1847,7 @@ function posAdd(pid){
   if(STOCK_IN){stockInAdd(p);return}
   if(WASTE_MODE){wasteProduct(p);return}
   const ex=POS_BASKET.find(function(b){return b.id===pid});
-  if(ex)ex.qty++;else POS_BASKET.push({id:p.id,name:p.name,price:parseFloat(p.price||0),vat:vatRate(p),qty:1,emoji:p.emoji||'',cost:parseFloat(p.cost_price||0)});
+  if(ex)ex.qty++;else POS_BASKET.push({id:p.id,name:p.name,price:parseFloat(p.price||0),vat:vatRate(p),qty:1,emoji:p.emoji||'',cost:parseFloat(p.cost_price||0),cat:p.pos_category||'general'});
   renderBasket();
 }
 function posScanAdd(q){
@@ -1869,6 +1915,12 @@ function posDayEnd(){
       vat+=parseFloat(x.vat_total||0);
       try{JSON.parse(x.items||'[]').forEach(function(it){var sign=t<0?-1:1;sold+=sign*(it.q||0);profit+=sign*(((it.p||0)-(it.c||0))*(it.q||0));});}catch(e){}
     });
+    var byCat={};
+    s.forEach(function(x){
+      if(x.method==='waste')return;var sign=parseFloat(x.total||0)<0?-1:1;
+      try{JSON.parse(x.items||'[]').forEach(function(it){var k=it.k||'general';byCat[k]=byCat[k]||{r:0,q:0};byCat[k].r+=sign*(it.p||0)*(it.q||0);byCat[k].q+=sign*(it.q||0);});}catch(e){}
+    });
+    var catHtml=Object.keys(byCat).sort(function(a,b){return byCat[b].r-byCat[a].r}).slice(0,6).map(function(k){return k.charAt(0).toUpperCase()+k.slice(1)+': £'+byCat[k].r.toFixed(2)+' ('+byCat[k].q+')'}).join(' · ')||'-';
     window._POS_TODAY=s;
     document.getElementById('pos-report').innerHTML='<b>📊 Day-End · '+new Date().toLocaleDateString()+'</b><br>'
       +'Sales: <b>'+s.filter(function(x){return x.method!=='waste'&&parseFloat(x.total)>0}).length+'</b> · Items sold: <b>'+sold+'</b><br>'
@@ -1876,7 +1928,8 @@ function posDayEnd(){
       +'VAT collected: <b>£'+vat.toFixed(2)+'</b> · Refunds: <b style="color:#ef4444">£'+refunds.toFixed(2)+'</b><br>'
       +'Waste/write-offs: <b>'+wasteN+' items</b><br>'
       +'Gross: <b style="color:var(--purple)">£'+(cash+card).toFixed(2)+'</b> · <span style="background:#f0fdf4;border-radius:8px;padding:2px 8px">💰 Profit: <b style="color:#059669">£'+profit.toFixed(2)+'</b></span><br>'
-      +'<span style="font-size:11px;color:var(--ink4)">Profit uses each product cost prices - set costs in Stock for accuracy</span>';
+      +'<b>📈 By category:</b> '+catHtml+'<br>'
+      +'<span style="font-size:11px;color:var(--ink4)">Profit uses product cost prices · staff discounts in Discount line · older than 30 days auto-archives to Stashlo HQ (admin holds master copy)</span>';
   }).catch(function(){T('Could not load','error');});
 }
 function posExportCSV(){
