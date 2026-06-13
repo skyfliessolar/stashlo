@@ -465,3 +465,11 @@ DROP POLICY IF EXISTS scratch_read ON scratch_codes;
 CREATE POLICY scratch_read ON scratch_codes FOR SELECT TO anon USING (true);
 DROP POLICY IF EXISTS scratch_claim ON scratch_codes;
 CREATE POLICY scratch_claim ON scratch_codes FOR UPDATE TO anon USING (claimed_by IS NULL);
+
+-- v18: promo codes, profile, credit, geofence
+CREATE TABLE IF NOT EXISTS promo_codes (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), code text UNIQUE, reward text, value numeric DEFAULT 0, type text DEFAULT 'reward', used_by uuid, used_at bigint, expiry bigint, created_at bigint);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS dob date;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS sl_credit numeric DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS birthday_offer_sent integer;

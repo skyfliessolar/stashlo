@@ -344,6 +344,11 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
     <div id="job-approvals-list" style="padding:0 16px"></div>
   </div>
 
+  <div class="screen" id="birthdays-screen">
+    <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">🎂 Birthday Offers</div>
+    <div id="bday-list" style="padding:0 16px"></div>
+  </div>
+
   <!-- SCRATCH CODES -->
   <div class="screen" id="scratch-screen">
     <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">🎟 Scratch Code Rewards</div>
@@ -395,6 +400,11 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
         <div style="font-size:26px">🎨</div>
         <div style="font-size:13px;font-weight:700;margin-top:6px;color:#fff">3D Studio</div>
         <div style="font-size:11px;color:rgba(255,255,255,.7)">Live theme</div>
+      </div>
+      <div onclick="switchTab('birthdays')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">🎂</div>
+        <div style="font-size:13px;font-weight:700;margin-top:6px">Birthdays</div>
+        <div style="font-size:11px;color:var(--ink3)">Today's offers</div>
       </div>
       <div onclick="switchTab('scratch')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:26px">🎟</div>
@@ -1522,6 +1532,19 @@ function ensureBackBtns(){
 }
 document.addEventListener('DOMContentLoaded',function(){setTimeout(ensureBackBtns,400)});
 
+// ===== BIRTHDAY OFFER CONTROL =====
+function loadBirthdayRequests(){
+  var el=document.getElementById('bday-list');if(!el)return;
+  sget('users','dob=not.is.null&order=created_at.desc&limit=100').then(function(d){
+    var u=Array.isArray(d)?d:[];var today=new Date();var todayMD=(today.getMonth()+1)+'-'+today.getDate();
+    var bday=u.filter(function(x){if(!x.dob)return false;var parts=x.dob.split('-');var md=parts[1]+'-'+parts[2];return md===todayMD;});
+    el.innerHTML=bday.length?bday.map(function(x){return '<div class="ic"><div class="ic-row"><div><div class="ic-name">🎂 '+(x.email||x.name||'User')+'</div><div class="ic-sub">DOB: '+x.dob+' · birthday today</div></div><button class="btn-xs btn-green" onclick="sendBirthdayOffer(''+x.id+'',''+x.email+'')">🎁 Send offer</button></div></div>';}).join(''):'<div style="padding:12px;color:var(--ink3)">No birthdays today</div>';
+  });
+}
+function sendBirthdayOffer(uid,email){
+  spat('users','id=eq.'+uid,{birthday_offer_sent:new Date().getFullYear(),sl_credit:(0+2)}).then(function(){T('🎂 Birthday offer sent to '+email,'success');logAudit('birthday_offer',email);}).catch(function(){T('Failed','error');});
+}
+
 // ===== SCRATCH CODES =====
 function genScratch(){
   var n=parseInt((document.getElementById('scg-n')||{}).value||10),codes=[];
@@ -1592,6 +1615,7 @@ function grantUserReceipts(){
 }
 
 function switchTab(name){
+  if(!document.getElementById(name+'-screen')){T('Section coming soon','error');name='overview';}
   if(!document.getElementById(name+'-screen')){T('Section coming soon');name='overview';}
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
@@ -1607,6 +1631,7 @@ function switchTab(name){
   if(name==='audit')loadAuditLogs();
   if(name==='design3d')loadTheme3DStudio();
   if(name==='admreceipts')loadAdminReceipts();
+  if(name==='birthdays')loadBirthdayRequests();
   if(name==='scratch')loadScratchClaims();
   if(name==='delivery')loadDelivery();
   if(name==='billing')loadBilling();

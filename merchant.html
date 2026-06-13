@@ -485,6 +485,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
         <button onclick="openManualPrice()" style="flex:1;background:#1e1b4b;color:#fff;border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">£ Manual Price</button>
         <button onclick="toggleWaste()" id="waste-btn" style="flex:1;background:var(--bg2);color:var(--ink2);border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">📉 Reduce/Waste</button>
       </div>
+      <div id="quick-grid" style="margin:0 16px 10px"></div>
       <div style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none" id="dept-keys"></div>
       <div id="pos-cats" style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none"></div>
       <div id="pos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:10px"></div>
@@ -774,7 +775,8 @@ function countUp(id,target,prefix){
   var cur=0,steps=24,inc=target/steps,i=0;
   var t=setInterval(function(){i++;cur+=inc;if(i>=steps){cur=target;clearInterval(t);}el.textContent=(prefix||'')+cur.toFixed(2);},28);
 }
-window.STASHLO_V='v15';console.log('STASHLO build',window.STASHLO_V);
+console.log('STASHLO build',window.STASHLO_V);
+(function(){var k=localStorage.getItem('sl_anth_key');if(k&&!window.ANTH_KEY)window.ANTH_KEY=k;})();
 function loadMerchant(){
   get("merchants","id=eq."+MID).then(d=>{
     MDATA=Array.isArray(d)&&d[0]?d[0]:{};
@@ -1629,7 +1631,7 @@ function loadPOSSales(){
         +'<button class="btn-xs btn-gray" onclick="reprintSale('+Q+x.id+Q+')">🖨</button>'
         +'<button class="btn-xs" style="background:#eef2ff;color:#4338ca" onclick="sendReceiptToCustomer('+Q+x.id+Q+')">📲</button>'
         +(!neg?'<button class="btn-xs" style="background:#fef2f2;color:#ef4444" onclick="posRefund('+Q+x.id+Q+')">↩️</button>':'')
-        +'</div></div>';
+        +'</div>'  /* end header row */+'<div style="display:none;padding:8px;background:#f8fafc;border-radius:10px;margin-top:6px;font-size:12px">'+(function(){var ls='';try{JSON.parse(x.items||'[]').forEach(function(it){ls+='<div style="display:flex;justify-content:space-between"><span>'+it.n+' x'+it.q+'</span><span>£'+(it.p*(it.q||1)).toFixed(2)+'</span></div>';});}catch(e){}return ls||'No items';})()+' </div></div>';
     }).join('');
     window._POS_HIST=s;
   }).catch(function(){el.innerHTML='Could not load';});
@@ -1801,6 +1803,7 @@ function posGuard(){
   var createdAt=MDATA.created_at?(typeof MDATA.created_at==='number'?MDATA.created_at:new Date(MDATA.created_at).getTime()):0;
   var inTrial=!MDATA.pos_enabled&&createdAt&&(Date.now()-createdAt)<trialMs&&!MDATA.pos_trial_used;
   if(MDATA.pos_enabled||inTrial){
+  setTimeout(renderQuickGrid,800);
     pay.style.display='none';main.style.display='block';renderPOSGrid();loadPOSSales();renderDeptKeys();
     if(inTrial&&!document.getElementById('trial-banner')){
       var days=Math.ceil((trialMs-(Date.now()-createdAt))/86400000);
@@ -2137,7 +2140,17 @@ function posExportCSV(){
 }
 
 /* ---- nav alignment + version ---- */
-window.STASHLO_V='v16';
+window.STASHLO_V='v18';
+
+function openAIKeyMgmt(){
+  var cur=window.ANTH_KEY||localStorage.getItem('sl_anth_key')||'';
+  slForm('🤖 AI Key (Claude)',
+  [{id:'akey',label:cur?'Current key ends …'+cur.slice(-8):'No key set — get one at console.anthropic.com',placeholder:'sk-ant-api03-...','value':''}],
+  [{label:'Remove key',bg:'#fef2f2',fg:'#b91c1c',cb:function(){window.ANTH_KEY='';try{localStorage.removeItem('sl_anth_key')}catch(e){}T('AI key removed — using free bot');return false;}},
+   {label:'Save key',primary:true,cb:function(v){var k=(v.akey||'').trim();if(!k){T('Enter a key','error');return false}window.ANTH_KEY=k;try{localStorage.setItem('sl_anth_key',k)}catch(e){}T('🤖 AI Claude activated!','success');}}]
+  ,'Key stays on this device only. Set a £10 spend limit at console.anthropic.com → Settings → Limits.');
+}
+
 (function(){
   var st=document.createElement('style');
   st.textContent='.bottomnav{display:flex!important;justify-content:space-around!important;align-items:center!important;left:0!important;right:0!important;width:100%!important;padding:6px 2px env(safe-area-inset-bottom,8px)!important;box-sizing:border-box}.bottomnav .nb{flex:1 1 0!important;display:flex!important;flex-direction:column!important;align-items:center!important;gap:2px;min-width:0}.bottomnav .nb-lab{font-size:10px!important;white-space:nowrap}';
@@ -2150,7 +2163,35 @@ window.STASHLO_V='v16';
 
 
 /* ============ v17: PWA-safe dialogs (no prompt/confirm), fullscreen scanner, back office ============ */
-window.STASHLO_V='v17';
+window.STASHLO_V='v18';
+
+function openAIKeyMgmt(){
+  var cur=window.ANTH_KEY||localStorage.getItem('sl_anth_key')||'';
+  slForm('🤖 AI Key (Claude)',
+  [{id:'akey',label:cur?'Current key ends …'+cur.slice(-8):'No key set — get one at console.anthropic.com',placeholder:'sk-ant-api03-...','value':''}],
+  [{label:'Remove key',bg:'#fef2f2',fg:'#b91c1c',cb:function(){window.ANTH_KEY='';try{localStorage.removeItem('sl_anth_key')}catch(e){}T('AI key removed — using free bot');return false;}},
+   {label:'Save key',primary:true,cb:function(v){var k=(v.akey||'').trim();if(!k){T('Enter a key','error');return false}window.ANTH_KEY=k;try{localStorage.setItem('sl_anth_key',k)}catch(e){}T('🤖 AI Claude activated!','success');}}]
+  ,'Key stays on this device only. Set a £10 spend limit at console.anthropic.com → Settings → Limits.');
+}
+
+
+/* v18 quick-sale grid */
+function renderQuickGrid(){
+  var el=document.getElementById('quick-grid');if(!el)return;
+  var favs=PRODUCTS.filter(function(p){return p.active!==false}).slice(0,8);
+  if(!favs.length){el.style.display='none';return}
+  el.innerHTML='<div style="font-size:11px;font-weight:800;color:#64748b;margin-bottom:6px;padding:0 2px">⚡ QUICK SALE</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">'
+    +favs.map(function(p){
+      var out=p.stock!=null&&p.stock<=0;
+      return '<button onclick="'+(out?'T(String.fromCharCode(79,117,116,32,111,102,32,115,116,111,99,107))':'posAdd(String.fromCharCode(39)'+p.id.split('').map(function(ch){return 'String.fromCharCode('+ch.charCodeAt(0)+')'}).join('+')+')')+'" style="background:'+(out?'#f1f5f9':'#fff')+';border:1.5px solid #e2e8f0;border-radius:12px;padding:9px 4px;cursor:pointer;opacity:'+(out?.5:1)+'">'
+        +'<div style="font-size:18px">'+(p.emoji||'🛍️')+'</div>'
+        +'<div style="font-size:10px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'
+        +'<div style="font-size:11px;font-weight:800;color:#6366F1">£'+(p.price||0).toFixed(2)+'</div>'
+        +'</div>';
+    }).join('')+'</div>';
+}
+
 
 /* top toasts - never hidden by keyboard/scroll */
 function T(msg,type){
