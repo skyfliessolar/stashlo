@@ -1175,7 +1175,7 @@ function showGeoPopup(loc){
 }
 function showCardById(cardId){
   var card=CARDS.find(function(c2){return c2.card_id===cardId});
-  if(!card)return;goTab('wallet');
+  if(!card)return;goTab('cards');
   setTimeout(function(){var el=document.querySelector('[data-cardid="'+cardId+'"]');if(el)el.click();},400);
 }
 function saveCardLocation(card){

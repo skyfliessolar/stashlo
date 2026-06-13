@@ -1753,7 +1753,8 @@ function buildReceiptHTML(sale){
   h+='<div class="row"><span>Paid by</span><span>'+(sale.method||'cash').toUpperCase()+'</span></div>';
   h+='<div class="line"></div><div class="c">'+footer+'</div>';
   h+='<div class="c" style="margin-top:6px">Powered by Stashlo</div>';
-  h+='</body></html>';
+  h+='
+</body></html>';
   return h;
 }
 function printReceipt(sale){
@@ -2113,7 +2114,8 @@ function posDayEnd(){
 function printDayEnd(){
   var de=window._DE||{};
   var w=window.open('','de','width=360,height=640');if(!w){T('Allow popups','error');return}
-  w.document.write('<html><body style="font-family:monospace;width:280px;margin:14px auto"><h3 style="text-align:center">DAY-END '+new Date().toLocaleDateString()+'</h3><p>Cash: £'+(de.cash||0).toFixed(2)+'<br>Card: £'+(de.card||0).toFixed(2)+'<br>VAT: £'+(de.vat||0).toFixed(2)+'<br>GROSS: £'+(de.gross||0).toFixed(2)+'<br>PROFIT: £'+(de.profit||0).toFixed(2)+'</p><p style="text-align:center">Stashlo EPOS</p></body></html>');
+  w.document.write('<html><body style="font-family:monospace;width:280px;margin:14px auto"><h3 style="text-align:center">DAY-END '+new Date().toLocaleDateString()+'</h3><p>Cash: £'+(de.cash||0).toFixed(2)+'<br>Card: £'+(de.card||0).toFixed(2)+'<br>VAT: £'+(de.vat||0).toFixed(2)+'<br>GROSS: £'+(de.gross||0).toFixed(2)+'<br>PROFIT: £'+(de.profit||0).toFixed(2)+'</p><p style="text-align:center">Stashlo EPOS</p>
+</body></html>');
   w.document.close();setTimeout(function(){w.print()},350);
 }
 
@@ -2430,6 +2432,11 @@ renderDeptKeys=function(){
   dk.parentElement.insertBefore(bo,dk);
 };
 
+
+/* div balance fix */
+
+</div>
 </script>
+
 </body>
 </html>
