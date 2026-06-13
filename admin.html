@@ -1536,9 +1536,25 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(ensureBackBtn
 function loadBirthdayRequests(){
   var el=document.getElementById('bday-list');if(!el)return;
   sget('users','dob=not.is.null&order=created_at.desc&limit=100').then(function(d){
-    var u=Array.isArray(d)?d:[];var today=new Date();var todayMD=(today.getMonth()+1)+'-'+today.getDate();
-    var bday=u.filter(function(x){if(!x.dob)return false;var parts=x.dob.split('-');var md=parts[1]+'-'+parts[2];return md===todayMD;});
-    el.innerHTML=bday.length?bday.map(function(x){return '<div class="ic"><div class="ic-row"><div><div class="ic-name">🎂 '+(x.email||x.name||'User')+'</div><div class="ic-sub">DOB: '+x.dob+' · birthday today</div></div><button class="btn-xs btn-green" onclick="sendBirthdayOffer(''+x.id+'',''+x.email+'')">🎁 Send offer</button></div></div>';}).join(''):'<div style="padding:12px;color:var(--ink3)">No birthdays today</div>';
+    var u=Array.isArray(d)?d:[];
+    var today=new Date();
+    var tm=(today.getMonth()+1);var td=today.getDate();
+    var bday=u.filter(function(x){
+      if(!x.dob)return false;
+      var parts=(x.dob||'').split('-');
+      return parseInt(parts[1])===tm&&parseInt(parts[2])===td;
+    });
+    if(!bday.length){el.innerHTML='<div style="padding:12px;color:var(--ink3)">No birthdays today</div>';return}
+    el.innerHTML=bday.map(function(x){
+      return '<div class="ic" style="padding:8px 0"><div style="display:flex;justify-content:space-between;align-items:center">'
+        +'<div><b>'+(x.email||x.name||'User')+'</b><div style="font-size:11px;color:var(--ink3)">DOB: '+x.dob+'</div></div>'
+        +'<button class="btn-xs btn-green" id="bdayBtn_'+x.id+'">Gift</button>'
+        +'</div></div>';
+    }).join('');
+    bday.forEach(function(x){
+      var b=document.getElementById('bdayBtn_'+x.id);
+      if(b)b.onclick=function(){sendBirthdayOffer(x.id,x.email);};
+    });
   });
 }
 function sendBirthdayOffer(uid,email){
