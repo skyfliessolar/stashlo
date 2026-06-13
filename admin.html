@@ -300,6 +300,8 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
       </div>
       <button class="btn btn-purple" id="bc-send-btn" onclick="sendBroadcast()">📢 Send Broadcast</button>
     </div>
+    <div class="sh"><span class="sh-t">Pending Merchant Approvals</span></div>
+    <div id="pending-bc-list" style="padding:0 16px;margin-bottom:10px"></div>
     <div class="sh"><span class="sh-t">Sent Broadcasts</span></div>
     <div id="broadcasts-list"></div>
   </div>
@@ -365,6 +367,8 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
       </div>
       <div id="scg-out" style="margin-top:8px;font-size:11px;font-family:monospace;color:var(--ink3);max-height:120px;overflow:auto"></div>
     </div>
+    <div style="margin:0 16px 12px;background:#fef3c7;border-radius:14px;padding:14px;border:1.5px solid #f59e0b"><div style="font-size:13px;font-weight:800;margin-bottom:8px">Birthday Offer Settings</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="bday-r-txt" placeholder="e.g. 5 credit" style="flex:1;min-width:130px;padding:9px;border-radius:10px;border:1.5px solid #d97706;font-size:13px"><input id="bday-r-val" type="number" placeholder="val" style="width:64px;padding:9px;border-radius:10px;border:1.5px solid #d97706"><button class="btn-xs btn-purple" onclick="saveBdayOffer()">Save</button></div><div style="font-size:11px;color:#92400e;margin-top:6px">Birthday changed same year = auto-block offer</div></div>
+    <div style="margin:0 16px 12px;background:var(--white);border-radius:14px;padding:14px;box-shadow:var(--sh)"><div style="font-size:13px;font-weight:800;margin-bottom:10px">Customer Receipts Control</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"><button class="btn-xs btn-green" onclick="setRcpMode(&#39;free_all&#39;)">Free All</button><button class="btn-xs" style="background:#dbeafe;color:#1e40af" onclick="setRcpMode(&#39;free_new&#39;)">Free New</button><button class="btn-xs btn-del" onclick="setRcpMode(&#39;block_all&#39;)">Block All</button></div><div style="display:flex;gap:8px"><input id="rcp-block-in" placeholder="Email or loyalty ID to block" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--bg2);font-size:13px"><button class="btn-xs btn-del" onclick="blockRcpUser()">Block</button></div><div id="rcp-mode-status" style="margin-top:8px;font-size:12px;font-weight:700;color:var(--green)">Mode: Free All</div></div>
     <div style="padding:0 16px 8px;font-size:14px;font-weight:800">Claims</div>
     <div id="scratch-claims" style="padding:0 16px"></div>
   </div>
@@ -835,7 +839,26 @@ function loadMerchants(){sget('merchants','order=created_at.desc&limit=200').the
 function loadCustomers(){sget('users','order=created_at.desc&limit=200').then(d=>{CUSTOMERS=Array.isArray(d)?d:[];txt('d-users',CUSTOMERS.length);txt('sd-customers',CUSTOMERS.length);renderCustomers()}).catch(()=>{})}
 function loadOrders(){sget('orders','order=created_at.desc&limit=100').then(d=>{ORDERS=Array.isArray(d)?d:[];txt('d-orders',ORDERS.length);renderOrders()}).catch(()=>{})}
 function loadStashProds(){sget('stashlo_products','order=created_at.desc').then(d=>{STASH_PRODS=Array.isArray(d)?d:[];renderStashProds()}).catch(()=>{})}
-function loadBroadcasts(){sget('broadcasts','order=sent_at.desc&limit=20').then(d=>{BROADCASTS=Array.isArray(d)?d:[];txt('d-broadcasts',BROADCASTS.length);renderBroadcasts()}).catch(()=>{})}
+function loadBroadcasts(){sget('broadcasts','order=sent_at.desc&limit=20').then(d=>{BROADCASTS=Array.isArray(d)?d:[];txt('d-broadcasts',BROADCASTS.length);renderBroadcasts()}).catch(()=>{});loadPendingBroadcasts();}
+function loadPendingBroadcasts(){
+  sget('notifications','status=eq.pending_approval&order=sent_at.desc&limit=20').then(function(d){
+    var pend=Array.isArray(d)?d:[];var el=document.getElementById('pending-bc-list');if(!el)return;
+    if(!pend.length){el.innerHTML='<div style="color:var(--ink3);font-size:13px;padding:8px 0">No pending</div>';return;}
+    el.innerHTML=pend.map(function(b){
+      var bid=b.id||'',et=encodeURIComponent(b.title||''),eb=encodeURIComponent(b.body||'');
+      return '<div class="ic" style="border-left:4px solid #f59e0b">'
+        +'<div class="ic-name">&#128226; '+(b.title||'Broadcast')+'</div>'
+        +'<div class="ic-sub">From: '+(b.merchant_name||'Merchant')+'</div>'
+        +'<div class="ic-sub" style="margin:4px 0 8px">'+(b.body||'')+'</div>'
+        +'<button class="btn-xs btn-green" onclick="approveBC('+JSON.stringify(bid)+','+JSON.stringify(et)+','+JSON.stringify(eb)+')">&#10003; Approve</button> '
+        +'<button class="btn-xs btn-del" onclick="rejectBC('+JSON.stringify(bid)+')">&#10007; Reject</button></div>';
+    }).join('');}).catch(function(){});
+}
+function approveBC(id,t,b){spost('broadcasts',{title:decodeURIComponent(t),body:decodeURIComponent(b),audience:'customers',sent_at:Date.now()}).then(function(){spat('notifications','id=eq.'+id,{status:'approved'}).then(function(){T('Approved & sent!','success');loadBroadcasts();logAudit('approve_bc',id);});}).catch(function(){T('Failed','error');});}
+function rejectBC(id){spat('notifications','id=eq.'+id,{status:'rejected'}).then(function(){T('Rejected','success');loadBroadcasts();logAudit('reject_bc',id);}).catch(function(){T('Failed','error');});}
+function saveBdayOffer(){var txt=((document.getElementById('bday-r-txt')||{}).value||'').trim(),val=parseFloat((document.getElementById('bday-r-val')||{}).value)||0;if(!txt){T('Enter description','error');return;}localStorage.setItem('sl_bday_offer',JSON.stringify({text:txt,value:val}));T('Birthday offer saved','success');}
+function setRcpMode(mode){localStorage.setItem('sl_rcp_mode',mode);var el=document.getElementById('rcp-mode-status');var L={free_all:'Free All',free_new:'Free New',block_all:'Block All'};if(el)el.textContent='Mode: '+(L[mode]||mode);T(L[mode]||mode,'success');}
+function blockRcpUser(){var v=((document.getElementById('rcp-block-in')||{}).value||'').trim();if(!v){T('Enter email or ID','error');return;}var bl=JSON.parse(localStorage.getItem('sl_rcp_bl')||'[]');if(!bl.includes(v)){bl.push(v);localStorage.setItem('sl_rcp_bl',JSON.stringify(bl));}T('Blocked: '+v,'success');logAudit('block_receipts',v);}
 function loadBilling(){sget('merchant_billing','order=created_at.desc&limit=50').then(d=>{BILLING=Array.isArray(d)?d:[];renderBilling()}).catch(()=>{})}
 
 // ── RENDER FUNCTIONS ──────────────────────────────────────
@@ -1653,6 +1676,7 @@ function switchTab(name){
   if(name==='design3d')loadTheme3DStudio();
   if(name==='admreceipts')loadAdminReceipts();
   if(name==='birthdays')loadBirthdayRequests();
+  if(name==='broadcast'){setTimeout(loadBroadcasts,100);}
   if(name==='scratch')loadScratchClaims();
   if(name==='delivery')loadDelivery();
   if(name==='billing')loadBilling();
