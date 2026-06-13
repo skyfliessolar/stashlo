@@ -198,6 +198,9 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
   #pos-main{max-width:1100px;margin:0 auto}
   #pos-grid{grid-template-columns:repeat(5,1fr)!important}
 }
+.dept-tile{flex:0 0 auto;color:#fff;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:64px;text-align:center;font-size:22px;transition:transform .12s}
+.dept-tile span{font-size:10px;font-weight:700;opacity:.9}
+.dept-tile:active{transform:scale(.93)}
 @media(min-width:1024px){#pos-grid{grid-template-columns:repeat(6,1fr)!important}}
 #stockin-btn.on{background:#f59e0b!important;color:#fff!important}
 </style>
@@ -489,10 +492,23 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
         <button onclick="toggleWaste()" id="waste-btn" style="flex:1;background:var(--bg2);color:var(--ink2);border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">📉 Reduce/Waste</button>
       </div>
       <div id="quick-grid" style="margin:0 16px 10px"></div>
+      <!-- FAST-SALE DEPARTMENT TILES (like evoPOS right panel) -->
+      <div id="dept-quick-tiles" style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 6px;scrollbar-width:none">
+        <div onclick="filterDept('vapes')" class="dept-tile" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">🚬<span>Vapes</span></div>
+        <div onclick="filterDept('tobacco')" class="dept-tile" style="background:linear-gradient(135deg,#b45309,#d97706)">🍃<span>Tobacco</span></div>
+        <div onclick="filterDept('cigarettes')" class="dept-tile" style="background:linear-gradient(135deg,#dc2626,#ef4444)">🚭<span>Cigs</span></div>
+        <div onclick="filterDept('alcohol')" class="dept-tile" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)">🍺<span>Alcohol</span></div>
+        <div onclick="filterDept('drinks')" class="dept-tile" style="background:linear-gradient(135deg,#0891b2,#06b6d4)">🥤<span>Drinks</span></div>
+        <div onclick="filterDept('grocery')" class="dept-tile" style="background:linear-gradient(135deg,#059669,#10b981)">🛒<span>Grocery</span></div>
+        <div onclick="filterDept('crisps')" class="dept-tile" style="background:linear-gradient(135deg,#d97706,#f59e0b)">🍟<span>Snacks</span></div>
+        <div onclick="filterDept('car')" class="dept-tile" style="background:linear-gradient(135deg,#374151,#6b7280)">🚗<span>Car</span></div>
+        <div onclick="filterDept('')" class="dept-tile" style="background:linear-gradient(135deg,#0f172a,#1e293b)">ALL<span>All</span></div>
+      </div>
       <div style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none" id="dept-keys"></div>
       <div id="pos-cats" style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none"></div>
       <div id="pos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:10px"></div>
       <div style="margin:0 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
+        <div id="pos-cx-banner" style="background:linear-gradient(135deg,#1e1b4b,#4338ca);border-radius:14px;padding:11px 14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between"><div><div id="pos-cx-name" style="color:#fff;font-size:13px;font-weight:800">👤 No customer</div><div id="pos-cx-pts" style="color:rgba(255,255,255,.7);font-size:11px;margin-top:1px">Scan for loyalty points</div></div><div style="display:flex;gap:5px"><button onclick="posScanCustQR()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:9px;padding:7px 11px;font-size:12px;font-weight:800;cursor:pointer">📷</button><button onclick="posTypeCustId()" style="background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:9px;padding:7px 10px;font-size:12px;cursor:pointer">⌨️</button><button id="pos-cx-clr" onclick="clearTillCX()" style="display:none;background:#ef4444;color:#fff;border:none;border-radius:9px;padding:7px 9px;font-size:12px;cursor:pointer">✕</button></div></div>
         <div style="font-size:13px;font-weight:800;margin-bottom:8px">🧺 Basket</div>
         <div id="pos-basket"><div style="color:var(--ink3);font-size:13px;text-align:center;padding:8px">Tap products to add</div></div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
@@ -512,21 +528,36 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
         </div>
         <button class="btn" style="width:100%;margin-top:8px;background:var(--bg2)" onclick="posClear()">Clear basket</button>
       </div>
-      <!-- Manual price modal (open-price key like real tills) -->
-      <div class="modal" id="manualModal"><div class="modal-box" style="max-width:340px">
-        <div style="font-size:16px;font-weight:800;margin-bottom:10px">£ Manual Item</div>
-        <div class="field" style="margin-bottom:10px"><label class="field-label">Item name (optional)</label>
-        <input id="mp-name" placeholder="Misc item" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:12px;font-size:14px"></div>
-        <div class="field" style="margin-bottom:10px"><label class="field-label">Price £</label>
-        <input id="mp-price" type="number" step="0.01" inputmode="decimal" placeholder="0.00" onkeydown="if(event.key==&#39;Enter&#39;)addManualItem()" style="width:100%;padding:14px;border:2px solid var(--bg2);border-radius:12px;font-size:20px;font-weight:800"></div>
-        <div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">VAT</div>
-        <div style="display:flex;gap:6px;margin-bottom:14px">
-          <button class="mp-vat btn-xs btn-purple" data-v="0.2" onclick="mpVat(this)">20%</button>
-          <button class="mp-vat btn-xs btn-gray" data-v="0.05" onclick="mpVat(this)">5%</button>
-          <button class="mp-vat btn-xs btn-gray" data-v="0" onclick="mpVat(this)">0%</button>
-          <button class="mp-vat btn-xs btn-gray" data-v="0" onclick="mpVat(this)">No VAT</button>
+      <!-- Manual price NUMPAD modal - like evoPOS -->
+      <div class="modal" id="manualModal"><div class="modal-box" style="max-width:320px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:16px;font-weight:800">£ Manual Price</div>
+          <button onclick="closeModal('manualModal');npReset()" style="background:var(--bg);border:none;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer">✕</button>
         </div>
-        <div style="display:flex;gap:8px"><button class="btn btn-gray" style="flex:1" onclick="closeModal('manualModal')">Cancel</button><button class="btn btn-purple" style="flex:1" onclick="addManualItem()">➕ Add to basket</button></div>
+        <input id="mp-name" placeholder="Description (optional)" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:12px;font-size:14px;margin-bottom:8px;outline:none">
+        <div id="mp-display" style="background:#0f172a;border-radius:14px;padding:14px 18px;text-align:right;font-size:34px;font-weight:900;color:#fff;margin-bottom:8px;letter-spacing:1px">£0.00</div>
+        <input type="hidden" id="mp-price" value="0">
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <button class="mp-vat" data-v="0.2" onclick="mpVat(this)" style="flex:1;padding:9px;border-radius:10px;font-weight:800;font-size:12px;background:var(--purple);color:#fff;border:none;cursor:pointer">20%</button>
+          <button class="mp-vat" data-v="0.05" onclick="mpVat(this)" style="flex:1;padding:9px;border-radius:10px;font-weight:800;font-size:12px;background:var(--bg2);color:var(--ink2);border:none;cursor:pointer">5%</button>
+          <button class="mp-vat" data-v="0" onclick="mpVat(this)" style="flex:1;padding:9px;border-radius:10px;font-weight:800;font-size:12px;background:var(--bg2);color:var(--ink2);border:none;cursor:pointer">0%</button>
+          <button class="mp-vat" data-v="0" onclick="mpVat(this)" style="flex:1;padding:9px;border-radius:10px;font-weight:800;font-size:12px;background:var(--bg2);color:var(--ink2);border:none;cursor:pointer">Exempt</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+          <button onclick="npKey('7')" style="padding:18px;font-size:22px;font-weight:700;border:none;border-radius:12px;background:var(--bg);cursor:pointer">7</button>
+          <button onclick="npKey('8')" style="padding:18px;font-size:22px;font-weight:700;border:none;border-radius:12px;background:var(--bg);cursor:pointer">8</button>
+          <button onclick="npKey('9')" style="padding:18px;font-size:22px;font-weight:700;border:none;border-radius:12px;background:var(--bg);cursor:pointer">9</button>
+          <button onclick="npKey('4')" style="padding:18px;font-size:22px;font-weight:700;border:none;border-radius:12px;background:var(--bg);cursor:pointer">4</button>
+          <button onclick="npKey('5')" style="padding:18px;font-size:22px;font-weight:700;border:none;border-radius:12px;background:var(--bg);cursor:pointer">5</button>
+          <button onclick="npKey('6')" style="padding:18px;font-size:22px;font-weight:700;border:none;border-radius:12px;background:var(--bg);cursor:pointer">6</button>
+          <button onclick="npKey('1')" style="padding:18px;font-size:22px;font-weight:700;border:none;border-radius:12px;background:var(--bg);cursor:pointer">1</button>
+          <button onclick="npKey('2')" style="padding:18px;font-size:22px;font-weight:700;border:none;border-radius:12px;background:var(--bg);cursor:pointer">2</button>
+          <button onclick="npKey('3')" style="padding:18px;font-size:22px;font-weight:700;border:none;border-radius:12px;background:var(--bg);cursor:pointer">3</button>
+          <button onclick="npKey('00')" style="padding:18px;font-size:18px;font-weight:700;border:none;border-radius:12px;background:var(--bg);cursor:pointer">00</button>
+          <button onclick="npKey('0')" style="padding:18px;font-size:22px;font-weight:700;border:none;border-radius:12px;background:var(--bg);cursor:pointer">0</button>
+          <button onclick="npKey('del')" style="padding:18px;font-size:20px;font-weight:700;border:none;border-radius:12px;background:var(--red3);color:var(--red);cursor:pointer">⌫</button>
+        </div>
+        <button class="btn btn-purple" style="width:100%" onclick="addManualItem()">➕ Add to Basket</button>
       </div></div>
       <!-- Cash change modal -->
       <div class="modal" id="cashModal"><div class="modal-box" style="max-width:340px">
@@ -550,6 +581,8 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
         <div class="field" style="margin-bottom:8px"><label class="field-label">Staff discount %</label><input id="pos-staffdisc" type="number" placeholder="10" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
         <div class="field" style="margin-bottom:8px"><label class="field-label">Stripe Payment Link (card payments)</label><input id="pos-stripe" placeholder="https://buy.stripe.com/..." style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
         <div class="field" style="margin-bottom:8px"><label class="field-label">Receipt footer message</label><input id="pos-footer" placeholder="Thank you for shopping with us!" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
+        <div class="field" style="margin-bottom:8px"><label class="field-label">🤖 Claude AI Key</label><input id="pos-ai-key" type="password" placeholder="sk-ant-..." style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px" oninput="if(this.value){localStorage.setItem('sl_anth_key',this.value);window.ANTH_KEY=this.value;}"></div>
+        <div class="field" style="margin-bottom:8px"><label class="field-label">🌍 Phone Country Code</label><select id="pos-country" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px;background:#fafafa"><option value="+44">🇬🇧 UK +44</option><option value="+1">🇺🇸 US +1</option><option value="+91">🇮🇳 India +91</option><option value="+353">🇮🇪 Ireland +353</option></select></div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-purple" style="flex:1" onclick="savePOSSettings()">💾 Save</button>
           <button class="btn btn-gray" style="flex:1" onclick="reprintLast()">🖨 Reprint last</button>
@@ -1045,7 +1078,7 @@ function loadMerchRewards(){
     const el=document.getElementById("mrewards-list");if(!el)return;
     el.innerHTML=M_REWARDS.length?M_REWARDS.map(r=>'<div class="ic"><div class="ic-row"><div><div class="ic-name">'+(r.emoji||"\ud83c\udf81")+' '+r.name+'</div><div class="ic-sub">'+(r.points_cost||0)+' points'+(r.active?'':' \u00b7 inactive')+'</div></div><button class="btn-xs btn-del" onclick="delMerchReward(\''+r.id+'\')">\u2715</button></div></div>').join("")
     :'<div style="text-align:center;padding:16px;color:var(--ink3);font-size:13px">No rewards yet \u2014 create one like "Free juice \u00b7 100 pts"</div>';
-  }).catch(()=>{});
+  }).catch(()=>{var el=document.getElementById('mrewards-list');if(el)el.innerHTML='<div style="color:var(--ink3);font-size:13px;padding:8px">Rewards unavailable. Contact support@stashlo.app</div>';});
 }
 function createMerchReward(){
   const name=V("mr-name"),pts=parseInt(document.getElementById("mr-pts").value||0),emoji=V("mr-emoji")||detectEmoji(name)||"\ud83c\udf81";
@@ -1122,8 +1155,8 @@ function sendNotification(){
   const title=V("notif-title"),body=document.getElementById("notif-body").value.trim();
   if(!title||!body){T("Fill title and message","error");return}
   const btn=document.getElementById("notif-send-btn");if(btn){btn.textContent="Sending...";btn.disabled=true;}
-  post("notifications",{merchant_id:MID,title,body,type:"promo",recipients:CUSTOMERS.length,sent_at:Date.now()})
-  .then(()=>{T("✅ Sent to "+CUSTOMERS.length+" customers!","success");closeModal("notifyModal");document.getElementById("notif-title").value="";document.getElementById("notif-body").value="";if(btn){btn.textContent="📢 Send to Customers";btn.disabled=false}})
+  post("notifications",{merchant_id:MID,merchant_name:MDATA.name||"Shop",title,body,type:"promo",status:"pending_approval",recipients:CUSTOMERS.length,sent_at:Date.now()})
+  .then(()=>{T("📨 Submitted for admin approval!","success");closeModal("notifyModal");document.getElementById("notif-title").value="";document.getElementById("notif-body").value="";if(btn){btn.textContent="📢 Send to Customers";btn.disabled=false}})
   .catch(()=>{T("Send failed","error");if(btn){btn.textContent="📢 Send to Customers";btn.disabled=false}})
 }
 
@@ -1483,19 +1516,32 @@ function stockInAdd(p){
   .then(function(){T('📦 +'+q+' '+p.name+' — stock now '+p.stock,'success');renderPOSGrid();})
   .catch(function(){T('Stock column missing — run migration v10','error');});
 }
+// ===== NUMPAD for manual price =====
+var _NP_CENTS = 0; // stores price in pence
+function npKey(k) {
+  if (k === 'del') { _NP_CENTS = Math.floor(_NP_CENTS / 10); }
+  else if (k === '00') { _NP_CENTS = Math.min(_NP_CENTS * 100, 999999); }
+  else { _NP_CENTS = Math.min(_NP_CENTS * 10 + parseInt(k), 999999); }
+  var disp = document.getElementById('mp-display');
+  if (disp) disp.textContent = '£' + (_NP_CENTS / 100).toFixed(2);
+  document.getElementById('mp-price').value = (_NP_CENTS / 100).toFixed(2);
+}
+function npReset() { _NP_CENTS = 0; var d = document.getElementById('mp-display'); if (d) d.textContent = '£0.00'; }
+
 function mpVat(btn){
   _MP_VAT=parseFloat(btn.getAttribute('data-v'))||0;
-  Array.prototype.forEach.call(document.querySelectorAll('.mp-vat'),function(b){b.className='mp-vat btn-xs btn-gray'});
-  btn.className='mp-vat btn-xs btn-purple';
+  document.querySelectorAll('.mp-vat').forEach(function(b){
+    b.style.background='var(--bg2)';b.style.color='var(--ink2)';
+  });
+  btn.style.background='var(--purple)';btn.style.color='#fff';
 }
 function openManualPrice(di){
   rehomeModals();
+  npReset();
   var d=(typeof di==='number')?DEPTS[di]:null;
   document.getElementById('mp-name').value=d?d[1]:'';
   window._MP_CAT=d?d[2]:'general';
-  document.getElementById('mp-price').value='';
   openModal('manualModal');
-  setTimeout(function(){document.getElementById('mp-price').focus()},250);
 }
 function addManualItem(){
   var price=parseFloat(document.getElementById('mp-price').value||0);
@@ -1503,6 +1549,7 @@ function addManualItem(){
   var name=V('mp-name')||'Misc item';
   POS_BASKET.push({id:'manual_'+Date.now(),name:name,price:price,vat:_MP_VAT,qty:1,emoji:'🏷️',cost:0,cat:window._MP_CAT||'general'});
   closeModal('manualModal');
+  npReset();
   renderBasket();
   T('🏷️ '+name+' £'+price.toFixed(2)+' added','success');
 }
@@ -1622,22 +1669,37 @@ function cmComplete(){
 }
 function loadPOSSales(){
   var el=document.getElementById('pos-history');if(!el)return;
-  get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+(Date.now()-30*86400000)+'&order=created_at.desc&limit=12').then(function(d){
+  get('pos_sales','merchant_id=eq.'+MID+'&order=created_at.desc&limit=20').then(function(d){
     var s=Array.isArray(d)?d:[];
-    if(!s.length){el.innerHTML='No sales yet today';return}
+    if(!s.length){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--ink3);font-size:13px">No sales yet — tap products to add, then checkout</div>';return}
     var Q=String.fromCharCode(39);
-    el.innerHTML=s.map(function(x){
+    el.innerHTML=s.map(function(x,i){
       var dt=new Date(x.created_at||0);var neg=parseFloat(x.total||0)<0;
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bg2)">'
-        +'<div><b style="color:'+(neg?'#ef4444':'var(--ink)')+'">'+(neg?'↩️ REFUND ':'')+'£'+Math.abs(parseFloat(x.total||0)).toFixed(2)+'</b> <span style="color:var(--ink3)">'+(x.method||'').toUpperCase()+'</span><div style="font-size:11px;color:var(--ink4)">'+dt.toLocaleDateString()+' '+dt.toLocaleTimeString().slice(0,5)+' · '+(x.id||'').slice(0,8)+'</div></div>'
-        +'<div style="display:flex;gap:6px">'
-        +'<button class="btn-xs btn-gray" onclick="reprintSale('+Q+x.id+Q+')">🖨</button>'
-        +'<button class="btn-xs" style="background:#eef2ff;color:#4338ca" onclick="sendReceiptToCustomer('+Q+x.id+Q+')">📲</button>'
-        +(!neg?'<button class="btn-xs" style="background:#fef2f2;color:#ef4444" onclick="posRefund('+Q+x.id+Q+')">↩️</button>':'')
-        +'</div>'  /* end header row */+'<div style="display:none;padding:8px;background:#f8fafc;border-radius:10px;margin-top:6px;font-size:12px">'+(function(){var ls='';try{JSON.parse(x.items||'[]').forEach(function(it){ls+='<div style="display:flex;justify-content:space-between"><span>'+it.n+' x'+it.q+'</span><span>£'+(it.p*(it.q||1)).toFixed(2)+'</span></div>';});}catch(e){}return ls||'No items';})()+' </div></div>';
+      var items='';try{JSON.parse(x.items||'[]').forEach(function(it){items+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bg2)"><span style="color:var(--ink2)">'+it.n+' x'+it.q+'</span><span style="font-weight:700">£'+(it.p*(it.q||1)).toFixed(2)+'</span></div>';});}catch(e){}
+      return '<div id="ptx-'+i+'" style="border-radius:12px;overflow:hidden;margin-bottom:6px;border:1.5px solid var(--bg2)">'
+        +'<div onclick="toggleTxnDetail('+i+')" style="display:flex;justify-content:space-between;align-items:center;padding:11px 12px;background:var(--white);cursor:pointer">'
+        +'<div><div style="font-weight:800;color:'+(neg?'#ef4444':'var(--ink)')+'">'+((neg?'REFUND ':'')+'£'+Math.abs(parseFloat(x.total||0)).toFixed(2))+'</div>'
+        +'<div style="font-size:11px;color:var(--ink3)">'+dt.toLocaleTimeString().slice(0,5)+' · '+(x.method||'').toUpperCase()+'</div></div>'
+        +'<div style="display:flex;gap:4px;align-items:center">'
+        +'<button onclick="event.stopPropagation();reprintSale('+Q+x.id+Q+')" style="background:var(--bg);border:none;border-radius:8px;padding:6px 8px;font-size:11px;cursor:pointer" title="Print">🖨</button>'
+        +'<button onclick="event.stopPropagation();sendReceiptToCustomer('+Q+x.id+Q+')" style="background:#eef2ff;color:#4338ca;border:none;border-radius:8px;padding:6px 8px;font-size:11px;cursor:pointer" title="Send">📲</button>'
+        +(!neg?'<button onclick="event.stopPropagation();posRefund('+Q+x.id+Q+')" style="background:#fef2f2;color:#ef4444;border:none;border-radius:8px;padding:6px 8px;font-size:11px;cursor:pointer" title="Refund">↩️</button>':'')
+        +'<span style="font-size:18px;color:var(--ink4);transition:transform .2s" id="ptx-arr-'+i+'">›</span></div></div>'
+        +'<div id="ptx-det-'+i+'" style="display:none;padding:12px;background:#f8fafc;border-top:1px solid var(--bg2);animation:fi .2s">'
+        +(items||'<div style="color:var(--ink3);font-size:12px">No items</div>')
+        +'<div style="display:flex;justify-content:space-between;font-weight:800;margin-top:8px;padding-top:8px;border-top:2px dashed var(--bg2)"><span>TOTAL</span><span>£'+parseFloat(x.total||0).toFixed(2)+'</span></div>'
+        +(x.vat?'<div style="font-size:11px;color:var(--ink3);margin-top:4px">VAT included: £'+parseFloat(x.vat||0).toFixed(2)+'</div>':'')
+        +(x.customer_id?'<div style="font-size:11px;color:var(--purple);font-weight:700;margin-top:4px">👤 Loyalty points awarded</div>':'')
+        +'<div style="font-size:10px;color:var(--ink4);margin-top:6px">Ref: '+(x.id||'').slice(0,8).toUpperCase()+' · '+dt.toLocaleDateString()+'</div>'
+        +'</div></div>';
     }).join('');
     window._POS_HIST=s;
-  }).catch(function(){el.innerHTML='Could not load';});
+  }).catch(function(){el.innerHTML='Could not load sales';});
+}
+function toggleTxnDetail(i){
+  var det=document.getElementById('ptx-det-'+i);
+  var arr=document.getElementById('ptx-arr-'+i);
+  if(det){var open=det.style.display==='none';det.style.display=open?'block':'none';if(arr)arr.style.transform=open?'rotate(90deg)':'';}
 }
 function scanCustomerQR(saleId){
   var ov=document.createElement('div');ov.id='cqr-ov';
@@ -1802,9 +1864,9 @@ function posGuard(){
   var sEl=document.getElementById('pos-stripe');if(sEl)sEl.value=MDATA.stripe_link||localStorage.getItem('sl_stripe_'+MID)||'';
   var sdEl=document.getElementById('pos-staffdisc');if(sdEl)sdEl.value=localStorage.getItem('sl_staffd_'+MID)||'';
   const pay=document.getElementById('pos-paywall'),main=document.getElementById('pos-main');
-  var trialMs=30*24*3600*1000;
-  var createdAt=MDATA.created_at?(typeof MDATA.created_at==='number'?MDATA.created_at:new Date(MDATA.created_at).getTime()):0;
-  var inTrial=!MDATA.pos_enabled&&createdAt&&(Date.now()-createdAt)<trialMs&&!MDATA.pos_trial_used;
+  var trialMs=365*24*3600*1000; // 1-year free trial
+  var createdAt=MDATA.created_at?(typeof MDATA.created_at==='number'?MDATA.created_at:new Date(MDATA.created_at).getTime()):Date.now();
+  var inTrial=true; // Free for all Stashlo merchants
   if(MDATA.pos_enabled||inTrial){
   setTimeout(renderQuickGrid,800);
     pay.style.display='none';main.style.display='block';renderPOSGrid();loadPOSSales();renderDeptKeys();
@@ -2506,6 +2568,67 @@ function openScanCustomer(){
       T('✅ '+(u.name||lid)+' · '+(u.total_points||0)+' pts','success');
     }).catch(function(){T('Lookup failed','error');});
   }}]);
+}
+
+// ===== POS CUSTOMER LOOKUP =====
+function posScanCustQR(){
+  if(!('BarcodeDetector' in window)){posTypeCustId();return;}
+  var ov=document.createElement('div');
+  ov.id='pcs-ov';
+  ov.style.cssText='position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px';
+  var vid=document.createElement('video');vid.id='pcs-vid';vid.autoplay=true;vid.playsInline=true;vid.muted=true;
+  vid.style.cssText='width:270px;height:270px;object-fit:cover;border-radius:16px;border:3px solid #6366F1';
+  var lbl=document.createElement('div');lbl.style.cssText='color:#fff;font-size:14px;font-weight:800';lbl.textContent='📷 Scan Customer QR / Barcode';
+  var hint=document.createElement('div');hint.style.cssText='color:rgba(255,255,255,.6);font-size:12px';hint.textContent='Point at customer Stashlo app QR code';
+  var btnType=document.createElement('button');btnType.textContent='⌨️ Type ID instead';
+  btnType.style.cssText='background:#1e1b4b;color:#fff;border:none;border-radius:12px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer';
+  btnType.onclick=function(){closePCSOv();posTypeCustId();};
+  var btnCancel=document.createElement('button');btnCancel.textContent='✕ Cancel';
+  btnCancel.style.cssText='background:#ef4444;color:#fff;border:none;border-radius:12px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer';
+  btnCancel.onclick=closePCSOv;
+  ov.appendChild(lbl);ov.appendChild(vid);ov.appendChild(hint);ov.appendChild(btnType);ov.appendChild(btnCancel);
+  document.body.appendChild(ov);
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(stream){
+    window._pcsStream=stream;vid.srcObject=stream;
+    var bd=new BarcodeDetector({formats:['qr_code','code_128','ean_13','code_39']});
+    window._pcsSI=setInterval(function(){
+      if(!document.getElementById('pcs-ov')){clearInterval(window._pcsSI);return;}
+      bd.detect(vid).then(function(codes){
+        if(codes.length){clearInterval(window._pcsSI);closePCSOv();lookupTillCX(codes[0].rawValue);}
+      }).catch(function(){});
+    },400);
+  }).catch(function(){closePCSOv();posTypeCustId();});
+}
+function closePCSOv(){
+  var ov=document.getElementById('pcs-ov');if(ov)ov.remove();
+  if(window._pcsStream)window._pcsStream.getTracks().forEach(function(t){t.stop();});
+  if(window._pcsSI)clearInterval(window._pcsSI);
+}
+function posTypeCustId(){
+  var id=prompt('Enter customer Stashlo ID (SL-XXXXXX) or phone number:');
+  if(id)lookupTillCX(id.trim().toUpperCase());
+}
+function lookupTillCX(raw){
+  T('Looking up customer...');
+  var id=raw.trim().toUpperCase();
+  var isLoyalty=/^SL-/.test(id);
+  var q=isLoyalty?'loyalty_id=eq.'+encodeURIComponent(id):'phone=like.*'+encodeURIComponent(id.replace(/\s+/g,'').slice(-9))+'*';
+  get('users',q+'&limit=1').then(function(d){
+    var u=Array.isArray(d)&&d[0];
+    if(!u){T('Customer not found','error');return;}
+    window._TILL_CX=u;
+    var pts=u.total_points||0,cr=parseFloat(u.sl_credit||0);
+    var nm=document.getElementById('pos-cx-name');if(nm)nm.textContent='\u2705 '+(u.name||u.email||'Customer');
+    var ps=document.getElementById('pos-cx-pts');if(ps)ps.textContent=pts+' pts'+(cr>0?' \u00b7 \u00a3'+cr.toFixed(2)+' credit':'');
+    var cl=document.getElementById('pos-cx-clr');if(cl)cl.style.display='inline-block';
+    T('\u2705 '+(u.name||'Customer')+' \u2014 '+pts+' pts','success');
+  }).catch(function(){T('Could not look up customer','error');});
+}
+function clearTillCX(){
+  window._TILL_CX=null;
+  var nm=document.getElementById('pos-cx-name');if(nm)nm.textContent='\ud83d\udc64 No customer';
+  var ps=document.getElementById('pos-cx-pts');if(ps)ps.textContent='Scan for loyalty points';
+  var cl=document.getElementById('pos-cx-clr');if(cl)cl.style.display='none';
 }
 
 /* --- INTERCEPT posCheckout for points --- */
