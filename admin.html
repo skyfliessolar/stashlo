@@ -1631,7 +1631,9 @@ function grantUserReceipts(){
 }
 
 function switchTab(name){
-  if(!document.getElementById(name+'-screen')){T('Section coming soon','error');name='overview';}
+  var aliases={'shops':'merchants','users':'customers','receipts':'admreceipts'};
+  if(aliases[name])name=aliases[name];
+  if(!document.getElementById(name+'-screen')){T('Section coming soon');name='overview';}
   if(!document.getElementById(name+'-screen')){T('Section coming soon');name='overview';}
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
