@@ -52,11 +52,18 @@
       "label": "Stashlo loyalty wallet home screen"
     },
     {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Stashlo loyalty cards wallet"
+    },
+    {
       "src": "feature-graphic.png",
       "sizes": "1024x500",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Stashlo - Loyalty Wallet and EPOS Platform"
+      "label": "Stashlo - Loyalty, EPOS and Rewards"
     }
   ],
   "categories": [
