@@ -560,10 +560,13 @@ html,body{overflow-x:hidden;overflow-y:auto!important;-webkit-overflow-scrolling
 .screen.on{display:block;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:calc(100vh - 72px)}
 
 /* ===== SCROLL FIX: ALL SCREENS MUST SCROLL ON MOBILE ===== */
-html{overflow-x:hidden!important;overflow-y:scroll!important;-webkit-overflow-scrolling:touch!important}
-body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;height:auto!important;min-height:100vh}
-#app{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;height:auto!important}
 #app .screen{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;height:auto!important;min-height:calc(100vh - 72px)!important}
+
+/* ===== SCROLL FIX ===== */
+html{overflow-x:hidden!important;overflow-y:scroll!important;-webkit-overflow-scrolling:touch!important}
+body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;height:auto!important}
+#app{overflow-x:hidden!important;overflow-y:auto!important}
+#app .screen{overflow-y:auto!important;-webkit-overflow-scrolling:touch!important}
 </style>
 </head>
 <body>
