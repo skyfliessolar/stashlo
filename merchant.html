@@ -206,32 +206,24 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 html,body{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .screen{-webkit-overflow-scrolling:touch;overflow-y:auto}
 
-/* ===== MODAL/OVERLAY VISIBILITY FIX =====
-   Always appear in viewport - never require scrolling */
-.modal, .sl-ov, [class*="modal"], [id*="modal"] {
+/* ===== OVERLAY FIX: sl-ov always centred in viewport ===== */
+.sl-ov {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  z-index: 999 !important;
-  display: flex !important;
+  z-index: 990 !important;
+  padding: 16px !important;
+  box-sizing: border-box !important;
   align-items: center !important;
   justify-content: center !important;
-  overflow-y: auto !important;
 }
-.modal-box, .sl-ov-box, .modal > div {
-  position: relative !important;
-  max-height: 90vh !important;
+.sl-ov-box {
+  max-height: 88vh !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  margin: auto !important;
 }
-/* Screen scroll fix */
-html, body {
-  scroll-behavior: auto !important;
-}
-/* When overlay opens - scroll to top instantly */
 
 </style>
 </head>
