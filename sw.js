@@ -1,8 +1,13 @@
-// Stashlo SW v12 - network-first: always get latest build
+// Stashlo SW v20 - stashlo.com
 const CACHE='stashlo-v20';
+const DOMAIN='stashlo.com';
 self.addEventListener('install',e=>{self.skipWaiting()});
 self.addEventListener('activate',e=>{
-  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+  e.waitUntil(
+    caches.keys()
+      .then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
+      .then(()=>self.clients.claim())
+  );
 });
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
