@@ -904,6 +904,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 
   <!-- ===== PROFILE / ME ===== -->
   <div class="screen" id="me-screen">
+    <div id="prof-summary" style="margin:14px 16px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 2px 16px -4px rgba(99,102,241,.10)"></div>
     <div style="padding:24px 16px 16px">
       <div class="prof-avatar">👤</div>
       <div class="prof-name-big" id="prof-name">Your Name</div>
@@ -1391,7 +1392,47 @@ document.addEventListener('DOMContentLoaded',function(){
     window._toastTimer=setTimeout(function(){_toastEl.classList.remove('show');},2800);
   };
 })();
-/* v19-customer */ window.STASHLO_V='v15';
+/* v19-customer */ window.STASHLO_V='v20';
+
+// ===== NATIONAL CARD BRAND DATA (colours + logos as emoji) =====
+var CARD_BRANDS={
+  nectar:{col1:'#e05206',col2:'#f97316',emoji:'🛒',name:'Nectar'},
+  tesco:{col1:'#ee1c25',col2:'#c10000',emoji:'🏪',name:'Tesco Clubcard'},
+  'tesco clubcard':{col1:'#ee1c25',col2:'#c10000',emoji:'🏪',name:'Tesco Clubcard'},
+  boots:{col1:'#003087',col2:'#0052cc',emoji:'💊',name:'Boots Advantage'},
+  'boots advantage':{col1:'#003087',col2:'#0052cc',emoji:'💊',name:'Boots Advantage'},
+  waitrose:{col1:'#214e34',col2:'#2d6a4f',emoji:'🌿',name:'Waitrose myWaitrose'},
+  morrisons:{col1:'#004c97',col2:'#f5a800',emoji:'🛍️',name:'Morrisons More'},
+  costa:{col1:'#6f1f23',col2:'#a52834',emoji:'☕',name:'Costa Club'},
+  starbucks:{col1:'#00704a',col2:'#00a862',emoji:'⭐',name:'Starbucks Rewards'},
+  ikea:{col1:'#003399',col2:'#ffda1a',emoji:'🏠',name:'IKEA Family'},
+  lidl:{col1:'#0050aa',col2:'#f9c900',emoji:'🛒',name:'Lidl Plus'},
+  aldi:{col1:'#003087',col2:'#e31837',emoji:'🛒',name:'Aldi Rewards'},
+  subway:{col1:'#00843d',col2:'#ffb700',emoji:'🥪',name:'Subway MyWay'},
+  mcdonalds:{col1:'#da291c',col2:'#ffbc0d',emoji:'🍔',name:'McDonald's MyMcDonald's'},
+  greggs:{col1:'#003082',col2:'#ffd700',emoji:'🥐',name:'Greggs Rewards'},
+  pret:{col1:'#9b0019',col2:'#d4001a',emoji:'☕',name:'Pret Coffee'},
+  esso:{col1:'#0c2577',col2:'#e31837',emoji:'⛽',name:'Esso Nectar'},
+  shell:{col1:'#dd1d21',col2:'#fbce07',emoji:'⛽',name:'Shell Go+'},
+  bp:{col1:'#007b40',col2:'#009a44',emoji:'⛽',name:'BP Rewards'},
+  clinique:{col1:'#000000',col2:'#333333',emoji:'💄',name:'Clinique'},
+  'superdrug beautycard':{col1:'#e31aab',col2:'#b81590',emoji:'💄',name:'Superdrug Beautycard'},
+  superdrug:{col1:'#e31aab',col2:'#b81590',emoji:'💄',name:'Superdrug Beautycard'},
+  'virgin atlantic':{col1:'#e31837',col2:'#c10b29',emoji:'✈️',name:'Virgin Red'},
+  avios:{col1:'#c00',col2:'#900',emoji:'✈️',name:'Avios'},
+  hilton:{col1:'#01579b',col2:'#0277bd',emoji:'🏨',name:'Hilton Honors'},
+  marriott:{col1:'#c8a96e',col2:'#9a7a4a',emoji:'🏨',name:'Marriott Bonvoy'},
+};
+function brandStyle(name){
+  var k=(name||'').toLowerCase().trim();
+  var b=CARD_BRANDS[k];
+  if(!b){
+    // fuzzy match
+    for(var bk in CARD_BRANDS){if(k.indexOf(bk)>=0||bk.indexOf(k)>=0){b=CARD_BRANDS[bk];break;}}
+  }
+  return b||{col1:'#6366F1',col2:'#8B5CF6',emoji:'💳',name:name||'Card'};
+}
+
 // ===== GEOFENCE LOYALTY POPUP =====
 var _geoWatch=null;
 function startGeofence(){
