@@ -567,6 +567,34 @@ html{overflow-x:hidden!important;overflow-y:scroll!important;-webkit-overflow-sc
 body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;height:auto!important}
 #app{overflow-x:hidden!important;overflow-y:auto!important}
 #app .screen{overflow-y:auto!important;-webkit-overflow-scrolling:touch!important}
+
+/* ===== MODAL/OVERLAY VISIBILITY FIX =====
+   Always appear in viewport - never require scrolling */
+.modal, .sl-ov, [class*="modal"], [id*="modal"] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow-y: auto !important;
+}
+.modal-box, .sl-ov-box, .modal > div {
+  position: relative !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  margin: auto !important;
+}
+/* Screen scroll fix */
+html, body {
+  scroll-behavior: auto !important;
+}
+/* When overlay opens - scroll to top instantly */
+
 </style>
 </head>
 <body>
@@ -1500,6 +1528,25 @@ function saveCardLocation(card){
     .then(function(){T('📍 Location saved — you will get a reminder next time you visit','success');})
     .catch(function(){T('📍 Location saved on this device','success');});
   },{enableHighAccuracy:true,timeout:10000});
+}
+
+
+// ===== OVERLAY SCROLL FIX =====
+// Every time an overlay opens, scroll window to top so it's visible
+var _origSlOverlay = typeof slOverlay !== 'undefined' ? slOverlay : null;
+function ensureVisible(el) {
+  if (!el) return;
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+// Intercept goTab to scroll to top
+var _origGoTabScroll = typeof goTab !== 'undefined' ? goTab : null;
+if (_origGoTabScroll) {
+  goTab = function(name) {
+    window.scrollTo({top: 0, behavior: 'instant'});
+    _origGoTabScroll(name);
+  };
 }
 
 // ===== CRASH-PROOF GUARDS (senior fintech: never a blank page) =====

@@ -189,6 +189,34 @@ html{overflow-x:hidden!important;overflow-y:scroll!important;-webkit-overflow-sc
 body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;height:auto!important}
 #app{overflow-x:hidden!important;overflow-y:auto!important}
 #app .screen{overflow-y:auto!important;-webkit-overflow-scrolling:touch!important}
+
+/* ===== MODAL/OVERLAY VISIBILITY FIX =====
+   Always appear in viewport - never require scrolling */
+.modal, .sl-ov, [class*="modal"], [id*="modal"] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow-y: auto !important;
+}
+.modal-box, .sl-ov-box, .modal > div {
+  position: relative !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  margin: auto !important;
+}
+/* Screen scroll fix */
+html, body {
+  scroll-behavior: auto !important;
+}
+/* When overlay opens - scroll to top instantly */
+
 </style>
 </head>
 <body>
@@ -1718,6 +1746,7 @@ function grantUserReceipts(){
 }
 
 function switchTab(name){
+  window.scrollTo({top:0,behavior:'instant'});
   var aliases={'shops':'merchants','users':'customers','receipts':'admreceipts'};
   if(aliases[name])name=aliases[name];
   if(!document.getElementById(name+'-screen')){T('Section coming soon');name='overview';}
