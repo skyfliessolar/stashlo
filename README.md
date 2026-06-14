@@ -1,7 +1,30 @@
-# Stashlo — Loyalty Wallet & Mobile EPOS (SaaS)
-Fintech SaaS platform: customer loyalty wallet (QR/barcode, geofence reminders, receipt
-tax vault, scratch-code rewards, jobs), merchant mobile EPOS (barcode till, AI invoice
-stock-in, dept keys, staff discounts, day-end with category insights & profit, HMRC CSV,
-digital receipts to customer by QR, 30-day free trial then £15/mo), and admin command
-centre (approvals, audit logs, receipts governance, scratch codes, billing).
-Stack: vanilla JS PWA · Supabase (Postgres/Auth/Storage) · GitHub Pages · Claude AI.
+# Stashlo — Loyalty Wallet, Merchant EPOS & Rewards Platform
+
+🌐 **Live at:** https://stashlo.com
+
+## Apps
+- **Customer App** → https://stashlo.com
+- **Merchant EPOS** → https://stashlo.com/merchant.html  
+- **Admin Panel** → https://stashlo.com/admin.html
+
+## Legal
+- Privacy Policy → https://stashlo.com/privacy.html
+- Terms of Service → https://stashlo.com/terms.html
+
+## Features
+- 💳 Loyalty wallet (Nectar, Tesco, Boots + any card)
+- 📍 Geofence loyalty reminders
+- 🖥️ Mobile EPOS till (barcode scan, VAT, receipts, day-end)
+- 🎟️ Scratch code rewards & gift cards
+- 📦 AI pallet invoice stock-in
+- 📊 HMRC-ready reports
+- 🤖 Free AI support bot
+- 📲 Digital receipts vault
+- 🎁 Promo codes & Stashlo Credit
+
+## Stack
+Vanilla JS PWA · Supabase · GitHub Pages · Claude AI
+
+## Company
+Stashlo Ltd — Registered in England & Wales  
+hello@stashlo.com
