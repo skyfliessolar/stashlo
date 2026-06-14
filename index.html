@@ -444,7 +444,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 /* FINAL FIX: a stuck entrance animation held screens at opacity 0 even over
    inline styles (animations beat inline CSS). Screens now NEVER animate
    opacity - visibility is controlled by display only. Bulletproof. */
-#app .screen{opacity:1!important;animation:none!important;transform:none!important;transition:none!important}
+#app .screen{opacity:1!important;animation:none!important;transform:none!important;transition:none!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important}
 
 /* ===== CINEMATIC SPLASH (premium, 2.6s, tap to skip) ===== */
 
@@ -555,6 +555,9 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 /* Reduced motion */
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition-duration:.01s!important}}
 
+html,body{overflow-x:hidden;overflow-y:auto!important;-webkit-overflow-scrolling:touch}
+#app{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.screen.on{display:block;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:calc(100vh - 72px)}
 </style>
 </head>
 <body>
