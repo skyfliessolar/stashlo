@@ -367,6 +367,22 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
     <div id="bday-list" style="padding:0 16px"></div>
   </div>
 
+  <!-- GIFT CARDS ADMIN -->
+  <div class="screen" id="giftcards-screen">
+    <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">🎁 Gift Cards</div>
+    <div style="margin:0 16px 12px;background:var(--white);border-radius:14px;padding:14px;box-shadow:var(--sh)">
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Generate Gift Cards</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <input id="gc-n" type="number" value="5" style="width:60px;padding:9px;border-radius:10px;border:1.5px solid var(--bg2)">
+        <input id="gc-val" type="number" step="0.01" placeholder="£ value" value="10" style="width:90px;padding:9px;border-radius:10px;border:1.5px solid var(--bg2)">
+        <button class="btn-xs btn-green" onclick="genGiftCards()">🎁 Generate</button>
+      </div>
+      <div id="gc-out" style="font-size:11px;font-family:monospace;color:var(--ink3);max-height:100px;overflow:auto;background:#f8fafc;border-radius:8px;padding:8px"></div>
+    </div>
+    <div style="padding:0 16px 8px;font-size:14px;font-weight:800">Issued Cards</div>
+    <div id="gc-list" style="padding:0 16px"></div>
+  </div>
+
   <!-- SCRATCH CODES -->
   <div class="screen" id="scratch-screen">
     <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">🎟 Scratch Code Rewards</div>
@@ -420,6 +436,11 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
         <div style="font-size:26px">🎨</div>
         <div style="font-size:13px;font-weight:700;margin-top:6px;color:#fff">3D Studio</div>
         <div style="font-size:11px;color:rgba(255,255,255,.7)">Live theme</div>
+      </div>
+      <div onclick="switchTab('giftcards')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">🎁</div>
+        <div style="font-size:13px;font-weight:700;margin-top:6px">Gift Cards</div>
+        <div style="font-size:11px;color:var(--ink3)">Generate · track</div>
       </div>
       <div onclick="switchTab('birthdays')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:26px">🎂</div>
@@ -1571,6 +1592,33 @@ function ensureBackBtns(){
 }
 document.addEventListener('DOMContentLoaded',function(){setTimeout(ensureBackBtns,400)});
 
+// ===== GIFT CARDS =====
+function genGiftCards(){
+  var n=parseInt((document.getElementById('gc-n')||{}).value||5);
+  var val=parseFloat((document.getElementById('gc-val')||{}).value||10);
+  var chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  var cards=[];
+  for(var i=0;i<n;i++){var cd='GFT-';for(var j=0;j<8;j++)cd+=chars[Math.floor(Math.random()*chars.length)];cards.push({code:cd,value:val,created_at:Date.now()});}
+  spost('gift_cards',cards).then(function(){
+    document.getElementById('gc-out').textContent=cards.map(function(x){return x.code}).join('  ');
+    T(n+' gift cards £'+val.toFixed(2)+' each generated','success');
+    logAudit('gen_gift_cards',n+'x£'+val);
+    loadGiftCards();
+  }).catch(function(){T('gift_cards table missing — run SQL v20','error');});
+}
+function loadGiftCards(){
+  var el=document.getElementById('gc-list');if(!el)return;
+  sget('gift_cards','order=created_at.desc&limit=50').then(function(d){
+    var s=Array.isArray(d)?d:[];
+    el.innerHTML=s.length?s.map(function(x){
+      return '<div class="ic" style="margin-bottom:8px"><div class="ic-row">'
+        +'<div><div class="ic-name">'+x.code+' · £'+parseFloat(x.value||0).toFixed(2)+'</div>'
+        +'<div class="ic-sub">'+(x.redeemed_by?'✅ Redeemed '+new Date(x.redeemed_at||0).toLocaleDateString():'⏳ Available')+'</div></div>'
+        +'</div></div>';
+    }).join(''):'<div style="padding:14px;color:var(--ink3)">No gift cards yet — generate some above</div>';
+  }).catch(function(){el.innerHTML='<div style="padding:14px;color:var(--ink3)">Run SQL v20 first</div>';});
+}
+
 // ===== BIRTHDAY OFFER CONTROL =====
 function loadBirthdayRequests(){
   var el=document.getElementById('bday-list');if(!el)return;
@@ -1688,6 +1736,7 @@ function switchTab(name){
   if(name==='audit')loadAuditLogs();
   if(name==='design3d')loadTheme3DStudio();
   if(name==='admreceipts')loadAdminReceipts();
+  if(name==='giftcards')loadGiftCards();
   if(name==='birthdays')loadBirthdayRequests();
   if(name==='broadcast'){setTimeout(loadBroadcasts,100);}
   if(name==='scratch')loadScratchClaims();

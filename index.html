@@ -1404,7 +1404,7 @@ document.addEventListener('DOMContentLoaded',function(){
     window._toastTimer=setTimeout(function(){_toastEl.classList.remove('show');},2800);
   };
 })();
-/* v19-customer */ window.STASHLO_V='v20';
+/* v20.1 */ window.STASHLO_V='v20.1';
 
 // ===== NATIONAL CARD BRAND DATA (colours + logos as emoji) =====
 var CARD_BRANDS={
@@ -1486,14 +1486,20 @@ function showCardById(cardId){
   setTimeout(function(){var el=document.querySelector('[data-cardid="'+cardId+'"]');if(el)el.click();},400);
 }
 function saveCardLocation(card){
+  // Save to both localStorage (offline) and Supabase (cross-device)
   if(!navigator.geolocation)return;
   navigator.geolocation.getCurrentPosition(function(pos){
+    var lat=pos.coords.latitude,lng=pos.coords.longitude;
+    // Save to localStorage for offline use
     var locs=[];try{locs=JSON.parse(localStorage.getItem('sl_cardlocs_'+UID)||'[]')}catch(e){}
     locs=locs.filter(function(l){return l.cardId!==card.card_id});
-    locs.push({cardId:card.card_id,shopName:card.shop_name||card.name||'Shop',lat:pos.coords.latitude,lng:pos.coords.longitude,emoji:card.emoji||'💳'});
+    locs.push({cardId:card.card_id,shopName:card.shop_name||card.name||'Shop',lat:lat,lng:lng,emoji:card.emoji||'💳'});
     try{localStorage.setItem('sl_cardlocs_'+UID,JSON.stringify(locs))}catch(e){}
-    T('📍 Location saved — Stashlo will remind you here next time','success');
-  },{enableHighAccuracy:true});
+    // Also save to Supabase for cross-device sync
+    post('card_locations',{card_id:card.card_id,user_id:UID,latitude:lat,longitude:lng,label:card.shop_name||card.name||'Shop',radius:200,created_at:Date.now()})
+    .then(function(){T('📍 Location saved — you will get a reminder next time you visit','success');})
+    .catch(function(){T('📍 Location saved on this device','success');});
+  },{enableHighAccuracy:true,timeout:10000});
 }
 
 // ===== CRASH-PROOF GUARDS (senior fintech: never a blank page) =====
@@ -2870,7 +2876,7 @@ function claimScratch(){
     if(!sc){T('❌ Code not recognised - check and try again');return}
     if(sc.claimed_by){T(sc.claimed_by===UID?'You already claimed this one!':'❌ This code has already been used');return}
     if(sc.expiry&&Date.now()>sc.expiry){T('⌛ This code has expired');return}
-    pat('scratch_codes','id=eq.'+sc.id,{claimed_by:UID,claimed_at:Date.now(),status:'pending'})
+    pat('scratch_codes','id=eq.'+sc.id+'&claimed_by=is.null',{claimed_by:UID,claimed_at:Date.now(),status:'pending'})
     .then(function(){
       T('🎉 Claimed! '+(sc.reward||'Your prize')+' - admin will approve shortly');
       document.getElementById('scratch-in').value='';
@@ -2880,6 +2886,22 @@ function claimScratch(){
 }
 function loadMyScratch(){
   var el=document.getElementById('scratch-mine');if(!el)return;
+  get('scratch_codes','claimed_by=eq.'+UID+'&order=claimed_at.desc&limit=10').then(function(d){
+    var s=Array.isArray(d)?d:[];
+    if(!s.length){el.innerHTML='<div style="color:rgba(255,255,255,.6);font-size:12px;margin-top:6px">No codes claimed yet</div>';return;}
+    var STATUS_COLOR={'approved':'#34d399','paid':'#34d399','rejected':'#f87171','pending':'#fbbf24','unclaimed':'#94a3b8'};
+    el.innerHTML='<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.15);padding-top:8px">'+s.map(function(x){
+      var col=STATUS_COLOR[x.status]||'#fbbf24';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08)">'
+        +'<div><div style="font-size:12px;font-weight:800">'+(x.reward||'Reward')+(x.value?' · £'+parseFloat(x.value).toFixed(2):'')+'</div>'
+        +'<div style="font-size:10px;opacity:.6">'+(x.claimed_at?new Date(x.claimed_at).toLocaleDateString():'')+'</div></div>'
+        +'<span style="font-size:10px;font-weight:800;background:rgba(0,0,0,.3);color:'+col+';border-radius:8px;padding:3px 8px">'+(x.status||'pending').toUpperCase()+'</span>'
+        +'</div>';
+    }).join('')+'</div>';
+  }).catch(function(){el.innerHTML='';});
+}
+function _loadMyScratch_DISABLED(){
+  var el=document.getElementById('scratch-mine');if(!el)return;
   get('scratch_codes','claimed_by=eq.'+UID+'&order=claimed_at.desc&limit=5').then(function(d){
     var s=Array.isArray(d)?d:[];
     if(!s.length){el.innerHTML='';return}
@@ -2888,6 +2910,29 @@ function loadMyScratch(){
       return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid rgba(255,255,255,.15)"><span>'+(x.reward||'Reward')+(x.value?' £'+x.value:'')+'</span><b style="color:'+col+'">'+(x.status||'pending').toUpperCase()+'</b></div>';
     }).join('');
   }).catch(function(){});
+}
+
+// ===== GIFT CARDS =====
+function redeemGiftCard(){
+  var code=((document.getElementById('gc-in')||{}).value||'').trim().toUpperCase();
+  if(!code){T('Enter your gift card code','error');return;}
+  var res=document.getElementById('gc-result');if(res)res.textContent='Checking...';
+  get('gift_cards','code=eq.'+encodeURIComponent(code)+'&limit=1').then(function(d){
+    var gc=Array.isArray(d)&&d[0];
+    if(!gc){if(res)res.innerHTML='<span style="color:#f87171">❌ Code not found</span>';return;}
+    if(gc.redeemed_by){if(res)res.innerHTML='<span style="color:#f87171">❌ Already redeemed</span>';return;}
+    var val=parseFloat(gc.value||0);
+    pat('gift_cards','id=eq.'+gc.id+'&redeemed_by=is.null',{redeemed_by:UID,redeemed_at:Date.now()})
+    .then(function(){
+      var newCred=(parseFloat(PROF.sl_credit||0)+val).toFixed(2);
+      return post('users',{id:UID,sl_credit:newCred},'id').then(function(){PROF.sl_credit=parseFloat(newCred);});
+    })
+    .then(function(){
+      if(res)res.innerHTML='<span style="color:#34d399">✅ £'+val.toFixed(2)+' added to your Stashlo Credit!</span>';
+      document.getElementById('gc-in').value='';
+      T('🎁 Gift card redeemed — £'+val.toFixed(2)+' credit added','success');
+    }).catch(function(){if(res)res.innerHTML='<span style="color:#f87171">Redemption failed — try again</span>';});
+  }).catch(function(){if(res)res.innerHTML='<span style="color:#f87171">Could not check code</span>';});
 }
 
 // ===== PROMO CODES =====
