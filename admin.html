@@ -805,6 +805,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 // ── AUTH ───────────────────────────────────────────────────
+// Safety: force-show auth after 5s if splash stuck
+setTimeout(function(){var sp=document.getElementById('splash');if(sp&&sp.style.display!=='none'){sp.style.display='none';var au=document.getElementById('auth');if(au)au.style.display='flex';}},5000);
 window.addEventListener('load',()=>{
   setTimeout(()=>{
     const s=JSON.parse(localStorage.getItem('ad_s')||'null');

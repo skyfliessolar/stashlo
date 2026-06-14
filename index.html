@@ -39,99 +39,57 @@ a{color:inherit;text-decoration:none}
 .splash-fill{height:100%;background:#fff;border-radius:10px;animation:fill 1.2s ease forwards}
 @keyframes fill{from{width:0}to{width:100%}}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-@keyframes slideUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
-@keyframes slideIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes popIn{0%{opacity:0;transform:scale(.88)}70%{transform:scale(1.04)}100%{opacity:1;transform:scale(1)}}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes gradShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-@keyframes orbFloat{0%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-24px) scale(1.08)}66%{transform:translate(-16px,20px) scale(.94)}100%{transform:translate(0,0) scale(1)}}
+@keyframes orbFloat{0%{transform:translate(0,0) scale(1)}33%{transform:translate(25px,-18px) scale(1.06)}66%{transform:translate(-14px,16px) scale(.95)}100%{transform:translate(0,0) scale(1)}}
+@keyframes cardRise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{0%{opacity:0;transform:scale(.9)}80%{transform:scale(1.03)}100%{opacity:1;transform:scale(1)}}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-@keyframes cardRise{0%{opacity:0;transform:translateY(32px) rotate(-1deg)}100%{opacity:1;transform:translateY(0) rotate(0)}}
-@keyframes borderGlow{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0)}50%{box-shadow:0 0 0 4px rgba(99,102,241,.25)}}
-@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-@keyframes spinSlow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@keyframes barFill{from{width:0}to{width:var(--w,60%)}}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 
-/* Screen transitions */
-.screen{display:none;padding-bottom:calc(var(--nav-h)+12px);min-height:calc(100vh - var(--head-h));position:relative;z-index:1}
-.screen.on{display:block;animation:fadeIn .2s ease}
-.screen.on>*{animation:slideUp .28s cubic-bezier(.22,1,.36,1) both}
-.screen.on>*:nth-child(1){animation-delay:.02s}
-.screen.on>*:nth-child(2){animation-delay:.06s}
-.screen.on>*:nth-child(3){animation-delay:.10s}
-.screen.on>*:nth-child(4){animation-delay:.14s}
-.screen.on>*:nth-child(5){animation-delay:.18s}
-.screen.on>*:nth-child(n+6){animation-delay:.22s}
-
-/* Ambient background orbs */
+/* Ambient orbs */
 .amb-wrap{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-.amb-orb{position:absolute;border-radius:50%;filter:blur(72px);animation:orbFloat var(--dur,18s) var(--delay,0s) ease-in-out infinite;opacity:.18}
-.amb-orb-1{width:320px;height:320px;background:radial-gradient(circle,#818CF8,transparent 70%);top:-100px;right:-80px;--dur:20s;--delay:-4s}
-.amb-orb-2{width:260px;height:260px;background:radial-gradient(circle,#6366F1,transparent 70%);bottom:15%;left:-80px;--dur:24s;--delay:-9s}
-.amb-orb-3{width:200px;height:200px;background:radial-gradient(circle,#a78bfa,transparent 70%);top:45%;right:5%;--dur:16s;--delay:-13s}
-.amb-orb-4{width:150px;height:150px;background:radial-gradient(circle,#34d399,transparent 70%);bottom:30%;right:20%;--dur:22s;--delay:-6s;opacity:.1}
+.amb-orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.15;animation:orbFloat var(--dur,18s) ease-in-out infinite}
+.amb-orb-1{width:280px;height:280px;background:radial-gradient(circle,#818CF8,transparent 70%);top:-80px;right:-60px;--dur:20s}
+.amb-orb-2{width:240px;height:240px;background:radial-gradient(circle,#6366F1,transparent 70%);bottom:18%;left:-70px;--dur:24s}
+.amb-orb-3{width:180px;height:180px;background:radial-gradient(circle,#a78bfa,transparent 70%);top:45%;right:8%;--dur:16s}
+.amb-orb-4{width:130px;height:130px;background:radial-gradient(circle,#34d399,transparent 70%);bottom:32%;right:22%;--dur:22s;opacity:.08}
 
-/* Hero gradient animation */
-.home-hero{background-size:300% 300%!important;animation:gradShift 7s ease infinite}
+/* Hero + Credits animated gradient */
+.home-hero{background-size:200% 200%!important;animation:gradShift 7s ease infinite!important}
+#sl-credit-card{background-size:300% 300%!important;animation:gradShift 5s ease infinite}
 
-/* Credit card */
-#sl-credit-card{background-size:300% 300%!important;animation:gradShift 5s ease infinite;transition:transform .2s}
-#sl-credit-card:active{transform:scale(.98)}
+/* Card interactions */
+.ic,.ocard{transition:transform .12s}
+.ic:active,.ocard:active{transform:scale(.97)}
+.lc:active{transform:scale(.97)!important}
+.qa-tile{transition:transform .15s}
+.qa-tile:active{transform:scale(.93)}
+.nearby-chip{transition:transform .15s}
+.nearby-chip:active{transform:scale(.95)}
 
-/* Cards with liquid glass feel */
-.lc{transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s}
-.lc:active{transform:scale(.96)!important}
-.ic{transition:transform .15s,box-shadow .15s;animation:cardRise .35s cubic-bezier(.22,1,.36,1) both}
-.ic:nth-child(2){animation-delay:.06s}.ic:nth-child(3){animation-delay:.12s}.ic:nth-child(4){animation-delay:.18s}
-.ic:active{transform:scale(.97)}
-.ocard{transition:transform .15s;animation:cardRise .35s cubic-bezier(.22,1,.36,1) both}
-.ocard:active{transform:scale(.98)}
-
-/* Quick action tiles pop in */
-.qa-tile{animation:popIn .4s cubic-bezier(.22,1,.36,1) both;transition:transform .15s}
-.qa-tile:active{transform:scale(.92)}
-
-/* Nearby chips */
-.nearby-chip{transition:transform .2s,box-shadow .2s;animation:slideIn .3s ease both}
-.nearby-chip:active{transform:scale(.93)}
-
-/* Bottom nav active glow */
-.nb.on .nb-ico{filter:drop-shadow(0 0 6px rgba(99,102,241,.6));transform:scale(1.12);display:inline-block;transition:transform .2s,filter .2s}
-.nb .nb-ico{transition:transform .2s,filter .2s;display:inline-block}
-
-/* Shimmer skeleton loader */
-.skel{background:linear-gradient(90deg,var(--bg) 25%,rgba(255,255,255,.9) 50%,var(--bg) 75%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;border-radius:10px}
-
-/* Profile avatar float */
+/* Profile float */
 .prof-avatar{animation:floatY 3.5s ease-in-out infinite}
 
-/* Modal entrance */
-.mo-box{animation:slideUp .3s cubic-bezier(.22,1,.36,1)}
+/* Bottom nav glow */
+.nb.on .nb-ico{filter:drop-shadow(0 0 5px rgba(99,102,241,.5))}
 
-/* Points bar animate on load */
-.pts-fill{animation:barFill .8s cubic-bezier(.22,1,.36,1) forwards}
+/* Modal glass */
+.mo-box{backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
 
-/* Loyalty card entry */
-.lc:nth-child(1){animation:cardRise .4s ease .05s both}
-.lc:nth-child(2){animation:cardRise .4s ease .12s both}
-.lc:nth-child(3){animation:cardRise .4s ease .19s both}
-
-/* Toast */
-
-#toast.on{opacity:1;transform:translateX(-50%) translateY(-4px)}
-
-/* Liquid glass modals */
-.mo-box{background:rgba(255,255,255,.92);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,.6)}
-
-/* Order tracking Temu-style */
+/* Track bar for orders */
 .track-bar{display:flex;align-items:center;margin:10px 0 4px;gap:0}
-.track-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;transition:background .3s,box-shadow .3s}
-.track-dot.done{background:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.2)}
-.track-dot.active{background:#6366F1;box-shadow:0 0 0 5px rgba(99,102,241,.25);animation:pulse .9s ease-in-out infinite}
+.track-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0}
+.track-dot.done{background:#6366F1}.track-dot.active{background:#6366F1;box-shadow:0 0 0 4px rgba(99,102,241,.25);animation:pulse .8s ease-in-out infinite}
 .track-dot.wait{background:#e5e7eb}
-.track-line{flex:1;height:3px;border-radius:2px;transition:background .4s}
+.track-line{flex:1;height:3px;border-radius:2px}
 .track-line.done{background:#6366F1}.track-line.wait{background:#e5e7eb}
-.track-label{font-size:11px;font-weight:800;color:#4338ca;text-align:center;margin-top:4px;animation:fadeIn .4s ease}
+.track-label{font-size:11px;font-weight:800;color:#4338ca;text-align:center;margin-top:4px}
+
+/* Toast style */
+#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:#1e1b4b;color:#fff;padding:11px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+#toast.on{opacity:1}
+
 
 
 /* AUTH */
@@ -351,7 +309,7 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .empty p{font-size:14px}
 
 /* TOAST */
-#toast{position:fixed;bottom:calc(var(--nav-h) + 16px);left:50%;transform:translateX(-50%) translateY(20px);background:#1e1b4b;color:#fff;padding:11px 20px;border-radius:24px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;max-width:calc(100vw - 32px);pointer-events:none}
+
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* SECTION SPACER */
@@ -1546,6 +1504,8 @@ setTimeout(function(){
 },1600);
 
 // ===== SESSION =====
+// Safety: if splash still visible after 5s, force-show auth
+setTimeout(function(){var sp=document.getElementById('splash');if(sp&&sp.style.display!=='none'){sp.style.display='none';var au=document.getElementById('auth');if(au)au.style.display='flex';console.log('Stashlo: safety timeout - showing auth');}},5000);
 window.addEventListener('load',()=>setTimeout(()=>{
   const s=JSON.parse(localStorage.getItem('sl_s')||'null');
   if(s&&s.tok&&s.uid&&s.exp>Date.now()){TOK=s.tok;UID=s.uid;UEMAIL=s.email;boot();}
@@ -1599,7 +1559,7 @@ function boot(){
   document.getElementById('app').style.display='flex';
   txt('h-greet',greet());
   loadTheme3D();loadProf();loadCards();loadOrders();buildBrands();loadStashloProd();loadPaymentCards();
-  setTimeout(function(){loadInbox();startGPS();loadMyRewards();setTimeout(fixNearbyStrip,3500);},2000);
+  setTimeout(function(){loadInbox();startGPS();loadMyRewards();},2000);
   setInterval(()=>checkUnreadChats&&checkUnreadChats(),30000);
 }
 function genLoyaltyId(){const ch='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let s='SL-';for(let i=0;i<6;i++)s+=ch[Math.floor(Math.random()*ch.length)];return s}
@@ -2658,32 +2618,22 @@ function payJobNow(){
 
 // ===== NAVIGATION =====
 function goTab(n){
-  // Animate current screen out briefly
-  document.querySelectorAll('.screen.on').forEach(function(s){
-    s.style.opacity='0';s.style.transform='translateY(8px)';s.style.transition='opacity .15s,transform .15s';
-    setTimeout(function(){s.style.opacity='';s.style.transform='';s.style.transition='';},160);
-  });
-  setTimeout(function(){
-    document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on');});
-    document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on');});
-    var scr=document.getElementById(n+'-screen');
-    if(scr){scr.classList.add('on');}
-    var nb=document.getElementById('nb-'+n);if(nb)nb.classList.add('on');
-    // Scroll to top on switch
-    window.scrollTo({top:0,behavior:'instant'});
-    // Haptic if available
-    if(navigator.vibrate)navigator.vibrate(6);
-    // Load data
-    if(n==='orders')loadOrders();
-    if(n==='shop'){updateMyShops();loadStashloProd();loadNearbyStrip();}
-    if(n==='inbox')loadInbox();
-    if(n==='offers')loadMyRewards();
-    if(n==='jobs')loadJobs();
-    if(n==='support')loadSupportChat();
-    if(n==='cards')renderAllCards();
-    if(n==='pay')loadPaymentCards();
-    if(n==='receipts')loadReceipts();
-  },120);
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on');});
+  document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on');});
+  var scr=document.getElementById(n+'-screen');
+  if(scr)scr.classList.add('on');
+  var nb=document.getElementById('nb-'+n);if(nb)nb.classList.add('on');
+  window.scrollTo(0,0);
+  if(navigator.vibrate)try{navigator.vibrate(6);}catch(e){}
+  if(n==='orders')loadOrders();
+  if(n==='shop'){updateMyShops();loadStashloProd();loadNearbyStrip();}
+  if(n==='inbox')loadInbox();
+  if(n==='offers')loadMyRewards();
+  if(n==='jobs')loadJobs();
+  if(n==='support')loadSupportChat();
+  if(n==='cards')renderAllCards();
+  if(n==='pay'){loadPaymentCards();if(typeof renderCreditBal==='function')renderCreditBal();}
+  if(n==='receipts')loadReceipts();
 }
 
 // ===== STASHLO 3D THEME ENGINE (admin-controlled via Supabase app_settings) =====

@@ -1,5 +1,5 @@
-// Stashlo SW v11 - network-first: users always get the latest build
-const CACHE='stashlo-v19';
+// Stashlo SW v12 - network-first: always get latest build
+const CACHE='stashlo-v20';
 self.addEventListener('install',e=>{self.skipWaiting()});
 self.addEventListener('activate',e=>{
   e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
