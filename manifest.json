@@ -4,23 +4,43 @@
   "description": "Your loyalty wallet, merchant EPOS, and rewards platform",
   "start_url": "/",
   "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
   "background_color": "#1e1b4b",
   "theme_color": "#6366F1",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "scope": "/",
-  "id": "/",
+  "id": "com.stashlo.app",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "icons": [
     {
       "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "screenshots": [
@@ -28,7 +48,15 @@
       "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "Stashlo loyalty wallet home screen"
+    },
+    {
+      "src": "feature-graphic.png",
+      "sizes": "1024x500",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Stashlo - Loyalty Wallet and EPOS Platform"
     }
   ],
   "categories": [
@@ -36,11 +64,11 @@
     "shopping",
     "business"
   ],
-  "lang": "en-GB",
-  "dir": "ltr",
   "shortcuts": [
     {
       "name": "My Cards",
+      "short_name": "Cards",
+      "description": "View your loyalty cards",
       "url": "/?tab=cards",
       "icons": [
         {
@@ -51,7 +79,21 @@
     },
     {
       "name": "Rewards",
+      "short_name": "Rewards",
+      "description": "View your rewards and offers",
       "url": "/?tab=offers",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Merchant EPOS",
+      "short_name": "EPOS",
+      "description": "Open the merchant till",
+      "url": "/merchant.html",
       "icons": [
         {
           "src": "icon-192.png",
@@ -60,6 +102,25 @@
       ]
     }
   ],
-  "related_applications": [],
-  "prefer_related_applications": false
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.stashlo.app",
+      "id": "com.stashlo.app"
+    }
+  ],
+  "prefer_related_applications": false,
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [],
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }
