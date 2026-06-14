@@ -1536,7 +1536,7 @@ function ensureVisible(el) {
 var _origGoTabScroll = typeof goTab !== 'undefined' ? goTab : null;
 if (_origGoTabScroll) {
   goTab = function(name) {
-    window.scrollTo({top: 0, behavior: 'instant'});
+    try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
     _origGoTabScroll(name);
   };
 }

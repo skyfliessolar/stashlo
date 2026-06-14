@@ -1558,7 +1558,7 @@ function mpVat(btn){
   btn.style.background='var(--purple)';btn.style.color='#fff';
 }
 function openManualPrice(di){
-  window.scrollTo({top:0,behavior:'instant'});
+  try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   rehomeModals();
   npReset();
   var d=(typeof di==='number')?DEPTS[di]:null;
@@ -1589,7 +1589,7 @@ function loadZXing(cb){
   document.head.appendChild(s);
 }
 function openPOSScanner(){
-  window.scrollTo({top:0,behavior:'instant'});
+  try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   if(!('BarcodeDetector' in window)){openZXingScanner();return}
   var ov=document.createElement('div');ov.id='scan-ov';
   ov.style.cssText='position:fixed;inset:0;background:#000;z-index:900;display:flex;flex-direction:column';
@@ -1971,7 +1971,7 @@ function renderBasket(){
 }
 function posClear(){POS_BASKET=[];renderBasket();}
 function posCheckout(method){
-  window.scrollTo({top:0,behavior:'instant'});
+  try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   if(!POS_BASKET.length){T('Basket empty','error');return}
   var net=0,vat=0;
   POS_BASKET.forEach(function(b){var g=b.price*b.qty;var n=g/(1+b.vat);net+=n;vat+=g-n;});
@@ -1996,7 +1996,7 @@ function posCheckout(method){
   finalizeSale(method);
 }
 function posDayEnd(){
-  window.scrollTo({top:0,behavior:'instant'});
+  try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   var start=new Date();start.setHours(0,0,0,0);
   get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+start.getTime()+'&order=created_at.desc').then(function(d){
     var s=Array.isArray(d)?d:[];
@@ -2045,7 +2045,7 @@ function closeMoreDrawer(){document.getElementById("more-bd").style.display="non
 
 /* ================= v16 OVERRIDES: bulletproof till (self-contained overlays) ================= */
 function slOverlay(inner,maxw){
-  window.scrollTo({top:0,behavior:'instant'});
+  try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   document.documentElement.scrollTop=0;
   document.body.scrollTop=0;
   var ov=document.createElement('div');
@@ -2083,7 +2083,7 @@ function editDepts(){
 
 /* ---- MANUAL PRICE (overlay, dept-aware, Enter to add) ---- */
 function openManualPrice(di){
-  window.scrollTo({top:0,behavior:'instant'});
+  try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   var dept=(typeof di==='number')?getDepts()[di]:null;
   var dname=dept?dept.replace(/^[^A-Za-z0-9]+/,'').trim():'';
   window._MPV=0.2;
@@ -2116,7 +2116,7 @@ function ovAddManual(){
 
 /* ---- CHECKOUT: cash drawer overlay with change ---- */
 function posCheckout(method){
-  window.scrollTo({top:0,behavior:'instant'});
+  try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   if(!POS_BASKET.length){T('Basket empty','error');return}
   var net=0,vat=0;
   POS_BASKET.forEach(function(b){var g=b.price*b.qty;var n=g/(1+b.vat);net+=n;vat+=g-n;});
@@ -2165,7 +2165,7 @@ function ovCashDone(){
 
 /* ---- DAY-END: full report overlay (EvoPOS style) ---- */
 function posDayEnd(){
-  window.scrollTo({top:0,behavior:'instant'});
+  try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   var start=new Date();start.setHours(0,0,0,0);
   T('Building Day-End...');
   get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+start.getTime()+'&order=created_at.desc').then(function(d){
@@ -2428,7 +2428,7 @@ function scanCustomerQR(saleId){
 
 /* FULLSCREEN long-range product scanner (hi-res, edge-to-edge) */
 function openPOSScanner(){
-  window.scrollTo({top:0,behavior:'instant'});
+  try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   if(!('BarcodeDetector' in window)){openZXingScanner();return}
   var ov=document.createElement('div');ov.id='scan-ov';
   ov.style.cssText='position:fixed;inset:0;background:#000;z-index:900';
@@ -2585,7 +2585,7 @@ setInterval(function(){var el=document.getElementById('till-clock');if(el)el.tex
 /* --- CUSTOMER SCAN AT TILL --- */
 var _TILL_CX=null;
 function openScanCustomer(){
-  window.scrollTo({top:0,behavior:'instant'});
+  try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   slForm('👤 Scan customer loyalty ID',
   [{id:'cid',label:'Stashlo ID (e.g. SL-448JXW)',placeholder:'SL-XXXXXX'}],
   [{label:'Cancel'},{label:'Load',primary:true,bg:'#6366F1',cb:function(v){

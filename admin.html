@@ -1738,7 +1738,7 @@ function grantUserReceipts(){
 }
 
 function switchTab(name){
-  window.scrollTo({top:0,behavior:'instant'});
+  try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   var aliases={'shops':'merchants','users':'customers','receipts':'admreceipts'};
   if(aliases[name])name=aliases[name];
   if(!document.getElementById(name+'-screen')){T('Section coming soon');name='overview';}
