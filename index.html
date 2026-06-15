@@ -587,6 +587,121 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
   -webkit-overflow-scrolling: touch !important;
 }
 
+
+/* ═══ PREMIUM FINTECH ANIMATIONS v20 ═══ */
+
+/* Card opens from bottom - spring physics */
+#cardDet {
+  position: fixed; inset: 0;
+  background: rgba(15,12,41,.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 900; display: none;
+  align-items: flex-end; justify-content: center;
+}
+#cardDet.on {
+  display: flex;
+  animation: sheetBackdropIn .3s ease both;
+}
+#cardDet.on .mo-box {
+  animation: sheetSlideUp .38s cubic-bezier(.2,.8,.25,1) both;
+}
+#cardDet.closing {
+  animation: sheetBackdropOut .25s ease both;
+}
+#cardDet.closing .mo-box {
+  animation: sheetSlideDown .25s cubic-bezier(.5,0,1,.5) both;
+}
+
+/* Bottom sheet slide animations */
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes sheetSlideDown {
+  from { transform: translateY(0);    opacity: 1; }
+  to   { transform: translateY(100%); opacity: 0; }
+}
+@keyframes sheetBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes sheetBackdropOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Barcode reveal animation */
+.bc-bg {
+  animation: barcodeReveal .4s cubic-bezier(.2,.8,.25,1) .15s both;
+}
+@keyframes barcodeReveal {
+  from { opacity: 0; transform: scale(.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)  translateY(0); }
+}
+
+/* Success tick animation */
+.success-tick {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: #10b981; color: #fff; font-size: 24px;
+  animation: successPop .5s cubic-bezier(.2,.8,.25,1) both;
+}
+@keyframes successPop {
+  0%  { transform: scale(0) rotate(-20deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(5deg); }
+  100%{ transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* Error shake */
+.shake { animation: errorShake .4s cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes errorShake {
+  10%,90%  { transform: translateX(-2px); }
+  20%,80%  { transform: translateX(4px);  }
+  30%,50%,70% { transform: translateX(-6px); }
+  40%,60%  { transform: translateX(6px);  }
+}
+
+/* Loading shimmer */
+.shimmer {
+  background: linear-gradient(90deg, #f0f2ff 25%, #e8eaf6 50%, #f0f2ff 75%);
+  background-size: 200% 100%;
+  animation: shimmerSlide 1.4s infinite;
+  border-radius: 8px;
+}
+@keyframes shimmerSlide {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* Tab switch fade */
+.screen.on { animation: screenFadeIn .2s ease both; }
+@keyframes screenFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Points counter roll */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Card flip 3D on open */
+@keyframes cardFlip {
+  from { transform: perspective(800px) rotateY(-8deg) scale(.96); opacity: .6; }
+  to   { transform: perspective(800px) rotateY(0)    scale(1);   opacity: 1;  }
+}
+.bc-wrap { animation: cardFlip .35s cubic-bezier(.2,.8,.25,1) both; }
+
+/* Swipe drag on card detail */
+.mo-box { touch-action: pan-y; user-select: none; }
+
+/* Confetti particle */
+@keyframes confettiFall {
+  0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(120px) rotate(720deg); opacity: 0; }
+}
 </style>
 </head>
 <body>
@@ -702,73 +817,136 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
 
   <!-- ===== HOME ===== -->
   <div class="screen on" id="home-screen">
-    <!-- Hero -->
-    <div class="home-hero" style="margin:16px 16px 12px;background:linear-gradient(135deg,#4338ca,#6366F1,#8B5CF6,#4338ca)">
-      <div class="hero-label">Total Points</div>
-      <div class="hero-pts" id="hs-p">0</div>
-      <div class="hero-sub">Across <span id="hs-c">0</span> loyalty cards</div>
-      <div class="hero-chips">
-        <div class="hero-chip">📦 <span id="hs-o">0</span> orders</div>
-        <div class="hero-chip">💰 £<span id="hs-spent">0.00</span> saved</div>
-      </div>
-    </div>
-    <!-- Stashlo Credit teaser -->
-    <div onclick="omo('creditMo')" style="margin:0 16px 12px;background:linear-gradient(120deg,#0f172a,#1e1b4b 60%,#4338ca);border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;position:relative;overflow:hidden">
-      <div>
-        <div style="font-size:11px;color:#a5b4fc;font-weight:700;text-transform:uppercase;letter-spacing:.6px">Coming soon</div>
-        <div style="font-size:16px;font-weight:800;color:#fff">💳 Stashlo Credit</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.7)">Flexible credit built on your loyalty</div>
-      </div>
-      <div style="background:rgba(255,255,255,.14);border-radius:10px;padding:8px 12px;font-size:12px;color:#fff;font-weight:700">Learn more</div>
-    </div>
-    <!-- My Loyalty ID strip -->
-    <div onclick="openMyQRv2()" style="margin:0 16px 12px;background:linear-gradient(135deg,#1a1a2e,#2d2d44);border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
-      <div>
-        <div style="font-size:11px;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.5px">My Stashlo ID</div>
-        <div style="font-size:18px;font-weight:800;color:#fff;font-family:monospace;letter-spacing:1px" id="my-lid">SL-······</div>
-      </div>
-      <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:8px 12px;font-size:13px;color:#fff;font-weight:700">📱 Show QR</div>
-    </div>
-    <!-- Quick actions -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px;margin-bottom:16px">
-      <div class="qa-tile" onclick="goTab('cards')" style="background:var(--card);border-radius:16px;padding:14px;cursor:pointer;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px">
-        <div style="font-size:24px">💳</div>
-        <div>
-          <div style="font-size:13px;font-weight:700">My Cards</div>
-          <div style="font-size:11px;color:var(--sub)" id="qa-cards">0 active</div>
-        </div>
-      </div>
-      <div class="qa-tile" onclick="goTab('shop')" style="background:var(--card);border-radius:16px;padding:14px;cursor:pointer;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px">
-        <div style="font-size:24px">🛍️</div>
-        <div>
-          <div style="font-size:13px;font-weight:700">Browse Shops</div>
-          <div style="font-size:11px;color:var(--sub)">Find & order</div>
-        </div>
-      </div>
-      <div class="qa-tile" onclick="goTab('orders')" style="background:var(--card);border-radius:16px;padding:14px;cursor:pointer;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px">
-        <div style="font-size:24px">📦</div>
-        <div>
-          <div style="font-size:13px;font-weight:700">My Orders</div>
-          <div style="font-size:11px;color:var(--sub)" id="qa-orders">0 orders</div>
-        </div>
-      </div>
-      <div class="qa-tile" onclick="goTab('offers')" style="background:var(--card);border-radius:16px;padding:14px;cursor:pointer;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px">
-        <div style="font-size:24px">🎁</div>
-        <div>
-          <div style="font-size:13px;font-weight:700">Rewards</div>
-          <div style="font-size:11px;color:var(--sub)">Redeem points</div>
-        </div>
-      </div>
-    </div>
-    <!-- Recent cards -->
-    <div class="sh pt16"><span class="sh-t">My Cards</span><span class="sh-a" onclick="goTab('cards')">See all →</span></div>
-    <div id="home-cards" style="padding:0 16px"></div>
-    <!-- Recent orders -->
-    <div class="sh pt16"><span class="sh-t">Recent Orders</span><span class="sh-a" onclick="goTab('orders')">See all →</span></div>
-    <div id="home-orders"></div>
-  </div>
+    <!-- COMPACT DASHBOARD - everything visible without scroll -->
 
-  <!-- ===== CARDS ===== -->
+    <!-- HEADER BAR -->
+    <div style="padding:14px 16px 8px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:12px;color:var(--sub)" id="home-greeting">Good morning ☀️</div>
+        <div style="font-size:17px;font-weight:800;color:var(--text)" id="home-name">My Wallet</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="goTab('support')" style="position:relative;background:var(--purple-bg);border:none;border-radius:12px;width:38px;height:38px;cursor:pointer;font-size:18px">🔔<span id="notif-dot" style="display:none;position:absolute;top:6px;right:6px;width:8px;height:8px;background:#ef4444;border-radius:50%"></span></button>
+        <button onclick="goTab('me')" style="background:var(--purple-bg);border:none;border-radius:12px;width:38px;height:38px;cursor:pointer;font-size:18px">👤</button>
+      </div>
+    </div>
+
+    <!-- HERO POINTS CARD (compact) -->
+    <div style="margin:0 16px 10px;background:linear-gradient(135deg,#312e81,#4338ca,#6366F1);border-radius:20px;padding:16px 18px;color:#fff;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-30px;right:-20px;width:140px;height:140px;background:rgba(255,255,255,.07);border-radius:50%"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:11px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.6px">Total Points</div>
+          <div style="font-size:32px;font-weight:800;line-height:1.1" id="hs-p" class="count-up">0</div>
+          <div style="font-size:12px;opacity:.75;margin-top:2px">Across <span id="hs-c">0</span> loyalty cards</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;opacity:.6;margin-bottom:4px">SL ID</div>
+          <div id="home-slid" style="font-size:13px;font-weight:800;letter-spacing:1px;background:rgba(255,255,255,.15);border-radius:8px;padding:4px 8px">SL-···</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <div onclick="goTab('orders')" style="flex:1;background:rgba(255,255,255,.15);border-radius:10px;padding:7px;text-align:center;cursor:pointer">
+          <div style="font-size:15px;font-weight:800" id="hs-o">0</div>
+          <div style="font-size:10px;opacity:.7">Orders</div>
+        </div>
+        <div onclick="goTab('offers')" style="flex:1;background:rgba(255,255,255,.15);border-radius:10px;padding:7px;text-align:center;cursor:pointer">
+          <div style="font-size:15px;font-weight:800" id="hs-spent">£0</div>
+          <div style="font-size:10px;opacity:.7">Saved</div>
+        </div>
+        <div onclick="openMyQRv2()" style="flex:1;background:rgba(255,255,255,.15);border-radius:10px;padding:7px;text-align:center;cursor:pointer">
+          <div style="font-size:15px">📱</div>
+          <div style="font-size:10px;opacity:.7">My QR</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUICK ACTIONS GRID (2x4) -->
+    <div style="margin:0 16px 10px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+      <div onclick="goTab('cards')" style="background:var(--card);border-radius:14px;padding:10px 6px;text-align:center;cursor:pointer;box-shadow:var(--shadow)">
+        <div style="font-size:22px">💳</div>
+        <div style="font-size:10px;font-weight:700;color:var(--sub);margin-top:4px">Cards</div>
+      </div>
+      <div onclick="goTab('offers')" style="background:var(--card);border-radius:14px;padding:10px 6px;text-align:center;cursor:pointer;box-shadow:var(--shadow)">
+        <div style="font-size:22px">🎁</div>
+        <div style="font-size:10px;font-weight:700;color:var(--sub);margin-top:4px">Rewards</div>
+      </div>
+      <div onclick="goTab('orders')" style="background:var(--card);border-radius:14px;padding:10px 6px;text-align:center;cursor:pointer;box-shadow:var(--shadow)">
+        <div style="font-size:22px">📦</div>
+        <div style="font-size:10px;font-weight:700;color:var(--sub);margin-top:4px">Orders</div>
+      </div>
+      <div onclick="goTab('shop')" style="background:var(--card);border-radius:14px;padding:10px 6px;text-align:center;cursor:pointer;box-shadow:var(--shadow)">
+        <div style="font-size:22px">🛍️</div>
+        <div style="font-size:10px;font-weight:700;color:var(--sub);margin-top:4px">Shop</div>
+      </div>
+      <div onclick="goTab('me')" style="background:var(--card);border-radius:14px;padding:10px 6px;text-align:center;cursor:pointer;box-shadow:var(--shadow)">
+        <div style="font-size:22px">👤</div>
+        <div style="font-size:10px;font-weight:700;color:var(--sub);margin-top:4px">Profile</div>
+      </div>
+      <div onclick="goTab('receipts')" style="background:var(--card);border-radius:14px;padding:10px 6px;text-align:center;cursor:pointer;box-shadow:var(--shadow)">
+        <div style="font-size:22px">🧾</div>
+        <div style="font-size:10px;font-weight:700;color:var(--sub);margin-top:4px">Receipts</div>
+      </div>
+      <div onclick="goTab('jobs')" style="background:var(--card);border-radius:14px;padding:10px 6px;text-align:center;cursor:pointer;box-shadow:var(--shadow)">
+        <div style="font-size:22px">💼</div>
+        <div style="font-size:10px;font-weight:700;color:var(--sub);margin-top:4px">Jobs</div>
+      </div>
+      <div onclick="goTab('support')" style="background:var(--card);border-radius:14px;padding:10px 6px;text-align:center;cursor:pointer;box-shadow:var(--shadow)">
+        <div style="font-size:22px">💬</div>
+        <div style="font-size:10px;font-weight:700;color:var(--sub);margin-top:4px">Support</div>
+      </div>
+    </div>
+
+    <!-- MY CARDS (horizontal scroll strip) -->
+    <div style="padding:0 16px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:14px;font-weight:800">My Cards</div>
+        <button onclick="goTab('cards')" style="background:none;border:none;color:var(--purple);font-size:12px;font-weight:700;cursor:pointer">See all →</button>
+      </div>
+      <div id="home-cards-strip" style="display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px">
+        <div class="shimmer" style="width:160px;height:90px;flex-shrink:0;border-radius:16px"></div>
+        <div class="shimmer" style="width:160px;height:90px;flex-shrink:0;border-radius:16px"></div>
+      </div>
+    </div>
+
+    <!-- RECENT TRANSACTIONS (2 rows) -->
+    <div style="padding:0 16px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:14px;font-weight:800">Recent</div>
+        <button onclick="goTab('orders')" style="background:none;border:none;color:var(--purple);font-size:12px;font-weight:700;cursor:pointer">See all →</button>
+      </div>
+      <div id="home-txns" style="display:flex;flex-direction:column;gap:6px">
+        <div class="shimmer" style="height:52px;border-radius:12px"></div>
+        <div class="shimmer" style="height:52px;border-radius:12px"></div>
+      </div>
+    </div>
+
+    <!-- OFFERS STRIP -->
+    <div style="padding:0 16px;margin-bottom:80px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:14px;font-weight:800">Offers & Rewards</div>
+        <button onclick="goTab('offers')" style="background:none;border:none;color:var(--purple);font-size:12px;font-weight:700;cursor:pointer">See all →</button>
+      </div>
+      <div id="home-offers-strip" style="display:flex;gap:10px;overflow-x:auto;scrollbar-width:none">
+        <div onclick="goTab('offers')" style="flex-shrink:0;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-radius:14px;padding:12px 14px;min-width:140px;cursor:pointer">
+          <div style="font-size:20px">🎟️</div>
+          <div style="font-size:12px;font-weight:800;margin-top:6px">Scratch Codes</div>
+          <div style="font-size:10px;opacity:.8">Win rewards</div>
+        </div>
+        <div onclick="goTab('offers')" style="flex-shrink:0;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-radius:14px;padding:12px 14px;min-width:140px;cursor:pointer">
+          <div style="font-size:20px">🎁</div>
+          <div style="font-size:12px;font-weight:800;margin-top:6px">Gift Cards</div>
+          <div style="font-size:10px;opacity:.8">Redeem balance</div>
+        </div>
+        <div onclick="goTab('offers')" style="flex-shrink:0;background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border-radius:14px;padding:12px 14px;min-width:140px;cursor:pointer">
+          <div style="font-size:20px">🏷️</div>
+          <div style="font-size:12px;font-weight:800;margin-top:6px">Promo Codes</div>
+          <div style="font-size:10px;opacity:.8">Save more</div>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- home close -->
   <div class="screen" id="cards-screen">
     <div class="tab-row" style="margin-top:12px">
       <button id="cn" class="tab-btn on" onclick="fCards('n')">🇬🇧 National</button>
@@ -998,34 +1176,45 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
 
   <!-- Card Detail (full-screen sheet) -->
   <div class="mo" id="cardDet" onclick="if(event.target===this)closeCardDet()">
-    <div class="mo-box">
-      <div class="mo-pill"></div>
-      <div class="mo-head">
-        <span class="mo-title" id="cd-shop">Card</span>
-        <button class="mo-x" onclick="closeCardDet()">✕</button>
+    <div class="mo-box" style="padding:0;overflow:hidden">
+      <!-- DRAG PILL -->
+      <div style="padding:10px 0 0;text-align:center">
+        <div class="mo-pill" style="margin:0 auto"></div>
       </div>
-      <!-- Reward banner -->
-      <div class="rew-banner" id="cd-rew"></div>
-      <!-- Barcode area -->
-      <div class="bc-wrap">
-        <div class="bc-e" id="bc-e">🛍️</div>
-        <div class="bc-name" id="bc-name">Shop</div>
-        <div class="bc-num" id="bc-num"></div>
-        <div class="bc-bg" id="bc-wrap">
-          <svg id="bc-svg"></svg>
+      <!-- BARCODE FIRST (Apple Wallet / Klarna style) -->
+      <div class="bc-wrap" style="margin:10px 16px 0;border-radius:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div>
+            <div class="bc-e" id="bc-e" style="font-size:28px;display:inline">🛍️</div>
+            <span class="bc-name" id="bc-name" style="font-size:16px;font-weight:800;color:#fff;margin-left:6px">Shop</span>
+          </div>
+          <button class="mo-x" onclick="closeCardDet()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;flex-shrink:0">✕</button>
+        </div>
+        <!-- BARCODE — always visible, no scroll needed -->
+        <div class="bc-bg" id="bc-wrap" style="margin:0;border-radius:14px;padding:14px">
+          <svg id="bc-svg" style="width:100%;height:80px"></svg>
+          <div id="bc-num" style="text-align:center;font-family:monospace;font-size:13px;font-weight:700;color:#0d0d1a;margin-top:6px;letter-spacing:2px"></div>
+        </div>
+        <!-- QR alternative -->
+        <div id="bc-qr-wrap" style="display:none;background:#fff;border-radius:14px;padding:14px;text-align:center">
+          <canvas id="bc-qr" width="180" height="180"></canvas>
         </div>
         <!-- Points bar -->
-        <div style="margin-top:10px">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.7);margin-bottom:4px">
+        <div style="margin-top:12px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.8);margin-bottom:4px">
             <span><span id="cd-pts">0</span> pts</span>
             <span id="cd-threshold"></span>
           </div>
-          <div class="pts-bar" style="background:rgba(255,255,255,.2)">
-            <div class="pts-fill" id="cd-pts-fill" style="background:#fff;width:0%"></div>
+          <div class="pts-bar" style="background:rgba(255,255,255,.25);border-radius:4px;height:6px">
+            <div class="pts-fill" id="cd-pts-fill" style="background:#fff;width:0%;border-radius:4px;height:6px;transition:width .6s cubic-bezier(.2,.8,.25,1)"></div>
           </div>
         </div>
       </div>
-      <!-- Stats -->
+      <!-- REWARD BANNER -->
+      <div class="rew-banner" id="cd-rew" style="margin:10px 16px 0"></div>
+      <!-- SCROLLABLE DETAILS BELOW FOLD -->
+      <div style="overflow-y:auto;max-height:calc(90vh - 280px);padding:10px 16px 32px">
+<!-- Stats -->
       <div id="cd-rows"></div>
       <!-- Locations -->
       <div style="margin:14px 0 8px;display:flex;justify-content:space-between;align-items:center">
@@ -3137,6 +3326,107 @@ function requestHuman(){
   post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:'Transferring you to a human agent - an admin has been alerted.',escalated:true,created_at:Date.now()})
   .then(function(){loadSupportChat();T('Admin alerted - they will join shortly');});
 }
+
+
+// ═══ SWIPE TO DISMISS (Apple Wallet style) ═══
+(function(){
+  var startY=0, moBox=null;
+  document.addEventListener('touchstart',function(e){
+    var det=document.getElementById('cardDet');
+    if(!det||!det.classList.contains('on'))return;
+    moBox=det.querySelector('.mo-box');
+    startY=e.touches[0].clientY;
+  },{passive:true});
+  document.addEventListener('touchmove',function(e){
+    if(!moBox)return;
+    var dy=Math.max(0,e.touches[0].clientY-startY);
+    moBox.style.transform='translateY('+dy+'px)';
+    moBox.style.transition='none';
+  },{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(!moBox)return;
+    var dy=e.changedTouches[0].clientY-startY;
+    moBox.style.transition='';
+    moBox.style.transform='';
+    if(dy>80){closeCardDet();}
+    moBox=null;
+  },{passive:true});
+})();
+
+// ═══ ENHANCED closeCardDet with animation ═══
+var _origCloseCardDet=closeCardDet;
+closeCardDet=function(){
+  var det=document.getElementById('cardDet');
+  if(!det)return;
+  det.classList.add('closing');
+  setTimeout(function(){
+    det.classList.remove('on','closing');
+    _origCloseCardDet&&_origCloseCardDet();
+  },240);
+};
+
+// ═══ HAPTIC feedback on card open ═══
+var _origOpenCardDet=openCardDet;
+openCardDet=function(cardId){
+  try{if(navigator.vibrate)navigator.vibrate(8);}catch(_){}
+  _origOpenCardDet(cardId);
+};
+
+// ═══ SUCCESS ANIMATION helper ═══
+function showSuccess(container,msg,cb){
+  var el=document.createElement('div');
+  el.style.cssText='text-align:center;padding:20px';
+  el.innerHTML='<div class="success-tick">✓</div><div style="margin-top:12px;font-size:14px;font-weight:700;color:#0f172a">'+(msg||'Done!')+'</div>';
+  if(container){container.innerHTML='';container.appendChild(el);}
+  if(typeof confetti==='function')confetti({particleCount:40,spread:60,origin:{y:.7}});
+  try{navigator.vibrate&&navigator.vibrate([10,50,10]);}catch(_){}
+  setTimeout(function(){if(cb)cb();},1200);
+}
+
+// ═══ SKELETON LOADER ═══
+function skelRow(w){return '<div class="shimmer" style="height:14px;width:'+( w||'80%')+';margin-bottom:8px"></div>';}
+
+
+// ═══ HOME SCREEN POPULATION ═══
+function populateHome(){
+  // Cards strip
+  var strip=document.getElementById('home-cards-strip');
+  if(strip&&CARDS&&CARDS.length){
+    strip.innerHTML=CARDS.slice(0,6).map(function(card){
+      var bs=typeof brandStyle==='function'?brandStyle(card.shop_name||card.shopName||card.name||''):{col1:'#6366F1',col2:'#8B5CF6'};
+      return '<div onclick="openCardDet(this.dataset.cid)" data-cid="'+card.card_id+'" style="flex-shrink:0;width:160px;height:90px;background:linear-gradient(135deg,'+bs.col1+','+bs.col2+');border-radius:16px;padding:12px;cursor:pointer;color:#fff;position:relative;overflow:hidden">'
+        +'<div style="font-size:11px;font-weight:800;opacity:.9">'+(card.shopName||card.name||'Card')+'</div>'
+        +'<div style="position:absolute;bottom:10px;left:12px;font-size:18px;font-weight:800">'+(card.points||0)+' pts</div>'
+        +'<div style="position:absolute;top:8px;right:8px;font-size:18px">'+(bs.emoji||'💳')+'</div>'
+        +'</div>';
+    }).join('')
+    +'<div onclick="goTab(\'cards\')" style="flex-shrink:0;width:100px;height:90px;background:var(--card);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:2px dashed var(--border)"><div style="font-size:22px">+</div><div style="font-size:10px;color:#6b7280;font-weight:700;margin-top:4px">Add Card</div></div>';
+  }
+  // Home loyalty id
+  var slid=document.getElementById('home-slid');
+  if(slid&&PROF&&PROF.loyalty_id)slid.textContent=PROF.loyalty_id;
+  // Greeting
+  var gr=document.getElementById('home-greeting');
+  if(gr){var h=new Date().getHours();gr.textContent=h<12?'Good morning ☀️':h<17?'Good afternoon 🌤️':'Good evening 🌙';}
+  var hn=document.getElementById('home-name');
+  if(hn&&PROF)hn.textContent=(PROF.display_name||PROF.name||'My Wallet');
+  // Recent txns
+  var txEl=document.getElementById('home-txns');
+  if(txEl){
+    get('pos_sales','order=created_at.desc&limit=3').then(function(d){
+      var ss=Array.isArray(d)?d:[];
+      txEl.innerHTML=ss.length?ss.map(function(s){
+        return '<div style="background:var(--card);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">'
+          +'<div><div style="font-size:13px;font-weight:700">'+(s.merchant_name||'Purchase')+'</div>'
+          +'<div style="font-size:11px;color:var(--sub)">'+new Date(s.created_at||Date.now()).toLocaleDateString()+'</div></div>'
+          +'<div style="font-size:14px;font-weight:800;color:var(--purple)">£'+parseFloat(s.total||0).toFixed(2)+'</div></div>';
+      }).join(''):'<div style="text-align:center;color:var(--sub);font-size:13px;padding:14px">No recent orders</div>';
+    }).catch(function(){txEl.innerHTML='';});
+  }
+}
+// Call after boot
+var _origBoot2=typeof boot==='function'?boot:null;
+if(_origBoot2){var _prevBoot=boot;boot=function(){_prevBoot();setTimeout(populateHome,800);};}
 
 </script>
 </body>
