@@ -2707,6 +2707,11 @@ finalizeSale=function(method){
 
 function posPrintLast(){if(window._LAST_SALE)printReceipt(window._LAST_SALE);else T('No sale this session','error');}
 
+
+function filterDept(dept){
+  renderPOSGrid(dept);
+}
+
 </script>
 
 </body>
