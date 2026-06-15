@@ -1650,6 +1650,22 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
 <div id="toast"></div>
 
 <script>
+// ═══ MODAL PORTAL FIX: move all .mo modals to <body> to avoid #app clipping ═══
+(function(){
+  function portalModals(){
+    var modals = document.querySelectorAll('#app .mo');
+    modals.forEach(function(mo){
+      document.body.appendChild(mo);
+    });
+    console.log('[Stashlo] Moved', modals.length, 'modals to body portal');
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', portalModals);
+  } else {
+    portalModals();
+  }
+})();
+
 // ===== CONFIG =====
 const SU='https://gcwevgaymahywqjorhnn.supabase.co';
 const SK='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
