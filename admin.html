@@ -1868,7 +1868,7 @@ function renderAdminReceipts(){
       <div class="ic-sub">${r.created_at?new Date(r.created_at).toLocaleString():''}</div>
     </div>
     <div style="display:flex;flex-direction:column;gap:6px">
-      '+(r.deleted?'<button class="btn-xs btn-purple" onclick="(function(id){spat(\'receipts\',\'id=eq.\'+id,{deleted:false}).then(function(){T(\'Restored\',\'success\');loadAdminReceipts();});})(\'' + r.id + '\')">↩ Restore</button>':'')+'
+      ${r.deleted?'<button class="btn-xs btn-purple" onclick="restoreAdminReceipt(\'' + r.id + '\')">\u21a9 Restore</button>':''}
       <button class="btn-xs btn-del" onclick="if(confirm('Permanently delete? Only if legally allowed.'))sdel('receipts','id=eq.${r.id}').then(()=>{T('Permanently deleted','success');loadAdminReceipts()})">🗑</button>
     </div></div></div>`).join('')
     :'<div class="empty"><div class="empty-ico">🧾</div><div class="empty-txt">No receipts found</div></div>';
@@ -1885,6 +1885,13 @@ function spat(table,query,data){
     headers:{apikey:SK,Authorization:'Bearer '+SR,'Content-Type':'application/json','Prefer':'return=minimal'},
     body:JSON.stringify(data)
   });
+}
+
+
+function restoreAdminReceipt(id){
+  fetch(SU+'/rest/v1/receipts?id=eq.'+id,{method:'PATCH',headers:{apikey:SK,Authorization:'Bearer '+SR,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({deleted:false})})
+  .then(function(){T('Restored to customer','success');loadAdminReceipts();})
+  .catch(function(){T('Failed','error');});
 }
 
 </script>
