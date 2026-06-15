@@ -1030,7 +1030,7 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
     <div style="padding:0 16px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:14px;font-weight:800">Recent</div>
-        <button onclick="goTab('orders')" style="background:none;border:none;color:var(--purple);font-size:12px;font-weight:700;cursor:pointer">See all →</button>
+        <button onclick="goTab('receipts')" style="background:none;border:none;color:var(--purple);font-size:12px;font-weight:700;cursor:pointer">See all →</button>
       </div>
       <div id="home-txns" style="display:flex;flex-direction:column;gap:6px">
         <div class="shimmer" style="height:52px;border-radius:12px"></div>
@@ -1857,20 +1857,69 @@ function startGeofence(){
 }
 function stopGeofence(){if(_geoWatch!=null){navigator.geolocation.clearWatch(_geoWatch);_geoWatch=null;}}
 function showGeoPopup(loc){
-  var ov=document.createElement('div');ov.id='geo-popup';
-  ov.style.cssText='position:fixed;bottom:90px;left:12px;right:12px;background:linear-gradient(135deg,#1e1b4b,#4338ca);color:#fff;border-radius:20px;padding:16px;z-index:1100;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:slideUp .35s cubic-bezier(.2,.8,.25,1)';
-  ov.innerHTML='<div style="display:flex;align-items:center;gap:12px">'
-    +'<div style="font-size:32px">'+(loc.emoji||'💳')+'</div>'
-    +'<div style="flex:1"><div style="font-weight:800;font-size:15px">You are near '+loc.shopName+'</div>'
-    +'<div style="font-size:12px;opacity:.8;margin-top:2px">Open your loyalty card to earn points</div></div></div>'
-    +'<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button id="gp-open" style="flex:2;padding:13px;border:none;border-radius:12px;background:#fff;color:#4338ca;font-weight:800;cursor:pointer">📱 Open Card</button>'
-    +'<button id="gp-dis" style="flex:1;padding:13px;border:none;border-radius:12px;background:rgba(255,255,255,.18);color:#fff;font-weight:800;cursor:pointer">Dismiss</button>'
+  // Remove any existing popup
+  var existing=document.getElementById('geo-popup');
+  if(existing)existing.remove();
+  
+  var bs=typeof brandStyle==='function'?brandStyle(loc.shopName||''):{col1:'#1e1b4b',col2:'#4338ca',emoji:'💳'};
+  var ov=document.createElement('div');
+  ov.id='geo-popup';
+  ov.style.cssText='position:fixed;bottom:90px;left:12px;right:12px;z-index:1100;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)';
+  
+  ov.innerHTML=
+    // Gradient header
+    '<div style="background:linear-gradient(135deg,'+bs.col1+','+bs.col2+');padding:14px 16px;color:#fff">'
+    +'<div style="display:flex;align-items:center;gap:10px">'
+    +'<div style="font-size:28px">'+(bs.emoji||loc.emoji||'💳')+'</div>'
+    +'<div style="flex:1">'
+    +'<div style="font-weight:800;font-size:14px">📍 You are near '+( loc.shopName||'a saved location')+'</div>'
+    +'<div style="font-size:11px;opacity:.75;margin-top:2px">Tap to show your loyalty barcode</div>'
+    +'</div>'
+    +'<button onclick="document.getElementById('geo-popup').remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:50%;width:28px;height:28px;font-size:14px;cursor:pointer;flex-shrink:0">✕</button>'
+    +'</div>'
+    +'</div>'
+    // Action buttons
+    +'<div style="background:#fff;padding:10px 12px;display:flex;gap:8px">'
+    +'<button id="gp-open" style="flex:2;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,'+bs.col1+','+bs.col2+');color:#fff;font-weight:800;font-size:13px;cursor:pointer">📱 Show Barcode</button>'
+    +'<button id="gp-dis" style="flex:1;padding:12px;border:none;border-radius:12px;background:#f1f5f9;color:#64748b;font-weight:700;font-size:13px;cursor:pointer">Dismiss</button>'
     +'</div>';
+  
   document.body.appendChild(ov);
-  ov.querySelector('#gp-dis').onclick=function(){ov.remove()};
-  ov.querySelector('#gp-open').onclick=function(){ov.remove();showCardById(loc.cardId);};
-  setTimeout(function(){if(ov.parentNode)ov.remove();},14000);
+  
+  // Animate in from bottom
+  ov.style.transform='translateY(120px)';ov.style.opacity='0';
+  ov.style.transition='transform .38s cubic-bezier(.2,.8,.25,1),opacity .38s';
+  setTimeout(function(){ov.style.transform='translateY(0)';ov.style.opacity='1';},20);
+  
+  // Dismiss
+  ov.querySelector('#gp-dis').onclick=function(){
+    ov.style.transform='translateY(120px)';ov.style.opacity='0';
+    setTimeout(function(){ov.remove();},380);
+  };
+  
+  // Open barcode — directly call openCardDet
+  ov.querySelector('#gp-open').onclick=function(){
+    ov.style.transform='translateY(120px)';ov.style.opacity='0';
+    setTimeout(function(){ov.remove();},200);
+    // Find card and open it
+    var cardId=loc.cardId;
+    if(typeof openCardDet==='function'){
+      openCardDet(cardId);
+    } else if(typeof showCardById==='function'){
+      showCardById(cardId);
+    } else {
+      // Fallback: go to cards tab
+      goTab('cards');
+    }
+  };
+  
+  // Auto-dismiss after 12 seconds
+  setTimeout(function(){
+    if(document.getElementById('geo-popup')){
+      ov.style.transform='translateY(120px)';ov.style.opacity='0';
+      setTimeout(function(){ov.remove();},380);
+    }
+  },12000);
 }
 function showCardById(cardId){
   var card=CARDS.find(function(c2){return c2.card_id===cardId});
@@ -1887,10 +1936,20 @@ function saveCardLocation(card){
     locs=locs.filter(function(l){return l.cardId!==card.card_id});
     locs.push({cardId:card.card_id,shopName:card.shop_name||card.name||'Shop',lat:lat,lng:lng,emoji:card.emoji||'💳'});
     try{localStorage.setItem('sl_cardlocs_'+UID,JSON.stringify(locs))}catch(e){}
-    // Also save to Supabase for cross-device sync
+    // Also save to Supabase
     post('card_locations',{card_id:card.card_id,user_id:UID,latitude:lat,longitude:lng,label:card.shop_name||card.name||'Shop',radius:200,created_at:Date.now()})
-    .then(function(){T('📍 Location saved — you will get a reminder next time you visit','success');})
-    .catch(function(){T('📍 Location saved on this device','success');});
+    .catch(function(){});
+    // Show confirmation popup immediately
+    T('📍 Location saved! Next time you are near here, your card will pop up','success');
+    // Show the geo popup right now as a preview
+    setTimeout(function(){
+      showGeoPopup({
+        cardId:card.card_id,
+        shopName:card.shop_name||card.name||'Shop',
+        emoji:card.emoji||'💳',
+        lat:lat,lng:lng
+      });
+    },1200);
   },{enableHighAccuracy:true,timeout:10000});
 }
 
