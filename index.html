@@ -3846,7 +3846,7 @@ function ordTab(tab){
     get('receipts','user_id=eq.'+UID+'&deleted=not.is.true&order=created_at.desc&limit=30').then(function(d){
       var rs=Array.isArray(d)?d:[];
       el.innerHTML=rs.length?rs.map(function(r){
-        return '<div class="ic" style="margin:0 16px 8px;cursor:pointer" onclick="window.open('#','_self')">'
+        return '<div class="ic" style="margin:0 16px 8px">'
           +'<div style="display:flex;justify-content:space-between;align-items:center">'
           +'<div><div style="font-size:14px;font-weight:800">'+(r.merchant_name||'Stashlo Receipt')+'</div>'
           +'<div style="font-size:11px;color:var(--sub)">#'+(r.receipt_no||r.id.slice(0,8).toUpperCase())+' · '+new Date(r.created_at||Date.now()).toLocaleDateString('en-GB')+'</div></div>'

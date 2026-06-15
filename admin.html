@@ -1873,7 +1873,6 @@ function renderAdminReceipts(){
     </div></div></div>`).join('')
     :'<div class="empty"><div class="empty-ico">🧾</div><div class="empty-txt">No receipts found</div></div>';
 }
-
 function sdel(table,id){
   return fetch(SU+'/rest/v1/'+table+'?id=eq.'+id,{
     method:'DELETE',
