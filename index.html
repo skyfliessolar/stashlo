@@ -159,7 +159,7 @@ a{color:inherit;text-decoration:none}
 .cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
 
 /* MODALS */
-.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000!important;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
 .mo.on{display:flex;animation:moIn .25s ease}
 @keyframes moIn{from{opacity:0}to{opacity:1}}
 .mo-box{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:430px;max-height:90vh;overflow-y:auto;padding:20px 16px 40px}
@@ -1793,7 +1793,7 @@ document.addEventListener('DOMContentLoaded',function(){
     window._toastTimer=setTimeout(function(){_toastEl.classList.remove('show');},2800);
   };
 })();
-/* v20.1 */ window.STASHLO_V='v20.1';
+/* v20.1 */ /* cache-bust-5a01183 */ window.STASHLO_V='v20.1';
 
 // ===== NATIONAL CARD BRAND DATA (colours + logos as emoji) =====
 var CARD_BRANDS={
