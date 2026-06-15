@@ -2799,21 +2799,8 @@ function renderCreditBal(){
   var el=document.getElementById('sl-credit-bal');
   if(el)el.textContent='£'+parseFloat(PROF.sl_credit||0).toFixed(2);
 }
-function redeemGiftCard(){
-  var code=(((document.getElementById('gift-code-in')||document.getElementById('gc-in'))||{}).value||"").trim().toUpperCase();
-  if(!code){(document.getElementById('gift-result')||document.getElementById('gc-result')).innerHTML='<span style="color:var(--red)">❌ Enter a code</span>';return;}
-  get('gift_cards','code=eq.'+encodeURIComponent(code)+'&limit=1').then(function(d){
-    var gc=Array.isArray(d)&&d[0];
-    if(!gc){(document.getElementById('gift-result')||document.getElementById('gc-result')).innerHTML='<span style="color:var(--red)">❌ Code not found</span>';return;}
-    if(gc.redeemed_by){(document.getElementById('gift-result')||document.getElementById('gc-result')).innerHTML='<span style="color:var(--red)">❌ Already redeemed</span>';return;}
-    pat('gift_cards','id=eq.'+gc.id,{redeemed_by:UID,redeemed_at:Date.now()}).then(function(){
-      var cur=parseFloat(PROF.sl_credit||0),val=parseFloat(gc.value||0);
-      post('users',{id:UID,sl_credit:cur+val},'id').then(function(){PROF.sl_credit=cur+val;renderCreditBal();});
-      (document.getElementById('gift-result')||document.getElementById('gc-result')).innerHTML='<span style="color:var(--green)">🎉 £'+val.toFixed(2)+' added!</span>';
-      T('🎁 £'+val.toFixed(2)+' credit added!','success');
-    });
-  }).catch(function(){(document.getElementById('gift-result')||document.getElementById('gc-result')).innerHTML='<span style="color:var(--red)">Could not check code</span>';});
-}
+// redeemGiftCard moved to v20 FINAL section below
+
 function applyPromoCode2(){
   var code=(((document.getElementById('promo-in2')||document.getElementById('promo-in')||{})||{}).value||"").trim().toUpperCase();
   if(!code){(document.getElementById('promo-result2')||document.getElementById('promo-result')||{}).innerHTML='<span style="color:var(--red)">Enter a code</span>';return;}
