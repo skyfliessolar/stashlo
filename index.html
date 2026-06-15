@@ -702,6 +702,10 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
   0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
   100% { transform: translateY(120px) rotate(720deg); opacity: 0; }
 }
+
+/* Home screen has its own header - hide app header on home */
+#app.home-active .app-head { display: none !important; }
+#app.home-active #home-screen { padding-top: 0 !important; }
 </style>
 </head>
 <body>
@@ -1582,7 +1586,7 @@ var _origBoot=boot;
 boot=function(){
   _origBoot();
   setTimeout(function(){
-    var el=document.getElementById('total-points');
+    var el=document.getElementById('total-points')||document.getElementById('hs-p');
     if(el&&window.CARDS){
       var total=CARDS.reduce(function(a,c2){return a+(c2.points||0)},0);
       var obj={v:0};
@@ -1863,7 +1867,7 @@ function renderAllCards(){
       <div class="pts-bar" style="margin-top:8px;background:rgba(255,255,255,.2)"><div class="pts-fill" style="background:#fff;width:${pct}%"></div></div></div>
     </div>`};
   const E=(ico,t)=>`<div class="empty"><i>${ico}</i><p>${t}</p></div>`;
-  document.getElementById('home-cards').innerHTML=CARDS.length?CARDS.slice(0,3).map(ch).join(''):E('💳','No cards yet — tap Cards to add');
+  (document.getElementById('home-cards')||document.getElementById('home-cards-strip')||{innerHTML:''}).innerHTML=CARDS.length?CARDS.slice(0,3).map(ch).join(''):E('💳','No cards yet — tap Cards to add');
   document.getElementById('n-list').innerHTML=nat.length?nat.map(ch).join(''):E('🇬🇧','No national cards yet. Tap + to add');
   document.getElementById('l-list').innerHTML=loc.length?loc.map(ch).join(''):E('🏪','No local shop cards<br>Search a shop to add');
 }
@@ -2268,7 +2272,7 @@ function renderOrders(){
     ${o.merchant_note?'<div style="background:#fff8e1;border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12px;color:#856404">📢 '+o.merchant_note+'</div>':''}
   </div>`;
   document.getElementById('orders-list').innerHTML=ORDERS.length?ORDERS.map(h).join(''):'<div class="empty" style="padding:40px 16px"><i>📦</i><p>No orders yet<br>Browse shops to place an order</p></div>';
-  document.getElementById('home-orders').innerHTML=ORDERS.length?ORDERS.slice(0,2).map(h).join(''):'<div class="empty" style="padding:20px 16px"><i>📦</i><p>No orders yet</p></div>';
+  (document.getElementById('home-orders')||{innerHTML:''}).innerHTML=ORDERS.length?ORDERS.slice(0,2).map(h).join(''):'<div class="empty" style="padding:20px 16px"><i>📦</i><p>No orders yet</p></div>';
 }
 function cancelOrder(orderId,productName){
   if(!orderId)return;
@@ -2622,35 +2626,35 @@ function renderCreditBal(){
   if(el)el.textContent='£'+parseFloat(PROF.sl_credit||0).toFixed(2);
 }
 function redeemGiftCard(){
-  var code=((document.getElementById('gift-code-in')||{}).value||"").trim().toUpperCase();
-  if(!code){document.getElementById('gift-result').innerHTML='<span style="color:var(--red)">❌ Enter a code</span>';return;}
+  var code=(((document.getElementById('gift-code-in')||document.getElementById('gc-in'))||{}).value||"").trim().toUpperCase();
+  if(!code){(document.getElementById('gift-result')||document.getElementById('gc-result')).innerHTML='<span style="color:var(--red)">❌ Enter a code</span>';return;}
   get('gift_cards','code=eq.'+encodeURIComponent(code)+'&limit=1').then(function(d){
     var gc=Array.isArray(d)&&d[0];
-    if(!gc){document.getElementById('gift-result').innerHTML='<span style="color:var(--red)">❌ Code not found</span>';return;}
-    if(gc.redeemed_by){document.getElementById('gift-result').innerHTML='<span style="color:var(--red)">❌ Already redeemed</span>';return;}
+    if(!gc){(document.getElementById('gift-result')||document.getElementById('gc-result')).innerHTML='<span style="color:var(--red)">❌ Code not found</span>';return;}
+    if(gc.redeemed_by){(document.getElementById('gift-result')||document.getElementById('gc-result')).innerHTML='<span style="color:var(--red)">❌ Already redeemed</span>';return;}
     pat('gift_cards','id=eq.'+gc.id,{redeemed_by:UID,redeemed_at:Date.now()}).then(function(){
       var cur=parseFloat(PROF.sl_credit||0),val=parseFloat(gc.value||0);
       post('users',{id:UID,sl_credit:cur+val},'id').then(function(){PROF.sl_credit=cur+val;renderCreditBal();});
-      document.getElementById('gift-result').innerHTML='<span style="color:var(--green)">🎉 £'+val.toFixed(2)+' added!</span>';
+      (document.getElementById('gift-result')||document.getElementById('gc-result')).innerHTML='<span style="color:var(--green)">🎉 £'+val.toFixed(2)+' added!</span>';
       T('🎁 £'+val.toFixed(2)+' credit added!','success');
     });
-  }).catch(function(){document.getElementById('gift-result').innerHTML='<span style="color:var(--red)">Could not check code</span>';});
+  }).catch(function(){(document.getElementById('gift-result')||document.getElementById('gc-result')).innerHTML='<span style="color:var(--red)">Could not check code</span>';});
 }
 function applyPromoCode2(){
-  var code=((document.getElementById('promo-in2')||{}).value||"").trim().toUpperCase();
-  if(!code){document.getElementById('promo-result2').innerHTML='<span style="color:var(--red)">Enter a code</span>';return;}
+  var code=(((document.getElementById('promo-in2')||document.getElementById('promo-in')||{})||{}).value||"").trim().toUpperCase();
+  if(!code){(document.getElementById('promo-result2')||document.getElementById('promo-result')||{}).innerHTML='<span style="color:var(--red)">Enter a code</span>';return;}
   get('promo_codes','code=eq.'+encodeURIComponent(code)+'&limit=1').then(function(d){
     var pc=Array.isArray(d)&&d[0];
-    if(!pc){document.getElementById('promo-result2').innerHTML='<span style="color:var(--red)">❌ Not recognised</span>';return;}
-    if(pc.used_by&&pc.used_by!==UID){document.getElementById('promo-result2').innerHTML='<span style="color:var(--red)">❌ Already used</span>';return;}
-    if(pc.expiry&&Date.now()>pc.expiry){document.getElementById('promo-result2').innerHTML='<span style="color:var(--red)">⌛ Expired</span>';return;}
+    if(!pc){(document.getElementById('promo-result2')||document.getElementById('promo-result')||{}).innerHTML='<span style="color:var(--red)">❌ Not recognised</span>';return;}
+    if(pc.used_by&&pc.used_by!==UID){(document.getElementById('promo-result2')||document.getElementById('promo-result')||{}).innerHTML='<span style="color:var(--red)">❌ Already used</span>';return;}
+    if(pc.expiry&&Date.now()>pc.expiry){(document.getElementById('promo-result2')||document.getElementById('promo-result')||{}).innerHTML='<span style="color:var(--red)">⌛ Expired</span>';return;}
     pat('promo_codes','id=eq.'+pc.id,{used_by:UID,used_at:Date.now()}).then(function(){
       var msg='🎉 '+pc.reward+(pc.value?' — £'+pc.value+' credit!':'!');
-      document.getElementById('promo-result2').innerHTML='<span style="color:var(--green)">'+msg+'</span>';
+      (document.getElementById('promo-result2')||document.getElementById('promo-result')||{}).innerHTML='<span style="color:var(--green)">'+msg+'</span>';
       if(pc.value&&pc.type==='credit'){var cur=parseFloat(PROF.sl_credit||0);post('users',{id:UID,sl_credit:cur+parseFloat(pc.value)},'id').then(function(){PROF.sl_credit=cur+parseFloat(pc.value);renderCreditBal();});}
       T(msg,'success');
-    }).catch(function(){document.getElementById('promo-result2').innerHTML='<span style="color:var(--red)">Already applied</span>';});
-  }).catch(function(){document.getElementById('promo-result2').innerHTML='<span style="color:var(--red)">Error checking code</span>';});
+    }).catch(function(){(document.getElementById('promo-result2')||document.getElementById('promo-result')||{}).innerHTML='<span style="color:var(--red)">Already applied</span>';});
+  }).catch(function(){(document.getElementById('promo-result2')||document.getElementById('promo-result')||{}).innerHTML='<span style="color:var(--red)">Error checking code</span>';});
 }
 
 // ===== MY LOYALTY ID (short universal ID + QR) =====
@@ -3427,6 +3431,15 @@ function populateHome(){
 // Call after boot
 var _origBoot2=typeof boot==='function'?boot:null;
 if(_origBoot2){var _prevBoot=boot;boot=function(){_prevBoot();setTimeout(populateHome,800);};}
+
+
+// Toggle home header
+var _origGoTab3 = goTab;
+goTab = function(name) {
+  var app = document.getElementById('app');
+  if (app) app.classList.toggle('home-active', name === 'home');
+  _origGoTab3(name);
+};
 
 </script>
 </body>
