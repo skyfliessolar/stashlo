@@ -603,15 +603,11 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
   display: flex;
   animation: sheetBackdropIn .3s ease both;
 }
-#cardDet.on .mo-box {
-  animation: sheetSlideUp .38s cubic-bezier(.2,.8,.25,1) both;
-}
+#cardDet.on /* sheetSlideUp removed - was conflicting with modal open */
 #cardDet.closing {
   animation: sheetBackdropOut .25s ease both;
 }
-#cardDet.closing .mo-box {
-  animation: sheetSlideDown .25s cubic-bezier(.5,0,1,.5) both;
-}
+#cardDet.closing /* sheetSlideDown removed - was making modal disappear immediately */
 
 /* Bottom sheet slide animations */
 @keyframes sheetSlideUp {
@@ -696,6 +692,7 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
 
 /* Swipe drag on card detail */
 .mo-box { touch-action: pan-y; user-select: none; }
+.mo.on .mo-box { animation: rise3d .3s cubic-bezier(.2,.8,.25,1); }
 
 /* Confetti particle */
 @keyframes confettiFall {
