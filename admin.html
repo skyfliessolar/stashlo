@@ -410,8 +410,20 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
       <div style="font-size:13px;font-weight:800;margin-bottom:8px">Generate codes</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input id="scg-n" type="number" value="10" style="width:64px;padding:9px;border-radius:10px;border:1.5px solid var(--bg2)">
-        <input id="scg-reward" placeholder="Reward (e.g. £5 cashback)" style="flex:1;min-width:140px;padding:9px;border-radius:10px;border:1.5px solid var(--bg2)">
-        <input id="scg-value" type="number" placeholder="£" style="width:70px;padding:9px;border-radius:10px;border:1.5px solid var(--bg2)">
+        <input id="scg-reward" placeholder="Reward (e.g. Free drink)" style="flex:1;min-width:140px;padding:9px;border-radius:10px;border:1.5px solid var(--bg2)">
+        <input id="scg-value" type="number" placeholder="£ val" style="width:60px;padding:9px;border-radius:10px;border:1.5px solid var(--bg2)">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">
+        <select id="scg-type" style="padding:9px;border-radius:10px;border:1.5px solid var(--bg2);background:var(--white);font-size:13px">
+          <option value="any">🌍 Any merchant product</option>
+          <option value="stashlo">🛒 Stashlo marketplace</option>
+          <option value="merchant">🏪 Specific merchant</option>
+          <option value="cash">💰 Cash/credit prize</option>
+          <option value="free_product">🎁 Free product</option>
+          <option value="discount_pct">% Discount off order</option>
+        </select>
+        <input id="scg-merchant-id" placeholder="Merchant ID (if specific)" style="flex:1;min-width:120px;padding:9px;border-radius:10px;border:1.5px solid var(--bg2);display:none">
+        <label style="font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:6px"><input type="checkbox" id="scg-notify"> Notify customers</label>
         <button class="btn-xs btn-purple" onclick="genScratch()">Generate</button>
       </div>
       <div id="scg-out" style="margin-top:8px;font-size:11px;font-family:monospace;color:var(--ink3);max-height:120px;overflow:auto"></div>
@@ -1673,6 +1685,11 @@ function genScratch(){
   var n=parseInt((document.getElementById('scg-n')||{}).value||10),codes=[];
   var reward=(document.getElementById('scg-reward')||{}).value||'Reward';
   var val=parseFloat((document.getElementById('scg-value')||{}).value||0);
+  var prizeType=(document.getElementById('scg-type')||{}).value||'any';
+  var merch=(document.getElementById('scg-merchant-id')||{}).value||'';
+  // Show merchant ID field only when needed
+  var mf=document.getElementById('scg-merchant-id');
+  if(mf)mf.style.display=prizeType==='merchant'?'block':'none';
   var chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   for(var i=0;i<n;i++){var cd='STX-';for(var j=0;j<6;j++)cd+=chars[Math.floor(Math.random()*chars.length)];codes.push({code:cd,reward:reward,value:val,status:'unclaimed',expiry:Date.now()+90*86400000,created_at:Date.now()});}
   spost('scratch_codes',codes).then(function(){
