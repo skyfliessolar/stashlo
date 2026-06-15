@@ -225,6 +225,97 @@ html,body{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
   -webkit-overflow-scrolling: touch !important;
 }
 
+
+/* ═══ MERCHANT v20 — Premium POS Animations ═══ */
+
+/* Product card - animated tap */
+.pos-card {
+  border-radius: 14px;
+  background: var(--white);
+  box-shadow: var(--sh);
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform .18s cubic-bezier(.2,.8,.25,1), box-shadow .18s;
+  position: relative;
+  overflow: hidden;
+}
+.pos-card:active { transform: scale(.94); }
+.pos-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(99,102,241,0);
+  transition: background .15s;
+}
+.pos-card:active::after { background: rgba(99,102,241,.08); }
+
+/* Dept key active */
+.dept-key-active {
+  background: var(--purple) !important;
+  color: #fff !important;
+  border-color: var(--purple) !important;
+}
+
+/* Bottom sheet overlay */
+.sl-ov {
+  animation: slOvIn .32s cubic-bezier(.2,.8,.25,1) both !important;
+}
+@keyframes slOvIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.sl-ov .sl-ov-box, .sl-ov > div {
+  animation: slBoxUp .35s cubic-bezier(.2,.8,.25,1) both !important;
+}
+@keyframes slBoxUp {
+  from { transform: translateY(60px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* Success animation */
+@keyframes successPulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+.success-pulse { animation: successPulse .4s ease; }
+
+/* Vape smoke particle animation */
+@keyframes smokeFloat {
+  0%   { transform: translateY(0) scale(1); opacity: .5; }
+  100% { transform: translateY(-24px) scale(1.6); opacity: 0; }
+}
+.smoke-particle {
+  position: absolute;
+  top: 4px; left: 50%;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(200,210,230,.7);
+  pointer-events: none;
+  animation: smokeFloat 1.2s ease-out infinite;
+}
+
+/* Category pill row - horizontal scroll */
+#pos-cats { padding: 0 16px 8px !important; }
+#dept-keys { padding: 6px 16px !important; }
+
+/* POS product grid - 2 columns for wider items, 3 for small */
+#pos-grid { grid-template-columns: repeat(3,1fr) !important; }
+
+/* Basket row animation */
+@keyframes rowIn {
+  from { transform: translateX(-10px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.basket-row { animation: rowIn .2s ease both; }
+
+/* Bottom nav merchant */
+.mbnav { 
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255,255,255,.88) !important;
+  border-top: 1px solid rgba(99,102,241,.1) !important;
+}
 </style>
 </head>
 <body>
@@ -1931,7 +2022,15 @@ function renderPOSGrid(){
   });
   el.innerHTML=list.map(function(p){
     var out=p.stock!=null&&p.stock<=0;
-    return '<div onclick="posAdd('+Q+p.id+Q+')" style="background:var(--white);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;box-shadow:var(--sh);opacity:'+(out?'.45':'1')+'"><div style="font-size:20px">'+(p.emoji||String.fromCodePoint(0x1F6CD))+'</div><div style="font-size:11px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div><div style="font-size:12px;font-weight:800;color:var(--purple)">'+Number(p.price||0).toFixed(2)+'</div>'+posStockBadge(p)+'</div>';
+    var isVape=(p.pos_category||'').toLowerCase().includes('vape')||(p.name||'').toLowerCase().includes('vape')||(p.name||'').toLowerCase().includes('tobacco')||(p.pos_category||'').toLowerCase().includes('tobacco');
+    var smokeHtml=isVape?'<div class="smoke-particle" style="animation-delay:0s"></div><div class="smoke-particle" style="animation-delay:.4s;left:60%"></div><div class="smoke-particle" style="animation-delay:.8s;left:40%"></div>':'';
+    var isVape=(p.pos_category||'').toLowerCase().indexOf('vape')>=0||(p.name||'').toLowerCase().indexOf('vape')>=0||(p.pos_category||'').toLowerCase().indexOf('tobacco')>=0;
+    var smoke=isVape?'<div class="smoke-particle"></div><div class="smoke-particle" style="animation-delay:.5s;left:60%"></div>':'';
+    return '<div class="pos-card" style="opacity:'+(out?'.45':'1')+'" onclick="posAdd('+Q+p.id+Q+')">'
+      +'<div style="font-size:22px;position:relative">'+( p.emoji||'🛒')+smoke+'</div>'
+      +'<div style="font-size:11px;font-weight:700;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'
+      +'<div style="font-size:12px;font-weight:800;color:var(--purple);margin-top:2px">£'+Number(p.price||0).toFixed(2)+'</div>'
+      +posStockBadge(p)+'</div>';
   }).join('')||'<div style="grid-column:1/-1;color:var(--ink3);font-size:13px;text-align:center;padding:10px">No matching products</div>';
 }
 function posAdd(pid){
