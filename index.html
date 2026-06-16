@@ -3660,6 +3660,24 @@ function loadAllMerchants(){
   }).catch(function(){el.innerHTML='';});
 }
 
+
+// ═══ CUSTOMER SCREEN HEIGHT FIX ═══
+function fixCustLayout(){
+  var app=document.getElementById('app');
+  var auth=document.getElementById('auth');
+  if(app){app.style.cssText+='position:fixed!important;inset:0!important;overflow:hidden!important;';}
+  if(auth){auth.style.cssText+='position:fixed!important;inset:0!important;overflow:hidden!important;';}
+  document.body.style.overflow='hidden';
+  document.body.style.position='fixed';
+  document.body.style.width='100%';
+  document.body.style.height='100%';
+  document.querySelectorAll('#app .screen').forEach(function(s){
+    s.style.cssText+='position:absolute!important;top:0!important;left:0!important;right:0!important;bottom:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;padding-bottom:80px!important;';
+  });
+}
+fixCustLayout();
+setTimeout(fixCustLayout,500);
+
 </script>
 </body>
 </html>

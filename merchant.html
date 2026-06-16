@@ -2831,6 +2831,26 @@ function filterDept(dept){
   renderPOSGrid(dept);
 }
 
+
+// ═══ SCREEN HEIGHT FIX — runs after DOM ready ═══
+function fixScreenLayout(){
+  var app=document.getElementById('app');
+  if(!app)return;
+  // Make app fill viewport without scroll
+  app.style.cssText+='position:fixed!important;inset:0!important;overflow:hidden!important;';
+  document.body.style.overflow='hidden';
+  document.body.style.position='fixed';
+  document.body.style.width='100%';
+  document.body.style.height='100%';
+  // Make all screens fill the container
+  document.querySelectorAll('.screen').forEach(function(s){
+    s.style.cssText+='position:absolute!important;top:0!important;left:0!important;right:0!important;bottom:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;';
+  });
+}
+// Run immediately and after a short delay to catch dynamic screens
+fixScreenLayout();
+setTimeout(fixScreenLayout, 500);
+
 </script>
 
 </body>
