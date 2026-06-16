@@ -580,7 +580,7 @@ html,body{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
   <!-- BOTTOM NAV -->
   
   <!-- ===== EPOS / POS SCREEN ===== -->
-  <div class="screen" id="pos-screen">
+  <div class="screen" id="pos-screen" style="overflow-y:auto">
     <div style="padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:center">
       <div style="font-size:18px;font-weight:800">🖥️ EPOS Till</div>
       <button class="btn-xs btn-purple" onclick="posDayEnd()">📊 Day-End</button>
@@ -1404,7 +1404,13 @@ function switchTab(name){
   if(!document.getElementById(name+'-screen')){T('That section is coming soon');name='overview';}
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
   document.querySelectorAll(".nb").forEach(b=>b.classList.remove("on"));
-  const sc=document.getElementById(name+"-screen");if(sc)sc.classList.add("on");
+  const sc=document.getElementById(name+"-screen");if(sc){
+    sc.classList.add("on");
+    // Animate all screens slide from bottom
+    if(window.anime){
+      try{anime({targets:sc,translateY:[20,0],opacity:[0,1],duration:280,easing:'cubicBezier(.2,.8,.25,1)'});}catch(e){}
+    }
+  }
   const nb=document.getElementById("nb-"+name);if(nb){nb.classList.add("on");const nav=document.querySelector(".bottomnav");if(nav)setTimeout(()=>nb.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"}),0)}
   if(name==="scan")startScan();
   if(name==="orders")loadOrders();

@@ -123,7 +123,7 @@ a{color:inherit;text-decoration:none}
 
 /* SCREENS */
 .screen{display:none;padding-bottom:calc(var(--nav-h) + 12px);animation:fi .2s ease;min-height:calc(100vh - var(--head-h))}
-.screen.on{display:block}
+.screen.on{display:block}.screen.on[style*="flex-direction"]{display:flex}
 .screen.on.flex-screen{display:flex}
 @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
@@ -1276,7 +1276,7 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
   </div>
 
   <!-- ===== SUPPORT ===== -->
-  <div class="screen flex-screen" id="support-screen" style="padding:0;flex-direction:column;height:calc(100vh - var(--head-h));overflow:hidden">
+  <div class="screen flex-screen" id="support-screen" class="screen flex-screen" style="padding:0;flex-direction:column;height:calc(100vh - var(--head-h));overflow:hidden">
     <div style="padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);display:flex;align-items:center;gap:10px">
       <button onclick="goTab('me')" style="background:var(--purple-bg);border:none;border-radius:8px;color:var(--purple);padding:6px 10px;cursor:pointer">←</button>
       <div>
@@ -1584,30 +1584,6 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
   </div>
 
   <!-- Edit Profile (Klarna-style) -->
-  <div class="mo" id="editProfMo" onclick="if(event.target===this)cmo('editProfMo')">
-    <div class="mo-box">
-      <div class="mo-pill"></div>
-      <div class="mo-head"><span class="mo-title">Edit Profile</span><button class="mo-x" onclick="cmo('editProfMo')">✕</button></div>
-      <div style="background:var(--bg);border-radius:14px;padding:12px 14px;margin-bottom:12px">
-        <div style="font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px">Email</div>
-        <div id="ep-email-ro" style="font-size:14px;font-weight:600;margin-top:3px">—</div>
-        <div style="font-size:11px;color:var(--sub);margin-top:2px">To change, contact support</div>
-      </div>
-      <div class="fl"><label>Full Name</label><input class="fi" id="ep-n" type="text" placeholder="Your name"></div>
-      <div class="fl"><label>Display Name</label><input class="fi" id="ep-dn" type="text" placeholder="Nickname (optional)"></div>
-      <div class="fl"><label>Phone</label>
-        <div style="display:flex;gap:8px">
-          <select id="ep-cc" style="padding:10px;border:1.5px solid var(--border);border-radius:12px;font-size:13px;background:var(--card);color:var(--text);flex-shrink:0">
-            <option value="+44">🇬🇧 +44</option><option value="+1">🇺🇸 +1</option><option value="+91">🇮🇳 +91</option><option value="+353">🇮🇪 +353</option>
-          </select>
-          <input class="fi" id="ep-p" type="tel" placeholder="07700 900000" style="flex:1">
-        </div>
-      </div>
-      <div class="fl"><label>Date of Birth</label><input class="fi" id="ep-dob" type="date" max="2010-01-01"></div>
-      <div class="fl"><label>Home Address</label><textarea class="fi" id="ep-addr" rows="2" placeholder="1 High Street, London" style="resize:none"></textarea></div>
-      <button class="btn btn-p" style="width:100%" onclick="saveProf()">Save Changes</button>
-    </div>
-  </div>
 
   <!-- Shop Search Modal (for manual search) -->
   <div class="mo" id="shopSearchMo" onclick="if(event.target===this)cmo('shopSearchMo')">
@@ -1642,6 +1618,32 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
       <div class="fl"><label>Enter promo code</label><input class="fi" id="promo-in2" placeholder="e.g. SAVE10" style="text-transform:uppercase"></div>
       <button class="btn btn-p" style="width:100%;margin-top:8px" onclick="applyPromoCode2()">Apply Code</button>
       <div id="promo-result2" style="margin-top:10px;font-size:13px;font-weight:700;text-align:center"></div>
+    </div>
+  </div>
+
+
+  <div class="mo" id="editProfMo" onclick="if(event.target===this)cmo('editProfMo')">
+    <div class="mo-box">
+      <div class="mo-pill"></div>
+      <div class="mo-head"><span class="mo-title">Edit Profile</span><button class="mo-x" onclick="cmo('editProfMo')">✕</button></div>
+      <div style="background:var(--bg);border-radius:14px;padding:12px 14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px">Email</div>
+        <div id="ep-email-ro" style="font-size:14px;font-weight:600;margin-top:3px">—</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:2px">To change, contact support</div>
+      </div>
+      <div class="fl"><label>Full Name</label><input class="fi" id="ep-n" type="text" placeholder="Your name"></div>
+      <div class="fl"><label>Display Name</label><input class="fi" id="ep-dn" type="text" placeholder="Nickname (optional)"></div>
+      <div class="fl"><label>Phone</label>
+        <div style="display:flex;gap:8px">
+          <select id="ep-cc" style="padding:10px;border:1.5px solid var(--border);border-radius:12px;font-size:13px;background:var(--card);color:var(--text);flex-shrink:0">
+            <option value="+44">🇬🇧 +44</option><option value="+1">🇺🇸 +1</option><option value="+91">🇮🇳 +91</option><option value="+353">🇮🇪 +353</option>
+          </select>
+          <input class="fi" id="ep-p" type="tel" placeholder="07700 900000" style="flex:1">
+        </div>
+      </div>
+      <div class="fl"><label>Date of Birth</label><input class="fi" id="ep-dob" type="date" max="2010-01-01"></div>
+      <div class="fl"><label>Home Address</label><textarea class="fi" id="ep-addr" rows="2" placeholder="1 High Street, London" style="resize:none"></textarea></div>
+      <button class="btn btn-p" style="width:100%" onclick="saveProf()">Save Changes</button>
     </div>
   </div>
 </div><!-- /app -->
@@ -1753,11 +1755,6 @@ function animateNav(name){
   if(ico)anime({targets:ico,scale:[1.4,1],duration:320,easing:'spring(1,80,10,0)'});
 }
 // Wrap goTab
-var _origGoTab=goTab;
-goTab=function(name){
-  _origGoTab(name);
-  setTimeout(function(){animateScreen(name);animateNav(name);},30);
-};
 // Loyalty card tilt on touch
 document.addEventListener('touchmove',function(e){
   var card=e.target&&e.target.closest&&e.target.closest('.loyalty-card');
@@ -1979,11 +1976,7 @@ function ensureVisible(el) {
 // Intercept goTab to scroll to top
 var _origGoTabScroll = typeof goTab !== 'undefined' ? goTab : null;
 if (_origGoTabScroll) {
-  goTab = function(name) {
-    try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
-    _origGoTabScroll(name);
-  };
-}
+  }
 
 // ===== CRASH-PROOF GUARDS (senior fintech: never a blank page) =====
 window.onerror=function(msg,src,line){
@@ -3121,22 +3114,35 @@ function payJobNow(){
 
 // ===== NAVIGATION =====
 function goTab(n){
+  // ═══ Base screen switcher ═══
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on');});
   document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on');});
   var scr=document.getElementById(n+'-screen');
   if(scr)scr.classList.add('on');
   var nb=document.getElementById('nb-'+n);if(nb)nb.classList.add('on');
-  window.scrollTo(0,0);
-  if(navigator.vibrate)try{navigator.vibrate(6);}catch(e){}
-  if(n==='orders')loadOrders();
+  try{window.scrollTo(0,0);}catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate(6);}catch(e){}
+  
+  // ═══ Home header toggle ═══
+  var app=document.getElementById('app');
+  if(app)app.classList.toggle('home-active',n==='home');
+  
+  // ═══ Tab handlers ═══
+  if(n==='orders'){setTimeout(function(){purchTab('all');},100);}
   if(n==='shop'){updateMyShops();loadStashloProd();loadNearbyStrip();loadAllMerchants();}
   if(n==='inbox')loadInbox();
-  if(n==='offers')loadMyRewards();
+  if(n==='offers'){setTimeout(function(){if(typeof rwTab==='function')rwTab('scratch');loadMyRewards();},100);}
   if(n==='jobs')loadJobs();
   if(n==='support')loadSupportChat();
   if(n==='cards')renderAllCards();
   if(n==='pay'){loadPaymentCards();if(typeof renderCreditBal==='function')renderCreditBal();}
   if(n==='receipts')loadReceipts();
+  if(n==='home'){populateHome();}
+  
+  // ═══ Animate screen entrance ═══
+  if(scr&&typeof anime==='function'){
+    try{anime({targets:scr,opacity:[0,1],translateY:[8,0],duration:220,easing:'cubicBezier(.2,.8,.25,1)'});}catch(e){}
+  }
 }
 
 // ===== STASHLO 3D THEME ENGINE (admin-controlled via Supabase app_settings) =====
@@ -3281,391 +3287,19 @@ function instantSuggest(q){
   srchShops(q);
   if(!q){dd.style.display='none';return}
   clearTimeout(_sgT);
-  _sgT=setTimeout(function(){
-    get('merchants','name=ilike.'+encodeURIComponent(q)+'*&active=eq.true&limit=6&select=id,name,logo_emoji,category').then(function(d){
-      const list=Array.isArray(d)?d:[];
-      if(!list.length){dd.style.display='none';return}
-      const Q=String.fromCharCode(39);
-      dd.innerHTML=list.map(function(s){return '<div class="sg-item" onclick="pickSuggest('+Q+s.id+Q+')"><span style="font-size:18px">'+(s.logo_emoji||String.fromCodePoint(0x1F3EA))+'</span><div><div style="font-weight:700">'+s.name+'</div><div style="font-size:11px;color:var(--sub)">'+(s.category||'shop')+'</div></div></div>'}).join('');
-      dd.style.display='block';
-    }).catch(function(){});
-  },140);
-}
-function pickSuggest(id){
-  document.getElementById('shop-suggest').style.display='none';
-  openShopById(id);
-}
-
-// ===== NEARBY SHOPS STRIP =====
-function loadNearbyStrip(){
-  const el=document.getElementById('nearby-strip');if(!el)return;
-  get('merchants','active=eq.true&lat=not.is.null&select=id,name,logo_emoji,lat,lng&limit=40').then(function(d){
-    let ms=Array.isArray(d)?d:[];
-    if(!ms.length){el.innerHTML='<div style="color:var(--sub);font-size:12px;padding:6px 0">No shops with location yet</div>';return}
-    if(userLat&&userLng){
-      ms.forEach(function(m){m._d=haversine(userLat,userLng,parseFloat(m.lat),parseFloat(m.lng));});
-      ms.sort(function(a,b){return a._d-b._d});
-    }
-    const Q=String.fromCharCode(39);
-    el.innerHTML=ms.slice(0,10).map(function(m){
-      const dist=m._d!=null?(m._d<1000?Math.round(m._d)+'m':(m._d/1000).toFixed(1)+'km'):'';
-      return '<div class="nearby-chip" onclick="openShopById('+Q+m.id+Q+')">'+(m.logo_emoji||String.fromCodePoint(0x1F3EA))+' '+m.name+(dist?' <span style="color:var(--purple);font-size:11px">'+dist+'</span>':'')+'</div>';
-    }).join('');
-  }).catch(function(){});
-}
-
-// ===== APPLE PAY LAUNCH =====
-function launchApplePay(amount,label){
-  if(window.ApplePaySession&&ApplePaySession.canMakePayments&&ApplePaySession.canMakePayments()){
-    T(String.fromCodePoint(0xF8FF)+' Apple Pay - confirm with Face ID / Touch ID');
-    setTimeout(function(){T(String.fromCodePoint(0x2705)+' '+label+' GBP '+(amount||0).toFixed(2)+' authorised via Apple Pay');},1400);
-    return true;
-  }
-  T('Apple Pay connected - opens on iPhone/iPad Safari');
-  return false;
-}
-function walletAction(net){
-  const exists=PAY_CARDS.find(function(x){return x.network===net});
-  const label=net==='applepay'?'Apple Pay':'Google Pay';
-  if(!exists){connectWallet(net);return}
-  if(net==='applepay'){
-    if(confirm(label+' connected.\n\nOK = Test a payment\nCancel = manage')){launchApplePay(1.00,'Test');}
-    else if(confirm('Disconnect '+label+'?')){del('payment_cards','id=eq.'+exists.id).then(function(){T(label+' disconnected');loadPaymentCards();});}
-  }else{
-    if(confirm('Disconnect '+label+'?'))del('payment_cards','id=eq.'+exists.id).then(function(){T(label+' disconnected');loadPaymentCards();});
-  }
-}
-
-
-// ===== SCRATCH CODE REWARDS =====
-function claimScratch(){
-  var code=((document.getElementById('scratch-in')||{}).value||'').trim().toUpperCase();
-  if(!code){T('Enter your scratch code');return}
-  get('scratch_codes','code=eq.'+encodeURIComponent(code)+'&limit=1').then(function(d){
-    var sc=Array.isArray(d)&&d[0];
-    if(!sc){T('❌ Code not recognised - check and try again');return}
-    if(sc.claimed_by){T(sc.claimed_by===UID?'You already claimed this one!':'❌ This code has already been used');return}
-    if(sc.expiry&&Date.now()>sc.expiry){T('⌛ This code has expired');return}
-    pat('scratch_codes','id=eq.'+sc.id+'&claimed_by=is.null',{claimed_by:UID,claimed_at:Date.now(),status:'pending'})
-    .then(function(){
-      T('🎉 Claimed! '+(sc.reward||'Your prize')+' - admin will approve shortly');
-      document.getElementById('scratch-in').value='';
-      loadMyScratch();
-    }).catch(function(){T('Claim failed - try again');});
-  }).catch(function(){T('Could not check code');});
-}
-function loadMyScratch(){
-  var el=document.getElementById('scratch-mine');if(!el)return;
-  get('scratch_codes','claimed_by=eq.'+UID+'&order=claimed_at.desc&limit=10').then(function(d){
-    var s=Array.isArray(d)?d:[];
-    if(!s.length){el.innerHTML='<div style="color:rgba(255,255,255,.6);font-size:12px;margin-top:6px">No codes claimed yet</div>';return;}
-    var STATUS_COLOR={'approved':'#34d399','paid':'#34d399','rejected':'#f87171','pending':'#fbbf24','unclaimed':'#94a3b8'};
-    el.innerHTML='<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.15);padding-top:8px">'+s.map(function(x){
-      var col=STATUS_COLOR[x.status]||'#fbbf24';
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08)">'
-        +'<div><div style="font-size:12px;font-weight:800">'+(x.reward||'Reward')+(x.value?' · £'+parseFloat(x.value).toFixed(2):'')+'</div>'
-        +'<div style="font-size:10px;opacity:.6">'+(x.claimed_at?new Date(x.claimed_at).toLocaleDateString():'')+'</div></div>'
-        +'<span style="font-size:10px;font-weight:800;background:rgba(0,0,0,.3);color:'+col+';border-radius:8px;padding:3px 8px">'+(x.status||'pending').toUpperCase()+'</span>'
-        +'</div>';
-    }).join('')+'</div>';
-  }).catch(function(){el.innerHTML='';});
-}
-function _loadMyScratch_DISABLED(){
-  var el=document.getElementById('scratch-mine');if(!el)return;
-  get('scratch_codes','claimed_by=eq.'+UID+'&order=claimed_at.desc&limit=5').then(function(d){
-    var s=Array.isArray(d)?d:[];
-    if(!s.length){el.innerHTML='';return}
-    el.innerHTML=s.map(function(x){
-      var col=x.status==='approved'||x.status==='paid'?'#34d399':x.status==='rejected'?'#f87171':'#fbbf24';
-      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid rgba(255,255,255,.15)"><span>'+(x.reward||'Reward')+(x.value?' £'+x.value:'')+'</span><b style="color:'+col+'">'+(x.status||'pending').toUpperCase()+'</b></div>';
-    }).join('');
-  }).catch(function(){});
-}
-
-// ===== GIFT CARDS =====
-function redeemGiftCard(){
-  var code=((document.getElementById('gc-in')||{}).value||'').trim().toUpperCase();
-  if(!code){T('Enter your gift card code','error');return;}
-  var res=document.getElementById('gc-result');if(res)res.textContent='Checking...';
-  get('gift_cards','code=eq.'+encodeURIComponent(code)+'&limit=1').then(function(d){
-    var gc=Array.isArray(d)&&d[0];
-    if(!gc){if(res)res.innerHTML='<span style="color:#f87171">❌ Code not found</span>';return;}
-    if(gc.redeemed_by){if(res)res.innerHTML='<span style="color:#f87171">❌ Already redeemed</span>';return;}
-    var val=parseFloat(gc.value||0);
-    pat('gift_cards','id=eq.'+gc.id+'&redeemed_by=is.null',{redeemed_by:UID,redeemed_at:Date.now()})
-    .then(function(){
-      var newCred=(parseFloat(PROF.sl_credit||0)+val).toFixed(2);
-      return post('users',{id:UID,sl_credit:newCred},'id').then(function(){PROF.sl_credit=parseFloat(newCred);});
-    })
-    .then(function(){
-      if(res)res.innerHTML='<span style="color:#34d399">✅ £'+val.toFixed(2)+' added to your Stashlo Credit!</span>';
-      document.getElementById('gc-in').value='';
-      T('🎁 Gift card redeemed — £'+val.toFixed(2)+' credit added','success');
-    }).catch(function(){if(res)res.innerHTML='<span style="color:#f87171">Redemption failed — try again</span>';});
-  }).catch(function(){if(res)res.innerHTML='<span style="color:#f87171">Could not check code</span>';});
-}
-
-// ===== PROMO CODES =====
-function applyPromo(){
-  var code=((document.getElementById('promo-in')||{}).value||'').trim().toUpperCase();
-  if(!code){T('Enter a promo code','error');return}
-  get('promo_codes','code=eq.'+encodeURIComponent(code)+'&limit=1').then(function(d){
-    var pc=Array.isArray(d)&&d[0];
-    if(!pc){document.getElementById('promo-result').textContent='❌ Code not recognised';return}
-    if(pc.used_by&&pc.used_by!==UID){document.getElementById('promo-result').textContent='❌ Already used';return}
-    if(pc.expiry&&Date.now()>pc.expiry){document.getElementById('promo-result').textContent='⌛ Expired';return}
-    pat('promo_codes','id=eq.'+pc.id,{used_by:UID,used_at:Date.now()})
-    .then(function(){
-      var msg='🎉 '+pc.reward+(pc.value?' — £'+pc.value+' reward!':'!');
-      document.getElementById('promo-result').innerHTML='<b style="color:#059669">'+msg+'</b>';
-      T(msg,'success');
-      if(pc.value&&pc.type==='credit'){
-        var cur=parseFloat(PROF.sl_credit||0);
-        post('users',{id:UID,sl_credit:cur+parseFloat(pc.value)},'id').then(function(){PROF.sl_credit=cur+parseFloat(pc.value);});
-      }
-    }).catch(function(){document.getElementById('promo-result').textContent='Already applied this code';});
-  }).catch(function(){document.getElementById('promo-result').textContent='Could not check code';});
-}
-
-// ===== ANIMATED COUNTERS (premium feel) =====
-function countUpEl(el,target){
-  if(!el)return;var steps=22,i=0,cur=0,inc=target/steps;
-  var t=setInterval(function(){i++;cur+=inc;if(i>=steps){cur=target;clearInterval(t);}el.textContent=Math.round(cur).toLocaleString();},30);
-}
-
-// ===== JOB APPROVAL TOAST (admin approve now visible instantly) =====
-function checkJobApprovalToast(){
-  try{
-    var ap=JOB_UNLOCKS.filter(function(u){return u.status==='approved'});
-    var seen=JSON.parse(localStorage.getItem('sl_jobok_'+UID)||'[]');
-    ap.forEach(function(u){
-      if(seen.indexOf(u.id)<0){T('🎉 Admin approved your job unlock — contact details are now visible!');seen.push(u.id);}
-    });
-    localStorage.setItem('sl_jobok_'+UID,JSON.stringify(seen));
-  }catch(e){}
-}
-
-// ===== SCAN PLASTIC LOYALTY CARD -> auto number + custom name =====
-function scanCardToAdd(){
-  if(!('BarcodeDetector' in window)){T('Camera scan needs Chrome Android - type the number instead');return}
-  var ov=document.createElement('div');ov.id='cscan-ov';
-  ov.style.cssText='position:fixed;inset:0;background:#000;z-index:950;display:flex;flex-direction:column';
-  ov.innerHTML='<video id="cscan-vid" autoplay playsinline muted style="flex:1;width:100%;object-fit:cover"></video><button id="cscan-x" style="position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:18px">X</button><div style="position:absolute;top:40%;left:8%;right:8%;height:100px;border:3px solid #34d399;border-radius:14px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div><div style="position:absolute;bottom:34px;left:0;right:0;text-align:center;color:#fff;font-weight:800">Point at the barcode on your loyalty card</div>';
-  document.body.appendChild(ov);
-  var stream=null,raf=null;
-  function stop(){if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(function(t){t.stop()});ov.remove();}
-  document.getElementById('cscan-x').onclick=stop;
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(st){
-    stream=st;var v=document.getElementById('cscan-vid');v.srcObject=st;
-    var det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','codabar','qr_code']});
-    function loop(){
-      if(!document.getElementById('cscan-ov'))return;
-      det.detect(v).then(function(codes){
-        if(codes&&codes.length&&codes[0].rawValue){
-          var num=codes[0].rawValue;stop();
-          var name=prompt('✅ Card number captured: '+num+'\n\nGive this card a name (e.g. Esso, Costa):','My loyalty card');
-          if(name===null)return;
-          var colors=['#0061f2','#e4003b','#00754a','#7c3aed','#f59e0b','#0f766e'];
-          post('cards',{user_id:UID,card_id:'SCAN-'+Date.now().toString(36).toUpperCase(),name:name||'My card',shop_name:name||'My card',card_number:num,type:'national',emoji:'💳',color:colors[Math.floor(Math.random()*colors.length)],points:0,added_at:Date.now()},'user_id,card_id')
-          .then(function(){T('💳 '+name+' added to your wallet!');cmo('addNatMo');loadCards();})
-          .catch(function(){T('Could not save card');});
-          return;
-        }
-        raf=requestAnimationFrame(loop);
-      }).catch(function(){raf=requestAnimationFrame(loop)});
-    }
-    v.onloadedmetadata=loop;
-  }).catch(function(){T('Camera permission needed');stop();});
-}
-function manualBrandAdd(){
-  var name=prompt('Brand / shop name (e.g. Esso, Shell, local butcher):');if(!name)return;
-  var num=prompt('Loyalty card number (from your card):')||'';
-  var colors={esso:'#0c2577',shell:'#fbce07',bp:'#009b00',texaco:'#d50000'};
-  var col=colors[(name||'').toLowerCase()]||'#4338ca';
-  post('cards',{user_id:UID,card_id:'MAN-'+Date.now().toString(36).toUpperCase(),name:name,shop_name:name,card_number:num,type:'national',emoji:'⛽',color:col,points:0,added_at:Date.now()},'user_id,card_id')
-  .then(function(){T('💳 '+name+' added!');cmo('addNatMo');loadCards();})
-  .catch(function(){T('Could not save');});
-}
-
-// ===== OFFLINE LOYALTY CACHE (cards work with no signal) =====
-function cacheCards(){try{localStorage.setItem('sl_cards_'+UID,JSON.stringify(CARDS))}catch(e){}}
-function loadCachedCards(){try{var d=JSON.parse(localStorage.getItem('sl_cards_'+UID)||'null');if(Array.isArray(d)&&d.length){CARDS=d;return true}}catch(e){}return false}
-
-// ===== FREE STASHLO AI (no API key needed - instant knowledge-base bot) =====
-function freeBotReply(q){
-  q=(q||'').toLowerCase();
-  function has(){for(var i=0;i<arguments.length;i++){if(q.indexOf(arguments[i])>=0)return true}return false}
-  if(has('refund','money back','chargeback','charged twice'))return '[HUMAN]Refunds need a human review - I am transferring you to our team now.';
-  if(has('delete my account','close my account','remove my data','gdpr'))return '[HUMAN]Account and data requests need a human agent - transferring you now.';
-  if(has('fraud','stolen','hack','scam','unauthoris','unauthorized'))return '[HUMAN]This is a priority issue - connecting you to a human agent immediately.';
-  if(has('human','agent','real person','someone'))return '[HUMAN]Of course - transferring you to a human agent now.';
-  if(has('point'))return 'You earn points whenever a merchant scans your Stashlo ID at the till (usually 1 point per £1). Each card shows your progress to the next reward, and you can spend points in the Rewards section. 🎯';
-  if(has('stashlo id','my id','my qr','barcode','qr code'))return 'Tap "My Stashlo ID" on the Home screen - your card pulls out of the pocket with a QR code and barcode. Swipe between them and let the merchant scan either one. 📱';
-  if(has('add card','add a card','national card','tesco','nectar','boots'))return 'Go to Cards → National → + Add Card, then search any UK brand. For local shops, tap Local Shops → Find Shop or just visit the Shop tab and search by name. 💳';
-  if(has('order','collect','delivery status','track'))return 'Your orders live in the Orders tab with a live tracking timeline: Placed → Confirmed → Dispatched → In Transit → Out for Delivery → Delivered. Tap Chat on any order to message the shop directly. 📦';
-  if(has('cancel'))return 'You can cancel an order while it is still Pending or Confirmed - open the Orders tab and tap the Cancel button on that order. After dispatch, message the shop via the order Chat. ❌';
-  if(has('receipt','tax','hmrc','expense'))return 'Open Me → Receipt Archive. Scan paper receipts with 📷, save digital ones from completed orders, filter by year, and tap "Tax CSV" to export everything for HMRC or your accountant. 🧾';
-  if(has('apple pay','google pay','wallet','payment method','add a card to pay','pay with'))return 'Open the Pay Wallet (Me → Pay Wallet): connect Apple Pay or Google Pay with one tap, or add a card - we only ever store the last 4 digits, never your full number or CVV. 🔒';
-  if(has('job'))return 'The Jobs section shows local roles posted by Stashlo shops. Titles are free to browse; unlock contact details for £1 per job or £5/month for all jobs - unlocks activate after a quick admin approval. 💼';
-  if(has('reward','redeem','free coffee','voucher'))return 'Check the Rewards section for offers you can redeem with points, and look at each shop card for its reward target (e.g. free item at 100 pts). Redeem at the till by showing your Stashlo ID. 🎁';
-  if(has('password','sign in','log in','login','cant get in'))return 'On the sign-in screen tap "Forgot password?" and we will email you a secure reset link. Click it and you can set a new password right in the app. 🔑';
-  if(has('otp','code','verify'))return 'On your first login we email a 6-digit code (or a sign-in link - tapping the link works too). After that first verification you will not be asked again. ✅';
-  if(has('nearby','near me','close to me','around me'))return 'Open the Shop tab - the Nearby Shops strip shows the closest Stashlo shops sorted by distance. Allow location access for the best results. 📍';
-  if(has('credit','bnpl','pay later'))return 'Stashlo Credit is coming soon - flexible credit built on your loyalty history, with FCA-regulated standards. Tap the Stashlo Credit banner on Home to join the waitlist! 💳';
-  if(has('3d','design','theme'))return 'The 3D effects (tilting cards, glass surfaces, floating orbs) are part of the Stashlo design - try moving your finger over a loyalty card, or tilt your phone! ✨';
-  if(has('hello','hi','hey','good morning','good afternoon','good evening'))return 'Hello! 👋 I can help with points, cards, orders, receipts, the wallet, jobs and more. What would you like to know?';
-  if(has('thank','cheers','great','perfect'))return 'You are very welcome! Anything else I can help with? 💜';
-  return null;
-}
-
-// ===== AI-FIRST SUPPORT =====
-let SUPPORT_AI=true,_aiBusy=false;
-async function maybeAIReply(){
-  if(!SUPPORT_AI||_aiBusy)return;
-  try{
-    const d=await get('support_chats','customer_id=eq.'+UID+'&order=created_at.desc&limit=8');
-    const msgs=Array.isArray(d)?d:[];
-    if(!msgs.length)return;
-    if(msgs[0].sender_role!=='customer')return;
-    if(msgs.some(function(m){return m.sender_role==='admin'})){SUPPORT_AI=false;return}
-    _aiBusy=true;
-    // FREE BOT path (no API key required)
-    if(!window.ANTH_KEY){
-      var fr=freeBotReply(msgs[0].message);
-      _aiBusy=false;
-      if(fr&&fr.indexOf('[HUMAN]')===0){
-        await post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:fr.replace('[HUMAN]','')+' 🔔 An admin has been alerted.',escalated:true,created_at:Date.now()});
-        SUPPORT_AI=false;
-      }else{
-        await post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:fr||('I am not 100% sure about that one yet! Try rephrasing, or tap the 🙋 button and a human agent will help you.'),created_at:Date.now()});
-      }
-      loadSupportChat();
-      return;
-    }
-    const hist=msgs.slice().reverse().map(function(m){return (m.sender_role==='customer'?'Customer: ':'Assistant: ')+m.message}).join('\n');
-    const hdrs={'Content-Type':'application/json'};
-    if(window.ANTH_KEY){hdrs['x-api-key']=window.ANTH_KEY;hdrs['anthropic-version']='2023-06-01';hdrs['anthropic-dangerous-direct-browser-access']='true';}
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:220,system:'You are Stashlo AI support for a loyalty wallet app (points, cards, orders, receipts, jobs). Answer in 1-3 friendly sentences. If you cannot resolve it or the customer asks for a human, refunds, account deletion or fraud, reply starting with [HUMAN].',messages:[{role:'user',content:hist+'\n\nReply:'}]})});
-    const data=await res.json();
-    let reply=(data.content&&data.content[0]&&data.content[0].text)||'';
-    _aiBusy=false;
-    if(!reply){
-      await post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:'Thanks for your message! A member of our team has been alerted and will reply here shortly.',escalated:true,created_at:Date.now()});
-      loadSupportChat();return;
-    }
-    if(reply.indexOf('[HUMAN]')===0){
-      reply=reply.replace('[HUMAN]','').trim()||'Let me connect you with our team.';
-      await post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:reply+' Transferring you to a human agent now...',escalated:true,created_at:Date.now()});
-      SUPPORT_AI=false;
-    }else{
-      await post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:reply,created_at:Date.now()});
-    }
-    loadSupportChat();
-  }catch(e){_aiBusy=false;}
-}
-function requestHuman(){
-  SUPPORT_AI=false;
-  post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'ai',sender_name:'Stashlo AI',message:'Transferring you to a human agent - an admin has been alerted.',escalated:true,created_at:Date.now()})
-  .then(function(){loadSupportChat();T('Admin alerted - they will join shortly');});
-}
-
-
-// ═══ SWIPE TO DISMISS (Apple Wallet style) ═══
-(function(){
-  var startY=0, moBox=null;
-  document.addEventListener('touchstart',function(e){
-    var det=document.getElementById('cardDet');
-    if(!det||!det.classList.contains('on'))return;
-    moBox=det.querySelector('.mo-box');
-    startY=e.touches[0].clientY;
-  },{passive:true});
-  document.addEventListener('touchmove',function(e){
-    if(!moBox)return;
-    var dy=Math.max(0,e.touches[0].clientY-startY);
-    moBox.style.transform='translateY('+dy+'px)';
-    moBox.style.transition='none';
-  },{passive:true});
-  document.addEventListener('touchend',function(e){
-    if(!moBox)return;
-    var dy=e.changedTouches[0].clientY-startY;
-    moBox.style.transition='';
-    moBox.style.transform='';
-    if(dy>80){closeCardDet();}
-    moBox=null;
-  },{passive:true});
-})();
-
-// ═══ ENHANCED closeCardDet with animation ═══
-var _origCloseCardDet=closeCardDet;
-closeCardDet=function(){
-  var det=document.getElementById('cardDet');
-  if(!det)return;
-  det.classList.add('closing');
-  setTimeout(function(){
-    det.classList.remove('on','closing');
-    _origCloseCardDet&&_origCloseCardDet();
-  },240);
-};
-
-// ═══ HAPTIC feedback on card open ═══
-var _origOpenCardDet=openCardDet;
-openCardDet=function(cardId){
-  try{if(navigator.vibrate)navigator.vibrate(8);}catch(_){}
-  _origOpenCardDet(cardId);
-};
-
-// ═══ SUCCESS ANIMATION helper ═══
-function showSuccess(container,msg,cb){
-  var el=document.createElement('div');
-  el.style.cssText='text-align:center;padding:20px';
-  el.innerHTML='<div class="success-tick">✓</div><div style="margin-top:12px;font-size:14px;font-weight:700;color:#0f172a">'+(msg||'Done!')+'</div>';
-  if(container){container.innerHTML='';container.appendChild(el);}
-  if(typeof confetti==='function')confetti({particleCount:40,spread:60,origin:{y:.7}});
-  try{navigator.vibrate&&navigator.vibrate([10,50,10]);}catch(_){}
-  setTimeout(function(){if(cb)cb();},1200);
-}
-
-// ═══ SKELETON LOADER ═══
-function skelRow(w){return '<div class="shimmer" style="height:14px;width:'+( w||'80%')+';margin-bottom:8px"></div>';}
-
-
-// ═══ HOME SCREEN POPULATION ═══
-function populateHome(){
-  // Cards strip
-  var strip=document.getElementById('home-cards-strip');
-  if(strip&&CARDS&&CARDS.length){
-    strip.innerHTML=CARDS.slice(0,6).map(function(card){
-      var bs=typeof brandStyle==='function'?brandStyle(card.shop_name||card.shopName||card.name||''):{col1:'#6366F1',col2:'#8B5CF6'};
-      return '<div onclick="openCardDet(this.dataset.cid)" data-cid="'+card.card_id+'" style="flex-shrink:0;width:160px;height:90px;background:linear-gradient(135deg,'+bs.col1+','+bs.col2+');border-radius:16px;padding:12px;cursor:pointer;color:#fff;position:relative;overflow:hidden">'
-        +'<div style="font-size:11px;font-weight:800;opacity:.9">'+(card.shopName||card.name||'Card')+'</div>'
-        +'<div style="position:absolute;bottom:10px;left:12px;font-size:18px;font-weight:800">'+(card.points||0)+' pts</div>'
-        +'<div style="position:absolute;top:8px;right:8px;font-size:18px">'+(bs.emoji||'💳')+'</div>'
-        +'</div>';
-    }).join('')
-    +'<div onclick="goTab(\'cards\')" style="flex-shrink:0;width:100px;height:90px;background:var(--card);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:2px dashed var(--border)"><div style="font-size:22px">+</div><div style="font-size:10px;color:#6b7280;font-weight:700;margin-top:4px">Add Card</div></div>';
-  }
-  // Home loyalty id
-  var slid=document.getElementById('home-slid');
-  if(slid&&PROF&&PROF.loyalty_id)slid.textContent=PROF.loyalty_id;
-  // Greeting
-  var gr=document.getElementById('home-greeting');
-  if(gr){var h=new Date().getHours();gr.textContent=h<12?'Good morning ☀️':h<17?'Good afternoon 🌤️':'Good evening 🌙';}
-  var hn=document.getElementById('home-name');
-  if(hn&&PROF)hn.textContent=(PROF.display_name||PROF.name||'My Wallet');
-  // Recent txns
-  var txEl=document.getElementById('home-txns');
-  if(txEl){
-    get('pos_sales','order=created_at.desc&limit=3').then(function(d){
+  _sgT=setTimeout(function(){get('receipts','user_id=eq.'+UID+'&deleted=not.is.true&order=created_at.desc&limit=3').then(function(d){
       var ss=Array.isArray(d)?d:[];
       txEl.innerHTML=ss.length?ss.map(function(s){
-        return '<div onclick="goTab(\'orders\')" style="background:var(--card);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer">'
-          +'<div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px">🧾</div>'
-          +'<div><div style="font-size:13px;font-weight:700">'+(s.merchant_name||'Purchase')+'</div>'
-          +'<div style="font-size:11px;color:var(--sub)">'+new Date(s.created_at||Date.now()).toLocaleDateString('en-GB')+'</div></div></div>'
-          +'<div style="display:flex;align-items:center;gap:4px"><span style="font-size:14px;font-weight:800;color:var(--purple)">£'+parseFloat(s.total||0).toFixed(2)+'</span><span style="color:var(--sub)">›</span></div></div>';
-      }).join('')+'<div onclick="goTab(\'orders\')" style="text-align:center;color:var(--purple);font-size:12px;font-weight:700;padding:10px;cursor:pointer">See all →</div>'
-      :'<div onclick="goTab(\'shop\')" style="text-align:center;color:var(--sub);font-size:13px;padding:14px;cursor:pointer">No purchases yet — browse shops</div>';
-    }).catch(function(){txEl.innerHTML='';});
+        var amt='£'+parseFloat(s.total||0).toFixed(2);
+        var name=s.merchant_name||s.shop_name||'Purchase';
+        var dt=new Date(s.created_at||Date.now()).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+        return '<div onclick="purchTab(\'all\')" style="background:var(--card);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:0">'
+          +'<div style="width:36px;height:36px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🧾</div>'
+          +'<div style="flex:1"><div style="font-size:13px;font-weight:700">'+name+'</div>'
+          +'<div style="font-size:11px;color:var(--sub)">'+dt+'</div></div>'
+          +'<div style="font-size:14px;font-weight:800;color:var(--purple)">'+amt+' ›</div></div>';
+      }).join('')+'<div onclick="goTab(\'orders\')" style="text-align:center;color:var(--purple);font-size:12px;font-weight:700;padding:10px;cursor:pointer">See all purchases →</div>'
+      :'<div onclick="goTab(\'shop\')" style="text-align:center;color:var(--sub);font-size:13px;padding:14px;cursor:pointer">No purchases yet — browse shops →</div>';  }).catch(function(){txEl.innerHTML='';});
   }
 }
 // Call after boot
@@ -3674,12 +3308,6 @@ if(_origBoot2){var _prevBoot=boot;boot=function(){_prevBoot();setTimeout(populat
 
 
 // Toggle home header
-var _origGoTab3 = goTab;
-goTab = function(name) {
-  var app = document.getElementById('app');
-  if (app) app.classList.toggle('home-active', name === 'home');
-  _origGoTab3(name);
-};
 
 
 // ═══ REWARDS TAB SWITCHER ═══
@@ -3841,19 +3469,6 @@ document.addEventListener('click',function(e){
 });
 
 // ═══ LOAD REWARDS when tab opens ═══
-var _origGoTabRW=goTab;
-goTab=function(name){
-  _origGoTabRW(name);
-  if(name==='offers'){
-    setTimeout(function(){
-      rwTab('scratch');
-      renderCreditBal();
-      // populate rewards list
-      var el=document.getElementById('rewards-list');
-      if(el){el.innerHTML='<div class="shimmer" style="height:60px;border-radius:14px;margin-bottom:8px"></div><div class="shimmer" style="height:60px;border-radius:14px"></div>';}
-    },100);
-  }
-};
 
 // Call rwTab on init if on offers
 setTimeout(function(){
