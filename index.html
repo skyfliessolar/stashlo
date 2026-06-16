@@ -3285,22 +3285,19 @@ let _sgT=null;
 function instantSuggest(q){
   const dd=document.getElementById('shop-suggest');
   srchShops(q);
-  if(!q){dd.style.display='none';return}
+  if(!q){dd.style.display='none';return;}
   clearTimeout(_sgT);
-  _sgT=setTimeout(function(){get('receipts','user_id=eq.'+UID+'&deleted=not.is.true&order=created_at.desc&limit=3').then(function(d){
-      var ss=Array.isArray(d)?d:[];
-      txEl.innerHTML=ss.length?ss.map(function(s){
-        var amt='£'+parseFloat(s.total||0).toFixed(2);
-        var name=s.merchant_name||s.shop_name||'Purchase';
-        var dt=new Date(s.created_at||Date.now()).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-        return '<div onclick="purchTab(\'all\')" style="background:var(--card);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:0">'
-          +'<div style="width:36px;height:36px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🧾</div>'
-          +'<div style="flex:1"><div style="font-size:13px;font-weight:700">'+name+'</div>'
-          +'<div style="font-size:11px;color:var(--sub)">'+dt+'</div></div>'
-          +'<div style="font-size:14px;font-weight:800;color:var(--purple)">'+amt+' ›</div></div>';
-      }).join('')+'<div onclick="goTab(\'orders\')" style="text-align:center;color:var(--purple);font-size:12px;font-weight:700;padding:10px;cursor:pointer">See all purchases →</div>'
-      :'<div onclick="goTab(\'shop\')" style="text-align:center;color:var(--sub);font-size:13px;padding:14px;cursor:pointer">No purchases yet — browse shops →</div>';  }).catch(function(){txEl.innerHTML='';});
-  }
+  _sgT=setTimeout(function(){
+    get('merchants','name=ilike.*'+encodeURIComponent(q)+'*&active=eq.true&limit=6').then(function(d){
+      if(!Array.isArray(d)||!d.length){dd.style.display='none';return;}
+      dd.style.display='block';
+      dd.innerHTML=d.map(function(s){
+        return '<div onclick="openShopById(\''+s.id+'\');this.closest(\'[id=shop-suggest]\').style.display=\'none\'" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">'
+          +'<span style="font-size:18px">'+(s.logo_emoji||'🏪')+'</span>'
+          +'<span style="font-size:13px;font-weight:700">'+(s.name||'Shop')+'</span></div>';
+      }).join('');
+    }).catch(function(){dd.style.display='none';});
+  },300);
 }
 // Call after boot
 var _origBoot2=typeof boot==='function'?boot:null;
