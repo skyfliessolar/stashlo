@@ -24,7 +24,7 @@
   --blue:#3b82f6;--blue-bg:#DBEAFE;
   --bg:#F0F2FF;--card:#fff;--text:#1e1b4b;--sub:#6b7280;
   --border:#e5e7eb;--r:16px;--r2:12px;
-  --nav-h:66px;--head-h:60px;
+  --nav-h:66px;--head-h:60px;--safe-bot:env(safe-area-inset-bottom,0px);
   --shadow:0 2px 16px rgba(99,102,241,.10);
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
@@ -122,13 +122,13 @@ a{color:inherit;text-decoration:none}
 .head-badge{position:absolute;top:0;right:0;width:16px;height:16px;background:var(--red);border-radius:50%;font-size:9px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;display:none}
 
 /* SCREENS */
-.screen{display:none;padding-bottom:calc(var(--nav-h) + 12px);animation:fi .2s ease;min-height:calc(100vh - var(--head-h))}
+.screen{display:none;padding-bottom:calc(var(--nav-h) + var(--safe-bot) + 16px);animation:fi .2s ease;min-height:calc(100vh - var(--head-h))}
 .screen.on{display:block}.screen.on[style*="flex-direction"]{display:flex}
 .screen.on.flex-screen{display:flex}
 @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
 /* BOTTOM NAV */
-.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(430px,100vw);height:var(--nav-h);background:var(--card);border-top:1px solid var(--border);display:flex;align-items:center;z-index:200;padding-bottom:env(safe-area-inset-bottom,0)}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(430px,100vw);background:var(--card);border-top:1px solid var(--border);display:flex;align-items:center;z-index:200;padding-bottom:env(safe-area-inset-bottom,0px);padding-top:4px;height:58px;box-sizing:content-box}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;padding:6px 0;transition:color .15s;color:var(--sub);min-height:50px}
 .nb.on{color:var(--purple)}
 .nb-ico{font-size:20px;line-height:1}
@@ -1045,6 +1045,8 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
         <div style="font-size:14px;font-weight:800">Recent</div>
         <button onclick="goTab('receipts')" style="background:none;border:none;color:var(--purple);font-size:12px;font-weight:700;cursor:pointer">See all →</button>
       </div>
+      <div id="home-orders" style="display:flex;flex-direction:column;gap:6px;display:none"></div>
+      <div id="home-orders" style="display:flex;flex-direction:column;gap:6px;display:none"></div>
       <div id="home-txns" style="display:flex;flex-direction:column;gap:6px">
         <div class="shimmer" style="height:52px;border-radius:12px"></div>
         <div class="shimmer" style="height:52px;border-radius:12px"></div>
@@ -1129,11 +1131,13 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
       <div style="font-size:18px;font-weight:800;margin-bottom:10px">🧾 All Purchases</div>
       <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px">
         <button id="pt-all" onclick="purchTab('all')" style="flex-shrink:0;background:var(--purple);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer">All</button>
-        <button id="pt-pos" onclick="purchTab('pos')" style="flex-shrink:0;background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">🧾 POS Receipts</button>
-        <button id="pt-orders" onclick="purchTab('orders')" style="flex-shrink:0;background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">📦 Shop Orders</button>
+        <button id="pt-pos" onclick="purchTab('pos');ordTab('txns')" style="flex-shrink:0;background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">🧾 POS Receipts</button>
+        <button id="pt-orders" onclick="purchTab('orders');ordTab('orders')" style="flex-shrink:0;background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">📦 Shop Orders</button>
       </div>
     </div>
-    <div id="purchases-list" style="padding:0 16px;padding-bottom:80px"></div>
+    <span id="ord-tab-orders" style="display:none"></span><span id="ord-tab-txns" style="display:none"></span>
+  <span id="ord-tab-orders" style="display:none"></span><span id="ord-tab-txns" style="display:none"></span>
+  <div id="purchases-list" style="padding:0 16px;padding-bottom:80px"></div>
   </div>
 
   <!-- ===== OFFERS/REWARDS ===== -->
@@ -1224,6 +1228,7 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
         <button onclick="openPromoCode()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer">🏷️ Promo</button>
         <button onclick="openGiftCard()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer">🎁 Gift Card</button>
+        <button id="credit-wl-btn" onclick="joinCreditWaitlist()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer">💳 Stashlo Credit</button>
       </div>
     </div>
     <!-- Add card CTA -->
@@ -1360,6 +1365,8 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
   </div>
 
   <!-- BOTTOM NAV (5 tabs) -->
+  <div id="err-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;font-size:12px;font-weight:700;padding:8px 16px;text-align:center"></div>
+  <div id="err-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;font-size:12px;font-weight:700;padding:8px 16px;text-align:center"></div>
   <div class="bottom-nav">
     <div class="nb on" id="nb-home" onclick="goTab('home')"><span class="nb-ico">🏠</span><span class="nb-lab">Home</span></div>
     <div class="nb" id="nb-cards" onclick="goTab('cards')"><span class="nb-ico">💳</span><span class="nb-lab">Cards</span></div>
@@ -1415,7 +1422,7 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
       <!-- Locations -->
       <div style="margin:14px 0 8px;display:flex;justify-content:space-between;align-items:center">
         <div style="font-size:14px;font-weight:700">📍 Saved Locations</div>
-        <button id="cd-loc-btn" data-cid="" onclick="saveCardLocation(window._OPEN_CARD||{})" style="background:var(--purple-bg);color:var(--purple);border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">+ Add Location</button>
+        <button id="cd-loc-btn" data-cid="" onclick="saveCardLocation(window._OPEN_CARD||CUR_CARD||{})" style="background:var(--purple-bg);color:var(--purple);border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">+ Add Location</button>
       </div>
       <div id="cd-loc-list"></div>
       <!-- Products (local shops only) -->
@@ -1953,30 +1960,22 @@ function showCardById(cardId){
   setTimeout(function(){var el=document.querySelector('[data-cardid="'+cardId+'"]');if(el)el.click();},400);
 }
 function saveCardLocation(card){
-  // Save to both localStorage (offline) and Supabase (cross-device)
-  if(!navigator.geolocation)return;
+  if(!card||!card.card_id){T('Card not found','error');return;}
+  if(!navigator.geolocation){T('Location not supported on this device','error');return;}
+  T('📍 Capturing your location...');
   navigator.geolocation.getCurrentPosition(function(pos){
     var lat=pos.coords.latitude,lng=pos.coords.longitude;
-    // Save to localStorage for offline use
+    var label='Near '+(card.shop_name||card.name||'Shop')+' ('+new Date().toLocaleDateString('en-GB')+')';
     var locs=[];try{locs=JSON.parse(localStorage.getItem('sl_cardlocs_'+UID)||'[]')}catch(e){}
     locs=locs.filter(function(l){return l.cardId!==card.card_id});
     locs.push({cardId:card.card_id,shopName:card.shop_name||card.name||'Shop',lat:lat,lng:lng,emoji:card.emoji||'💳'});
     try{localStorage.setItem('sl_cardlocs_'+UID,JSON.stringify(locs))}catch(e){}
-    // Also save to Supabase
-    post('card_locations',{card_id:card.card_id,user_id:UID,latitude:lat,longitude:lng,label:card.shop_name||card.name||'Shop',radius:200,created_at:Date.now()})
-    .catch(function(){});
-    // Show confirmation popup immediately
-    T('📍 Location saved! Next time you are near here, your card will pop up','success');
-    // Show the geo popup right now as a preview
-    setTimeout(function(){
-      showGeoPopup({
-        cardId:card.card_id,
-        shopName:card.shop_name||card.name||'Shop',
-        emoji:card.emoji||'💳',
-        lat:lat,lng:lng
-      });
-    },1200);
-  },{enableHighAccuracy:true,timeout:10000});
+    del('card_locations','card_id=eq.'+card.card_id+'&user_id=eq.'+UID).catch(function(){}).then(function(){
+      return post('card_locations',{card_id:card.card_id,user_id:UID,latitude:lat,longitude:lng,label:label,radius:200,created_at:Date.now()});
+    }).then(function(){loadCardLocations(card.card_id||card.id);}).catch(function(){});
+    T('✅ Location saved! Card pops up when you are nearby','success');
+    setTimeout(function(){showGeoPopup({cardId:card.card_id,shopName:card.shop_name||card.name||'Shop',emoji:card.emoji||'💳',lat:lat,lng:lng});},1400);
+  },function(){T('⚠️ Cannot access location — check device permissions','error');},{enableHighAccuracy:true,timeout:10000});
 }
 
 
@@ -2182,16 +2181,6 @@ function saveNatCard(){
 }
 
 // ===== CARD LOCATIONS =====
-function saveCardLocation(cardId){
-  if(!navigator.geolocation){T('Location not supported');return}
-  T('📍 Capturing location…');
-  navigator.geolocation.getCurrentPosition(p=>{
-    const lat=p.coords.latitude,lng=p.coords.longitude;
-    const label='Near '+(window.CUR_CARD?CUR_CARD.shopName:'Shop')+' ('+new Date().toLocaleDateString()+')';
-    post('card_locations',{card_id:cardId,user_id:UID,latitude:lat,longitude:lng,label,radius:200,created_at:Date.now()})
-    .then(()=>{T('✅ Location saved!');loadCardLocations(cardId);}).catch(()=>T('Failed to save location'));
-  },()=>T('⚠️ Cannot access location'),{enableHighAccuracy:true,timeout:8000});
-}
 function loadCardLocations(cardId){
   const el=document.getElementById('cd-loc-list');if(!el)return;
   get('card_locations','card_id=eq.'+cardId+'&user_id=eq.'+UID+'&order=created_at.desc').then(d=>{
@@ -2515,8 +2504,8 @@ function renderOrders(){
     <div class="ocard-h"><div style="font-size:11px;font-weight:700;color:var(--sub);font-family:monospace">#${o.id?o.id.slice(0,8).toUpperCase():'—'}</div><div class="ostatus ${sc[o.status]||'st-p'}">${sl[o.status]||o.status||'Pending'}</div></div>
     <div style="display:flex;gap:12px;margin:8px 0">
       <div style="font-size:28px">${o.product_emoji||'📦'}</div>
-      <div style="flex:1"><div style="font-size:15px;font-weight:700">${o.product_name||'Order'}</div>
-      <div style="font-size:12px;color:var(--sub)">Qty: ${o.quantity||1} • £${parseFloat(o.total||0).toFixed(2)}</div>
+      <div style="flex:1"><div style="font-size:15px;font-weight:700">${o.product_name||o.merchant_name||'Order'}</div>
+      <div style="font-size:12px;color:var(--sub)">Qty: ${o.quantity||1} • £${parseFloat(o.total||0).toFixed(2)}</div><div style="font-size:12px;color:var(--sub)">🏪 ${o.merchant_name||o.shop_name||''}</div>
       <div style="font-size:12px;color:var(--sub)">${o.type==='collect'?'🏪 Collect':'🚚 Delivery'}${o.collect_time?' · '+o.collect_time:''}</div></div>
     </div>
     ${statusTimeline(o.status||'pending')}
@@ -2617,7 +2606,7 @@ function openCardDet(cardId){
   var card=CARDS.find(function(c2){return c2.card_id===cardId});
   if(card)window._OPEN_CARD=card;
   const c=CARDS.find(x=>x.card_id===cardId||x.id===cardId);if(!c)return;
-  CUR_CARD=c;
+  CUR_CARD=c;window._OPEN_CARD=c;
   txt('cd-shop',c.shopName||c.name);txt('cd-pts',c.points||0);
   const rew=document.getElementById('cd-rew');
   if(c.threshold){
@@ -2863,7 +2852,7 @@ function openEditProf(){
   var p=document.getElementById('ep-p');if(p)p.value=(PROF.phone||'').replace(/^\+\d{1,3}/,'').trim();
   var dob=document.getElementById('ep-dob');if(dob)dob.value=PROF.date_of_birth||'';
   var addr=document.getElementById('ep-addr');if(addr)addr.value=PROF.address||'';
-  var ro=document.getElementById('ep-email-ro');if(ro)ro.textContent=UEMAIL||PROF.email||'—';
+  var ro=document.getElementById('ep-email-ro');if(ro)ro.textContent=UEMAIL||PROF.email||'—';var addr=document.getElementById('ep-addr');if(addr)addr.value=PROF.address||'';
   var cc=document.getElementById('ep-cc');
   if(cc&&PROF.phone){if(PROF.phone.startsWith('+91'))cc.value='+91';else if(PROF.phone.startsWith('+1'))cc.value='+1';else if(PROF.phone.startsWith('+353'))cc.value='+353';else cc.value='+44';}
   omo('editProfMo');
@@ -3006,7 +2995,7 @@ function exportReceiptsCSV(){
 }
 function saveReceipt(orderId){
   const o=ORDERS.find(x=>x.id===orderId);if(!o){T('Order not found');return}
-  post('receipts',{user_id:UID,merchant_name:o.product_name?'Order: '+o.product_name:'Receipt',order_id:o.id,items:(o.product_name||'')+' x'+(o.quantity||1),total:o.total||0,receipt_no:'RCP-'+(o.id||'').slice(0,8).toUpperCase(),created_at:Date.now()})
+  post('receipts',{user_id:UID,merchant_id:o.merchant_id||null,merchant_name:o.merchant_name||(o.product_name?'Order: '+o.product_name:'Receipt'),shop_name:o.merchant_name||null,order_id:o.id,items:(o.product_name||'')+' x'+(o.quantity||1),total:o.total||0,vat:parseFloat(((o.total||0)*0.2/1.2).toFixed(2)),payment_method:'online',receipt_no:'RCP-'+(o.id||'').slice(0,8).toUpperCase(),created_at:Date.now()})
   .then(()=>T('\ud83e\uddfe Receipt saved to archive!')).catch(()=>T('Save failed'));
 }
 
@@ -3052,17 +3041,38 @@ async function uploadReceiptImg(file){
 async function scanReceipt(input){
   const file=input.files[0];if(!file)return;
   input.value='';
-  if(file.size>5*1024*1024){T('Max 5MB image');return}
+  if(file.size>5*1024*1024){T('Max 5MB — please use a smaller image','error');return;}
   if(!(await receiptLimitOK()))return;
-  T('📷 Uploading receipt...');
+  // Show quick-entry sheet instead of prompt()
+  var mo=document.createElement('div');mo.className='mo on';
+  var _rcTs=Date.now();
+  var _rcHtml=['<div class="mo-box">'];
+  _rcHtml.push('<div class="mo-head"><span class="mo-title">Save Receipt</span><button class="mo-x" id="rc-close-btn">X</button></div>');
+  _rcHtml.push('<div class="fl"><label>Shop name</label><input class="fi" id="rc-shop" placeholder="e.g. Tesco, Boots..."></div>');
+  _rcHtml.push('<div class="fl"><label>Total (£)</label><input class="fi" id="rc-total" type="number" step="0.01" min="0" placeholder="0.00"></div>');
+  _rcHtml.push('<div class="fl"><label>Date</label><input class="fi" id="rc-date" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div>');
+  _rcHtml.push('<div style="background:#f0fdf4;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#065f46">Uploading image...</div>');
+  _rcHtml.push('<button class="btn btn-p" style="width:100%" id="rc-save-btn">Save Receipt</button>');
+  _rcHtml.push('</div>');
+  mo.innerHTML=_rcHtml.join('');
+  document.body.appendChild(mo);
+  document.getElementById("rc-close-btn").onclick=function(){mo.remove();};
+  document.getElementById("rc-save-btn").onclick=function(){doSaveScannedReceipt(this,String(_rcTs));};
+  window._SCAN_UPLOAD=uploadReceiptImg(file).catch(function(){return null;});
+}
+async function doSaveScannedReceipt(btn,ts){
+  btn.disabled=true;btn.textContent='Saving...';
+  const shop=(document.getElementById('rc-shop')||{}).value||'Scanned receipt';
+  const total=parseFloat((document.getElementById('rc-total')||{}).value||0)||0;
+  const dateVal=(document.getElementById('rc-date')||{}).value||new Date().toISOString().slice(0,10);
+  const created=new Date(dateVal).getTime()||Date.now();
+  const url=await(window._SCAN_UPLOAD||Promise.resolve(null));
+  const now=new Date(created);
   try{
-    const url=await uploadReceiptImg(file);
-    const shop=prompt('Shop name on the receipt? (optional)','')||'Scanned receipt';
-    const totalStr=prompt('Total amount £? (optional)','')||'0';
-    const now=new Date();
-    await post('receipts',{user_id:UID,merchant_name:shop,items:'📷 Scanned '+now.toLocaleDateString()+' '+now.toLocaleTimeString().slice(0,5),total:parseFloat(totalStr)||0,receipt_no:'SCAN-'+Date.now().toString(36).toUpperCase(),image_url:url,created_at:Date.now()});
-    T('✅ Receipt saved with date & time!');loadReceipts();
-  }catch(e){T('⚠️ Upload failed — check storage bucket');}
+    await post('receipts',{user_id:UID,merchant_name:shop,shop_name:shop,items:'📷 Scanned '+now.toLocaleDateString('en-GB')+' '+now.toLocaleTimeString().slice(0,5),total:total,receipt_no:'SCAN-'+ts.toString(36).toUpperCase(),image_url:url||null,created_at:created});
+    btn.closest('.mo').remove();
+    T('✅ Receipt saved!','success');loadReceipts();
+  }catch(e){btn.disabled=false;btn.textContent='💾 Save Receipt';T('⚠️ Save failed — check connection','error');}
 }
 
 // ===== DIGITAL WALLET CONNECT (Apple Pay / Google Pay) =====
@@ -3145,6 +3155,7 @@ function goTab(n){
   
   // ═══ Tab handlers ═══
   if(n==='orders'){setTimeout(function(){purchTab('all');},100);}
+  if(n==='cards'){setTimeout(function(){fCards('n');if(typeof renderAllCards==='function')renderAllCards();},80);}
   if(n==='shop'){updateMyShops();loadStashloProd();loadNearbyStrip();loadAllMerchants();}
   if(n==='inbox')loadInbox();
   if(n==='offers'){setTimeout(function(){if(typeof rwTab==='function')rwTab('scratch');loadMyRewards();},100);}
