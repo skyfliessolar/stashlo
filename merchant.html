@@ -316,6 +316,19 @@ html,body{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
   background: rgba(255,255,255,.88) !important;
   border-top: 1px solid rgba(99,102,241,.1) !important;
 }
+
+/* ═══ SCREEN HEIGHT FIX — prevent page body scroll ═══ */
+#app { position: fixed; inset: 0; overflow: hidden; }
+.screen { 
+  position: absolute !important; 
+  inset: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  display: none !important;
+  padding-bottom: 80px !important;
+}
+.screen.on { display: block !important; }
+body { overflow: hidden !important; height: 100vh !important; }
 </style>
 </head>
 <body>
@@ -1402,13 +1415,14 @@ function markMsgsRead(){txt("m-inbox-lab","Inbox")}
 
 function switchTab(name){
   if(!document.getElementById(name+'-screen')){T('That section is coming soon');name='overview';}
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
+  document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("on");s.scrollTop=0;});
   document.querySelectorAll(".nb").forEach(b=>b.classList.remove("on"));
   const sc=document.getElementById(name+"-screen");if(sc){
     sc.classList.add("on");
-    // Animate all screens slide from bottom
+    sc.scrollTop=0;
+    try{window.scrollTo(0,0);}catch(e){}
     if(window.anime){
-      try{anime({targets:sc,translateY:[20,0],opacity:[0,1],duration:280,easing:'cubicBezier(.2,.8,.25,1)'});}catch(e){}
+      try{anime({targets:sc,translateY:[12,0],opacity:[0,1],duration:260,easing:'cubicBezier(.2,.8,.25,1)'});}catch(e){}
     }
   }
   const nb=document.getElementById("nb-"+name);if(nb){nb.classList.add("on");const nav=document.querySelector(".bottomnav");if(nav)setTimeout(()=>nb.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"}),0)}
