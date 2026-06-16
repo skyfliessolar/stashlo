@@ -3159,6 +3159,7 @@ function goTab(n){
   if(scr&&typeof anime==='function'){
     try{anime({targets:scr,opacity:[0,1],translateY:[8,0],duration:220,easing:'cubicBezier(.2,.8,.25,1)'});}catch(e){}
   }
+  setTimeout(function(){if(typeof populateHome==="function")populateHome();},800);
 }
 
 // ===== STASHLO 3D THEME ENGINE (admin-controlled via Supabase app_settings) =====
@@ -3677,6 +3678,198 @@ function fixCustLayout(){
 }
 fixCustLayout();
 setTimeout(fixCustLayout,500);
+
+
+// ═══ EXTRA STUBS ═══
+function loadShops(){loadAllMerchants();}
+
+// ═══════════════════════════════════════════════════════════
+// RESTORED FUNCTIONS — claimScratch, redeemGiftCard, applyPromo, populateHome
+// ═══════════════════════════════════════════════════════════
+
+function claimScratch(){
+  var inp=document.getElementById('scratch-in');
+  var res=document.getElementById('scratch-result');
+  var code=(inp?inp.value:'').trim().toUpperCase();
+  if(!code){T('Enter a scratch code','error');return;}
+  if(res)res.innerHTML='<span style="opacity:.7">⏳ Checking...</span>';
+  fetch(SU+'/rest/v1/scratch_codes?code=eq.'+encodeURIComponent(code)+'&limit=1',{
+    headers:{apikey:SK,Authorization:'Bearer '+(TOK||SK)}
+  }).then(function(r){return r.json();}).then(function(d){
+    var sc=Array.isArray(d)&&d[0];
+    if(!sc){
+      if(res)res.innerHTML='<span style="color:#f87171">❌ Code not recognised — check spelling</span>';
+      T('Code not recognised','error');return;
+    }
+    if(sc.claimed_by){
+      if(res)res.innerHTML='<span style="color:#fbbf24">'+(sc.claimed_by===UID?'✅ Already claimed by you':'❌ Already claimed')+'</span>';return;
+    }
+    if(sc.expiry&&Date.now()>sc.expiry){
+      if(res)res.innerHTML='<span style="color:#f87171">⌛ Expired</span>';return;
+    }
+    fetch(SU+'/rest/v1/scratch_codes?id=eq.'+sc.id,{
+      method:'PATCH',
+      headers:{apikey:SK,Authorization:'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({claimed_by:UID,claimed_at:Date.now(),status:'claimed'})
+    }).then(function(r){
+      if(r.ok||r.status===204){
+        var prize=sc.reward||'Prize';
+        if(res)res.innerHTML='<span style="color:#34d399">🎉 '+prize+' — claimed! Admin will approve.</span>';
+        T('🎉 '+prize+' claimed!','success');
+        if(inp)inp.value='';
+        try{navigator.vibrate&&navigator.vibrate([10,50,20]);}catch(e){}
+        setTimeout(function(){loadMyScratch&&loadMyScratch();},500);
+      }else{if(res)res.innerHTML='<span style="color:#f87171">Claim failed — try again</span>';}
+    }).catch(function(){if(res)res.innerHTML='<span style="color:#f87171">Connection error</span>';});
+  }).catch(function(){if(res)res.innerHTML='<span style="color:#f87171">Could not check code</span>';});
+}
+
+function redeemGiftCard(){
+  var inp=document.getElementById('gc-in');
+  var res=document.getElementById('gc-result');
+  var code=(inp?inp.value:'').trim().toUpperCase();
+  if(!code){T('Enter gift card code','error');return;}
+  if(res)res.textContent='⏳ Checking...';
+  fetch(SU+'/rest/v1/gift_cards?code=eq.'+encodeURIComponent(code)+'&limit=1',{
+    headers:{apikey:SK,Authorization:'Bearer '+(TOK||SK)}
+  }).then(function(r){return r.json();}).then(function(d){
+    var gc=Array.isArray(d)&&d[0];
+    if(!gc){if(res)res.innerHTML='<span style="color:#f87171">❌ Gift card not found</span>';return;}
+    if(gc.redeemed_by){if(res)res.innerHTML='<span style="color:#fbbf24">'+(gc.redeemed_by===UID?'Already redeemed by you':'Already used')+'</span>';return;}
+    var val=parseFloat(gc.value||0);
+    fetch(SU+'/rest/v1/gift_cards?id=eq.'+gc.id,{
+      method:'PATCH',
+      headers:{apikey:SK,Authorization:'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({redeemed_by:UID,redeemed_at:Date.now()})
+    }).then(function(r){
+      if(r.ok||r.status===204){
+        if(res)res.innerHTML='<span style="color:#34d399">🎁 £'+val.toFixed(2)+' added to your Stashlo Credit!</span>';
+        T('🎁 £'+val.toFixed(2)+' credit added!','success');
+        if(inp)inp.value='';
+        // Update user credit
+        var newCredit=(parseFloat(PROF&&PROF.sl_credit||0)+val);
+        if(PROF)PROF.sl_credit=newCredit;
+        fetch(SU+'/rest/v1/users?id=eq.'+UID,{method:'PATCH',headers:{apikey:SK,Authorization:'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({sl_credit:newCredit})}).catch(function(){});
+        var cb=document.getElementById('gc-credit-bal');if(cb)cb.textContent='£'+newCredit.toFixed(2);
+        var rw=document.getElementById('rw-credit');if(rw)rw.textContent='Credit: £'+newCredit.toFixed(2);
+      }else{if(res)res.innerHTML='<span style="color:#f87171">Redemption failed</span>';}
+    }).catch(function(){if(res)res.innerHTML='<span style="color:#f87171">Connection error</span>';});
+  }).catch(function(){if(res)res.innerHTML='<span style="color:#f87171">Could not check code</span>';});
+}
+
+function applyPromo(){
+  var inp=document.getElementById('promo-in');
+  var res=document.getElementById('promo-result');
+  var code=(inp?inp.value:'').trim().toUpperCase();
+  if(!code){T('Enter promo code','error');return;}
+  if(res)res.textContent='⏳ Checking...';
+  fetch(SU+'/rest/v1/promo_codes?code=eq.'+encodeURIComponent(code)+'&limit=1',{
+    headers:{apikey:SK,Authorization:'Bearer '+(TOK||SK)}
+  }).then(function(r){return r.json();}).then(function(d){
+    var pc=Array.isArray(d)&&d[0];
+    if(!pc){if(res)res.innerHTML='<span style="color:#f87171">❌ Code not recognised</span>';return;}
+    if(pc.used_by&&pc.used_by!==UID){if(res)res.innerHTML='<span style="color:#f87171">❌ Already used</span>';return;}
+    if(pc.expiry&&Date.now()>pc.expiry){if(res)res.innerHTML='<span style="color:#f87171">⌛ Expired</span>';return;}
+    fetch(SU+'/rest/v1/promo_codes?id=eq.'+pc.id,{
+      method:'PATCH',
+      headers:{apikey:SK,Authorization:'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({used_by:UID,used_at:Date.now()})
+    }).then(function(){
+      var val=parseFloat(pc.value||0);
+      var msg='🎉 '+(pc.reward||'Promo applied')+(val?' — '+( pc.type==='pct'?val+'% off':'£'+val.toFixed(2)+' off'):'')+'!';
+      if(res)res.innerHTML='<b style="color:#34d399">'+msg+'</b>';
+      T(msg,'success');
+      if(inp)inp.value='';
+    }).catch(function(){if(res)res.innerHTML='<span style="color:#f87171">Failed</span>';});
+  }).catch(function(){if(res)res.innerHTML='<span style="color:#f87171">Connection error</span>';});
+}
+
+function populateHome(){
+  // Greeting
+  var h=new Date().getHours();
+  var gr=document.getElementById('home-greeting');
+  if(gr)gr.textContent=h<12?'Good morning ☀️':h<17?'Good afternoon 🌤️':'Good evening 🌙';
+  var hn=document.getElementById('home-name');
+  if(hn&&PROF)hn.textContent=(PROF.display_name||PROF.name||'My Wallet');
+  // SL ID
+  var slid=document.getElementById('home-slid');
+  if(slid&&PROF&&PROF.loyalty_id)slid.textContent=PROF.loyalty_id;
+  // Points
+  var pts=document.getElementById('hs-p');
+  if(pts&&typeof CARDS!=='undefined'){
+    var total=CARDS.reduce(function(a,card){return a+(card.points||0);},0);
+    pts.textContent=total.toLocaleString();
+  }
+  var hc=document.getElementById('hs-c');
+  if(hc&&typeof CARDS!=='undefined')hc.textContent=CARDS.length;
+  // Orders count
+  var ho=document.getElementById('hs-o');
+  if(ho&&typeof ORDERS!=='undefined')ho.textContent=ORDERS.length;
+  // Cards strip
+  var strip=document.getElementById('home-cards-strip');
+  if(strip&&typeof CARDS!=='undefined'&&CARDS.length){
+    strip.innerHTML=CARDS.slice(0,5).map(function(card){
+      var bs=typeof brandStyle==='function'?brandStyle(card.shopName||card.name||''):{col1:'#6366F1',col2:'#8B5CF6',emoji:'💳'};
+      return '<div onclick="openCardDet(this.dataset.cid)" data-cid="'+card.card_id+'" style="flex-shrink:0;width:150px;height:86px;background:linear-gradient(135deg,'+bs.col1+','+bs.col2+');border-radius:16px;padding:12px;cursor:pointer;color:#fff;position:relative;overflow:hidden">'
+        +'<div style="font-size:11px;font-weight:800;opacity:.9">'+(card.shopName||card.name||'Card')+'</div>'
+        +'<div style="position:absolute;bottom:10px;left:12px;font-size:16px;font-weight:800">'+(card.points||0)+' pts</div>'
+        +'<div style="position:absolute;top:8px;right:8px;font-size:16px">'+(bs.emoji||'💳')+'</div>'
+        +'</div>';
+    }).join('')+'<div onclick="goTab(\'cards\')" style="flex-shrink:0;width:80px;height:86px;background:var(--card);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:2px dashed var(--border)"><div style="font-size:20px">+</div><div style="font-size:10px;color:var(--sub);font-weight:700;margin-top:3px">Add</div></div>';
+  }
+  // Recent transactions
+  var txEl=document.getElementById('home-txns');
+  if(txEl&&UID){
+    fetch(SU+'/rest/v1/receipts?user_id=eq.'+UID+'&deleted=not.is.true&order=created_at.desc&limit=3',{
+      headers:{apikey:SK,Authorization:'Bearer '+(TOK||SK)}
+    }).then(function(r){return r.json();}).then(function(d){
+      var ss=Array.isArray(d)?d:[];
+      txEl.innerHTML=ss.length?ss.map(function(s){
+        var name=s.merchant_name||s.shop_name||'Purchase';
+        var amt='£'+parseFloat(s.total||0).toFixed(2);
+        var dt=new Date(s.created_at||Date.now()).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+        return '<div onclick="goTab(\'orders\')" style="background:var(--card);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer">'
+          +'<div style="width:36px;height:36px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🧾</div>'
+          +'<div style="flex:1"><div style="font-size:13px;font-weight:700">'+name+'</div>'
+          +'<div style="font-size:11px;color:var(--sub)">'+dt+'</div></div>'
+          +'<div style="font-size:13px;font-weight:800;color:var(--purple)">'+amt+' ›</div></div>';
+      }).join('')+'<div onclick="goTab(\'orders\')" style="text-align:center;color:var(--purple);font-size:12px;font-weight:700;padding:8px;cursor:pointer">See all →</div>'
+      :'<div style="text-align:center;color:var(--sub);font-size:13px;padding:12px">No purchases yet</div>';
+    }).catch(function(){txEl.innerHTML='';});
+  }
+}
+
+function requestHuman(){
+  T('Connecting you to a human agent...','success');
+  setTimeout(function(){
+    var msg=document.createElement('div');
+    msg.className='bubble bubble-admin';
+    msg.style.cssText='padding:10px 14px;background:var(--purple-bg);border-radius:12px;font-size:13px;margin:8px 0';
+    msg.textContent='Hi! A Stashlo support agent will be with you shortly.';
+    var el=document.getElementById('support-msgs');
+    if(el){el.appendChild(msg);el.scrollTop=el.scrollHeight;}
+  },1000);
+}
+
+function walletAction(type){
+  if(type==='add')T('Add card coming soon','info');
+  else if(type==='pay')goTab('pay');
+  else T('Coming soon','info');
+}
+
+function manualBrandAdd(){
+  var name=prompt('Enter card name (e.g. Nectar, Tesco Clubcard):');
+  if(!name)return;
+  goTab('cards');
+  setTimeout(function(){
+    var addBtn=document.getElementById('add-card-btn');
+    if(addBtn)addBtn.click();
+  },300);
+}
+
+function scanCardToAdd(){
+  T('Camera scan to add card — coming soon','info');
+}
 
 </script>
 </body>
