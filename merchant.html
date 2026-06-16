@@ -2169,9 +2169,11 @@ function slOverlay(inner,maxw){
   document.body.scrollTop=0;
   var ov=document.createElement('div');
   ov.className='sl-ov';
-  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,10,20,.72);z-index:990;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
+  // Reset active screen scroll first
+  try{document.querySelectorAll('.screen.on').forEach(function(s){s.scrollTop=0;});}catch(e){}
+  ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(5,5,15,.80);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:1990;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
   var box=document.createElement('div');
-  box.style.cssText='background:#fff;width:100%;max-width:'+(maxw||440)+'px;border-radius:20px;padding:20px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 20px 60px rgba(0,0,0,.5)';
+  box.style.cssText='background:#fff;width:100%;max-width:'+(maxw||440)+'px;border-radius:20px;padding:20px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative;z-index:2000';
   box.innerHTML=inner;ov.appendChild(box);
   ov.addEventListener('click',function(e){if(e.target===ov)ov.remove()});
   document.body.appendChild(ov);
