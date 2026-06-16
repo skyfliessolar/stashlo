@@ -3871,6 +3871,80 @@ function scanCardToAdd(){
   T('Camera scan to add card — coming soon','info');
 }
 
+
+// ═══ MISSING STUBS — restored ═══
+
+function loadMyScratch(){
+  var el=document.getElementById('scratch-mine');
+  if(!el||!UID)return;
+  fetch(SU+'/rest/v1/scratch_codes?claimed_by=eq.'+UID+'&order=claimed_at.desc&limit=10',{
+    headers:{apikey:SK,Authorization:'Bearer '+(TOK||SK)}
+  }).then(function(r){return r.json();}).then(function(d){
+    var items=Array.isArray(d)?d:[];
+    el.innerHTML=items.length
+      ?'<div style="font-size:12px;font-weight:800;color:var(--sub);margin-bottom:6px">YOUR CLAIMS</div>'
+        +items.map(function(sc){
+          var status=sc.status==='approved'?'✅ Approved':sc.status==='claimed'?'⏳ Pending admin':'🎉 '+sc.status;
+          return '<div style="background:var(--card);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+            +'<div><div style="font-size:13px;font-weight:700">'+(sc.reward||'Prize')+'</div>'
+            +'<div style="font-size:11px;color:var(--sub)">'+sc.code+'</div></div>'
+            +'<div style="font-size:12px;font-weight:700;color:var(--purple)">'+status+'</div></div>';
+        }).join('')
+      :'<div style="text-align:center;color:var(--sub);font-size:13px;padding:12px">No scratch codes claimed yet</div>';
+  }).catch(function(){el.innerHTML='';});
+}
+
+function loadNearbyStrip(){
+  // Load nearby merchants into the shop strip
+  var el=document.getElementById('nearby-strip');
+  if(!el)return;
+  get('merchants','active=eq.true&limit=6').then(function(d){
+    var ms=Array.isArray(d)?d:[];
+    if(!ms.length){el.style.display='none';return;}
+    el.style.display='flex';
+    el.innerHTML=ms.map(function(s){
+      return '<div onclick="openShopById(\''+s.id+'\')" style="flex-shrink:0;width:100px;background:var(--card);border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer;box-shadow:var(--sh)">'
+        +'<div style="font-size:24px">'+(s.logo_emoji||'🏪')+'</div>'
+        +'<div style="font-size:11px;font-weight:700;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(s.name||'Shop')+'</div>'
+        +'</div>';
+    }).join('');
+  }).catch(function(){});
+}
+
+function checkJobApprovalToast(){
+  // Check if user has any approved job notifications
+  if(!UID||!JOB_UNLOCKS||!JOB_UNLOCKS.length)return;
+  var newApproval=JOB_UNLOCKS.find(function(u){
+    return u.status==='approved'&&!u.notified;
+  });
+  if(newApproval){
+    T('✅ Your job application was approved!','success');
+    // Mark as notified
+    fetch(SU+'/rest/v1/job_unlocks?id=eq.'+newApproval.id,{
+      method:'PATCH',
+      headers:{apikey:SK,Authorization:'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({notified:true})
+    }).catch(function(){});
+  }
+}
+
+function cacheCards(){
+  // Cache cards to localStorage for offline access
+  try{
+    if(CARDS&&CARDS.length){
+      localStorage.setItem('sl_cards_'+UID, JSON.stringify(CARDS));
+    }
+  }catch(e){}
+}
+
+function myRewards(){goTab('offers');}
+function openMyQRv2(){
+  var qr=document.getElementById('my-qr-mo');
+  if(qr){omo('my-qr-mo');}else{
+    T('Your QR: '+(PROF&&PROF.loyalty_id||'SL-···'),'success');
+  }
+}
+
 </script>
 </body>
 </html>
