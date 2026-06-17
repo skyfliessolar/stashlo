@@ -411,7 +411,161 @@ body { overflow: hidden !important; height: 100vh !important; }
   #app,.app-wrap{max-width:430px;border-radius:24px;overflow:hidden;min-height:90vh;margin:24px auto;position:relative;}
 }
 
+
+/* ╔══════════════════════════════════════════════════════════╗
+   ║  STASHLO DESIGN SYSTEM — Flutter/Material You v2        ║
+   ╚══════════════════════════════════════════════════════════╝ */
+
+/* ── Core tokens ── */
+:root{
+  --ripple-light:rgba(255,255,255,.38);
+  --ripple-dark:rgba(0,0,0,.10);
+  --spring:cubic-bezier(.2,.8,.25,1);
+  --snap:cubic-bezier(.4,0,.2,1);
+}
+
+/* ── Ripple base ── */
+.sl-btn{position:relative;overflow:hidden;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;user-select:none;
+  transform:translateZ(0);will-change:transform;}
+.sl-btn:active{transform:scale(.96) translateZ(0);}
+.sl-ripple-ring{
+  position:absolute;border-radius:50%;
+  background:var(--ripple-light);
+  transform:scale(0);opacity:1;
+  pointer-events:none;
+  animation:slRipple .55s var(--snap) forwards;
+}
+.sl-ripple-ring.dark{background:var(--ripple-dark);}
+@keyframes slRipple{
+  60%{opacity:.6;}
+  100%{transform:scale(4.5);opacity:0;}
+}
+
+/* ── Haptic press effect ── */
+@keyframes hapticPress{
+  0%{transform:scale(1);}
+  40%{transform:scale(.95);}
+  70%{transform:scale(1.02);}
+  100%{transform:scale(1);}
+}
+.sl-btn:active{animation:hapticPress .18s var(--spring);}
+
+/* ── Department tiles (retail EPOS) ── */
+.dept-tile{
+  flex:0 0 auto;color:#fff;border-radius:20px;padding:12px 14px;
+  font-size:24px;font-weight:900;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  min-width:70px;text-align:center;position:relative;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+  box-shadow:0 6px 20px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.22);
+  transition:transform .12s var(--spring),box-shadow .12s,filter .1s;
+  will-change:transform;
+}
+.dept-tile span{font-size:10px;font-weight:800;opacity:.9;letter-spacing:.5px;text-transform:uppercase;}
+.dept-tile:hover{filter:brightness(1.1);transform:translateY(-3px);}
+.dept-tile:active{transform:scale(.9);box-shadow:0 2px 6px rgba(0,0,0,.2);}
+.dept-tile.active-dept{box-shadow:0 0 0 3px #fff,0 6px 20px rgba(0,0,0,.3);filter:brightness(1.12);}
+
+/* ── Bubble particles ── */
+@keyframes bubRise{
+  0%{transform:translateY(0) scale(.7);opacity:.75;}
+  60%{transform:translateY(-20px) scale(1.1);opacity:.35;}
+  100%{transform:translateY(-40px) scale(.4);opacity:0;}
+}
+.tile-bubble{
+  position:absolute;width:7px;height:7px;border-radius:50%;
+  background:rgba(255,255,255,.55);pointer-events:none;bottom:8px;left:32%;
+  animation:bubRise 1.6s ease-out infinite;
+}
+.tile-bubble:nth-child(2){left:54%;animation-delay:.55s;width:5px;height:5px;}
+.tile-bubble:nth-child(3){left:42%;animation-delay:1.1s;width:4px;height:4px;}
+
+/* ── POS product cards ── */
+.pos-card{
+  background:var(--white);border:1.5px solid var(--bg2);border-radius:18px;
+  padding:13px 8px;cursor:pointer;text-align:center;position:relative;overflow:hidden;
+  transition:transform .12s var(--spring),box-shadow .12s,border-color .15s;
+  -webkit-tap-highlight-color:transparent;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+.pos-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(99,102,241,.2);border-color:#6366F1;}
+.pos-card:active{transform:scale(.93);}
+
+/* ── Smoke / vape particles ── */
+@keyframes smokePuff{
+  0%{transform:translateY(0) scale(.7);opacity:.6;}
+  100%{transform:translateY(-36px) scale(2.2);opacity:0;}
+}
+.smoke-particle{
+  position:absolute;width:7px;height:7px;border-radius:50%;
+  background:rgba(210,210,230,.72);pointer-events:none;bottom:3px;left:26%;
+  animation:smokePuff 1.4s ease-out infinite;
+}
+.smoke-particle:nth-child(2){left:54%;animation-delay:.55s;width:5px;height:5px;}
+.smoke-particle:nth-child(3){left:38%;animation-delay:1.05s;width:4px;height:4px;}
+
+/* ── Nav items ── */
+.nb,.nav-item{transition:transform .12s var(--spring),color .12s;}
+.nb:active,.nav-item:active{transform:scale(.85);}
+@keyframes navPop{
+  0%{transform:scale(.85);}
+  60%{transform:scale(1.12);}
+  100%{transform:scale(1);}
+}
+.nb.on,.nav-item.on{animation:navPop .22s var(--spring);}
+
+/* ── Bottom nav iOS safe ── */
+.bottom-nav,.bottomnav{
+  padding-bottom:env(safe-area-inset-bottom,0px)!important;
+  padding-top:6px!important;
+  min-height:56px;
+  box-sizing:content-box!important;
+  z-index:300!important;
+}
+
+/* ── Top header iOS safe ── */
+.app-head,.topbar{
+  padding-top:max(env(safe-area-inset-top,0px),16px)!important;
+}
+
+/* ── Screen safe padding ── */
+.screen{
+  padding-bottom:calc(72px + env(safe-area-inset-bottom,0px) + 12px)!important;
+}
+
+/* ── Geo popup ── */
+#geo-popup{
+  animation:geoSlide .38s var(--spring);
+}
+@keyframes geoSlide{
+  from{transform:translateY(120%) scale(.95);opacity:0;}
+  to{transform:translateY(0) scale(1);opacity:1;}
+}
+
+/* ── Modal slide ── */
+.mo.on .mo-box{animation:moSlide .3s var(--spring);}
+@keyframes moSlide{
+  from{transform:translateY(60px);opacity:0;}
+  to{transform:translateY(0);opacity:1;}
+}
+
+/* ── Responsive / desktop ── */
+@media(min-width:600px){
+  #app,.app-wrap{max-width:430px;margin:0 auto;box-shadow:0 0 80px rgba(0,0,0,.14);min-height:100vh;}
+  .bottom-nav,.bottomnav{
+    left:50%!important;right:auto!important;
+    transform:translateX(-50%)!important;
+    width:430px!important;
+  }
+}
+@media(min-width:1024px){
+  body{background:#e8eaf6;}
+  #app,.app-wrap{border-radius:28px;overflow:hidden;margin:20px auto;}
+}
+
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
 </head>
 <body>
 
@@ -2739,33 +2893,63 @@ function loadLoyaltySettings(){return loadMerchant();}
 function renderBackOffice(){if(typeof patchPOSLayout==='function')patchPOSLayout();}
 function loadBackOffice(){renderBackOffice();}
 
-// ═══ FLUTTER RIPPLE ENGINE ═══
-(function(){
-  function mkRipple(el,e,dark){
-    var r=document.createElement('span');
-    r.className='sl-ripple'+(dark?' sl-ripple-dark':'');
-    var rect=el.getBoundingClientRect();
-    var cx=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
-    var cy=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
-    var sz=Math.max(rect.width,rect.height)*2;
-    r.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+(cx-sz/2)+'px;top:'+(cy-sz/2)+'px;';
+/* ═══ ANIME.JS FLUTTER RIPPLE + HAPTIC ENGINE ═══ */
+(function initSLAnimations(){
+  // ── Ripple factory ──
+  function spawnRipple(el, e){
+    var rect = el.getBoundingClientRect();
+    var px = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    var py = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    var sz = Math.max(rect.width, rect.height) * 2.2;
+    var r = document.createElement('span');
+    r.className = 'sl-ripple-ring';
+    var bg = window.getComputedStyle(el).backgroundColor;
+    var isDark = /rgb((?:[0-9]+,s*){2}[0-9]+)/.test(bg) &&
+      (function(s){var m=s.match(/(d+),s*(d+),s*(d+)/);return m&&(0.299*m[1]+0.587*m[2]+0.114*m[3])<100;})(bg);
+    if(isDark) r.classList.add('dark');
+    r.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+(px-sz/2)+'px;top:'+(py-sz/2)+'px;';
     el.appendChild(r);
-    setTimeout(function(){r.remove();},520);
+    setTimeout(function(){r.remove();}, 580);
   }
-  document.addEventListener('pointerdown',function(e){
-    var el=e.target&&e.target.closest&&e.target.closest('.sl-btn,.dept-tile,.nb,.nav-item,.ic,.btn-xs');
-    if(!el)return;
-    var dark=!el.classList.contains('dept-tile')&&!el.style.background?.includes('gradient');
-    mkRipple(el,e,dark);
-  },{passive:true});
-  // Add sl-btn to all buttons not already styled
+
+  // ── Haptic via vibrate API ──
+  function haptic(ms){ try{ navigator.vibrate && navigator.vibrate(ms||6); }catch(e){} }
+
+  // ── Global pointer handler ──
+  document.addEventListener('pointerdown', function(e){
+    var el = e.target && e.target.closest &&
+      e.target.closest('.sl-btn,.dept-tile,.nb,.nav-item,.ic,.btn-xs,.pos-card,.lc');
+    if(!el) return;
+    spawnRipple(el, e);
+    haptic(6);
+
+    // anime.js press for dept tiles
+    if(window.anime && el.classList.contains('dept-tile')){
+      anime({targets:el,scale:[1,.88,1.04,1],duration:280,easing:'spring(1,80,10,0)'});
+    }
+    // anime.js press for nav items
+    if(window.anime && (el.classList.contains('nb')||el.classList.contains('nav-item'))){
+      anime({targets:el,scale:[1,.82,1.08,1],duration:240,easing:'spring(1,90,12,0)'});
+    }
+  }, {passive:true});
+
+  // ── Auto-upgrade all buttons ──
   function upgradeBtns(){
-    document.querySelectorAll('button:not(.sl-btn),a.btn:not(.sl-btn)').forEach(function(b){
-      if(!b.classList.contains('sl-btn'))b.classList.add('sl-btn');
+    document.querySelectorAll('button:not(.sl-btn), a.btn:not(.sl-btn)').forEach(function(b){
+      b.classList.add('sl-btn');
     });
   }
-  setTimeout(upgradeBtns,400);
-  document.addEventListener('DOMContentLoaded',upgradeBtns);
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', upgradeBtns);
+  } else {
+    setTimeout(upgradeBtns, 100);
+  }
+  // Re-upgrade after dynamic renders
+  var _orig_innerHTML = Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');
+  // MutationObserver for dynamic buttons
+  var mo = new MutationObserver(function(){setTimeout(upgradeBtns,50);});
+  if(document.body) mo.observe(document.body,{childList:true,subtree:true});
+  else document.addEventListener('DOMContentLoaded',function(){mo.observe(document.body,{childList:true,subtree:true});});
 })();
 </script>
 
