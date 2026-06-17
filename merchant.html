@@ -866,7 +866,6 @@ body { overflow: hidden !important; height: 100vh !important; }
         <div onclick="filterDept('car')" data-dept="car" class="sl-btn dept-tile" style="background:linear-gradient(135deg,#1f2937,#374151)">🚗<div class="tile-bubble"></div><div class="tile-bubble"></div><span>Car</span></div>
         <div onclick="filterDept('general')" data-dept="general" class="sl-btn dept-tile" style="background:linear-gradient(135deg,#0f172a,#1e293b)">✦<div class="tile-bubble"></div><span>All</span></div>
       </div>
-      </div>
       <div style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none" id="dept-keys"></div>
       <div id="pos-cats" style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none"></div>
       <div id="pos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:10px"></div>
@@ -2951,6 +2950,33 @@ function loadBackOffice(){renderBackOffice();}
   if(document.body) mo.observe(document.body,{childList:true,subtree:true});
   else document.addEventListener('DOMContentLoaded',function(){mo.observe(document.body,{childList:true,subtree:true});});
 })();
+
+// ── Missing function aliases ──
+function clearBasket(){posClear();}
+function posDiscount(pct){
+  if(!pct)pct=parseFloat(prompt('Discount % to apply:','10')||0);
+  if(!pct||pct<=0)return;
+  var el=document.getElementById('pos-disc');
+  if(!el)return;
+  var gross=parseFloat(txt('pos-total')||0)||0;
+  var amt=(gross*pct/100);
+  el.value=amt.toFixed(2);
+  renderBasket();
+  T('Discount '+pct+'% applied — £'+amt.toFixed(2),'success');
+}
+function posManualPrice(){openManualPrice();}
+function renderStock(){renderProducts();}
+function saveDepts(){editDepts();}
+function startBarcodeScanner(){openPOSScanner();}
+function delProd(id){
+  if(!confirm('Delete this product?'))return;
+  del('products','id=eq.'+id).then(function(){T('Deleted','success');loadProducts();}).catch(function(){T('Delete failed','error');});
+}
+function saveReceiptLimit(){
+  var v=((document.getElementById('admrcp-limit')||{}).value||'10');
+  pat('app_settings','key=eq.receipt_free_limit',{value:v}).then(function(){T('Limit saved','success');}).catch(function(){post('app_settings',{key:'receipt_free_limit',value:v},'key').then(function(){T('Limit saved','success');});});
+}
+function openCashCalc(){openModal('cashModal');var el=document.getElementById('cm-due');if(el)el.textContent='£'+((window._POS_DUE)||0).toFixed(2);}
 </script>
 
 </body>
