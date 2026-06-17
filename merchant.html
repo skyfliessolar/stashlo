@@ -2730,6 +2730,15 @@ function posRefundOpen(){
   posRefund(sale.id);
 }
 
+
+// ── Alias compatibility ──
+function loadMerchOrders(){return loadOrders();}
+function renderMerchOrders(){return renderOrders();}
+function saveLoyalty(){return saveSettings();}
+function loadLoyaltySettings(){return loadMerchant();}
+function renderBackOffice(){if(typeof patchPOSLayout==='function')patchPOSLayout();}
+function loadBackOffice(){renderBackOffice();}
+
 // ═══ FLUTTER RIPPLE ENGINE ═══
 (function(){
   function mkRipple(el,e,dark){
