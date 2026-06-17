@@ -1951,6 +1951,32 @@ let ARECEIPTS=[];
   setTimeout(upgradeBtns,400);
   document.addEventListener('DOMContentLoaded',upgradeBtns);
 })();
+// ── Admin alias compatibility ──
+function loadDashboard(){loadAll();}
+function renderDashboard(){renderActivity();}
+function approveMerch(id){openMerch(id);}
+function toggleMerchApproval(id,name,curr){
+  spat('merchants','id=eq.'+id,{approved:!curr}).then(function(){
+    T((curr?'Suspended':'Approved')+': '+name,'success');
+    logAudit(curr?'unapprove_merch':'approve_merch',name);
+    loadMerchants();
+  }).catch(function(){T('Failed','error');});
+}
+function loadUsers(){loadCustomers();}
+function renderUsers(){renderCustomers();}
+function givePoints(custId,email){quickGivePoints(custId,email);}
+function adminGivePoints(custId,email){quickGivePoints(custId,email);}
+function loadSupportTickets(){loadSupport();}
+function renderSupport(){loadSupport();}
+function sendBdayGift(uid,email){sendBirthdayOffer(uid,email);}
+function loadBirthdays(){loadBirthdayRequests();}
+function loadAdminBO(){switchTab('backoffice');}
+function renderAdminBO(){loadAdminReceipts();}
+function loadPromoCodes(){loadGiftCards();}
+function createPromoCode(){genGiftCards();}
+function loadScratchCodes(){loadScratchClaims();}
+function createScratchCode(){genScratch();}
+
 </script>
 </body>
 </html>
