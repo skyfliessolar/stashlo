@@ -57,7 +57,7 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 .nb-ico{font-size:18px;display:block;margin-bottom:2px}
 .nb-lab{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;display:block}
 
-.screen{display:none;padding:16px;padding-top:70px;padding-bottom:calc(80px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;animation:fi .2s}
+.screen{display:none;padding:16px;padding-top:70px;padding-bottom:calc(100px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;animation:fi .2s}
 .screen.on{display:block}
 @keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 
@@ -2793,32 +2793,42 @@ function openScanCustomer(){
 
 // ===== POS CUSTOMER LOOKUP =====
 function posScanCustQR(){
-  if(!('BarcodeDetector' in window)){posTypeCustId();return;}
-  var ov=document.createElement('div');
-  ov.id='pcs-ov';
-  ov.style.cssText='position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px';
-  var vid=document.createElement('video');vid.id='pcs-vid';vid.autoplay=true;vid.playsInline=true;vid.muted=true;
-  vid.style.cssText='width:270px;height:270px;object-fit:cover;border-radius:16px;border:3px solid #6366F1';
-  var lbl=document.createElement('div');lbl.style.cssText='color:#fff;font-size:14px;font-weight:800';lbl.textContent='📷 Scan Customer QR / Barcode';
-  var hint=document.createElement('div');hint.style.cssText='color:rgba(255,255,255,.6);font-size:12px';hint.textContent='Point at customer Stashlo app QR code';
-  var btnType=document.createElement('button');btnType.textContent='⌨️ Type ID instead';
-  btnType.style.cssText='background:#1e1b4b;color:#fff;border:none;border-radius:12px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer';
-  btnType.onclick=function(){closePCSOv();posTypeCustId();};
-  var btnCancel=document.createElement('button');btnCancel.textContent='✕ Cancel';
-  btnCancel.style.cssText='background:#ef4444;color:#fff;border:none;border-radius:12px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer';
-  btnCancel.onclick=closePCSOv;
-  ov.appendChild(lbl);ov.appendChild(vid);ov.appendChild(hint);ov.appendChild(btnType);ov.appendChild(btnCancel);
-  document.body.appendChild(ov);
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(stream){
-    window._pcsStream=stream;vid.srcObject=stream;
-    var bd=new BarcodeDetector({formats:['qr_code','code_128','ean_13','code_39']});
-    window._pcsSI=setInterval(function(){
-      if(!document.getElementById('pcs-ov')){clearInterval(window._pcsSI);return;}
-      bd.detect(vid).then(function(codes){
-        if(codes.length){clearInterval(window._pcsSI);closePCSOv();lookupTillCX(codes[0].rawValue);}
-      }).catch(function(){});
-    },400);
-  }).catch(function(){closePCSOv();posTypeCustId();});
+  var raw=prompt('Scan customer barcode (SL-XXXXXX):','');
+  if(!raw)return;
+  
+  // Query for customer in merchant_customers
+  fetch(SBURL+'/rest/v1/merchant_customers?or=(shop_barcode.eq.'+raw+',user_id.eq.'+raw+')',{headers:SBHEADERS})
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.length>0){
+        var cust=d[0];
+        POS.customer_id=cust.user_id;
+        POS.customer_name=cust.name;
+        POS.customer_phone=cust.phone;
+        docId('pos-cust-name').textContent='👤 '+cust.name+' ('+cust.phone+')';
+        T('✅ Customer found: '+cust.name,'success');
+      } else {
+        T('Customer not found. Create new?','warning');
+        var newName=prompt('Enter customer name:','');
+        if(newName) createPosCustomer(newName, raw);
+      }
+    })
+    .catch(e=>{T('Error scanning: '+e.message,'error');console.error(e);});
+}
+
+function createPosCustomer(name, barcode){
+  // Create user then merchant_customer
+  var userData={name:name,loyalty_id:'SL-'+Math.random().toString(36).substr(2,6).toUpperCase()};
+  fetch(SBURL+'/rest/v1/users',{method:'POST',headers:SBHEADERS,body:JSON.stringify(userData)})
+    .then(r=>r.json())
+    .then(users=>{
+      if(!users[0])throw new Error('User creation failed');
+      var mcData={merchant_id:MERCHANT.id,user_id:users[0].id,name:name,phone:'',shop_barcode:barcode,points:0};
+      return fetch(SBURL+'/rest/v1/merchant_customers',{method:'POST',headers:SBHEADERS,body:JSON.stringify(mcData)})
+        .then(r=>r.json())
+        .then(d=>{T('✅ Customer created!','success');posScanCustQR();});
+    })
+    .catch(e=>{T('Error: '+e.message,'error');});
 }
 function closePCSOv(){
   var ov=document.getElementById('pcs-ov');if(ov)ov.remove();

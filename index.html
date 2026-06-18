@@ -122,13 +122,13 @@ a{color:inherit;text-decoration:none}
 .head-badge{position:absolute;top:0;right:0;width:16px;height:16px;background:var(--red);border-radius:50%;font-size:9px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;display:none}
 
 /* SCREENS */
-.screen{display:none;padding-top:60px;padding-bottom:calc(72px + env(safe-area-inset-bottom,0px) + 16px);animation:fi .2s ease;min-height:calc(100vh - var(--head-h))}
+.screen{display:none;padding-top:60px;padding-bottom:calc(100px + env(safe-area-inset-bottom,0px));animation:fi .2s ease;min-height:calc(100vh - var(--head-h))}
 .screen.on{display:block}.screen.on[style*="flex-direction"]{display:flex}
 .screen.on.flex-screen{display:flex}
 @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
 /* BOTTOM NAV */
-.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(430px,100vw);background:var(--card);border-top:1px solid var(--border);display:flex;align-items:center;z-index:200;padding-bottom:env(safe-area-inset-bottom,0px);padding-top:4px;height:58px;box-sizing:content-box}
+.bottom-nav{position:fixed !important;bottom:0 !important;left:0 !important;right:0 !important;width:100% !important;z-index:99999 !important;
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;padding:6px 0;transition:color .15s;color:var(--sub);min-height:50px}
 .nb.on{color:var(--purple)}
 .nb-ico{font-size:20px;line-height:1}
@@ -1852,7 +1852,7 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
         <div id="ep-email-ro" style="font-size:14px;font-weight:600;margin-top:3px">—</div>
         <div style="font-size:11px;color:var(--sub);margin-top:2px">To change, contact support</div>
       </div>
-      <div class="fl"><label>Full Name</label><input class="fi" id="ep-n" type="text" placeholder="Your name"></div>
+      <div class="fl"><label>Full Name</label><input class="fi" id="ep-n" onblur="saveProf()" type="text" placeholder="Your name"></div>
       <div class="fl"><label>Display Name</label><input class="fi" id="ep-dn" type="text" placeholder="Nickname (optional)"></div>
       <div class="fl"><label>Phone</label>
         <div style="display:flex;gap:8px">
@@ -1862,8 +1862,8 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
           <input class="fi" id="ep-p" type="tel" placeholder="07700 900000" style="flex:1">
         </div>
       </div>
-      <div class="fl"><label>Date of Birth</label><input class="fi" id="ep-dob" type="date" max="2010-01-01"></div>
-      <div class="fl"><label>Home Address</label><textarea class="fi" id="ep-addr" rows="2" placeholder="1 High Street, London" style="resize:none"></textarea></div>
+      <div class="fl"><label>Date of Birth</label><input class="fi" id="ep-dob" onblur="saveProf()" type="date" max="2010-01-01"></div>
+      <div class="fl"><label>Home Address</label><textarea class="fi" id="ep-addr" onblur="saveProf()" rows="2" placeholder="1 High Street, London" style="resize:none"></textarea></div>
       <button class="sl-btn btn btn-p" style="width:100%" onclick="saveProf()">Save Changes</button>
     </div>
   </div>
@@ -3074,16 +3074,21 @@ function openEditProf(){
   omo('editProfMo');
 }
 function saveProf(){
-  var cc=(document.getElementById('ep-cc')||{}).value||'+44';
-  var rawP=V('ep-p').replace(/^0/,'');
-  var phone=rawP?cc+rawP:(PROF.phone||null);
-  var dob=V('ep-dob');
-  var addr=V('ep-addr');
-  var updates={name:V('ep-n'),display_name:V('ep-dn'),phone:phone};
-  if(addr)updates.address=addr;
-  if(dob){updates.dob=dob;updates.date_of_birth=dob;}
-  Object.keys(updates).forEach(function(k){if(!updates[k])delete updates[k];});
-  pat('users','id=eq.'+UID,updates).then(()=>{T('✅ Profile saved','success');cmo('editProfMo');loadProf();}).catch(()=>T('Save failed','error'));
+  if(!UID){alert('Please login first');return;}
+  var name=V('ep-n'),email=V('ep-e'),phone=V('ep-ph'),addr=V('ep-addr'),dob=V('ep-dob');
+  if(!name||!email){T('Name and email required','error');return;}
+  
+  var updates={name:name,display_name:name,email:email,phone:phone||'',address:addr||'',date_of_birth:dob||'',updated_at:Date.now()};
+  
+  patch('users','id=eq.'+UID,updates)
+    .then(function(res){
+      PROF=Object.assign(PROF,updates);
+      T('✅ Profile saved!','success');
+    })
+    .catch(function(e){
+      console.error('Error:',e);
+      T('❌ Save failed: '+(e.message||'Unknown error'),'error');
+    });
 }
 
 // ===== STASHLO CREDITS & GIFT CARDS =====
