@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Stashlo - Digital Loyalty Wallet & POS for UK Retailers</title>
+  <meta name="description" content="Stashlo is the digital loyalty wallet app for UK customers and AI-powered POS till for retailers. Build customer loyalty, earn rewards, and grow your retail business.">
+  <meta name="keywords" content="loyalty app, POS system, digital wallet, UK retail, rewards program, Klarna alternative">
+  <meta name="theme-color" content="#6366F1">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%236366F1'/><text x='50' y='60' font-size='60' fill='white' text-anchor='middle' font-weight='bold'>S</text></svg>">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #6366F1;
+      --secondary: #8B5CF6;
+      --success: #10B981;
+      --danger: #EF4444;
+      --dark: #0F172A;
+      --light: #F8FAFC;
+      --border: #E2E8F0;
+      --text: #1E293B;
+      --text-muted: #64748B;
+      --spring: cubic-bezier(0.2, 0.8, 0.25, 1);
+      --snap: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      color: var(--text);
+      line-height: 1.6;
+      background: #FFFFFF;
+    }
+
+    /* ═══ HEADER / NAV ═══ */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      padding: 14px 0;
+    }
+
+    .header-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -1px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: color 0.3s var(--spring);
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s var(--spring);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.96);
+    }
+
+    .btn-secondary {
+      background: var(--light);
+      color: var(--text);
+      border: 2px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+      border-color: var(--primary);
+    }
+
+    /* ═══ HERO ═══ */
+    body {
+      padding-top: 60px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #F0F4FF 0%, #F5F3FF 50%, #FFF5F7 100%);
+      padding: 80px 20px;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -10%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero-content {
+      max-width: 900px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+      animation: slideUp 0.8s var(--spring);
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hero h1 {
+      font-size: clamp(32px, 8vw, 64px);
+      font-weight: 900;
+      margin-bottom: 16px;
+      line-height: 1.1;
+      background: linear-gradient(135deg, var(--primary), var(--secondary), #EC4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: clamp(16px, 4vw, 20px);
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 60px;
+    }
+
+    /* ═══ FEATURES GRID ═══ */
+    .features {
+      background: white;
+      padding: 80px 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .features h2 {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 60px;
+      color: var(--dark);
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      margin-bottom: 80px;
+    }
+
+    .feature-card {
+      padding: 30px;
+      background: var(--light);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      transition: all 0.3s var(--spring);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(99, 102, 241, 0.1);
+      border-color: var(--primary);
+    }
+
+    .feature-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .feature-card h3 {
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ═══ BENEFITS SECTION ═══ */
+    .benefits {
+      padding: 80px 20px;
+      background: linear-gradient(135deg, #F0F4FF 0%, #FFF5F7 100%);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .benefits h2 {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 60px;
+    }
+
+    .benefits-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .benefits-container {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+    }
+
+    .benefits-list {
+      list-style: none;
+    }
+
+    .benefits-list li {
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .benefits-list li:last-child {
+      border-bottom: none;
+    }
+
+    .benefits-list strong {
+      font-size: 24px;
+      color: var(--success);
+      min-width: 30px;
+    }
+
+    .benefits-list span {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .benefits-image {
+      text-align: center;
+      font-size: 120px;
+      opacity: 0.8;
+    }
+
+    /* ═══ DOWNLOAD SECTION ═══ */
+    .download {
+      padding: 80px 20px;
+      background: white;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .download h2 {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 60px;
+    }
+
+    .download-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+      margin-bottom: 60px;
+    }
+
+    .download-card {
+      padding: 40px 30px;
+      background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      text-align: center;
+      transition: all 0.3s var(--spring);
+    }
+
+    .download-card:hover {
+      transform: translateY(-8px);
+      border-color: var(--primary);
+      box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15);
+    }
+
+    .download-card .icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .download-card h3 {
+      font-size: 22px;
+      margin-bottom: 12px;
+      color: var(--dark);
+    }
+
+    .download-card p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 24px;
+      min-height: 60px;
+    }
+
+    .download-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn-download {
+      padding: 12px 16px;
+      background: var(--light);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s var(--spring);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-download:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .btn-download.primary {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .btn-download.primary:hover {
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    /* ═══ COMPARISON ═══ */
+    .comparison {
+      padding: 80px 20px;
+      background: linear-gradient(135deg, #F0F4FF 0%, #FFF5F7 100%);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .comparison h2 {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 60px;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+      padding: 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    .comparison-table th {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      font-weight: 700;
+    }
+
+    .comparison-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .comparison-table tr:hover {
+      background: var(--light);
+    }
+
+    /* ═══ CTA ═══ */
+    .cta {
+      padding: 60px 20px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      text-align: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-radius: 20px;
+    }
+
+    .cta h2 {
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+
+    .cta p {
+      font-size: 18px;
+      margin-bottom: 32px;
+      opacity: 0.95;
+    }
+
+    /* ═══ FOOTER ═══ */
+    .footer {
+      background: var(--dark);
+      color: white;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 30px;
+      margin-bottom: 30px;
+      text-align: left;
+    }
+
+    .footer-section h4 {
+      margin-bottom: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.8;
+    }
+
+    .footer-section a {
+      display: block;
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      font-size: 13px;
+      margin-bottom: 8px;
+      transition: color 0.3s;
+    }
+
+    .footer-section a:hover {
+      color: white;
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 30px;
+      text-align: center;
+      font-size: 13px;
+      opacity: 0.7;
+    }
+
+    /* ═══ RESPONSIVE ═══ */
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+
+      .hero-buttons {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .comparison-table {
+        font-size: 12px;
+      }
+
+      .comparison-table th,
+      .comparison-table td {
+        padding: 12px;
+      }
+    }
+
+    /* ═══ ANIMATIONS ═══ */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    .feature-card {
+      animation: fadeIn 0.6s var(--spring) forwards;
+    }
+
+    .feature-card:nth-child(1) { animation-delay: 0s; }
+    .feature-card:nth-child(2) { animation-delay: 0.1s; }
+    .feature-card:nth-child(3) { animation-delay: 0.2s; }
+    .feature-card:nth-child(4) { animation-delay: 0.3s; }
+    .feature-card:nth-child(5) { animation-delay: 0.4s; }
+    .feature-card:nth-child(6) { animation-delay: 0.5s; }
+
+    /* ═══ MODAL FOR APP SELECTION ═══ */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal.show {
+      display: flex;
+      animation: fadeIn 0.3s var(--spring);
+    }
+
+    .modal-box {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: var(--light);
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .app-option {
+      padding: 20px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s var(--spring);
+    }
+
+    .app-option:hover {
+      border-color: var(--primary);
+      background: var(--light);
+      transform: translateY(-4px);
+    }
+
+    .app-option.selected {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+    }
+
+    .app-option-icon {
+      font-size: 48px;
+      margin-bottom: 8px;
+    }
+
+    .app-option-text {
+      font-weight: 700;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-wrap">
+    <div class="logo">Stashlo</div>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#benefits">Benefits</a></li>
+        <li><a href="#download">Download</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><button class="btn btn-primary" onclick="scrollToDownload()">Get Started</button></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <h1>Your Digital Loyalty Wallet & Smart POS</h1>
+    <p>Stashlo connects customers with their favourite local shops through digital loyalty rewards, instant payments, and AI-powered insights. Built for UK retailers and shoppers.</p>
+    <div class="hero-buttons">
+      <button class="btn btn-primary" onclick="showAppSelector()">Download App</button>
+      <button class="btn btn-secondary" onclick="scrollToDownload()">Learn More</button>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <h2>Why Choose Stashlo?</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <span class="feature-icon">💳</span>
+      <h3>Digital Loyalty Wallet</h3>
+      <p>Store all your loyalty cards in one app. Earn points, get instant rewards, and manage your UK shop loyalty cards seamlessly.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🏪</span>
+      <h3>Smart Retail POS</h3>
+      <p>AI-powered till system for merchants. Accept payments, manage inventory, and unlock customer loyalty in real-time.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📍</span>
+      <h3>Location-Based Rewards</h3>
+      <p>Customers receive loyalty reminders when near your shop. Real-time notifications turn foot traffic into loyal customers.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">💰</span>
+      <h3>Instant Cashback & Points</h3>
+      <p>Earn points on every purchase, redeem for discounts, or use Stashlo Credit for instant payments across partner shops.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🤖</span>
+      <h3>AI Business Insights</h3>
+      <p>Merchants get real-time analytics on customer behaviour, VAT returns, and growth recommendations powered by AI.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🔒</span>
+      <h3>Bank-Grade Security</h3>
+      <p>Your data is protected with encryption. Fast, secure payments with industry-standard compliance across all platforms.</p>
+    </div>
+  </div>
+</section>
+
+<!-- BENEFITS FOR CUSTOMERS -->
+<section class="benefits" id="benefits">
+  <h2>Benefits</h2>
+  <div class="benefits-container">
+    <div>
+      <h3 style="margin-bottom: 30px; font-size: 24px;">For Customers</h3>
+      <ul class="benefits-list">
+        <li><strong>✓</strong> <span><strong>One Digital Wallet:</strong> All your loyalty cards in one place. No more plastic cards to carry.</span></li>
+        <li><strong>✓</strong> <span><strong>Earn Points Everywhere:</strong> Shop locally, earn points, redeem for rewards instantly.</span></li>
+        <li><strong>✓</strong> <span><strong>Smart Notifications:</strong> Get reminded when you're near your favourite shops with exclusive offers.</span></li>
+        <li><strong>✓</strong> <span><strong>Instant Cashback:</strong> Use Stashlo Credit to pay instantly at any partner shop with 1-click checkout.</span></li>
+        <li><strong>✓</strong> <span><strong>Track Rewards Live:</strong> See your points, credit balance, and exclusive deals in real-time.</span></li>
+        <li><strong>✓</strong> <span><strong>Support When You Need It:</strong> 24/7 in-app chat support with merchants and our team.</span></li>
+      </ul>
+    </div>
+    <div class="benefits-image">🛍️💳✨</div>
+  </div>
+</section>
+
+<!-- BENEFITS FOR MERCHANTS -->
+<section class="benefits" style="background: white;">
+  <div class="benefits-container">
+    <div class="benefits-image">🏪📊💡</div>
+    <div>
+      <h3 style="margin-bottom: 30px; font-size: 24px;">For Merchants</h3>
+      <ul class="benefits-list">
+        <li><strong>✓</strong> <span><strong>Smart POS Till:</strong> Modern, cloud-based till system that works on any device. No expensive hardware.</span></li>
+        <li><strong>✓</strong> <span><strong>Build Loyalty:</strong> Create shop-specific loyalty programs. Customers come back for rewards.</span></li>
+        <li><strong>✓</strong> <span><strong>Real-Time Analytics:</strong> Understand customer behaviour, popular items, and peak hours instantly.</span></li>
+        <li><strong>✓</strong> <span><strong>Location-Based Marketing:</strong> Send offers when customers are near. Drive foot traffic with geofencing.</span></li>
+        <li><strong>✓</strong> <span><strong>AI Insights:</strong> Get automatic recommendations on inventory, VAT returns, and business growth.</span></li>
+        <li><strong>✓</strong> <span><strong>Instant Payments:</strong> Accept card, cash, and Stashlo Credit. Payments settled in real-time.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARISON -->
+<section class="comparison">
+  <h2>Why Stashlo Over Competitors?</h2>
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>Stashlo</th>
+        <th>Klarna</th>
+        <th>Nectar</th>
+        <th>Zip</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Digital Loyalty Wallet</strong></td>
+        <td>✅ All UK shops</td>
+        <td>❌ BNPL only</td>
+        <td>✅ Nectar partners</td>
+        <td>❌ BNPL only</td>
+      </tr>
+      <tr>
+        <td><strong>Smart POS for Retailers</strong></td>
+        <td>✅ Included</td>
+        <td>❌ No</td>
+        <td>❌ No</td>
+        <td>❌ No</td>
+      </tr>
+      <tr>
+        <td><strong>Location-Based Offers</strong></td>
+        <td>✅ Real-time geofencing</td>
+        <td>❌ No</td>
+        <td>⚠️ Limited</td>
+        <td>❌ No</td>
+      </tr>
+      <tr>
+        <td><strong>AI Business Insights</strong></td>
+        <td>✅ For merchants</td>
+        <td>❌ No</td>
+        <td>❌ No</td>
+        <td>❌ No</td>
+      </tr>
+      <tr>
+        <td><strong>Instant Payments</strong></td>
+        <td>✅ Card + Stashlo Credit</td>
+        <td>✅ 4 payments</td>
+        <td>❌ Points only</td>
+        <td>✅ BNPL</td>
+      </tr>
+      <tr>
+        <td><strong>Merchant-Friendly</strong></td>
+        <td>✅ Zero setup, full support</td>
+        <td>⚠️ BNPL commission</td>
+        <td>⚠️ Limited control</td>
+        <td>⚠️ BNPL commission</td>
+      </tr>
+      <tr>
+        <td><strong>UK Focus</strong></td>
+        <td>✅ Built for UK retail</td>
+        <td>🌍 Global</td>
+        <td>✅ UK only</td>
+        <td>🌍 Global</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- DOWNLOAD -->
+<section class="download" id="download">
+  <h2>Get Stashlo Today</h2>
+  <div class="download-grid">
+    <!-- CUSTOMER APP -->
+    <div class="download-card">
+      <div class="icon">👤</div>
+      <h3>Customer App</h3>
+      <p>Earn points on every purchase, manage your loyalty cards, and get instant rewards from your favourite UK shops.</p>
+      <div class="download-buttons">
+        <a href="https://skyfliessolar.github.io/stashlo/" class="btn-download primary">📱 Open Web App</a>
+        <a href="https://play.google.com/store/apps/details?id=com.stashlo.app" class="btn-download">🤖 Google Play</a>
+        <a href="https://apps.apple.com/app/stashlo" class="btn-download">🍎 App Store</a>
+      </div>
+    </div>
+
+    <!-- MERCHANT APP -->
+    <div class="download-card">
+      <div class="icon">🏪</div>
+      <h3>Merchant App</h3>
+      <p>Modern POS till, build customer loyalty, accept payments, and grow your retail business with AI insights.</p>
+      <div class="download-buttons">
+        <button class="btn-download primary" onclick="openMerchantApp()">📱 Open Merchant App</button>
+        <a href="https://play.google.com/store/apps/details?id=com.stashlo.merchant" class="btn-download">🤖 Google Play</a>
+        <a href="https://apps.apple.com/app/stashlo-merchant" class="btn-download">🍎 App Store</a>
+      </div>
+    </div>
+
+    
+      <h3>Admin Dashboard</h3>
+      <p>Manage merchants, customers, payments, and support. Real-time insights into platform health and growth.</p>
+      <div class="download-buttons">
+        <button class="btn-download primary" onclick="openAdminApp()">🔑 Access Admin</button>
+        <button class="btn-download" onclick="alert('Contact: admin@stashlo.com for enterprise setup')">📧 Enterprise</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta">
+    <h2>Ready to Transform Your Retail Business?</h2>
+    <p>Join thousands of UK merchants and customers already using Stashlo.</p>
+    <button class="btn btn-primary" style="background: white; color: var(--primary); padding: 14px 32px; font-size: 16px;" onclick="showAppSelector()">Get Started Free</button>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section style="padding: 60px 20px; background: white; max-width: 1200px; margin: 0 auto; text-align: center;" id="contact">
+  <h2 style="font-size: 32px; margin-bottom: 20px;">Have Questions?</h2>
+  <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 30px;">Get in touch with our team. We're here to help you succeed.</p>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+    <div>
+      <h4 style="margin-bottom: 10px;">📧 Email</h4>
+      <a href="mailto:admin@stashlo.com" style="color: var(--primary); text-decoration: none; font-weight: 600;">admin@stashlo.com</a>
+    </div>
+    <div>
+      <h4 style="margin-bottom: 10px;">💬 Support</h4>
+      <a href="mailto:support@stashlo.com" style="color: var(--primary); text-decoration: none; font-weight: 600;">support@stashlo.com</a>
+    </div>
+    <div>
+      <h4 style="margin-bottom: 10px;">🏪 Merchant Support</h4>
+      <a href="mailto:merchant@stashlo.com" style="color: var(--primary); text-decoration: none; font-weight: 600;">merchant@stashlo.com</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-content">
+    <div class="footer-section">
+      <h4>Product</h4>
+      <a href="#features">Features</a>
+      <a href="#download">Download</a>
+      <a href="https://blog.stashlo.com">Blog</a>
+    </div>
+    <div class="footer-section">
+      <h4>For Merchants</h4>
+      <a href="#benefits">Benefits</a>
+      <a href="mailto:merchant@stashlo.com">Get Started</a>
+      <a href="#">Pricing</a>
+    </div>
+    <div class="footer-section">
+      <h4>Company</h4>
+      <a href="#">About</a>
+      <a href="#">Careers</a>
+      <a href="#">Press</a>
+    </div>
+    <div class="footer-section">
+      <h4>Legal</h4>
+      <a href="https://stashlo.com/privacy">Privacy</a>
+      <a href="https://stashlo.com/terms">Terms</a>
+      <a href="#">Security</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2026 Stashlo Ltd. All rights reserved. | Built for UK Retail | <a href="https://stashlo.com" style="color: white; text-decoration: none;">stashlo.com</a></p>
+  </div>
+</footer>
+
+<!-- APP SELECTOR MODAL -->
+<div class="modal" id="appModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2 style="margin-bottom: 10px;">Which app are you?</h2>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">Select your role to get started.</p>
+    <div class="app-selector">
+      <div class="app-option" onclick="selectApp('customer')">
+        <div class="app-option-icon">👤</div>
+        <div class="app-option-text">I'm a Customer</div>
+      </div>
+      <div class="app-option" onclick="selectApp('merchant')">
+        <div class="app-option-icon">🏪</div>
+        <div class="app-option-text">I'm a Merchant</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width: 100%; margin-top: 24px; padding: 14px;" onclick="confirmSelection()">
+      Continue
+    </button>
+  </div>
+</div>
+
+<script>
+  let selectedApp = null;
+
+  function showAppSelector() {
+    document.getElementById('appModal').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('appModal').classList.remove('show');
+    selectedApp = null;
+  }
+
+  function selectApp(app) {
+    selectedApp = app;
+    document.querySelectorAll('.app-option').forEach(el => el.classList.remove('selected'));
+    event.target.closest('.app-option').classList.add('selected');
+  }
+
+  function confirmSelection() {
+    if (!selectedApp) {
+      alert('Please select an option');
+      return;
+    }
+    if (selectedApp === 'customer') {
+      window.location.href = 'https://skyfliessolar.github.io/stashlo/';
+    } else if (selectedApp === 'merchant') {
+      openMerchantApp();
+    }
+  }
+
+  function openMerchantApp() {
+    window.location.href = 'https://skyfliessolar.github.io/stashlo/merchant.html';
+  }
+
+  function openAdminApp() {
+    window.location.href = 'https://skyfliessolar.github.io/stashlo/admin.html';
+  }
+
+  function scrollToDownload() {
+    document.getElementById('download').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // Smooth scroll for nav links
+  document.querySelectorAll('a[href^="#"]').forEach(link => {
+    link.addEventListener('click', function(e) {
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+
+  // Check if user is on mobile and visiting from merchant link
+  if (new URLSearchParams(window.location.search).get('app') === 'merchant') {
+    setTimeout(() => openMerchantApp(), 500);
+  }
+</script>
+
+</body>
+</html>
