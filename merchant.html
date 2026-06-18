@@ -43,7 +43,7 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 
 #app{display:none;flex-direction:column;min-height:100vh;padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
 
-.topbar{padding-top:max(env(safe-area-inset-top,0px),14px);background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:99;box-shadow:0 2px 20px rgba(0,0,0,.3)}
+.topbar{padding-top:max(env(safe-area-inset-top,0px),14px);background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:static;top:0;z-index:99;box-shadow:0 2px 20px rgba(0,0,0,.3)}
 .tb-brand{font-size:18px;font-weight:900}.tb-brand b{color:var(--purple2)}
 .tb-shop{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px}
 .tb-btn{background:rgba(255,255,255,.1);color:#fff;padding:8px 14px;border-radius:var(--r8);font-size:13px;font-weight:600}
@@ -57,7 +57,7 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 .nb-ico{font-size:18px;display:block;margin-bottom:2px}
 .nb-lab{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;display:block}
 
-.screen{display:none;padding:16px;padding-bottom:calc(80px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;animation:fi .2s}
+.screen{display:none;padding:16px;padding-top:70px;padding-bottom:calc(80px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;animation:fi .2s}
 .screen.on{display:block}
 @keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 
@@ -112,7 +112,7 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 .modal{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);display:none;align-items:flex-end;z-index:500}
 .modal.on{display:flex}
 .modal-box{background:var(--white);width:100%;border-radius:var(--r24) var(--r24) 0 0;max-height:92vh;overflow-y:auto}
-.modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 20px 16px;border-bottom:1px solid var(--bg2);position:sticky;top:0;background:var(--white);z-index:2}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 20px 16px;border-bottom:1px solid var(--bg2);position:static;top:0;background:var(--white);z-index:2}
 .modal-title{font-size:18px;font-weight:800}
 .modal-close{width:32px;height:32px;background:var(--bg);border-radius:var(--r8);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--ink3)}
 .modal-close:hover{background:var(--bg2)}
@@ -1209,7 +1209,7 @@ function renderProducts(){
 function renderOrders(){
   const el=document.getElementById("orders-list");if(!el)return;
   const sc={pending:"b-pending",confirmed:"b-ready",ready:"b-ready",completed:"b-done",rejected:"b-rejected",cancelled:"b-rejected"};
-  el.innerHTML=ORDERS.length?ORDERS.map(o=>`<div class="ic" style="cursor:pointer" onclick="openOrderDet('${o.id}')"><div class="ic-row"><div><div class="ic-name">${o.product_name||"Order"} ×${o.quantity||1}</div><div class="ic-sub">${o.type==="collect"?"🏪 Collect":"🚚 Delivery"} · £${parseFloat(o.total||0).toFixed(2)}</div><div class="ic-sub">${o.created_at?new Date(o.created_at).toLocaleString().slice(0,14):""}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="badge ${sc[o.status]||"b-pending"}">${o.status||"pending"}</span><button onclick="event.stopPropagation();openChat('${o.id}','${(o.product_name||"Order").replace(/'/g,"")}')">💬</button></div></div></div>`).join("")
+  el.innerHTML=ORDERS.length?ORDERS.map(o=>`<div class="ic" style="cursor:pointer" onclick="openOrderDet('${o.id}')"><div class="ic-row"><div><div class="ic-name">${o.product_name||"Order"} ×${o.quantity||1}</div><div class="ic-sub">${o.type==="collect"?"🏪 Collect":"🚚 Delivery"} · £${parseFloat(o.total||0).toFixed(2)}</div><div class="ic-sub">${o.created_at?new Date(o.created_at).toLocaleString().slice(0,14):""}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="badge ${sc[o.status]||"b-pending"}">${o.status||"pending"}</span><button class="sl-btn" style="background:var(--purple);color:#fff;border:none;border-radius:10px;padding:8px 10px;font-size:14px;font-weight:700;cursor:pointer;" onclick="event.stopPropagation();openChat('${o.id}','${(o.product_name||"Order").replace(/'/g,"")}')">💬</button></div></div></div>`).join("")
     :"<div class=\"empty\"><div class=\"empty-ico\">📦</div><div class=\"empty-txt\">No orders yet</div></div>";
 }
 function renderPending(){
@@ -1367,6 +1367,74 @@ function addCustomerManually(phone){
   .then(()=>{T("✅ Customer "+name+" added!","success");lookupCustomer();loadCustomers()}).catch(()=>T("Failed","error"))
 }
 
+
+// ═══ ADD NEW CUSTOMER TO POS (with auto barcode) ═══
+function openPOSAddCustomer(scannedId){
+  var mo=document.createElement('div');mo.className='mo on';
+  var isPhone=/^[0-9]{10,}$/.test(scannedId.replace(/\D/g,''));
+  var phone=isPhone?scannedId.replace(/\D/g,''):prompt('Phone number for this customer?')||'';
+  if(!phone){T('Phone required to create customer','error');return;}
+  
+  var html='<div class="mo-box"><div class="mo-head"><span class="mo-title">👤 New Customer</span><button class="mo-x" id="poc-x">✕</button></div>';
+  html+='<div class="fl"><label class="field-label">Customer name</label><input id="poc-name" class="fi" placeholder="e.g. John Smith" autofocus></div>';
+  html+='<div class="fl"><label class="field-label">Phone</label><input class="fi" value="'+phone+'" readonly></div>';
+  html+='<div style="padding:12px;background:var(--bg2);border-radius:10px;font-size:13px;color:var(--ink3)"><strong>What happens:</strong><br>1. New customer profile created<br>2. Loyalty ID generated (SL-XXXXXX)<br>3. Shop-specific barcode for this location<br>4. Customer can view in their app</div>';
+  html+='<button class="sl-btn btn btn-p" id="poc-add" style="width:100%;margin-top:12px">✅ Create customer & barcode</button>';
+  html+='</div>';
+  mo.innerHTML=html;
+  document.body.appendChild(mo);
+  
+  document.getElementById('poc-x').onclick=function(){mo.remove();};
+  document.getElementById('poc-add').onclick=function(){
+    var name=(document.getElementById('poc-name').value||'').trim()||'Customer';
+    var btn=document.getElementById('poc-add');btn.disabled=true;btn.textContent='Creating...';
+    
+    // Generate loyalty ID (SL-XXXXXX format)
+    var chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';var lid='SL-';
+    for(var i=0;i<6;i++)lid+=chars[Math.floor(Math.random()*chars.length)];
+    
+    // Create in users table
+    post('users',{
+      email:phone+'@stashlo.local',
+      name:name,
+      phone:phone,
+      loyalty_id:lid,
+      created_at:Date.now(),
+      total_points:0,
+      sl_credit:0
+    }).then(function(ur){
+      var uid=ur&&ur.id?ur.id:null;
+      
+      // Also add to merchant_customers for shop-specific tracking
+      post('merchant_customers',{
+        merchant_id:MID,
+        user_id:uid,
+        phone:phone,
+        name:name,
+        points:0,
+        visit_count:0,
+        total_spend:0,
+        shop_barcode:lid,
+        last_updated:Date.now()
+      }).then(function(){
+        mo.remove();
+        T('✅ Customer '+name+' created!\n📲 ID: '+lid,'success');
+        window._TILL_CX={id:uid,name:name,phone:phone,loyalty_id:lid,total_points:0,sl_credit:0};
+        // Update till display
+        var nm=document.getElementById('pos-cx-name');if(nm)nm.textContent='✅ '+name;
+        var ps=document.getElementById('pos-cx-pts');if(ps)ps.textContent='New customer · '+lid;
+        var cl=document.getElementById('pos-cx-clr');if(cl)cl.style.display='inline-block';
+      }).catch(function(e){
+        btn.disabled=false;btn.textContent='✅ Create customer & barcode';
+        T('Failed to save to merchant_customers','error');
+      });
+    }).catch(function(e){
+      btn.disabled=false;btn.textContent='✅ Create customer & barcode';
+      T('Failed to create user','error');
+    });
+  };
+}
+
 function openChat(orderId,productName){
   CHAT_ORDER=orderId;CHAT_LAST=0;
   document.getElementById("chat-modal-title").textContent="💬 "+productName;
@@ -1476,23 +1544,35 @@ function payInvoice(id,amount){
 
 // ===== AI SUGGEST REPLY (auto-handle customer chats) =====
 async function aiSuggestReply(){
-  if(!CHAT_ORDER){T("Open a chat first","error");return}
-  const inp=document.getElementById("chat-inp");
-  inp.value="\u2728 AI is drafting...";inp.disabled=true;
-  try{
-    const msgs=await get("chats","conversation_id=eq.order_"+CHAT_ORDER+"&order=created_at.asc&limit=20");
-    const hist=(Array.isArray(msgs)?msgs:[]).map(m=>(m.sender_role==="customer"?"Customer: ":"Merchant: ")+m.message).join("\n");
-    const hdrs2={"Content-Type":"application/json"};if(window.ANTH_KEY){hdrs2["x-api-key"]=window.ANTH_KEY;hdrs2["anthropic-version"]="2023-06-01";hdrs2["anthropic-dangerous-direct-browser-access"]="true";}
-    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:hdrs2,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,system:"You are a friendly shop assistant for "+(MDATA.name||"a shop")+". Reply to the customer conversation concisely and helpfully in 1-2 sentences. If the issue is serious (refund dispute, complaint about safety, legal), start your reply with [ESCALATE].",messages:[{role:"user",content:hist+"\n\nDraft the next merchant reply:"}]})});
-    const data=await res.json();
-    let reply=data.content?.[0]?.text||"";
-    if(reply.startsWith("[ESCALATE]")){
-      reply=reply.replace("[ESCALATE]","").trim();
-      post("support_chats",{customer_id:null,customer_email:"escalation@"+(MDATA.shop_id||"shop"),sender_role:"customer",sender_name:"\u26a0\ufe0f Escalation from "+(MDATA.name||"Merchant"),message:"Order "+CHAT_ORDER+" needs admin attention: "+hist.slice(-300),created_at:Date.now()}).catch(()=>{});
-      T("\u26a0\ufe0f Escalated to Stashlo admin","error");
-    }
-    inp.value=reply;inp.disabled=false;inp.focus();
-  }catch(e){inp.value="";inp.disabled=false;T("AI unavailable","error");}
+  if(!CHAT_ORDER||!window.Anthropic)return;
+  const inp=document.getElementById('chat-inp');
+  if(!inp){console.warn('chat-inp not found');return;}
+  inp.value='💭 Generating suggestion...';inp.disabled=true;
+  // Call Anthropic API to suggest a helpful merchant response
+  const msgEl=document.getElementById('chat-msgs');
+  const msgs=(msgEl&&msgEl.textContent)||'';
+  const prompt='Based on this customer chat thread, suggest a brief, helpful merchant response:\n\n'+msgs+'\n\nMerchant response (under 100 chars):';
+  const reqBody={
+    model:'claude-opus-4-6',
+    max_tokens:80,
+    messages:[{role:'user',content:prompt}]
+  };
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'x-api-key':localStorage.getItem('ai_key')||'',
+      'anthropic-version':'2023-06-01',
+      'content-type':'application/json'
+    },
+    body:JSON.stringify(reqBody)
+  }).then(r=>r.json()).then(d=>{
+    const txt=(d.content&&d.content[0]&&d.content[0].text)||'Unable to generate';
+    inp.value=txt.split('\n')[0].slice(0,120);
+    inp.disabled=false;inp.focus();
+  }).catch(()=>{
+    inp.value='';inp.disabled=false;
+    T('AI suggestion failed - check API key','error');
+  });
 }
 
 // ===== ACCESS RESTRICTION CHECK (unpaid fees) =====
@@ -2677,7 +2757,7 @@ setInterval(function(){var el=document.getElementById('till-clock');if(el)el.tex
   var pm=document.getElementById('pos-main');
   if(pm&&!document.getElementById('till-header')){
     var hdr=document.createElement('div');hdr.id='till-header';
-    hdr.style.cssText='background:#1e1b4b;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50';
+    hdr.style.cssText='background:#1e1b4b;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;position:static;top:0;z-index:50';
     hdr.innerHTML='<div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0"></div><span style="color:#a5b4fc;font-size:12px;font-weight:800">TILL OPEN</span><span style="color:rgba(255,255,255,.5);font-size:11px" id="till-clock"></span></div>'
       +'<div style="display:flex;gap:6px"><button onclick="openScanCustomer()" style="background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:8px;padding:7px 11px;font-size:11px;font-weight:800;cursor:pointer">👤 Customer</button><button onclick="openPOSScanner()" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:7px 11px;font-size:11px;font-weight:800;cursor:pointer">📷 Scan</button></div>';
     pm.prepend(hdr);
@@ -2756,13 +2836,18 @@ function lookupTillCX(raw){
   var q=isLoyalty?'loyalty_id=eq.'+encodeURIComponent(id):'phone=like.*'+encodeURIComponent(id.replace(/\s+/g,'').slice(-9))+'*';
   get('users',q+'&limit=1').then(function(d){
     var u=Array.isArray(d)&&d[0];
-    if(!u){T('Customer not found','error');return;}
+    if(!u){
+      // Customer not found — offer to create new one
+      openPOSAddCustomer(id);
+      return;
+    }
+    // Found customer
     window._TILL_CX=u;
     var pts=u.total_points||0,cr=parseFloat(u.sl_credit||0);
-    var nm=document.getElementById('pos-cx-name');if(nm)nm.textContent='\u2705 '+(u.name||u.email||'Customer');
-    var ps=document.getElementById('pos-cx-pts');if(ps)ps.textContent=pts+' pts'+(cr>0?' \u00b7 \u00a3'+cr.toFixed(2)+' credit':'');
+    var nm=document.getElementById('pos-cx-name');if(nm)nm.textContent='✅ '+(u.name||u.email||'Customer');
+    var ps=document.getElementById('pos-cx-pts');if(ps)ps.textContent=pts+' pts'+(cr>0?' · £'+cr.toFixed(2)+' credit':'');
     var cl=document.getElementById('pos-cx-clr');if(cl)cl.style.display='inline-block';
-    T('\u2705 '+(u.name||'Customer')+' \u2014 '+pts+' pts','success');
+    T('✅ '+(u.name||'Customer')+' — '+pts+' pts','success');
   }).catch(function(){T('Could not look up customer','error');});
 }
 function clearTillCX(){
