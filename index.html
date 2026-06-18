@@ -113,7 +113,7 @@ a{color:inherit;text-decoration:none}
 #app{display:none;flex-direction:column;min-height:100vh;max-width:430px;margin:0 auto;position:relative}
 
 /* HEADER */
-.app-head{padding-top:max(env(safe-area-inset-top,0px),14px);position:sticky;top:0;z-index:100;background:var(--card);padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.app-head{padding-top:max(env(safe-area-inset-top,0px),14px);position:static;top:0;z-index:100;background:var(--card);padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .head-left{display:flex;flex-direction:column}
 .head-greet{font-size:12px;color:var(--sub)}
 .head-name{font-size:17px;font-weight:800;color:var(--text)}
@@ -122,7 +122,7 @@ a{color:inherit;text-decoration:none}
 .head-badge{position:absolute;top:0;right:0;width:16px;height:16px;background:var(--red);border-radius:50%;font-size:9px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;display:none}
 
 /* SCREENS */
-.screen{display:none;padding-bottom:calc(var(--nav-h) + var(--safe-bot) + 20px);animation:fi .2s ease;min-height:calc(100vh - var(--head-h))}
+.screen{display:none;padding-top:60px;padding-bottom:calc(72px + env(safe-area-inset-bottom,0px) + 16px);animation:fi .2s ease;min-height:calc(100vh - var(--head-h))}
 .screen.on{display:block}.screen.on[style*="flex-direction"]{display:flex}
 .screen.on.flex-screen{display:flex}
 @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
@@ -702,7 +702,7 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
 
 /* Home screen has its own header - hide app header on home */
 #app.home-active .app-head { display: none !important; }
-#app.home-active #home-screen { padding-top: 0 !important; }
+#app.home-active #home-screen { padding-top: 16px !important; margin-top: 0 !important; }
 
 /* ═══════════════════════════════════════
    STASHLO LIQUID GLASS DESIGN SYSTEM
@@ -3046,11 +3046,18 @@ function loadSupportChat(){
   }).catch(()=>{});
 }
 function sendSupportMsg(){
-  const inp=document.getElementById('support-inp');
-  const msg=inp.value.trim();if(!msg||!UID)return;
-  inp.value='';
-  post('support_chats',{customer_id:UID,customer_email:UEMAIL,sender_role:'customer',sender_name:PROF.name||UEMAIL,message:msg,created_at:Date.now()})
-  .then(()=>{loadSupportChat();setTimeout(maybeAIReply,900);}).catch(()=>{T('Failed');inp.value=msg;});
+  var msg=V('chat-inp');if(!msg)return;
+  T('Sending...');
+  post('support_chats',{user_id:UID,message:msg,status:'open',created_at:Date.now()})
+  .then(function(){
+    document.getElementById('chat-inp').value='';
+    loadSupportChat();
+    T('✅ Message sent!','success');
+  }).catch(function(e){
+    var err=e.message||'Connection error. Check your internet.';
+    T('❌ Failed: '+err,'error');
+    console.error('Chat send error:',e);
+  });
 }
 
 // ===== PROFILE =====
