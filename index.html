@@ -3,66 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Stashlo - Loyalty Wallet</title>
+    <title>Stashlo Loyalty</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
+        
+        body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #f5f5f5;
-            color: #333;
         }
 
-        /* ═══ LAYOUT ═══ */
-        .app { width: 100%; max-width: 480px; margin: 0 auto; background: white; min-height: 100vh; position: relative; }
-        .screen { display: none; padding: 16px; padding-top: max(16px, env(safe-area-inset-top, 0px)); padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
-        .screen.active { display: block; }
+        .app {
+            max-width: 480px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+        }
 
-        /* ═══ HEADER ═══ */
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
-            padding: max(16px, env(safe-area-inset-top, 0px)) 16px 16px;
+            padding: 20px;
+            text-align: center;
             position: sticky;
             top: 0;
             z-index: 100;
         }
-        .header h1 { font-size: 24px; margin-bottom: 4px; }
-        .header p { font-size: 12px; opacity: 0.9; }
 
-        /* ═══ BUTTONS ═══ */
+        .header h1 { font-size: 24px; margin-bottom: 4px; }
+        .header p { font-size: 12px; opacity: 0.8; }
+
+        .content {
+            padding: 16px;
+            padding-bottom: 120px;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
         .btn {
-            display: inline-block;
-            padding: 12px 16px;
+            display: block;
+            width: 100%;
+            padding: 14px;
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border: none;
             border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
             font-size: 14px;
-            transition: all 0.3s ease;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
             position: relative;
             overflow: hidden;
+            transition: all 0.2s ease;
         }
 
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); }
-        .btn:active { transform: scale(0.98); }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
 
-        /* ═══ RIPPLE ANIMATION ═══ */
-        .btn::after {
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Ripple Effect */
+        .btn::before {
             content: '';
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 5px;
-            height: 5px;
-            background: rgba(255,255,255,0.5);
+            width: 0;
+            height: 0;
             border-radius: 50%;
+            background: rgba(255,255,255,0.5);
             transform: translate(-50%, -50%);
             pointer-events: none;
         }
 
-        .btn:active::after {
+        .btn:active::before {
             animation: ripple 0.6s ease-out;
         }
 
@@ -74,93 +103,21 @@
             }
         }
 
-        /* ═══ CARDS ═══ */
-        .card {
-            background: white;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-        }
-
-        .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-
-        .card h3 { font-size: 16px; margin-bottom: 8px; color: #667eea; }
-        .card p { font-size: 13px; color: #666; line-height: 1.6; }
-
-        /* ═══ WALLET CARD ═══ */
-        .wallet-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 24px 16px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            text-align: center;
-        }
-
-        .wallet-card .points { font-size: 48px; font-weight: bold; margin: 16px 0; }
-        .wallet-card .label { font-size: 12px; opacity: 0.9; }
-
-        /* ═══ BOTTOM NAV ═══ */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            border-top: 2px solid #f0f0f0;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 4px;
-            padding: 8px;
-            padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-            z-index: 99999;
-        }
-
-        .nav-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 8px 4px;
-            background: none;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            color: #667eea;
-            transition: all 0.3s ease;
-        }
-
-        .nav-btn:active { background: #f0f0f0; transform: scale(0.95); }
-        .nav-btn.active { background: #667eea; color: white; font-weight: bold; }
-
-        .nav-icon { font-size: 20px; margin-bottom: 2px; }
-
-        /* ═══ AUTH SCREEN ═══ */
-        .auth-form {
-            max-width: 400px;
-            margin: 40px auto;
-            padding: 24px;
-        }
-
         .input-group {
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .input-group label {
             display: block;
             margin-bottom: 6px;
-            font-weight: 600;
             font-size: 13px;
+            font-weight: 600;
             color: #333;
         }
 
         .input-group input {
             width: 100%;
-            padding: 12px;
+            padding: 11px;
             border: 1px solid #ddd;
             border-radius: 6px;
             font-size: 14px;
@@ -172,38 +129,122 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        /* ═══ ERROR MESSAGE ═══ */
-        .error-msg {
-            background: #fee2e2;
-            color: #991b1b;
-            padding: 12px;
+        .card {
+            background: #f9f9f9;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #eee;
+        }
+
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .card p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .points-display {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .points-value {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .points-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #eee;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            z-index: 99999;
+        }
+
+        .nav-btn {
+            padding: 12px 0;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+            color: #999;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .nav-btn.active {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+
+        .auth-form {
+            max-width: 350px;
+            margin: 40px auto;
+        }
+
+        .auth-form h2 {
+            text-align: center;
+            margin-bottom: 24px;
+            color: #333;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 10px;
             border-radius: 6px;
             margin-bottom: 16px;
             font-size: 13px;
             display: none;
         }
 
-        .error-msg.show { display: block; }
-
-        /* ═══ LOADING ═══ */
-        .loading { 
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .error.show {
+            display: block;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .text-center {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 13px;
         }
 
-        /* ═══ RESPONSIVE ═══ */
-        @media (min-width: 640px) {
-            .app { margin: 0 auto; }
+        .text-center a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .success {
+            background: #efe;
+            color: #3c3;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
         }
     </style>
 </head>
@@ -213,27 +254,30 @@
         <div id="auth-screen" class="screen active">
             <div class="header">
                 <h1>🎁 Stashlo</h1>
-                <p>Your Loyalty Wallet</p>
+                <p>Loyalty Wallet</p>
             </div>
 
-            <div class="auth-form">
-                <h2 style="margin-bottom: 24px; text-align: center;">Sign In</h2>
-                <div class="error-msg" id="auth-error"></div>
+            <div class="content">
+                <div class="auth-form">
+                    <h2>Sign In</h2>
+                    
+                    <div class="error" id="error-msg"></div>
 
-                <div class="input-group">
-                    <label>Email</label>
-                    <input type="email" id="email" placeholder="you@example.com">
-                </div>
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="email-input" placeholder="test@example.com">
+                    </div>
 
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="password" placeholder="••••••••">
-                </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="pass-input" placeholder="password">
+                    </div>
 
-                <button class="btn" style="width: 100%;" onclick="login()">Sign In</button>
+                    <button class="btn" id="signin-btn">Sign In</button>
 
-                <div style="text-align: center; margin-top: 16px; font-size: 13px;">
-                    No account? <a href="#" onclick="toggleAuthMode(); return false;" style="color: #667eea; text-decoration: none;">Create one</a>
+                    <div class="text-center">
+                        Demo: Use any email & password
+                    </div>
                 </div>
             </div>
         </div>
@@ -242,23 +286,19 @@
         <div id="home-screen" class="screen">
             <div class="header">
                 <h1>🎁 Stashlo</h1>
-                <p id="user-name">Welcome back!</p>
+                <p id="greeting">Welcome!</p>
             </div>
 
-            <div style="padding: 16px;">
-                <!-- WALLET CARD -->
-                <div class="wallet-card">
-                    <div class="label">YOUR LOYALTY POINTS</div>
-                    <div class="points" id="points-display">0</div>
-                    <div class="label">Tap to redeem rewards</div>
+            <div class="content">
+                <div class="points-display">
+                    <div class="points-label">Your Points</div>
+                    <div class="points-value" id="points-show">0</div>
+                    <div class="points-label">Tap rewards to redeem</div>
                 </div>
 
-                <!-- RECENT TRANSACTIONS -->
                 <h3 style="margin-bottom: 12px;">Recent Activity</h3>
-                <div id="transactions-list">
-                    <div class="card">
-                        <p style="text-align: center; color: #999;">No transactions yet</p>
-                    </div>
+                <div class="card">
+                    <p style="text-align: center; color: #999;">No activity yet</p>
                 </div>
             </div>
         </div>
@@ -270,11 +310,17 @@
                 <p>Redeem your points</p>
             </div>
 
-            <div style="padding: 16px;">
-                <div id="rewards-list">
-                    <div class="card">
-                        <p style="text-align: center; color: #999;">No rewards available</p>
-                    </div>
+            <div class="content">
+                <div class="card">
+                    <h3>Free Coffee</h3>
+                    <p>500 points</p>
+                </div>
+                <div class="card">
+                    <h3>$10 Discount</h3>
+                    <p>250 points</p>
+                </div>
+                <div class="card">
+                    <p style="text-align: center; color: #999;">More rewards coming soon!</p>
                 </div>
             </div>
         </div>
@@ -283,14 +329,12 @@
         <div id="orders-screen" class="screen">
             <div class="header">
                 <h1>📦 Orders</h1>
-                <p>Your purchase history</p>
+                <p>Your purchases</p>
             </div>
 
-            <div style="padding: 16px;">
-                <div id="orders-list">
-                    <div class="card">
-                        <p style="text-align: center; color: #999;">No orders yet</p>
-                    </div>
+            <div class="content">
+                <div class="card">
+                    <p style="text-align: center; color: #999;">No orders yet</p>
                 </div>
             </div>
         </div>
@@ -299,36 +343,35 @@
         <div id="profile-screen" class="screen">
             <div class="header">
                 <h1>👤 Profile</h1>
-                <p>Your account details</p>
+                <p>Account details</p>
             </div>
 
-            <div style="padding: 16px;">
+            <div class="content">
                 <div class="card">
-                    <h3>Account Info</h3>
-                    <p><strong>Name:</strong> <span id="profile-name">--</span></p>
+                    <h3>Account</h3>
                     <p><strong>Email:</strong> <span id="profile-email">--</span></p>
-                    <p><strong>Phone:</strong> <span id="profile-phone">--</span></p>
+                    <p><strong>Name:</strong> <span id="profile-name">--</span></p>
                 </div>
 
-                <button class="btn" style="width: 100%; margin-top: 16px; background: #dc3545;" onclick="logout()">Sign Out</button>
+                <button class="btn" style="background: #e74c3c;" id="logout-btn">Sign Out</button>
             </div>
         </div>
 
         <!-- BOTTOM NAV -->
         <div class="bottom-nav">
-            <button class="nav-btn active" onclick="switchTab('home')">
+            <button class="nav-btn active" id="nav-home">
                 <div class="nav-icon">🏠</div>
                 <div>Home</div>
             </button>
-            <button class="nav-btn" onclick="switchTab('rewards')">
+            <button class="nav-btn" id="nav-rewards">
                 <div class="nav-icon">🎁</div>
                 <div>Rewards</div>
             </button>
-            <button class="nav-btn" onclick="switchTab('orders')">
+            <button class="nav-btn" id="nav-orders">
                 <div class="nav-icon">📦</div>
                 <div>Orders</div>
             </button>
-            <button class="nav-btn" onclick="switchTab('profile')">
+            <button class="nav-btn" id="nav-profile">
                 <div class="nav-icon">👤</div>
                 <div>Profile</div>
             </button>
@@ -336,79 +379,124 @@
     </div>
 
     <script>
-        // ═══ AUTH ═══
-        function login() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+        // ═════════════════════════
+        // STATE
+        // ═════════════════════════
+        let user = null;
 
-            if (!email || !password) {
-                showError('Please fill in all fields');
+        // ═════════════════════════
+        // AUTH
+        // ═════════════════════════
+        document.getElementById('signin-btn').addEventListener('click', function() {
+            const email = document.getElementById('email-input').value.trim();
+            const pass = document.getElementById('pass-input').value.trim();
+
+            if (!email || !pass) {
+                showError('Please enter email and password');
                 return;
             }
 
-            // Demo login
-            if (email && password) {
-                localStorage.setItem('user_email', email);
-                localStorage.setItem('user_name', email.split('@')[0]);
-                showHome();
+            user = {
+                email: email,
+                name: email.split('@')[0],
+                points: Math.floor(Math.random() * 1000)
+            };
+
+            localStorage.setItem('stashlo_user', JSON.stringify(user));
+            showHome();
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', function() {
+            user = null;
+            localStorage.removeItem('stashlo_user');
+            showAuth();
+        });
+
+        // ═════════════════════════
+        // NAVIGATION
+        // ═════════════════════════
+        document.getElementById('nav-home').addEventListener('click', function() {
+            switchScreen('home-screen');
+            updateNav('nav-home');
+        });
+
+        document.getElementById('nav-rewards').addEventListener('click', function() {
+            switchScreen('rewards-screen');
+            updateNav('nav-rewards');
+        });
+
+        document.getElementById('nav-orders').addEventListener('click', function() {
+            switchScreen('orders-screen');
+            updateNav('nav-orders');
+        });
+
+        document.getElementById('nav-profile').addEventListener('click', function() {
+            if (user) {
+                updateProfile();
+            }
+            switchScreen('profile-screen');
+            updateNav('nav-profile');
+        });
+
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function updateNav(activeId) {
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(activeId).classList.add('active');
+        }
+
+        // ═════════════════════════
+        // UI
+        // ═════════════════════════
+        function showHome() {
+            if (user) {
+                document.getElementById('greeting').textContent = 'Welcome, ' + user.name + '!';
+                document.getElementById('points-show').textContent = user.points;
+            }
+            switchScreen('home-screen');
+            updateNav('nav-home');
+        }
+
+        function showAuth() {
+            switchScreen('auth-screen');
+            document.getElementById('email-input').value = '';
+            document.getElementById('pass-input').value = '';
+            clearError();
+        }
+
+        function updateProfile() {
+            if (user) {
+                document.getElementById('profile-email').textContent = user.email;
+                document.getElementById('profile-name').textContent = user.name;
             }
         }
 
-        function logout() {
-            localStorage.clear();
-            showAuth();
-        }
-
         function showError(msg) {
-            const err = document.getElementById('auth-error');
+            const err = document.getElementById('error-msg');
             err.textContent = msg;
             err.classList.add('show');
             setTimeout(() => err.classList.remove('show'), 3000);
         }
 
-        // ═══ NAVIGATION ═══
-        function switchTab(tab) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(tab + '-screen').classList.add('active');
-
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            event.target.closest('.nav-btn').classList.add('active');
-
-            loadScreenData(tab);
+        function clearError() {
+            document.getElementById('error-msg').classList.remove('show');
         }
 
-        function loadScreenData(tab) {
-            const name = localStorage.getItem('user_name');
-            const email = localStorage.getItem('user_email');
-
-            if (tab === 'home') {
-                document.getElementById('user-name').textContent = 'Welcome, ' + (name || 'Guest') + '!';
-                document.getElementById('points-display').textContent = Math.floor(Math.random() * 1000);
-            }
-
-            if (tab === 'profile') {
-                document.getElementById('profile-name').textContent = name || '--';
-                document.getElementById('profile-email').textContent = email || '--';
-                document.getElementById('profile-phone').textContent = localStorage.getItem('user_phone') || 'Not set';
-            }
-        }
-
-        // ═══ AUTH STATE ═══
-        function showHome() {
-            document.getElementById('auth-screen').classList.remove('active');
-            document.getElementById('home-screen').classList.add('active');
-            loadScreenData('home');
-        }
-
-        function showAuth() {
-            document.getElementById('home-screen').classList.remove('active');
-            document.getElementById('auth-screen').classList.add('active');
-        }
-
-        // ═══ INIT ═══
+        // ═════════════════════════
+        // INIT
+        // ═════════════════════════
         window.addEventListener('load', function() {
-            if (localStorage.getItem('user_email')) {
-                showHome();
+            const saved = localStorage.getItem('stashlo_user');
+            if (saved) {
+                try {
+                    user = JSON.parse(saved);
+                    showHome();
+                } catch(e) {
+                    showAuth();
+                }
             }
         });
     </script>
