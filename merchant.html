@@ -49,13 +49,13 @@ input,select,textarea{font-family:inherit;border:none;outline:none}
 .tb-btn{background:rgba(255,255,255,.1);color:#fff;padding:8px 14px;border-radius:var(--r8);font-size:13px;font-weight:600}
 
 /* BOTTOM NAV - 5 primary + 5 secondary tabs with scroll */
-.bottomnav{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--bg2);display:flex;overflow-x:auto;overflow-y:hidden;z-index:200;padding-bottom:env(safe-area-inset-bottom,0px);padding-top:6px;min-height:56px;box-sizing:content-box;box-shadow:0 -4px 24px rgba(0,0,0,.1);scroll-behavior:smooth;-webkit-overflow-scrolling:touch;}
+.bottomnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--white);border-top:1px solid var(--bg2);display:grid;grid-template-columns:repeat(5,1fr);z-index:9999;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 4px);padding-top:6px;min-height:60px;box-shadow:0 -4px 24px rgba(0,0,0,.1);}
 .bottomnav::-webkit-scrollbar{display:none}
-.nb{flex-shrink:0;min-width:68px;padding:10px 6px 8px;text-align:center;cursor:pointer;color:var(--ink4);transition:color .15s;position:relative}
+.nb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 2px;cursor:pointer;border-radius:10px;min-width:0;transition:background .15s}
 .nb.on{color:var(--purple)}
 .nb.on::after{content:"";position:absolute;bottom:0;left:10%;right:10%;height:3px;background:var(--purple);border-radius:3px 3px 0 0}
 .nb-ico{font-size:18px;display:block;margin-bottom:2px}
-.nb-lab{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;display:block}
+.nb-lab{font-size:10px!important;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;display:block}
 
 .screen{display:none;padding:16px;padding-top:70px;padding-bottom:calc(100px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;animation:fi .2s}
 .screen.on{display:block}
@@ -626,6 +626,15 @@ body { overflow: hidden !important; height: 100vh !important; }
 .nb-lab{ font-size:10px!important; }
 .bottomnav{ min-height:60px!important; }
 </style>
+
+<style id="ios-fix">
+@supports (-webkit-touch-callout:none){
+  .bottomnav{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px)!important}
+  .screen{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important}
+}
+.nb-ico{font-size:20px;line-height:1}
+.nb-lab{font-size:10px;font-weight:700;white-space:nowrap}
+</style>
 </head>
 <body>
 
@@ -971,17 +980,12 @@ body { overflow: hidden !important; height: 100vh !important; }
       </div>
       <div id="quick-grid" style="margin:0 16px 10px"></div>
       <!-- FAST-SALE DEPARTMENT TILES (like evoPOS right panel) -->
-      <div id="dept-quick-tiles" style="display:flex;gap:8px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
-        <div onclick="filterDept('vapes')" data-dept="vapes" class="sl-btn dept-tile" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">💨<div class="tile-bubble"></div><div class="tile-bubble"></div><div class="tile-bubble"></div><span>Vapes</span></div>
-        <div onclick="filterDept('tobacco')" data-dept="tobacco" class="sl-btn dept-tile" style="background:linear-gradient(135deg,#92400e,#b45309)">🍃<div class="tile-bubble"></div><div class="tile-bubble"></div><span>Tobacco</span></div>
-        <div onclick="filterDept('cigarettes')" data-dept="cigarettes" class="sl-btn dept-tile" style="background:linear-gradient(135deg,#991b1b,#dc2626)">🚭<div class="tile-bubble"></div><div class="tile-bubble"></div><span>Cigs</span></div>
-        <div onclick="filterDept('alcohol')" data-dept="alcohol" class="sl-btn dept-tile" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8)">🍺<div class="tile-bubble"></div><div class="tile-bubble"></div><span>Alcohol</span></div>
-        <div onclick="filterDept('drinks')" data-dept="drinks" class="sl-btn dept-tile" style="background:linear-gradient(135deg,#0e7490,#0891b2)">🥤<div class="tile-bubble"></div><div class="tile-bubble"></div><span>Drinks</span></div>
-        <div onclick="filterDept('grocery')" data-dept="grocery" class="sl-btn dept-tile" style="background:linear-gradient(135deg,#065f46,#059669)">🛒<div class="tile-bubble"></div><div class="tile-bubble"></div><span>Grocery</span></div>
-        <div onclick="filterDept('crisps')" data-dept="crisps" class="sl-btn dept-tile" style="background:linear-gradient(135deg,#92400e,#d97706)">🍟<div class="tile-bubble"></div><div class="tile-bubble"></div><span>Snacks</span></div>
-        <div onclick="filterDept('car')" data-dept="car" class="sl-btn dept-tile" style="background:linear-gradient(135deg,#1f2937,#374151)">🚗<div class="tile-bubble"></div><div class="tile-bubble"></div><span>Car</span></div>
-        <div onclick="filterDept('general')" data-dept="general" class="sl-btn dept-tile" style="background:linear-gradient(135deg,#0f172a,#1e293b)">✦<div class="tile-bubble"></div><span>All</span></div>
+      <!-- Shop-type header + dynamic department tiles -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 6px">
+        <div id="pos-shoptype-lab" style="font-size:12px;font-weight:800;color:var(--ink3)">🛒 RETAIL</div>
+        <button onclick="openShopTypePicker()" style="background:var(--purple-bg,#eef2ff);color:var(--purple);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer">Change shop</button>
       </div>
+      <div id="dept-quick-tiles" style="display:flex;gap:8px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>
       <div style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none" id="dept-keys"></div>
       <div id="pos-cats" style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none"></div>
       <div id="pos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:10px"></div>
@@ -2275,7 +2279,7 @@ function posGuard(){
   var inTrial=true; // Free for all Stashlo merchants
   if(MDATA.pos_enabled||inTrial){
   setTimeout(renderQuickGrid,800);
-    pay.style.display='none';main.style.display='block';renderPOSGrid();loadPOSSales();renderDeptKeys();
+    pay.style.display='none';main.style.display='block';renderPOSGrid();loadPOSSales();renderDeptKeys();try{renderDeptTiles();}catch(e){}
     if(inTrial&&!document.getElementById('trial-banner')){
       var days=Math.ceil((trialMs-(Date.now()-createdAt))/86400000);
       var tb=document.createElement('div');tb.id='trial-banner';
@@ -2427,6 +2431,113 @@ function slOverlay(inner,maxw){
 function slClose(){var o=document.querySelector('.sl-ov');if(o)o.remove();}
 
 /* ---- DEPT KEYS (merchant-editable) ---- */
+/* ═══════════ SHOP-TYPE SYSTEM (retail/fuel/restaurant/etc + editable) ═══════════ */
+var SHOP_TYPES={
+  retail:{label:'🛒 RETAIL',depts:[
+    {k:'vapes',n:'Vapes',e:'💨',c:'#7c3aed,#a855f7'},
+    {k:'tobacco',n:'Tobacco',e:'🍃',c:'#92400e,#b45309'},
+    {k:'cigarettes',n:'Cigs',e:'🚬',c:'#991b1b,#dc2626'},
+    {k:'alcohol',n:'Alcohol',e:'🍺',c:'#1e3a8a,#1d4ed8'},
+    {k:'drinks',n:'Drinks',e:'🥤',c:'#0e7490,#0891b2'},
+    {k:'snacks',n:'Snacks',e:'🍟',c:'#92400e,#d97706'},
+    {k:'grocery',n:'Grocery',e:'🛒',c:'#065f46,#059669'},
+    {k:'general',n:'All',e:'✦',c:'#0f172a,#1e293b'}
+  ]},
+  fuel:{label:'⛽ FUEL STATION',depts:[
+    {k:'unleaded',n:'Petrol',e:'⛽',c:'#059669,#10b981'},
+    {k:'diesel',n:'Diesel',e:'🛢️',c:'#1f2937,#374151'},
+    {k:'super',n:'Super Unl.',e:'✨',c:'#b45309,#f59e0b'},
+    {k:'gas',n:'LPG / Gas',e:'🔥',c:'#dc2626,#ef4444'},
+    {k:'adblue',n:'AdBlue',e:'💧',c:'#0891b2,#06b6d4'},
+    {k:'carwash',n:'Car Wash',e:'🚿',c:'#1d4ed8,#3b82f6'},
+    {k:'shop',n:'Shop',e:'🏪',c:'#065f46,#059669'},
+    {k:'general',n:'All',e:'✦',c:'#0f172a,#1e293b'}
+  ]},
+  restaurant:{label:'🍔 RESTAURANT',depts:[
+    {k:'sandwiches',n:'Sandwich',e:'🥪',c:'#b45309,#f59e0b'},
+    {k:'meals',n:'Meals',e:'🍱',c:'#dc2626,#ef4444'},
+    {k:'burgers',n:'Burgers',e:'🍔',c:'#92400e,#d97706'},
+    {k:'drinks',n:'Drinks',e:'🥤',c:'#0e7490,#0891b2'},
+    {k:'sides',n:'Sides',e:'🍟',c:'#ca8a04,#eab308'},
+    {k:'desserts',n:'Desserts',e:'🍰',c:'#db2777,#ec4899'},
+    {k:'hot',n:'Hot Drinks',e:'☕',c:'#78350f,#92400e'},
+    {k:'general',n:'All',e:'✦',c:'#0f172a,#1e293b'}
+  ]},
+  grocery:{label:'🥬 GROCERY',depts:[
+    {k:'fruitveg',n:'Fruit/Veg',e:'🥬',c:'#16a34a,#22c55e'},
+    {k:'bakery',n:'Bakery',e:'🍞',c:'#b45309,#f59e0b'},
+    {k:'dairy',n:'Dairy',e:'🥛',c:'#0891b2,#06b6d4'},
+    {k:'meat',n:'Meat',e:'🥩',c:'#dc2626,#ef4444'},
+    {k:'frozen',n:'Frozen',e:'🧊',c:'#1d4ed8,#3b82f6'},
+    {k:'drinks',n:'Drinks',e:'🥤',c:'#0e7490,#0891b2'},
+    {k:'household',n:'Household',e:'🧽',c:'#7c3aed,#a855f7'},
+    {k:'general',n:'All',e:'✦',c:'#0f172a,#1e293b'}
+  ]},
+  vape:{label:'💨 VAPE & TOBACCO',depts:[
+    {k:'disposables',n:'Disposable',e:'💨',c:'#7c3aed,#a855f7'},
+    {k:'eliquid',n:'E-Liquid',e:'🧪',c:'#0891b2,#06b6d4'},
+    {k:'devices',n:'Devices',e:'🔋',c:'#1f2937,#374151'},
+    {k:'coils',n:'Coils/Pods',e:'⚙️',c:'#b45309,#f59e0b'},
+    {k:'tobacco',n:'Tobacco',e:'🍃',c:'#92400e,#b45309'},
+    {k:'cigarettes',n:'Cigs',e:'🚬',c:'#991b1b,#dc2626'},
+    {k:'general',n:'All',e:'✦',c:'#0f172a,#1e293b'}
+  ]},
+  pharmacy:{label:'💊 PHARMACY',depts:[
+    {k:'otc',n:'Medicine',e:'💊',c:'#0891b2,#06b6d4'},
+    {k:'vitamins',n:'Vitamins',e:'🍊',c:'#f59e0b,#fbbf24'},
+    {k:'baby',n:'Baby',e:'🍼',c:'#ec4899,#f472b6'},
+    {k:'beauty',n:'Beauty',e:'💄',c:'#db2777,#ec4899'},
+    {k:'toiletries',n:'Toiletries',e:'🧴',c:'#7c3aed,#a855f7'},
+    {k:'general',n:'All',e:'✦',c:'#0f172a,#1e293b'}
+  ]}
+};
+function getShopType(){try{return localStorage.getItem('sl_shoptype_'+(MID||''))||'retail';}catch(e){return 'retail';}}
+function setShopType(t){try{localStorage.setItem('sl_shoptype_'+(MID||''),t);}catch(e){} renderDeptTiles(); var lab=document.getElementById('pos-shoptype-lab'); if(lab&&SHOP_TYPES[t])lab.textContent=SHOP_TYPES[t].label;}
+function getCustomDepts(t){try{var c=JSON.parse(localStorage.getItem('sl_customdepts_'+(MID||'')+'_'+t)||'null');return c;}catch(e){return null;}}
+function renderDeptTiles(){
+  var t=getShopType();
+  var cfg=SHOP_TYPES[t]||SHOP_TYPES.retail;
+  var depts=getCustomDepts(t)||cfg.depts;
+  var lab=document.getElementById('pos-shoptype-lab');if(lab)lab.textContent=cfg.label;
+  var el=document.getElementById('dept-quick-tiles');if(!el)return;
+  var Q=String.fromCharCode(39);
+  el.innerHTML=depts.map(function(d){
+    return '<div onclick="filterDept('+Q+d.k+Q+')" data-dept="'+d.k+'" class="sl-btn dept-tile" style="background:linear-gradient(135deg,'+d.c+')">'+d.e+'<span>'+d.n+'</span></div>';
+  }).join('')
+  +'<div onclick="editShopDepts()" class="sl-btn dept-tile" style="background:linear-gradient(135deg,#475569,#64748b)">✏️<span>Edit</span></div>';
+}
+function openShopTypePicker(){
+  if(typeof slForm!=='function'){var m=document.getElementById('shopSelectorModal');if(m)m.classList.add('show');return;}
+  var cur=getShopType();
+  var opts=Object.keys(SHOP_TYPES).map(function(k){return {v:k,label:SHOP_TYPES[k].label};});
+  var html='<div style="display:grid;gap:8px">'+opts.map(function(o){
+    return '<button onclick="setShopType('+String.fromCharCode(39)+o.v+String.fromCharCode(39)+');slClose();T('+String.fromCharCode(39)+'Shop type set'+String.fromCharCode(39)+','+String.fromCharCode(39)+'success'+String.fromCharCode(39)+')" style="padding:14px;border:2px solid '+(o.v===cur?'#6366F1':'#e2e8f0')+';background:'+(o.v===cur?'#eef2ff':'#fff')+';border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;text-align:left">'+o.label+(o.v===cur?' ✓':'')+'</button>';
+  }).join('')+'</div>';
+  slOverlay('<h3 style="margin-bottom:14px;font-size:17px">🏪 Select Shop Type</h3>'+html+'<button onclick="slClose()" style="width:100%;margin-top:12px;padding:12px;background:#f1f5f9;border:none;border-radius:12px;font-weight:700;cursor:pointer">Cancel</button>');
+}
+function editShopDepts(){
+  var t=getShopType();
+  var cfg=SHOP_TYPES[t]||SHOP_TYPES.retail;
+  var depts=getCustomDepts(t)||cfg.depts;
+  var current=depts.filter(function(d){return d.k!=='general';}).map(function(d){return d.n;}).join(', ');
+  if(typeof slForm!=='function'){
+    var v=prompt('Edit sections (comma separated):',current);
+    if(v!=null)saveCustomDepts(t,v);
+    return;
+  }
+  slForm('✏️ Edit '+cfg.label+' sections',[{id:'dlist',type:'textarea',value:current,placeholder:'Petrol, Diesel, Shop...'}],
+  [{label:'Cancel'},{label:'💾 Save',primary:true,cb:function(v){saveCustomDepts(t,v.dlist);}}],
+  'These tiles appear on your till. "All" is always added.');
+}
+function saveCustomDepts(t,csv){
+  var palette=['#7c3aed,#a855f7','#0e7490,#0891b2','#065f46,#059669','#b45309,#f59e0b','#1e3a8a,#1d4ed8','#dc2626,#ef4444','#db2777,#ec4899','#1f2937,#374151'];
+  var names=csv.split(',').map(function(s){return s.trim();}).filter(Boolean).slice(0,11);
+  var depts=names.map(function(n,i){return {k:n.toLowerCase().replace(/[^a-z0-9]+/g,'_'),n:n,e:'🏷️',c:palette[i%palette.length]};});
+  depts.push({k:'general',n:'All',e:'✦',c:'#0f172a,#1e293b'});
+  try{localStorage.setItem('sl_customdepts_'+(MID||'')+'_'+t,JSON.stringify(depts));}catch(e){}
+  renderDeptTiles();T('Sections updated','success');
+}
+
 function getDepts(){
   try{var d=JSON.parse(localStorage.getItem('sl_depts_'+MID)||'null');if(Array.isArray(d)&&d.length)return d;}catch(e){}
   return ['💨 Vapes','🚬 Tobacco','🥤 Drinks','🍟 Crisps','🏠 Home','💄 Beauty','🍼 Baby','🛒 Grocery'];
