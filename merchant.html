@@ -565,254 +565,55 @@ body { overflow: hidden !important; height: 100vh !important; }
 }
 
 
-        /* Shop Selector Styles */
-        .shop-selector-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 10000;
-            align-items: flex-end;
-        }
-        
-        .shop-selector-modal.show {
-            display: flex;
-        }
-        
-        .shop-selector-content {
-            background: white;
-            width: 100%;
-            padding: 20px;
-            border-radius: 12px 12px 0 0;
-            animation: slideUp 0.3s ease;
-        }
-        
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-        
-        .shop-option-btn {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 10px;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            color: white;
-        }
-        
-        .shop-petrol { background: linear-gradient(135deg, #FF6B35, #ff8c42); }
-        .shop-convenience { background: linear-gradient(135deg, #004E89, #0066b3); }
-        .shop-restaurant { background: linear-gradient(135deg, #F77F00, #ffa500); }
-        
-        .shop-display {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: 12px 16px;
-            border-radius: 6px;
-            margin-bottom: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .shop-display strong { font-size: 18px; }
-        .change-shop-btn {
-            background: white;
-            color: #667eea;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 12px;
-        }
+/* ═══ SHOP / SECTION SELECTOR + DISPLAY BAR (consolidated, single copy) ═══ */
+.shop-selector-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;}
+.shop-selector-modal.show{display:flex;}
+.shop-selector-content{background:var(--white);width:100%;max-width:480px;margin:0 auto;border-radius:18px 18px 0 0;padding:20px;animation:moSlide .3s var(--spring);}
+.shop-option-btn{width:100%;padding:15px;margin-bottom:10px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;font-weight:800;font-size:15px;cursor:pointer;transition:transform .15s;}
+.shop-option-btn:active{transform:scale(.97);}
+.shop-display-bar{background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;padding:10px 14px;border-radius:12px;margin:0 16px 12px;display:flex;justify-content:space-between;align-items:center;}
+.change-shop-btn{background:#fff;color:var(--purple);border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:800;font-size:12px;}
 
-/* FIX: Ensure bottom nav is visible */
-.bottom-nav, .bottomnav {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    z-index: 10000 !important;
-    display: flex !important;
-}
+/* ═══ BACK OFFICE DRAWER ═══ */
+.bo-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;align-items:flex-end;}
+.bo-modal.show{display:flex;}
+.bo-content{background:var(--white);width:100%;max-width:480px;margin:0 auto;border-radius:20px 20px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow-y:auto;animation:moSlide .3s var(--spring);}
+.bo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;}
+.bo-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 8px;border:none;border-radius:14px;background:var(--bg);color:var(--ink);font-weight:700;font-size:12px;cursor:pointer;transition:transform .15s;text-align:center;}
+.bo-btn:active{transform:scale(.96);}
+.bo-btn .bo-ico{font-size:24px;line-height:1;}
+.bo-btn.danger{background:#fef2f2;color:#dc2626;}
+.bo-btn.green{background:#ecfdf5;color:#059669;}
 
-.shop-selector-modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 9999;
-    align-items: flex-end;
-}
-
-.shop-selector-modal.show {
-    display: flex;
-}
-
-.shop-selector-content {
-    background: white;
-    width: 100%;
-    border-radius: 16px 16px 0 0;
-    padding: 20px;
-    animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-}
-
-.shop-option-btn {
-    width: 100%;
-    padding: 15px;
-    margin-bottom: 10px;
-    border: none;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    font-weight: bold;
-    font-size: 16px;
-    cursor: pointer;
-}
-
-.shop-option-btn:active { transform: scale(0.98); }
-
-.shop-display-bar {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    padding: 12px 16px;
-    border-radius: 6px;
-    margin-bottom: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.change-shop-btn {
-    background: white;
-    color: #667eea;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 12px;
-}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js">
-    // Shop Selector Functions
-    function openShopSelector() {
-        document.getElementById('shopModal').classList.add('show');
-    }
-    
-    function closeShopSelector() {
-        document.getElementById('shopModal').classList.remove('show');
-    }
-    
-    function selectShop(shopType, shopName) {
-        localStorage.setItem('selected_shop', shopType);
-        localStorage.setItem('selected_shop_name', shopName);
-        
-        document.getElementById('shopName').textContent = shopName;
-        document.getElementById('shopDisplay').style.display = 'flex';
-        
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+<script>
+    /* ═══ SHOP / SECTION SELECTOR (merchant) ═══
+       No auto-popup, no alert. Merchant opens it manually from Settings. */
+    function openShopSelector(){ var m=document.getElementById('shopSelectorModal'); if(m) m.classList.add('show'); }
+    function closeShopSelector(){ var m=document.getElementById('shopSelectorModal'); if(m) m.classList.remove('show'); }
+    function selectShop(shopType, shopName){
+        try{
+            localStorage.setItem('stashlo_shop_type', shopType);
+            localStorage.setItem('stashlo_shop_label', shopName);
+        }catch(e){}
+        var bar=document.getElementById('shopDisplayBar');
+        var lbl=document.getElementById('shopNameDisplay');
+        if(lbl) lbl.textContent = shopName;
+        if(bar) bar.style.display='flex';
         closeShopSelector();
-        
-        alert('✅ Shop selected: ' + shopName);
+        if(typeof T==='function') T('Shop set: '+shopName,'success');
     }
-    
-    // Load shop on page load
-    window.addEventListener('load', function() {
-        const savedShop = localStorage.getItem('selected_shop');
-        const savedShopName = localStorage.getItem('selected_shop_name');
-        
-        if (savedShop && savedShopName) {
-            document.getElementById('shopName').textContent = savedShopName;
-            document.getElementById('shopDisplay').style.display = 'flex';
-        } else {
-            openShopSelector();
-        }
+    // Restore saved shop label silently (no popup)
+    window.addEventListener('load', function(){
+        try{
+            var t=localStorage.getItem('stashlo_shop_label');
+            if(t){ var lbl=document.getElementById('shopNameDisplay'); var bar=document.getElementById('shopDisplayBar');
+                   if(lbl) lbl.textContent=t; if(bar) bar.style.display='flex'; }
+        }catch(e){}
+        var m=document.getElementById('shopSelectorModal');
+        if(m){ m.addEventListener('click', function(e){ if(e.target===this) closeShopSelector(); }); }
     });
-    
-    // Close modal when clicking outside
-    document.addEventListener('click', function(event) {
-        const modal = document.getElementById('shopModal');
-        if (event.target === modal) {
-            closeShopSelector();
-        }
-    });
-
-// ═══ SHOP SELECTOR FUNCTIONS ═══
-function openShopSelector() {
-    document.getElementById('shopSelectorModal').classList.add('show');
-}
-
-function closeShopSelector() {
-    document.getElementById('shopSelectorModal').classList.remove('show');
-}
-
-function selectShop(shopType, shopName) {
-    localStorage.setItem('selected_shop', shopType);
-    localStorage.setItem('selected_shop_name', shopName);
-    
-    document.getElementById('shopNameDisplay').textContent = shopName;
-    document.getElementById('shopDisplayBar').style.display = 'flex';
-    
-    closeShopSelector();
-    alert('✅ Shop selected: ' + shopName);
-}
-
-// Load shop on page load
-window.addEventListener('load', function() {
-    const savedShop = localStorage.getItem('selected_shop');
-    const savedShopName = localStorage.getItem('selected_shop_name');
-    
-    if (savedShop && savedShopName) {
-        document.getElementById('shopNameDisplay').textContent = savedShopName;
-        document.getElementById('shopDisplayBar').style.display = 'flex';
-    } else {
-        openShopSelector();
-    }
-    
-    // Close modal when clicking outside
-    document.getElementById('shopSelectorModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeShopSelector();
-        }
-    });
-});
-
-// ═══ RIPPLE ANIMATION FOR ALL BUTTONS ═══
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('button, .btn, .tb-btn, [role="button"]');
-    if (btn) {
-        const rect = btn.getBoundingClientRect();
-        const ripple = document.createElement('span');
-        ripple.style.cssText = 'position: absolute; top: ' + (e.clientY - rect.top) + 'px; left: ' + (e.clientX - rect.left) + 'px; width: 0; height: 0; border-radius: 50%; background: rgba(255,255,255,0.5); pointer-events: none;';
-        btn.style.position = 'relative';
-        btn.appendChild(ripple);
-        
-        let size = 0;
-        const interval = setInterval(() => {
-            size += 5;
-            ripple.style.width = size + 'px';
-            ripple.style.height = size + 'px';
-            ripple.style.opacity = 1 - (size / 300);
-            if (size > 300) {
-                clearInterval(interval);
-                ripple.remove();
-            }
-        }, 10);
-    }
-});
 </script>
 </head>
 <body>
@@ -845,23 +646,25 @@ document.addEventListener('click', function(e) {
 </div>
 
 
-<!-- Shop Selector Modal -->
+<!-- Shop Type Selector Modal (merchant chooses business type → tailors POS) -->
 <div id="shopSelectorModal" class="shop-selector-modal">
     <div class="shop-selector-content">
-        <h3 style="margin-bottom: 16px;">Select Your Shop</h3>
-        <button class="shop-option-btn" onclick="selectShop('retail', '🛒 Retail Store')">🛒 Retail Store</button>
-        <button class="shop-option-btn" onclick="selectShop('fuel', '⛽ Fuel Station')">⛽ Fuel Station</button>
-        <button class="shop-option-btn" onclick="selectShop('restaurant', '🍔 Restaurant')">🍔 Restaurant</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <h3 style="margin:0;font-size:17px;font-weight:800">Choose your shop type</h3>
+          <button onclick="closeShopSelector()" style="background:var(--bg);border:none;border-radius:8px;width:30px;height:30px;font-size:16px;cursor:pointer">✕</button>
+        </div>
+        <p style="font-size:12px;color:var(--ink3);margin-bottom:14px">This tailors your POS departments and reports.</p>
+        <button class="shop-option-btn" onclick="selectShop('retail','🛒 Retail / Convenience')">🛒 Retail / Convenience</button>
+        <button class="shop-option-btn" onclick="selectShop('fuel','⛽ Fuel / Petrol Station')">⛽ Fuel / Petrol Station</button>
+        <button class="shop-option-btn" onclick="selectShop('restaurant','🍔 Restaurant / Takeaway')">🍔 Restaurant / Takeaway</button>
+        <button class="shop-option-btn" onclick="selectShop('grocery','🥬 Grocery / Supermarket')">🥬 Grocery / Supermarket</button>
+        <button class="shop-option-btn" onclick="selectShop('vape','💨 Vape / Tobacco')">💨 Vape / Tobacco</button>
+        <button class="shop-option-btn" onclick="selectShop('pharmacy','💊 Pharmacy / Health')">💊 Pharmacy / Health</button>
+        <button class="shop-option-btn" style="background:var(--bg2);color:var(--ink)" onclick="addCustomShop()">➕ Add custom shop type…</button>
     </div>
 </div>
 
-<!-- Shop Display Bar -->
-<div id="shopDisplayBar" class="shop-display-bar" style="display: none; margin: 16px;">
-    <div>
-        <strong id="shopNameDisplay">Select a shop</strong>
-    </div>
-    <button class="change-shop-btn" onclick="openShopSelector()">Change</button>
-</div>
+<!-- shop display bar moved into Settings screen -->
 <div id="app">
   <div class="topbar">
     <div>
@@ -963,6 +766,19 @@ document.addEventListener('click', function(e) {
   <!-- SETTINGS -->
   <div class="screen" id="settings-screen">
     <div class="sh"><span class="sh-t">Shop Settings</span></div>
+    <!-- Shop type + POS section customise -->
+    <div class="setting-card">
+      <div class="setting-title">🏪 Shop Type &amp; POS Sections</div>
+      <div class="setting-sub">Pick your business type and customise quick-sale sections.</div>
+      <div id="shopDisplayBar" class="shop-display-bar" style="display:none">
+        <div><span style="font-size:11px;opacity:.8">Shop type</span><br><strong id="shopNameDisplay">Not set</strong></div>
+        <button class="change-shop-btn" onclick="openShopSelector()">Change</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button onclick="openShopSelector()" style="flex:1;background:var(--purple);color:#fff;border:none;border-radius:var(--r12);padding:12px;font-weight:800;font-size:13px;cursor:pointer">🏪 Choose shop type</button>
+        <button onclick="editDepts()" style="flex:1;background:var(--bg2);color:var(--ink);border:none;border-radius:var(--r12);padding:12px;font-weight:800;font-size:13px;cursor:pointer">✏️ Edit sections</button>
+      </div>
+    </div>
     <div class="setting-card">
       <div class="setting-title">Shop Details</div>
       <div class="setting-sub">Update your shop information</div>
@@ -2532,9 +2348,18 @@ function getDepts(){
 function renderDeptKeys(){
   var el=document.getElementById('dept-keys');if(!el)return;
   var ds=getDepts();
-  el.innerHTML=ds.map(function(d,i){
-    return '<button onclick="openManualPrice('+i+')" style="flex:0 0 auto;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06)">'+d+'</button>';
-  }).join('')+'<button onclick="editDepts()" style="flex:0 0 auto;background:#eef2ff;color:#4338ca;border:none;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:800;cursor:pointer">✏️</button>';
+  // Default departments already shown as colour tiles above — skip them here to avoid duplication.
+  var DEFAULTS=['vapes','tobacco','drinks','crisps','home','beauty','baby','grocery','cigarettes','cigs','alcohol','car','snacks','juice'];
+  function key(d){return (d||'').replace(/^[^A-Za-z0-9]+/,'').trim().toLowerCase();}
+  var customOnly=[];
+  ds.forEach(function(d,i){ if(DEFAULTS.indexOf(key(d))===-1) customOnly.push({d:d,i:i}); });
+  var html=customOnly.map(function(o){
+    return '<button onclick="openManualPrice('+o.i+')" style="flex:0 0 auto;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06)">'+o.d+'</button>';
+  }).join('');
+  // Always show a "manual £ item" quick button + customise pencil
+  html += '<button onclick="openManualPrice()" style="flex:0 0 auto;background:#1e1b4b;color:#fff;border:none;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:800;cursor:pointer">\u00a3 Manual</button>';
+  html += '<button onclick="editDepts()" style="flex:0 0 auto;background:#eef2ff;color:#4338ca;border:none;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:800;cursor:pointer">\u270f\ufe0f Sections</button>';
+  el.innerHTML=html;
 }
 /* ---- MANUAL PRICE (overlay, dept-aware, Enter to add) ---- */
 function openManualPrice(di){
@@ -2770,6 +2595,21 @@ function editDepts(){
     try{localStorage.setItem('sl_depts_'+MID,JSON.stringify(arr))}catch(e){}
     renderDeptKeys();T('Sections updated','success');
   }}],'Comma separated. These become your one-tap price keys.');
+}
+
+/* Add a custom shop type from the shop selector */
+function addCustomShop(){
+  if(typeof slForm!=='function'){ 
+    var n=prompt('New shop type name:'); if(n) selectShop('custom','🏪 '+n); return;
+  }
+  slForm('➕ Add custom shop type',[
+    {id:'emoji',label:'Icon (emoji)',value:'🏪',placeholder:'🏪'},
+    {id:'name',label:'Shop type name',placeholder:'e.g. Barber, Florist, Off-licence'}
+  ],[{label:'Cancel'},{label:'Save',primary:true,cb:function(v){
+    var nm=(v.name||'').trim(); if(!nm){T('Enter a name','error');return;}
+    var em=(v.emoji||'🏪').trim();
+    selectShop('custom', em+' '+nm);
+  }}],'This becomes your shop type and tailors reports.');
 }
 
 /* stock-in qty - overlay */
