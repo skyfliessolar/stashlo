@@ -1040,9 +1040,90 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
   </div>
 </div>
 
+<!-- LIVE VIEW MODAL (admin watches a merchant's POS in real time) -->
+<div class="modal" id="liveModal">
+  <div class="modal-box" style="max-height:94vh">
+    <div style="position:sticky;top:0;background:var(--white);padding:16px 18px 12px;border-bottom:1px solid var(--bg2);z-index:2">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:17px;font-weight:800" id="live-shop">Live View</div>
+          <div style="font-size:12px;color:var(--ink3)"><span id="live-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#94a3b8;margin-right:5px"></span><span id="live-status">Connecting…</span></div>
+        </div>
+        <button onclick="closeLiveView()" style="background:var(--bg);border:none;border-radius:10px;width:34px;height:34px;font-size:17px;cursor:pointer">✕</button>
+      </div>
+    </div>
+    <div style="padding:16px 18px 28px" id="live-body">
+      <div style="text-align:center;color:var(--ink3);padding:30px">Loading live data…</div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
+
+/* ═══ ADMIN LIVE VIEW: poll a merchant's live POS state ═══ */
+var _LIVE_POLL=null, _LIVE_MID=null;
+function openLiveView(mid,name){
+  _LIVE_MID=mid;
+  txt('live-shop','📺 '+(name||'Merchant'));
+  txt('live-status','Connecting…');
+  document.getElementById('live-dot').style.background='#94a3b8';
+  document.getElementById('live-body').innerHTML='<div style="text-align:center;color:var(--ink3);padding:30px">Loading live data…</div>';
+  openModal('liveModal');
+  fetchLive();
+  if(_LIVE_POLL)clearInterval(_LIVE_POLL);
+  _LIVE_POLL=setInterval(fetchLive,3000);
+}
+function closeLiveView(){
+  if(_LIVE_POLL){clearInterval(_LIVE_POLL);_LIVE_POLL=null;}
+  _LIVE_MID=null;closeModal('liveModal');
+}
+function fetchLive(){
+  if(!_LIVE_MID)return;
+  sget('merchant_live','merchant_id=eq.'+_LIVE_MID).then(function(d){
+    var row=Array.isArray(d)&&d[0]?d[0]:null;
+    renderLive(row);
+  }).catch(function(){ txt('live-status','Connection error'); });
+}
+function renderLive(row){
+  var dot=document.getElementById('live-dot'), st=document.getElementById('live-status'), body=document.getElementById('live-body');
+  if(!row){ dot.style.background='#94a3b8'; st.textContent='No live data yet — merchant must open the app'; 
+    body.innerHTML='<div style="text-align:center;color:var(--ink3);padding:30px">This merchant hasn\'t opened their till app recently.<br><br>Live view shows their POS once they\'re active.</div>'; return; }
+  var age=Date.now()-(row.updated_at||0);
+  var online=age<15000; // active within 15s
+  dot.style.background=online?'#10b981':'#f59e0b';
+  st.textContent=online?('🟢 Live · updated '+Math.round(age/1000)+'s ago'):('🟡 Last seen '+timeAgo(row.updated_at));
+  var basket=Array.isArray(row.basket)?row.basket:[];
+  var ls=row.last_sale||null;
+  body.innerHTML=
+    // KPI row
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">'
+    +liveKpi('Today',(row.sales_today||0)+' sales','#eef2ff','#4338ca')
+    +liveKpi('Revenue','£'+(parseFloat(row.revenue_today||0).toFixed(2)),'#ecfdf5','#059669')
+    +liveKpi('Screen',(row.screen||'—'),'#f1f5f9','#334155')
+    +'</div>'
+    // Till + customer
+    +'<div style="background:var(--bg);border-radius:14px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">'
+    +'<div><div style="font-size:11px;color:var(--ink3);font-weight:700">TILL</div><div style="font-weight:800;font-size:14px">'+(row.till_open?'🟢 Open':'⚪ Closed')+'</div></div>'
+    +'<div style="text-align:right"><div style="font-size:11px;color:var(--ink3);font-weight:700">CUSTOMER</div><div style="font-weight:800;font-size:14px">'+(row.customer?('👤 '+row.customer):'—')+'</div></div>'
+    +'</div>'
+    // Live basket
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:8px">🧺 Live Basket ('+basket.length+')</div>'
+    +'<div style="background:#fff;border:1px solid var(--bg2);border-radius:14px;padding:10px 14px;margin-bottom:12px">'
+    +(basket.length?basket.map(function(b){return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bg2);font-size:13px"><div>'+(b.e||'')+' <b>'+esc(b.n||'Item')+'</b> ×'+(b.q||1)+'</div><div style="font-weight:700">£'+((b.p||0)*(b.q||1)).toFixed(2)+'</div></div>';}).join(''):'<div style="text-align:center;color:var(--ink3);font-size:13px;padding:6px">Empty basket</div>')
+    +'<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1.5px dashed var(--bg2);font-size:15px"><b>TOTAL</b><b style="color:var(--purple)">£'+(parseFloat(row.total||0).toFixed(2))+'</b></div>'
+    +'</div>'
+    // Last sale
+    +(ls?('<div style="font-size:13px;font-weight:800;margin-bottom:8px">🧾 Last Sale</div><div style="background:#ecfdf5;border-radius:14px;padding:12px 14px;color:#065f46;font-size:13px"><b>£'+(ls.total||'0.00')+'</b> · '+(ls.method||'cash').toUpperCase()+' · '+(ls.items||0)+' items · '+timeAgo(ls.at)+'</div>'):'')
+    +'<div style="font-size:11px;color:var(--ink3);text-align:center;margin-top:16px">Read-only mirror · app '+(row.app_version||'?')+' · refreshes every 3s</div>';
+}
+function liveKpi(label,val,bg,fg){
+  return '<div style="background:'+bg+';border-radius:12px;padding:10px 8px;text-align:center"><div style="font-size:10px;color:'+fg+';font-weight:800;text-transform:uppercase;letter-spacing:.4px">'+label+'</div><div style="font-size:14px;font-weight:800;color:'+fg+';margin-top:2px">'+val+'</div></div>';
+}
+function timeAgo(ts){ if(!ts)return 'never'; var s=Math.round((Date.now()-ts)/1000); if(s<60)return s+'s ago'; var m=Math.round(s/60); if(m<60)return m+'m ago'; var h=Math.round(m/60); return h+'h ago'; }
+function esc(s){return String(s||'').replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];});}
+
 const SU='https://gcwevgaymahywqjorhnn.supabase.co',
       SK='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_',
       SR='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd2V2Z2F5bWFoeXdxam9yaG5uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTIzNjA2NywiZXhwIjoyMDk0ODEyMDY3fQ.w72URBw7g0TCP5y-TLcqLfiZNfjmaIAZ4M430Qb77E4';
@@ -1162,6 +1243,7 @@ function renderMerchants(list){
             <button class="btn-xs" style="background:${m.suspended?'#064e3b':'#7f1d1d'};color:#fff" onclick="event.stopPropagation();toggleMerchSuspend('${m.id}','${(m.name||'').replace(/'/g,'')}',${!!m.suspended})">${m.suspended?'▶':'⛔'}</button>
             <button class="btn-xs" style="background:${m.restricted?'#064e3b':'#713f12'};color:#fff" onclick="event.stopPropagation();toggleMerchRestrict('${m.id}','${(m.name||'').replace(/'/g,'')}',${!!m.restricted})">${m.restricted?'🔓':'💰'}</button>
             ${!m.pos_enabled?`<button class="btn-xs" style="background:#6366F1;color:#fff" title="Activate EPOS" onclick="event.stopPropagation();approvePOS('${m.id}','${(m.name||'').replace(/'/g,'')}')">🖥✓</button>`:`<button class="btn-xs" style="background:#334155;color:#fff" title="Revoke EPOS" onclick="event.stopPropagation();revokePOS('${m.id}','${(m.name||'').replace(/'/g,'')}')">🖥✕</button>`}
+            <button class="btn-xs" style="background:#0ea5e9;color:#fff" title="Live view" onclick="event.stopPropagation();openLiveView('${m.id}','${(m.name||'').replace(/'/g,'')}')">📺</button>
           </div>
         </div>
       </div>

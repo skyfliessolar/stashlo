@@ -1280,7 +1280,7 @@ function showAuthErr(m){const e=document.getElementById("auth-err");if(e){e.text
 function showRegErr(m){const e=document.getElementById("reg-err");if(e){e.textContent=m;e.style.display="block"}}
 function showReg(){const s=document.getElementById("reg-section");if(s)s.style.display=s.style.display==="none"?"block":"none"}
 function logout(){localStorage.removeItem("ms_s");location.reload()}
-function showApp(){["splash","auth"].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display="none"});document.getElementById("app").style.display="flex";loadAll()}
+function showApp(){try{setTimeout(startLiveHeartbeat,3000);}catch(e){}["splash","auth"].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display="none"});document.getElementById("app").style.display="flex";loadAll()}
 function loadAll(){loadTheme3D();loadMerchant();loadProducts();loadOrders();loadCustomers();loadTxns();loadInbox()}
 
 function countUp(id,target,prefix){
@@ -2186,8 +2186,12 @@ function finalizeSale(method){
       if(p&&p.stock!=null){p.stock=Math.max(0,p.stock-b.qty);pat('products','id=eq.'+p.id,{stock:p.stock}).catch(function(){});}
     });
     T((method==='cash'?'💵 CASH':'💳 CARD')+' sale £'+gross.toFixed(2)+' recorded','success');
+    try{window._LAST_SALE_SUMMARY={total:gross.toFixed(2),method:method,at:Date.now(),items:(POS_BASKET||[]).length};
+        fetch(SU+'/rest/v1/merchant_live?on_conflict=merchant_id',{method:'POST',headers:{'apikey':SK,'Authorization':'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({merchant_id:MID,last_sale:window._LAST_SALE_SUMMARY,updated_at:Date.now()})}).catch(function(){});
+    }catch(e){}
     posClear();var de=document.getElementById('pos-disc');if(de)de.value='';
     renderPOSGrid();loadPOSSales();
+    try{setTimeout(function(){publishLiveState(true);},600);}catch(e){}
     if(confirm('Sale complete — £'+gross.toFixed(2)+'\n\nPrint receipt?'))printReceipt(saved);
   }).catch(function(){
     // retry without new columns
@@ -2337,6 +2341,51 @@ function posQty(pid,d){
   b.qty+=d;if(b.qty<=0)POS_BASKET=POS_BASKET.filter(function(x){return x.id!==pid});
   renderBasket();
 }
+
+/* ═══ ADMIN REMOTE VIEW: publish live POS state to Supabase ═══ */
+var _LIVE_LAST=0, _LIVE_TIMER=null;
+function publishLiveState(force){
+  if(!MID)return;
+  var now=Date.now();
+  if(!force && now-_LIVE_LAST<2500)return; // throttle to ~once per 2.5s
+  _LIVE_LAST=now;
+  try{
+    var net=0,vat=0;
+    (POS_BASKET||[]).forEach(function(b){var g=b.price*b.qty;var n=g/(1+(b.vat||0));net+=n;vat+=g-n;});
+    var disc=parseFloat((document.getElementById('pos-disc')||{}).value||0)||0;
+    var gross=Math.max(0,net+vat-disc);
+    var cust=(document.getElementById('pos-cx-name')||{}).textContent||'';
+    if(/no customer/i.test(cust))cust='';
+    var todaySales=(TXNS||[]).filter(function(t){var d=new Date(t.created_at);var n=new Date();return d.toDateString()===n.toDateString() && !t.refund;});
+    var revToday=todaySales.reduce(function(s,t){return s+parseFloat(t.total||0);},0);
+    var activeScreen=(document.querySelector('.screen.on')||{}).id||'';
+    var row={
+      merchant_id:MID,
+      shop_name:(MDATA.name||'Shop'),
+      till_open:!!document.getElementById('pos-main') && document.getElementById('pos-main').style.display!=='none',
+      basket:(POS_BASKET||[]).map(function(b){return {n:b.name,q:b.qty,p:b.price,e:b.emoji||''};}),
+      net:+net.toFixed(2), vat:+vat.toFixed(2), total:+gross.toFixed(2),
+      customer:cust.replace(/^👤\s*/,''),
+      sales_today:todaySales.length,
+      revenue_today:+revToday.toFixed(2),
+      screen:activeScreen.replace('-screen',''),
+      app_version:(window.STASHLO_V||'v?'),
+      updated_at:now
+    };
+    // upsert on merchant_id (merge-duplicates)
+    fetch(SU+'/rest/v1/merchant_live?on_conflict=merchant_id',{
+      method:'POST',
+      headers:{'apikey':SK,'Authorization':'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify(row)
+    }).catch(function(){});
+  }catch(e){}
+}
+// Heartbeat every 4s while the app is open & visible
+function startLiveHeartbeat(){
+  if(_LIVE_TIMER)return;
+  _LIVE_TIMER=setInterval(function(){ if(!document.hidden) publishLiveState(false); },4000);
+}
+
 function renderBasket(){
   const el=document.getElementById('pos-basket');if(!el)return;
   const Q=String.fromCharCode(39);
@@ -2352,6 +2401,7 @@ function renderBasket(){
   if(disc>0){var f=(gross0-disc)/Math.max(gross0,0.01);net*=f;vat*=f;if(note)note.textContent='−£'+disc.toFixed(2)+' applied';}
   else if(note)note.textContent='';
   txt('pos-net','£'+net.toFixed(2));txt('pos-vat','£'+vat.toFixed(2));txt('pos-total','£'+(net+vat).toFixed(2));
+  try{publishLiveState(true);}catch(e){}
 }
 function posClear(){POS_BASKET=[];renderBasket();}
 function openMoreDrawer(){document.getElementById("more-bd").style.display="block";document.getElementById("more-drawer").style.display="block";}
