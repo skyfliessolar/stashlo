@@ -615,6 +615,17 @@ body { overflow: hidden !important; height: 100vh !important; }
         if(m){ m.addEventListener('click', function(e){ if(e.target===this) closeShopSelector(); }); }
     });
 </script>
+
+<style id="ios-nav-fix">
+/* iOS Safari: ensure bottom nav clears the browser toolbar */
+@supports (-webkit-touch-callout: none){
+  .bottomnav{ padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6px)!important; }
+  .screen{ padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important; }
+}
+/* Make nav labels readable (were 8px) */
+.nb-lab{ font-size:10px!important; }
+.bottomnav{ min-height:60px!important; }
+</style>
 </head>
 <body>
 
@@ -665,6 +676,30 @@ body { overflow: hidden !important; height: 100vh !important; }
 </div>
 
 <!-- shop display bar moved into Settings screen -->
+
+<!-- ═══ BACK OFFICE DRAWER (opens on demand, all tools in one place) ═══ -->
+<div id="boDrawer" class="bo-modal" onclick="if(event.target===this)closeBackOfficeDrawer()">
+  <div class="bo-content">
+    <div style="width:40px;height:4px;background:var(--bg2);border-radius:4px;margin:0 auto 14px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:17px;font-weight:800">🏢 Back Office</div>
+      <button onclick="closeBackOfficeDrawer()" style="background:var(--bg);border:none;border-radius:8px;width:30px;height:30px;font-size:16px;cursor:pointer">✕</button>
+    </div>
+    <div class="bo-grid">
+      <button class="bo-btn" onclick="closeBackOfficeDrawer();switchTab('products')"><span class="bo-ico">📦</span>Stock / Products</button>
+      <button class="bo-btn" onclick="closeBackOfficeDrawer();toggleStockIn();T('Stock In mode toggled')"><span class="bo-ico">📥</span>Stock In</button>
+      <button class="bo-btn" onclick="closeBackOfficeDrawer();aiInvoiceScan()"><span class="bo-ico">📄</span>AI Invoice</button>
+      <button class="bo-btn" onclick="closeBackOfficeDrawer();openManualPrice()"><span class="bo-ico">£</span>Manual Price</button>
+      <button class="bo-btn" onclick="closeBackOfficeDrawer();toggleWaste();T('Reduce/Waste mode toggled')"><span class="bo-ico">📉</span>Reduce / Waste</button>
+      <button class="bo-btn green" onclick="closeBackOfficeDrawer();posDayEnd()"><span class="bo-ico">📊</span>Day-End</button>
+      <button class="bo-btn green" onclick="closeBackOfficeDrawer();(typeof posExportCSV==='function'?posExportCSV():downloadCSV('sales'))"><span class="bo-ico">⬇️</span>HMRC CSV</button>
+      <button class="bo-btn" onclick="closeBackOfficeDrawer();(typeof openPetrolVAT==='function'?openPetrolVAT():switchTab('settings'))"><span class="bo-ico">⛽</span>Fuel &amp; VAT</button>
+      <button class="bo-btn" onclick="closeBackOfficeDrawer();switchTab('settings')"><span class="bo-ico">⚙️</span>POS Setup</button>
+      <button class="bo-btn danger" onclick="closeBackOfficeDrawer();posRefundOpen()"><span class="bo-ico">↩️</span>Refund</button>
+    </div>
+  </div>
+</div>
+
 <div id="app">
   <div class="topbar">
     <div>
@@ -929,11 +964,10 @@ body { overflow: hidden !important; height: 100vh !important; }
         <input id="pos-scan" placeholder="🔍 Search / barcode + Enter" style="flex:1;padding:13px;border:2px solid var(--bg2);border-radius:14px;font-size:14px" onkeydown="if(event.key==='Enter')posScanAdd(this.value)" oninput="renderPOSGrid()">
         <button onclick="openPOSScanner()" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:14px;padding:0 18px;font-size:15px;font-weight:800;cursor:pointer">📷 Scan</button>
       </div>
+      <!-- Compact action row: Manual Price (most used) + Back Office button -->
       <div style="display:flex;gap:8px;padding:0 16px;margin-bottom:8px">
-        <button id="stockin-btn" onclick="toggleStockIn()" style="flex:1;background:var(--bg2);color:var(--ink2);border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">📦 Stock In: OFF</button>
-        <button onclick="aiInvoiceScan()" style="flex:1;background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">📄 AI Invoice</button>
-        <button onclick="openManualPrice()" style="flex:1;background:#1e1b4b;color:#fff;border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">£ Manual Price</button>
-        <button onclick="toggleWaste()" id="waste-btn" style="flex:1;background:var(--bg2);color:var(--ink2);border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">📉 Reduce/Waste</button>
+        <button onclick="openManualPrice()" style="flex:1;background:#1e1b4b;color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:800;cursor:pointer">£ Manual Price</button>
+        <button onclick="openBackOfficeDrawer()" style="flex:1;background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:800;cursor:pointer">🏢 Back Office</button>
       </div>
       <div id="quick-grid" style="margin:0 16px 10px"></div>
       <!-- FAST-SALE DEPARTMENT TILES (like evoPOS right panel) -->
@@ -1810,6 +1844,8 @@ function downloadCSV(type){
 
 function markMsgsRead(){txt("m-inbox-lab","Inbox")}
 
+function openBackOfficeDrawer(){var d=document.getElementById('boDrawer');if(d)d.classList.add('show');}
+function closeBackOfficeDrawer(){var d=document.getElementById('boDrawer');if(d)d.classList.remove('show');}
 function switchTab(name){
   if(!document.getElementById(name+'-screen')){T('That section is coming soon');name='overview';}
   document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("on");s.scrollTop=0;});
@@ -2796,32 +2832,7 @@ function aiInvoiceScan(){
   inp.click();
 }
 
-/* BACK OFFICE hub injected above dept keys */
-var _rdk=renderDeptKeys;
-renderDeptKeys=function(){
-  _rdk();
-  if(document.getElementById('backoffice-card'))return;
-  var dk=document.getElementById('dept-keys');if(!dk)return;
-  var bo=document.createElement('div');
-  bo.id='backoffice-card';
-  bo.style.cssText='margin:0 16px 10px;background:#0f172a;border-radius:16px;padding:12px';
-  bo.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:12px;font-weight:800;color:#94a3b8;letter-spacing:1px">🏢 BACK OFFICE</div><div style="font-size:10px;color:#475569">tap any tile</div></div>'
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px">'
-    +'<button onclick="switchTab(String.fromCharCode(115,116,111,99,107))" style="background:linear-gradient(135deg,#1e293b,#334155);color:#fff;border:none;border-radius:14px;padding:13px 4px;font-size:11px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)">📦<br><span style=\"font-size:10px;opacity:.8\">Products</span></button>'
-    +'<button onclick="aiInvoiceScan()" style="background:linear-gradient(135deg,#4338ca,#6366F1);color:#fff;border:none;border-radius:14px;padding:13px 4px;font-size:11px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(99,102,241,.4)">📄<br><span style=\"font-size:10px;opacity:.8\">AI Invoice</span></button>'
-    +'<button onclick="posDayEnd()" style="background:linear-gradient(135deg,#065f46,#059669);color:#fff;border:none;border-radius:14px;padding:13px 4px;font-size:11px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(5,150,105,.4)">📊<br><span style=\"font-size:10px;opacity:.8\">Day-End</span></button>'
-    +'<button onclick="posExportCSV()" style="background:linear-gradient(135deg,#7c3aed,#9333ea);color:#fff;border:none;border-radius:14px;padding:13px 4px;font-size:11px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(147,51,234,.4)">⬇<br><span style=\"font-size:10px;opacity:.8\">HMRC CSV</span></button>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'
-    +'<button onclick="openPetrolVAT()" style="background:linear-gradient(135deg,#b45309,#d97706);color:#fff;border:none;border-radius:14px;padding:13px 4px;font-size:11px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(180,83,9,.4)">⛽<br><span style=\"font-size:10px;opacity:.8\">Fuel&amp;VAT</span></button>'
-    +'<button onclick="switchTab(\'settings\')" style="background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;border:none;border-radius:14px;padding:13px 4px;font-size:11px;font-weight:800;cursor:pointer">⚙️<br><span style=\'font-size:10px;opacity:.8\'>POS Setup</span></button>'
-    +'<button onclick="switchTab(String.fromCharCode(115,116,111,99,107))" style="background:linear-gradient(135deg,#164e63,#0891b2);color:#fff;border:none;border-radius:14px;padding:13px 4px;font-size:11px;font-weight:800;cursor:pointer">📋<br><span style=\"font-size:10px;opacity:.8\">Stock</span></button>'
-    +'<button onclick="posRefundOpen()" style="background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff;border:none;border-radius:14px;padding:13px 4px;font-size:11px;font-weight:800;cursor:pointer">↩<br><span style=\"font-size:10px;opacity:.8\">Refund</span></button>'
-    +'</div>';
-  dk.parentElement.insertBefore(bo,dk);
-};
-
-
+/* (old always-visible back-office card removed — replaced by on-demand Back Office drawer) */
 
 /* ===== STASHLO EPOS v19: Customer loyalty scan + auto receipt ===== */
 window.STASHLO_V='v19';
@@ -3024,23 +3035,35 @@ function filterDept(dept){
     var od=t.getAttribute('data-dept')||'';
     if(od===dept)t.classList.add('active-dept');
   });
+  // If this department has no products yet, jump straight to a manual-price entry
+  // tagged to that department so the tile is always useful (common for vapes/tobacco).
+  try{
+    if(dept && dept!=='general' && dept!==''){
+      var any=(PRODUCTS||[]).some(function(p){return p.active!==false && (p.pos_category||'general')===dept;});
+      if(!any){
+        window._DEPT_HINT=dept;
+        if(typeof openManualPrice==='function'){ openManualPrice(); T('No '+dept+' products yet — add a quick price','');}
+      }
+    }
+  }catch(e){}
 }
 
 
 // ═══ SCREEN HEIGHT FIX — runs after DOM ready ═══
 function fixScreenLayout(){
-  var app=document.getElementById('app');
-  if(!app)return;
-  // Make app fill viewport without scroll
-  app.style.cssText+='position:fixed!important;inset:0!important;overflow:hidden!important;';
-  document.body.style.overflow='hidden';
-  document.body.style.position='fixed';
-  document.body.style.width='100%';
-  document.body.style.height='100%';
-  // Make all screens fill the container
-  document.querySelectorAll('.screen').forEach(function(s){
-    s.style.cssText+='position:absolute!important;top:0!important;left:0!important;right:0!important;bottom:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;';
-  });
+  // iOS-safe: do NOT pin #app to position:fixed (that hides the bottom nav behind
+  // Safari's toolbar). Just guarantee screens scroll and leave space for the nav.
+  try{
+    document.body.style.removeProperty('position');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('height');
+    var app=document.getElementById('app');
+    if(app){app.style.removeProperty('position');app.style.removeProperty('inset');app.style.removeProperty('overflow');}
+    document.querySelectorAll('.screen').forEach(function(s){
+      s.style.webkitOverflowScrolling='touch';
+      s.style.overflowY='auto';
+    });
+  }catch(e){}
 }
 // Run immediately and after a short delay to catch dynamic screens
 fixScreenLayout();

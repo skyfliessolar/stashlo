@@ -1018,6 +1018,15 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
 }
 
 </style>
+
+<style id="ios-nav-fix">
+@supports (-webkit-touch-callout: none){
+  .bottom-nav,.bottomnav{ padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6px)!important; }
+  .screen{ padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important; }
+}
+.nb-lab{ font-size:10px!important; }
+.bottom-nav,.bottomnav{ min-height:60px!important; }
+</style>
 </head>
 <body>
 
