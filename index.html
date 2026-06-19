@@ -1019,10 +1019,32 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
 
 </style>
 
-<style id="ios-fix">
-@supports (-webkit-touch-callout:none){
-  .bottom-nav,.bottomnav,.nav{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px)!important}
-  .screen{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important}
+
+<style id="ios-fix-v2">
+/* ── Definitive bottom-nav fix (targets the REAL .bottom-nav element) ── */
+.bottom-nav{
+  position:fixed!important;
+  bottom:0!important;
+  left:50%!important;transform:translateX(-50%)!important;
+  width:min(480px,100vw)!important;
+  z-index:9999!important;                 /* above all content */
+  height:auto!important;min-height:60px!important;
+  box-sizing:border-box!important;
+  padding-top:6px!important;
+  /* extra clearance so iOS Safari toolbar never covers the tabs */
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px)!important;
+  background:rgba(255,255,255,.96)!important;
+  backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);
+  border-top:1px solid var(--border,#e2e8f0)!important;
+  box-shadow:0 -4px 24px rgba(15,23,42,.10)!important;
+}
+.bottom-nav .nb{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.nb-ico{font-size:21px;line-height:1}
+.nb-lab{font-size:10px;font-weight:700;white-space:nowrap}
+/* Give every scrollable screen room so content isn't hidden behind the nav */
+.screen{padding-bottom:calc(72px + env(safe-area-inset-bottom,0px) + 16px)!important}
+@supports (height:100dvh){
+  body,html{min-height:100dvh}
 }
 </style>
 </head>
