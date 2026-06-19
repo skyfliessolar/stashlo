@@ -3173,33 +3173,7 @@ function downloadReceiptPDF(i){
    +'<div>'+(r.items||'')+'</div><div class="line"></div>'
    +'<div class="row"><b>TOTAL</b><b>£'+parseFloat(r.total||0).toFixed(2)+'</b></div>'
    +(r.image_url?'<img src="'+r.image_url+'" style="width:100%;margin-top:10px">':'')
-   +'<div class="c" style="margin-top:14px">Stashlo Receipt Archive</div>
-<script id="viewport-fix">
-/* iOS Safari hides fixed-bottom elements behind its toolbar. Track the REAL visible
-   height with visualViewport and push the nav up by the exact hidden amount. */
-(function(){
-  function fix(){
-    try{
-      var vv=window.visualViewport;
-      var navEls=document.querySelectorAll('.bottom-nav,.bottomnav');
-      if(!vv||!navEls.length)return;
-      // gap between layout viewport bottom and visual viewport bottom = toolbar overlap
-      var gap=Math.max(0,(window.innerHeight - (vv.height + vv.offsetTop)));
-      navEls.forEach(function(n){ n.style.bottom=gap+'px'; });
-    }catch(e){}
-  }
-  if(window.visualViewport){
-    window.visualViewport.addEventListener('resize',fix);
-    window.visualViewport.addEventListener('scroll',fix);
-  }
-  window.addEventListener('resize',fix);
-  window.addEventListener('orientationchange',function(){setTimeout(fix,200);});
-  document.addEventListener('DOMContentLoaded',fix);
-  window.addEventListener('load',function(){fix();setTimeout(fix,300);setTimeout(fix,800);});
-  setInterval(fix,1500);
-})();
-</script>
-</body></html>');
+   +'<div class="c" style="margin-top:14px">Stashlo Receipt Archive</div></body></html>');
   w.document.close();
   setTimeout(function(){w.print();},400);
 }
