@@ -686,6 +686,12 @@ body{
 /* modals/drawers stay above nav */
 .modal,.mo,#more-drawer,#more-bd{z-index:10000!important}
 </style>
+
+<style id="layout-css-v5">
+#app .topbar,#app .app-head{position:fixed!important;top:0!important;left:50%!important;transform:translateX(-50%)!important;width:100%!important;max-width:480px!important;z-index:9000!important}
+#app{padding-top:0!important}
+.bottomnav,.bottom-nav{position:fixed!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:100%!important;max-width:480px!important;z-index:9000!important}
+</style>
 </head>
 <body>
 
@@ -3413,5 +3419,40 @@ function saveReceiptLimit(){
 function openCashCalc(){openModal('cashModal');var el=document.getElementById('cm-due');if(el)el.textContent='£'+((window._POS_DUE)||0).toFixed(2);}
 </script>
 
+
+<script id="layout-fix-v5">
+(function(){
+  function apply(){
+    try{
+      var head=document.querySelector('.topbar');
+      var navs=document.querySelectorAll('.bottomnav');
+      var screens=document.querySelectorAll('#app .screen');
+      var vv=window.visualViewport;
+      // header height (includes safe-area padding already)
+      var hh=head?head.getBoundingClientRect().height:60;
+      // nav height
+      var nh=navs.length?navs[0].getBoundingClientRect().height:60;
+      // how much the iOS toolbar overlaps the bottom
+      var gap=vv?Math.max(0,(window.innerHeight-(vv.height+vv.offsetTop))):0;
+      navs.forEach(function(n){ n.style.bottom=gap+'px'; });
+      screens.forEach(function(s){
+        s.style.paddingTop=(hh+10)+'px';
+        s.style.paddingBottom=(nh+gap+16)+'px';
+      });
+    }catch(e){}
+  }
+  function boot(){ apply(); setTimeout(apply,150); setTimeout(apply,500); setTimeout(apply,1200); }
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',apply);
+    window.visualViewport.addEventListener('scroll',apply);
+  }
+  window.addEventListener('resize',apply);
+  window.addEventListener('orientationchange',function(){setTimeout(apply,200);});
+  if(document.readyState!=='loading')boot(); else document.addEventListener('DOMContentLoaded',boot);
+  window.addEventListener('load',boot);
+  // re-apply when tabs switch (new screen becomes visible)
+  document.addEventListener('click',function(){setTimeout(apply,60);});
+})();
+</script>
 </body>
 </html>
