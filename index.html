@@ -1020,32 +1020,68 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
 </style>
 
 
-<style id="ios-fix-v2">
-/* ── Definitive bottom-nav fix (targets the REAL .bottom-nav element) ── */
-.bottom-nav{
-  position:fixed!important;
-  bottom:0!important;
-  left:50%!important;transform:translateX(-50%)!important;
-  width:min(480px,100vw)!important;
-  z-index:9999!important;                 /* above all content */
-  height:auto!important;min-height:60px!important;
-  box-sizing:border-box!important;
+
+<style id="app-shell-v3">
+/* ===== DEFINITIVE APP SHELL (fixes top+bottom hidden on all devices) ===== */
+html,body{
+  height:100%!important;
+  min-height:0!important;
+  margin:0!important;padding:0!important;
+  overflow:hidden!important;            /* page itself never scrolls */
+  position:fixed!important;             /* lock to viewport, no rubber-band */
+  width:100%!important;
+  overscroll-behavior:none!important;
+}
+#app{
+  display:flex!important;
+  flex-direction:column!important;
+  height:100vh!important;
+  height:100dvh!important;              /* dynamic vh: respects iOS toolbar */
+  max-width:480px!important;
+  margin:0 auto!important;
+  overflow:hidden!important;           /* shell never scrolls */
+  position:relative!important;
+  min-height:0!important;
+}
+/* Header: fixed at top, always visible, with safe-area inset */
+#app .app-head{
+  flex:0 0 auto!important;
+  position:relative!important;          /* not sticky — it's a flex child now */
+  top:auto!important;
+  padding-top:calc(env(safe-area-inset-top,0px) + 12px)!important;
+  z-index:30!important;
+}
+/* The scrolling region: ONLY the active screen scrolls */
+#app .screen{
+  flex:1 1 auto!important;
+  min-height:0!important;              /* critical for flex children to scroll */
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  padding-bottom:20px!important;       /* no need for nav-height padding now */
+}
+#app .screen:not(.on){display:none!important}
+#app .screen.on{display:block!important}
+/* Bottom nav: a flex child pinned at the bottom of the shell — always visible */
+#app .bottom-nav{
+  flex:0 0 auto!important;
+  position:relative!important;          /* not fixed — it's inside the flex shell */
+  left:auto!important;transform:none!important;
+  width:100%!important;max-width:100%!important;
+  bottom:auto!important;
+  z-index:30!important;
+  height:auto!important;min-height:58px!important;
   padding-top:6px!important;
-  /* extra clearance so iOS Safari toolbar never covers the tabs */
-  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px)!important;
-  background:rgba(255,255,255,.96)!important;
-  backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6px)!important;
+  box-sizing:border-box!important;
+  background:rgba(255,255,255,.98)!important;
   border-top:1px solid var(--border,#e2e8f0)!important;
-  box-shadow:0 -4px 24px rgba(15,23,42,.10)!important;
+  box-shadow:0 -2px 16px rgba(15,23,42,.08)!important;
 }
-.bottom-nav .nb{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
-.nb-ico{font-size:21px;line-height:1}
-.nb-lab{font-size:10px;font-weight:700;white-space:nowrap}
-/* Give every scrollable screen room so content isn't hidden behind the nav */
-.screen{padding-bottom:calc(72px + env(safe-area-inset-bottom,0px) + 16px)!important}
-@supports (height:100dvh){
-  body,html{min-height:100dvh}
-}
+.bottom-nav .nb{flex:1 1 0!important;min-width:0!important}
+.nb-ico{font-size:21px}.nb-lab{font-size:10px;font-weight:700;white-space:nowrap}
+/* ambient orbs must not block scroll/taps */
+.amb-wrap{position:absolute!important;inset:0!important;pointer-events:none!important;z-index:0!important;overflow:hidden!important}
 </style>
 </head>
 <body>
