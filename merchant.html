@@ -620,7 +620,7 @@ body { overflow: hidden !important; height: 100vh !important; }
 /* iOS Safari: ensure bottom nav clears the browser toolbar */
 @supports (-webkit-touch-callout: none){
   .bottomnav{ padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6px)!important; }
-  .screen{ padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important; }
+  /* screen padding-bottom set by JS */
 }
 /* Make nav labels readable (were 8px) */
 .nb-lab{ font-size:10px!important; }
@@ -653,8 +653,8 @@ body{
 }
 /* Screens: normal flow, each fills at least the viewport minus chrome */
 #app .screen{
-  padding-top:14px!important;
-  padding-bottom:20px!important;
+  padding-top:calc(env(safe-area-inset-top,0px) + 78px)!important;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)!important;
 }
 #app .screen:not(.on){display:none!important}
 #app .screen.on{display:block!important}

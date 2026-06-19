@@ -404,7 +404,7 @@ html{height:100%}
 body{margin:0;min-height:100%;background:var(--bg,#f1f5f9)}
 #app{display:block!important;max-width:480px;margin:0 auto;min-height:100dvh;position:relative;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))!important}
 #app .topbar,#app .app-head{position:sticky!important;top:0!important;z-index:40!important;padding-top:calc(env(safe-area-inset-top,0px) + 12px)!important}
-#app .screen{padding-top:14px!important;padding-bottom:20px!important}
+#app .screen{padding-top:calc(env(safe-area-inset-top,0px) + 78px)!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)!important}
 #app .screen:not(.on){display:none!important}
 #app .screen.on{display:block!important}
 {position:fixed!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:100%!important;max-width:480px!important;display:grid!important;grid-template-columns:repeat(5,1fr)!important;align-items:center!important;overflow:visible!important;z-index:9999!important;height:auto!important;min-height:56px!important;margin:0!important;padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px) 0!important;background:#fff!important;border-top:1px solid var(--bg2,#e2e8f0)!important;box-shadow:0 -3px 18px rgba(15,23,42,.10)!important}
