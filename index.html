@@ -1021,67 +1021,21 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
 
 
 
-<style id="app-shell-v3">
-/* ===== DEFINITIVE APP SHELL (fixes top+bottom hidden on all devices) ===== */
-html,body{
-  height:100%!important;
-  min-height:0!important;
-  margin:0!important;padding:0!important;
-  overflow:hidden!important;            /* page itself never scrolls */
-  position:fixed!important;             /* lock to viewport, no rubber-band */
-  width:100%!important;
-  overscroll-behavior:none!important;
-}
-#app{
-  display:flex!important;
-  flex-direction:column!important;
-  height:100vh!important;
-  height:100dvh!important;              /* dynamic vh: respects iOS toolbar */
-  max-width:480px!important;
-  margin:0 auto!important;
-  overflow:hidden!important;           /* shell never scrolls */
-  position:relative!important;
-  min-height:0!important;
-}
-/* Header: fixed at top, always visible, with safe-area inset */
-#app .app-head{
-  flex:0 0 auto!important;
-  position:relative!important;          /* not sticky — it's a flex child now */
-  top:auto!important;
-  padding-top:calc(env(safe-area-inset-top,0px) + 12px)!important;
-  z-index:30!important;
-}
-/* The scrolling region: ONLY the active screen scrolls */
-#app .screen{
-  flex:1 1 auto!important;
-  min-height:0!important;              /* critical for flex children to scroll */
-  overflow-y:auto!important;
-  overflow-x:hidden!important;
-  -webkit-overflow-scrolling:touch!important;
-  padding-bottom:20px!important;       /* no need for nav-height padding now */
-}
+
+<style id="app-shell-v4">
+*{box-sizing:border-box}
+html{height:100%}
+body{margin:0;min-height:100%;background:var(--bg,#f1f5f9)}
+#app{display:block!important;max-width:480px;margin:0 auto;min-height:100dvh;position:relative;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))!important}
+#app .topbar,#app .app-head{position:sticky!important;top:0!important;z-index:40!important;padding-top:calc(env(safe-area-inset-top,0px) + 12px)!important}
+#app .screen{padding-top:14px!important;padding-bottom:20px!important}
 #app .screen:not(.on){display:none!important}
 #app .screen.on{display:block!important}
-/* Bottom nav: a flex child pinned at the bottom of the shell — always visible */
-#app .bottom-nav{
-  flex:0 0 auto!important;
-  position:relative!important;          /* not fixed — it's inside the flex shell */
-  left:auto!important;transform:none!important;
-  width:100%!important;max-width:100%!important;
-  bottom:auto!important;
-  z-index:30!important;
-  height:auto!important;min-height:58px!important;
-  padding-top:6px!important;
-  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6px)!important;
-  box-sizing:border-box!important;
-  background:rgba(255,255,255,.98)!important;
-  border-top:1px solid var(--border,#e2e8f0)!important;
-  box-shadow:0 -2px 16px rgba(15,23,42,.08)!important;
-}
-.bottom-nav .nb{flex:1 1 0!important;min-width:0!important}
-.nb-ico{font-size:21px}.nb-lab{font-size:10px;font-weight:700;white-space:nowrap}
-/* ambient orbs must not block scroll/taps */
-.amb-wrap{position:absolute!important;inset:0!important;pointer-events:none!important;z-index:0!important;overflow:hidden!important}
+{position:fixed!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:100%!important;max-width:480px!important;display:grid!important;grid-template-columns:repeat(5,1fr)!important;align-items:center!important;overflow:visible!important;z-index:9999!important;height:auto!important;min-height:56px!important;margin:0!important;padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px) 0!important;background:#fff!important;border-top:1px solid var(--bg2,#e2e8f0)!important;box-shadow:0 -3px 18px rgba(15,23,42,.10)!important}
+ .nb{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;min-width:0!important;padding:2px!important;cursor:pointer}
+ .nb-ico{font-size:20px!important;line-height:1!important}
+ .nb-lab{font-size:10px!important;font-weight:700!important;white-space:nowrap!important}
+.modal,.mo,#more-drawer,#more-bd{z-index:10000!important}
 </style>
 </head>
 <body>

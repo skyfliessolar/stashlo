@@ -397,16 +397,21 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
 
-<style id="app-shell-v3">
-/* ===== ADMIN DEFINITIVE SHELL (fix top+bottom hidden) ===== */
-html,body{height:100%!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;position:fixed!important;width:100%!important;overscroll-behavior:none!important}
-#app{display:flex!important;flex-direction:column!important;height:100vh!important;height:100dvh!important;max-width:480px!important;margin:0 auto!important;overflow:hidden!important;min-height:0!important;padding-bottom:0!important;position:relative!important}
-#app .topbar{flex:0 0 auto!important;position:relative!important;top:auto!important;padding-top:calc(env(safe-area-inset-top,0px) + 12px)!important;z-index:30!important}
-#app .screen{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;padding-top:14px!important;padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))!important}
+
+<style id="app-shell-v4">
+*{box-sizing:border-box}
+html{height:100%}
+body{margin:0;min-height:100%;background:var(--bg,#f1f5f9)}
+#app{display:block!important;max-width:480px;margin:0 auto;min-height:100dvh;position:relative;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))!important}
+#app .topbar,#app .app-head{position:sticky!important;top:0!important;z-index:40!important;padding-top:calc(env(safe-area-inset-top,0px) + 12px)!important}
+#app .screen{padding-top:14px!important;padding-bottom:20px!important}
 #app .screen:not(.on){display:none!important}
 #app .screen.on{display:block!important}
-.bottomnav{position:fixed!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:100%!important;max-width:480px!important;z-index:9999!important;height:auto!important;min-height:58px!important;padding-top:6px!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6px)!important;box-sizing:border-box!important;background:var(--white,#fff)!important;border-top:1px solid var(--bg2,#e2e8f0)!important;box-shadow:0 -2px 16px rgba(15,23,42,.10)!important}
-.nb{min-width:0!important}.nb-lab{font-size:10px!important;font-weight:700;white-space:nowrap}.nb-ico{font-size:20px!important}
+{position:fixed!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:100%!important;max-width:480px!important;display:grid!important;grid-template-columns:repeat(5,1fr)!important;align-items:center!important;overflow:visible!important;z-index:9999!important;height:auto!important;min-height:56px!important;margin:0!important;padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px) 0!important;background:#fff!important;border-top:1px solid var(--bg2,#e2e8f0)!important;box-shadow:0 -3px 18px rgba(15,23,42,.10)!important}
+ .nb{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;min-width:0!important;padding:2px!important;cursor:pointer}
+ .nb-ico{font-size:20px!important;line-height:1!important}
+ .nb-lab{font-size:10px!important;font-weight:700!important;white-space:nowrap!important}
+.modal,.mo,#more-drawer,#more-bd{z-index:10000!important}
 </style>
 </head>
 <body>
