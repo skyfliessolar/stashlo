@@ -2259,12 +2259,45 @@ function loadCards(){
       ...c,id:c.card_id,shopName:c.shop_name||c.name,
       visitCount:c.visit_count||0,totalSpend:c.total_spend||0,rewardsRedeemed:c.rewards_redeemed||0
     }));
-    renderAllCards();
-    txt('hs-c',CARDS.length);
-    const totalPts=CARDS.reduce((a,c)=>a+(c.points||0),0);
-    txt('hs-p',totalPts.toLocaleString());
-    txt('qa-cards',CARDS.length+' active');
-  }).catch(()=>{})
+    mergeMerchantPoints().then(function(){
+      renderAllCards();
+      txt('hs-c',CARDS.length);
+      var totalPts=CARDS.reduce((a,c)=>a+(c.points||0),0);
+      txt('hs-p',totalPts.toLocaleString());
+      txt('qa-cards',CARDS.length+' active');
+    });
+  }).catch(()=>{renderAllCards();})
+}
+function mergeMerchantPoints(){
+  return new Promise(function(resolve){
+    var phone=(PROF&&PROF.phone)?String(PROF.phone).replace(/\s+/g,''):'';
+    function applyRows(rows){
+      if(Array.isArray(rows)&&rows.length){
+        rows.forEach(function(mc){
+          var card=CARDS.find(function(c){return c.type==='local'&&(c.merchant_id==mc.merchant_id||c.card_id===('local-'+mc.merchant_id));});
+          if(card){
+            if(typeof mc.points==='number')card.points=mc.points;
+            card.visitCount=mc.visit_count||card.visitCount;
+            card.totalSpend=mc.total_spend||card.totalSpend;
+          } else {
+            CARDS.push({card_id:'local-'+mc.merchant_id,id:'local-'+mc.merchant_id,merchant_id:mc.merchant_id,type:'local',
+              name:mc.shop_name||mc.name||'Local Shop',shopName:mc.shop_name||mc.name||'Local Shop',shop_name:mc.shop_name||mc.name||'Local Shop',
+              emoji:mc.emoji||'🏪',color:mc.color||'#1e1b4b',points:mc.points||0,threshold:mc.threshold||100,
+              visitCount:mc.visit_count||0,totalSpend:mc.total_spend||0});
+          }
+        });
+      }
+      resolve();
+    }
+    get('merchant_customers','user_id=eq.'+UID).then(function(rows){
+      if(Array.isArray(rows)&&rows.length){applyRows(rows);}
+      else if(phone){get('merchant_customers','phone=eq.'+encodeURIComponent(phone)).then(applyRows).catch(function(){resolve();});}
+      else{resolve();}
+    }).catch(function(){
+      if(phone){get('merchant_customers','phone=eq.'+encodeURIComponent(phone)).then(applyRows).catch(function(){resolve();});}
+      else{resolve();}
+    });
+  });
 }
 function renderAllCards(){
   const nat=CARDS.filter(c=>c.type==='national');
@@ -2501,6 +2534,11 @@ function pCard(p,shop){
 function closeShopDet(){document.getElementById('shopDet').classList.remove('on')}
 function addLocalCard(){
   if(!CUR_SHOP)return;
+  var myPhone=(PROF&&PROF.phone)?String(PROF.phone).replace(/\s+/g,''):'';
+  post('merchant_customers',{merchant_id:CUR_SHOP.id,user_id:UID,phone:myPhone||null,
+    name:(PROF&&(PROF.display_name||PROF.name))||'Customer',shop_name:CUR_SHOP.name,emoji:CUR_SHOP.logo_emoji||'🏪',
+    points:0,visit_count:0,total_spend:0,threshold:CUR_SHOP.loyalty_threshold||100,last_updated:Date.now(),added_at:Date.now()
+  }, myPhone?'merchant_id,phone':'merchant_id,user_id').catch(function(){});
   post('cards',{user_id:UID,card_id:'local-'+CUR_SHOP.id,merchant_id:CUR_SHOP.id,name:CUR_SHOP.name,shop_name:CUR_SHOP.name,emoji:CUR_SHOP.logo_emoji||'🏪',color:'#1e1b4b',type:'local',points:0,threshold:CUR_SHOP.loyalty_threshold||100,added_at:Date.now(),visit_count:0,total_spend:0,rewards_redeemed:0,latitude:userLat||CUR_SHOP.lat||null,longitude:userLng||CUR_SHOP.lng||null},'user_id,card_id')
   .then(()=>{
     if(userLat&&userLng){
@@ -3022,16 +3060,24 @@ function openEditProf(){
   omo('editProfMo');
 }
 function saveProf(){
+  if(!UID){T('Please sign in first','error');return;}
   var cc=(document.getElementById('ep-cc')||{}).value||'+44';
   var rawP=V('ep-p').replace(/^0/,'');
   var phone=rawP?cc+rawP:(PROF.phone||null);
-  var dob=V('ep-dob');
-  var addr=V('ep-addr');
-  var updates={name:V('ep-n'),display_name:V('ep-dn'),phone:phone};
+  var dob=V('ep-dob'); var addr=V('ep-addr'); var name=V('ep-n');
+  if(!name){T('Please enter your name','error');return;}
+  var updates={name:name,display_name:(V('ep-dn')||name)};
+  if(phone)updates.phone=phone;
   if(addr)updates.address=addr;
-  if(dob){updates.dob=dob;updates.date_of_birth=dob;}
-  Object.keys(updates).forEach(function(k){if(!updates[k])delete updates[k];});
-  pat('users','id=eq.'+UID,updates).then(()=>{T('✅ Profile saved','success');cmo('editProfMo');loadProf();}).catch(()=>T('Save failed','error'));
+  if(dob)updates.date_of_birth=dob;
+  PROF=Object.assign(PROF||{},updates);
+  pat('users','id=eq.'+UID,updates)
+    .then(function(){T('✅ Profile saved','success');cmo('editProfMo');loadProf();})
+    .catch(function(){
+      if(dob){var u2={name:name,display_name:(V('ep-dn')||name)};if(phone)u2.phone=phone;if(addr)u2.address=addr;
+        pat('users','id=eq.'+UID,u2).then(function(){T('✅ Saved','success');cmo('editProfMo');loadProf();}).catch(function(){T('Save failed — check connection','error');});
+      } else {T('Save failed — check connection','error');}
+    });
 }
 
 // ===== STASHLO CREDITS & GIFT CARDS =====
@@ -3127,7 +3173,33 @@ function downloadReceiptPDF(i){
    +'<div>'+(r.items||'')+'</div><div class="line"></div>'
    +'<div class="row"><b>TOTAL</b><b>£'+parseFloat(r.total||0).toFixed(2)+'</b></div>'
    +(r.image_url?'<img src="'+r.image_url+'" style="width:100%;margin-top:10px">':'')
-   +'<div class="c" style="margin-top:14px">Stashlo Receipt Archive</div></body></html>');
+   +'<div class="c" style="margin-top:14px">Stashlo Receipt Archive</div>
+<script id="viewport-fix">
+/* iOS Safari hides fixed-bottom elements behind its toolbar. Track the REAL visible
+   height with visualViewport and push the nav up by the exact hidden amount. */
+(function(){
+  function fix(){
+    try{
+      var vv=window.visualViewport;
+      var navEls=document.querySelectorAll('.bottom-nav,.bottomnav');
+      if(!vv||!navEls.length)return;
+      // gap between layout viewport bottom and visual viewport bottom = toolbar overlap
+      var gap=Math.max(0,(window.innerHeight - (vv.height + vv.offsetTop)));
+      navEls.forEach(function(n){ n.style.bottom=gap+'px'; });
+    }catch(e){}
+  }
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',fix);
+    window.visualViewport.addEventListener('scroll',fix);
+  }
+  window.addEventListener('resize',fix);
+  window.addEventListener('orientationchange',function(){setTimeout(fix,200);});
+  document.addEventListener('DOMContentLoaded',fix);
+  window.addEventListener('load',function(){fix();setTimeout(fix,300);setTimeout(fix,800);});
+  setInterval(fix,1500);
+})();
+</script>
+</body></html>');
   w.document.close();
   setTimeout(function(){w.print();},400);
 }
