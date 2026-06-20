@@ -1024,26 +1024,67 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
 
 
 
-<style id="app-shell-v4">
-*{box-sizing:border-box}
-html{height:100%}
-body{margin:0;min-height:100%;background:var(--bg,#f1f5f9)}
-#app{display:block!important;max-width:480px;margin:0 auto;min-height:100dvh;position:relative;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))!important}
-#app .topbar,#app .app-head{position:sticky!important;top:0!important;z-index:40!important;padding-top:calc(env(safe-area-inset-top,0px) + 12px)!important}
-#app .screen{padding-top:calc(env(safe-area-inset-top,0px) + 78px)!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px)!important}
+
+
+<style id="shell-final">
+/* ===== TRUE FLEX SHELL — iOS-proof (header/nav are flex children, not fixed) ===== */
+html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;width:100%;overscroll-behavior:none}
+#app{
+  position:relative;
+  display:flex!important;flex-direction:column!important;
+  height:100vh;height:100dvh;            /* dynamic vh follows iOS toolbar */
+  max-width:480px;margin:0 auto;
+  overflow:hidden!important;
+}
+/* Header — flex child pinned at top, ALWAYS visible (no fixed/sticky) */
+#app .app-head{
+  position:static!important;flex:0 0 auto!important;
+  padding-top:calc(env(safe-area-inset-top,0px) + 12px)!important;
+  z-index:5;
+}
+/* The screens wrapper region scrolls; each screen is a normal block */
+#app .screen{
+  position:relative!important;       /* was absolute → broke flex; now flex controls it */
+  flex:1 1 auto!important;min-height:0!important;
+  overflow-y:auto!important;overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  padding:12px 0 16px 0!important;
+  inset:auto!important;              /* clear absolute offsets */
+}
 #app .screen:not(.on){display:none!important}
 #app .screen.on{display:block!important}
-{position:fixed!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:100%!important;max-width:480px!important;display:grid!important;grid-template-columns:repeat(5,1fr)!important;align-items:center!important;overflow:visible!important;z-index:9999!important;height:auto!important;min-height:56px!important;margin:0!important;padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px) 0!important;background:#fff!important;border-top:1px solid var(--bg2,#e2e8f0)!important;box-shadow:0 -3px 18px rgba(15,23,42,.10)!important}
- .nb{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;min-width:0!important;padding:2px!important;cursor:pointer}
- .nb-ico{font-size:20px!important;line-height:1!important}
- .nb-lab{font-size:10px!important;font-weight:700!important;white-space:nowrap!important}
-.modal,.mo,#more-drawer,#more-bd{z-index:10000!important}
-</style>
+/* Bottom nav — flex child pinned at bottom, ALWAYS visible */
+#app .bottom-nav,#app .bottomnav{
+  position:static!important;flex:0 0 auto!important;
+  left:auto!important;right:auto!important;bottom:auto!important;transform:none!important;
+  width:100%!important;max-width:100%!important;
+  z-index:5!important;
+  min-height:56px!important;height:auto!important;
+  padding-top:6px!important;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6px)!important;
+  box-sizing:border-box!important;
+  background:#fff!important;border-top:1px solid var(--border,#e2e8f0)!important;
+  box-shadow:0 -2px 16px rgba(15,23,42,.08)!important;
+  display:flex!important;
+}
+.bottom-nav .nb{flex:1 1 0!important;min-width:0!important}
+.amb-wrap{position:absolute!important;inset:0!important;pointer-events:none!important;z-index:0!important;overflow:hidden!important}
 
-<style id="layout-css-v5">
-#app .topbar,#app .app-head{position:fixed!important;top:0!important;left:50%!important;transform:translateX(-50%)!important;width:100%!important;max-width:480px!important;z-index:9000!important}
-#app{padding-top:0!important}
-.bottomnav,.bottom-nav{position:fixed!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:100%!important;max-width:480px!important;z-index:9000!important}
+/* Force screens into flex flow regardless of other rules */
+#app .screen.on, #app .screen{
+  position:relative!important;
+  min-height:0!important;
+  max-height:none!important;
+}
+#app .screen.on{ height:auto!important; }
+
+/* Force screens into flex flow regardless of other rules */
+#app .screen.on, #app .screen{
+  position:relative!important;
+  min-height:0!important;
+  max-height:none!important;
+}
+#app .screen.on{ height:auto!important; }
 </style>
 </head>
 <body>
@@ -3901,21 +3942,8 @@ function loadAllMerchants(){
 
 
 // ═══ CUSTOMER SCREEN HEIGHT FIX ═══
-function fixCustLayout(){
-  var app=document.getElementById('app');
-  var auth=document.getElementById('auth');
-  if(app){app.style.cssText+='position:fixed!important;inset:0!important;overflow:hidden!important;';}
-  if(auth){auth.style.cssText+='position:fixed!important;inset:0!important;overflow:hidden!important;';}
-  document.body.style.overflow='hidden';
-  document.body.style.position='fixed';
-  document.body.style.width='100%';
-  document.body.style.height='100%';
-  document.querySelectorAll('#app .screen').forEach(function(s){
-    s.style.cssText+='position:absolute!important;top:0!important;left:0!important;right:0!important;bottom:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;padding-bottom:80px!important;';
-  });
-}
+function fixCustLayout(){/* disabled — was forcing screens to position:absolute, breaking the flex shell */}
 fixCustLayout();
-setTimeout(fixCustLayout,500);
 
 
 // ═══ EXTRA STUBS ═══
@@ -4275,39 +4303,5 @@ function openManualReceipt(){
 })();
 </script>
 
-<script id="layout-fix-v5">
-(function(){
-  function apply(){
-    try{
-      var head=document.querySelector('.app-head');
-      var navs=document.querySelectorAll('.bottom-nav,.bottomnav');
-      var screens=document.querySelectorAll('#app .screen');
-      var vv=window.visualViewport;
-      // header height (includes safe-area padding already)
-      var hh=head?head.getBoundingClientRect().height:60;
-      // nav height
-      var nh=navs.length?navs[0].getBoundingClientRect().height:60;
-      // how much the iOS toolbar overlaps the bottom
-      var gap=vv?Math.max(0,(window.innerHeight-(vv.height+vv.offsetTop))):0;
-      navs.forEach(function(n){ n.style.bottom=gap+'px'; });
-      screens.forEach(function(s){
-        s.style.paddingTop=(hh+10)+'px';
-        s.style.paddingBottom=(nh+gap+16)+'px';
-      });
-    }catch(e){}
-  }
-  function boot(){ apply(); setTimeout(apply,150); setTimeout(apply,500); setTimeout(apply,1200); }
-  if(window.visualViewport){
-    window.visualViewport.addEventListener('resize',apply);
-    window.visualViewport.addEventListener('scroll',apply);
-  }
-  window.addEventListener('resize',apply);
-  window.addEventListener('orientationchange',function(){setTimeout(apply,200);});
-  if(document.readyState!=='loading')boot(); else document.addEventListener('DOMContentLoaded',boot);
-  window.addEventListener('load',boot);
-  // re-apply when tabs switch (new screen becomes visible)
-  document.addEventListener('click',function(){setTimeout(apply,60);});
-})();
-</script>
 </body>
 </html>
