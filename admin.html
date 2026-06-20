@@ -2305,5 +2305,15 @@ function createScratchCode(){genScratch();}
   document.addEventListener('click',function(){setTimeout(apply,60);});
 })();
 </script>
+<script>
+try{
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.update();});});
+    if(window.caches)caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});
+    var _rl=false;
+    navigator.serviceWorker.addEventListener('controllerchange',function(){if(_rl)return;_rl=true;location.reload();});
+  }
+}catch(e){}
+</script>
 </body>
 </html>

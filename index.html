@@ -116,7 +116,9 @@ a{color:inherit;text-decoration:none}
 .app-head{padding-top:max(env(safe-area-inset-top,0px),14px);position:sticky;top:0;z-index:100;background:var(--card);padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .head-left{display:flex;flex-direction:column}
 .head-greet{font-size:12px;color:var(--sub)}
-.head-name{font-size:17px;font-weight:800;color:var(--text)}
+.head-name{font-size:17px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}
+.head-left{max-width:64vw;min-width:0}
+.head-greet{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .head-right{display:flex;gap:10px;align-items:center}
 .head-btn{width:38px;height:38px;border-radius:50%;background:var(--purple-bg);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:17px;position:relative}
 .head-badge{position:absolute;top:0;right:0;width:16px;height:16px;background:var(--red);border-radius:50%;font-size:9px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;display:none}
@@ -2166,8 +2168,14 @@ window.onerror=function(msg,src,line){
 // kill stale service-worker caches so users always get the newest build
 try{
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.update()})});
-    if(window.caches)caches.keys().then(function(ks){ks.forEach(function(k){if(k!=='stashlo-v11')caches.delete(k)})});
+    // Always pull the newest SW and clear ALL old caches so a fresh build shows immediately
+    navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.update();})});
+    if(window.caches)caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});
+    // If a new SW takes control, reload once to show the new files
+    var _reloaded=false;
+    navigator.serviceWorker.addEventListener('controllerchange',function(){
+      if(_reloaded)return;_reloaded=true;location.reload();
+    });
   }
 }catch(e){}
 // screen visibility failsafe (reduced-motion devices)
@@ -2253,7 +2261,7 @@ function loadProf(){
     if(!PROF.loyalty_id){const lid=genLoyaltyId();pat('users','id=eq.'+UID,{loyalty_id:lid}).then(()=>{PROF.loyalty_id=lid;renderLoyaltyId();}).catch(()=>{});}
     else renderLoyaltyId();
     const n=PROF.name||(UEMAIL?UEMAIL.split('@')[0]:'there');
-    txt('h-name',n+"'s wallet");txt('prof-name',PROF.name||'You');txt('prof-email',UEMAIL||'');
+    txt('h-name',(String(n).split(" ")[0]||n)+"'s wallet");txt('prof-name',PROF.name||'You');txt('prof-email',UEMAIL||'');
     if(typeof renderCreditBal==='function')renderCreditBal();
   }).catch(()=>{})
 }
