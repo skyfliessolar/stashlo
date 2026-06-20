@@ -2795,21 +2795,83 @@ function openAIKeyMgmt(){
 }
 
 
-/* v18 quick-sale grid */
+/* v20 editable quick-sale grid — merchant picks their fast sellers */
+function getQuickFavs(){
+  try{var s=JSON.parse(localStorage.getItem('sl_quickfavs_'+(MID||''))||'null');return Array.isArray(s)?s:null;}catch(e){return null;}
+}
+function setQuickFavs(ids){
+  try{localStorage.setItem('sl_quickfavs_'+(MID||''),JSON.stringify(ids));}catch(e){}
+  renderQuickGrid();
+}
 function renderQuickGrid(){
   var el=document.getElementById('quick-grid');if(!el)return;
-  var favs=PRODUCTS.filter(function(p){return p.active!==false}).slice(0,8);
-  if(!favs.length){el.style.display='none';return}
-  el.innerHTML='<div style="font-size:11px;font-weight:800;color:#64748b;margin-bottom:6px;padding:0 2px">⚡ QUICK SALE</div>'
+  var active=PRODUCTS.filter(function(p){return p.active!==false;});
+  var favIds=getQuickFavs();
+  var favs;
+  if(favIds&&favIds.length){
+    // keep merchant's chosen order, only those still active
+    favs=favIds.map(function(id){return active.find(function(p){return p.id===id;});}).filter(Boolean);
+  } else {
+    favs=active.slice(0,8); // default: first 8
+  }
+  el.style.display='block';
+  var header='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding:0 2px">'
+    +'<div style="font-size:11px;font-weight:800;color:#64748b">⚡ QUICK SALE</div>'
+    +'<button onclick="editQuickFavs()" style="background:#eef2ff;color:#6366F1;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer">✏️ Edit</button>'
+    +'</div>';
+  if(!favs.length){
+    el.innerHTML=header+'<div onclick="editQuickFavs()" style="border:1.5px dashed #cbd5e1;border-radius:12px;padding:16px;text-align:center;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">Tap Edit to add your fast-selling products</div>';
+    return;
+  }
+  var Q=String.fromCharCode(39);
+  el.innerHTML=header
     +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">'
     +favs.map(function(p){
       var out=p.stock!=null&&p.stock<=0;
-      return '<button onclick="'+(out?'T(String.fromCharCode(79,117,116,32,111,102,32,115,116,111,99,107))':'posAdd(String.fromCharCode(39)'+p.id.split('').map(function(ch){return 'String.fromCharCode('+ch.charCodeAt(0)+')'}).join('+')+')')+'" style="background:'+(out?'#f1f5f9':'#fff')+';border:1.5px solid #e2e8f0;border-radius:12px;padding:9px 4px;cursor:pointer;opacity:'+(out?.5:1)+'">'
+      var click=out?'T('+Q+'Out of stock'+Q+',\''+'error'+'\')':'posAdd('+Q+p.id+Q+')';
+      return '<button onclick="'+click.replace(/"/g,'&quot;')+'" style="background:'+(out?'#f1f5f9':'#fff')+';border:1.5px solid #e2e8f0;border-radius:12px;padding:9px 4px;cursor:pointer;opacity:'+(out?'.5':'1')+'">'
         +'<div style="font-size:18px">'+(p.emoji||'🛍️')+'</div>'
-        +'<div style="font-size:10px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'
-        +'<div style="font-size:11px;font-weight:800;color:#6366F1">£'+(p.price||0).toFixed(2)+'</div>'
-        +'</div>';
+        +'<div style="font-size:10px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</div>'
+        +'<div style="font-size:11px;font-weight:800;color:#6366F1">£'+(parseFloat(p.price)||0).toFixed(2)+'</div>'
+        +'</button>';
     }).join('')+'</div>';
+}
+function esc(s){return String(s==null?'':s).replace(/[<>&"]/g,function(c){return{'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});}
+// Edit which products appear in Quick Sale (multi-select toggle list)
+function editQuickFavs(){
+  var active=PRODUCTS.filter(function(p){return p.active!==false;});
+  if(!active.length){T('Add some products first','error');return;}
+  var current=getQuickFavs()||active.slice(0,8).map(function(p){return p.id;});
+  var Q=String.fromCharCode(39);
+  var rows=active.map(function(p){
+    var on=current.indexOf(p.id)>=0;
+    return '<div onclick="_toggleFav('+Q+p.id+Q+',this)" data-id="'+p.id+'" data-on="'+(on?'1':'0')+'" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:2px solid '+(on?'#6366F1':'#e2e8f0')+';border-radius:12px;margin-bottom:8px;cursor:pointer;background:'+(on?'#eef2ff':'#fff')+'">'
+      +'<div style="font-size:20px">'+(p.emoji||'🛍️')+'</div>'
+      +'<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</div><div style="font-size:12px;color:#64748b">£'+(parseFloat(p.price)||0).toFixed(2)+'</div></div>'
+      +'<div class="fav-check" style="width:24px;height:24px;border-radius:50%;border:2px solid '+(on?'#6366F1':'#cbd5e1')+';background:'+(on?'#6366F1':'#fff')+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800">'+(on?'✓':'')+'</div>'
+      +'</div>';
+  }).join('');
+  var html='<div style="font-size:17px;font-weight:800;margin-bottom:4px">⚡ Edit Quick Sale</div>'
+    +'<div style="font-size:12px;color:#64748b;margin-bottom:14px">Tap to add/remove your fast-selling products. They show as one-tap buttons on the till.</div>'
+    +'<div style="max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch">'+rows+'</div>'
+    +'<button onclick="_saveFavs()" style="width:100%;margin-top:12px;padding:14px;background:#6366F1;color:#fff;border:none;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer">💾 Save Quick Sale</button>';
+  slOverlay(html,480);
+}
+function _toggleFav(id,el){
+  var on=el.getAttribute('data-on')==='1';
+  on=!on;
+  el.setAttribute('data-on',on?'1':'0');
+  el.style.border='2px solid '+(on?'#6366F1':'#e2e8f0');
+  el.style.background=on?'#eef2ff':'#fff';
+  var chk=el.querySelector('.fav-check');
+  if(chk){chk.style.border='2px solid '+(on?'#6366F1':'#cbd5e1');chk.style.background=on?'#6366F1':'#fff';chk.textContent=on?'✓':'';}
+}
+function _saveFavs(){
+  var els=document.querySelectorAll('[data-id][data-on]');
+  var ids=[];els.forEach(function(e){if(e.getAttribute('data-on')==='1')ids.push(e.getAttribute('data-id'));});
+  setQuickFavs(ids);
+  if(typeof slClose==='function')slClose();else{var o=document.querySelector('.sl-overlay');if(o)o.remove();}
+  T('✅ Quick Sale updated','success');
 }
 
 
