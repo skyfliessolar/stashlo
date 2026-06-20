@@ -1061,7 +1061,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   z-index:5!important;
   min-height:56px!important;height:auto!important;
   padding-top:6px!important;
-  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6px)!important;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 22px)!important;
   box-sizing:border-box!important;
   background:#fff!important;border-top:1px solid var(--border,#e2e8f0)!important;
   box-shadow:0 -2px 16px rgba(15,23,42,.08)!important;
@@ -4303,5 +4303,24 @@ function openManualReceipt(){
 })();
 </script>
 
+<script id="layout-diag">
+(function(){
+  function show(){
+    try{
+      var nav=document.querySelector('.bottom-nav,.bottomnav');
+      var nb=nav?nav.getBoundingClientRect():{bottom:0,top:0};
+      var vv=window.visualViewport||{height:window.innerHeight,offsetTop:0};
+      var d=document.getElementById('_ldiag');
+      if(!d){d=document.createElement('div');d.id='_ldiag';d.onclick=function(){d.remove();};
+        d.style.cssText='position:fixed;top:70px;left:8px;z-index:2147483647;background:rgba(0,0,0,.85);color:#0f0;font:11px monospace;padding:8px 10px;border-radius:8px;max-width:200px;pointer-events:auto';
+        document.body.appendChild(d);}
+      var hidden=Math.max(0,Math.round(nb.bottom-(vv.height+vv.offsetTop)));
+      d.innerHTML='innerH:'+window.innerHeight+'<br>visualVP h:'+Math.round(vv.height)+'<br>navBottom:'+Math.round(nb.bottom)+'<br>navTop:'+Math.round(nb.top)+'<br>HIDDEN below fold:'+hidden+'px'+(hidden>2?' ⚠️':' ✅')+'<br>(tap to close)';
+    }catch(e){}
+  }
+  if(window.visualViewport){window.visualViewport.addEventListener('resize',show);window.visualViewport.addEventListener('scroll',show);}
+  window.addEventListener('load',function(){setTimeout(show,800);setTimeout(show,2000);});
+})();
+</script>
 </body>
 </html>
