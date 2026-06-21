@@ -711,7 +711,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <button class="bo-btn green" onclick="closeBackOfficeDrawer();posDayEnd()"><span class="bo-ico">📊</span>Day-End</button>
       <button class="bo-btn green" onclick="closeBackOfficeDrawer();(typeof posExportCSV==='function'?posExportCSV():downloadCSV('sales'))"><span class="bo-ico">⬇️</span>HMRC CSV</button>
       <button class="bo-btn" onclick="closeBackOfficeDrawer();(typeof openPetrolVAT==='function'?openPetrolVAT():switchTab('settings'))"><span class="bo-ico">⛽</span>Fuel &amp; VAT</button>
-      <button class="bo-btn" onclick="closeBackOfficeDrawer();switchTab('settings')"><span class="bo-ico">⚙️</span>POS Setup</button>
+      <button class="bo-btn" onclick="closeBackOfficeDrawer();openPOSSettings()"><span class="bo-ico">⚙️</span>POS Settings</button>
       <button class="bo-btn danger" onclick="closeBackOfficeDrawer();posRefundOpen()"><span class="bo-ico">↩️</span>Refund</button>
     </div>
   </div>
@@ -986,18 +986,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <button onclick="openManualPrice()" style="flex:1;background:#1e1b4b;color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:800;cursor:pointer">£ Manual Price</button>
         <button onclick="openBackOfficeDrawer()" style="flex:1;background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:800;cursor:pointer">🏢 Back Office</button>
       </div>
-      <div id="quick-grid" style="margin:0 16px 10px"></div>
-      <!-- FAST-SALE DEPARTMENT TILES (like evoPOS right panel) -->
-      <!-- Shop-type header + dynamic department tiles -->
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 6px">
-        <div id="pos-shoptype-lab" style="font-size:12px;font-weight:800;color:var(--ink3)">🛒 RETAIL</div>
-        <button onclick="openShopTypePicker()" style="background:var(--purple-bg,#eef2ff);color:var(--purple);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer">Change shop</button>
-      </div>
-      <div id="dept-quick-tiles" style="display:flex;gap:8px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>
-      <div style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none" id="dept-keys"></div>
-      <div id="pos-cats" style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none"></div>
-      <div id="pos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:10px"></div>
-      <div style="margin:0 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
+            <div style="margin:0 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
         <div id="pos-cx-banner" style="background:linear-gradient(135deg,#1e1b4b,#4338ca);border-radius:14px;padding:11px 14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between"><div><div id="pos-cx-name" style="color:#fff;font-size:13px;font-weight:800">👤 No customer</div><div id="pos-cx-pts" style="color:rgba(255,255,255,.7);font-size:11px;margin-top:1px">Scan for loyalty points</div></div><div style="display:flex;gap:5px"><button onclick="posScanCustQR()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:9px;padding:7px 11px;font-size:12px;font-weight:800;cursor:pointer">📷</button><button onclick="posTypeCustId()" style="background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:9px;padding:7px 10px;font-size:12px;cursor:pointer">⌨️</button><button id="pos-cx-clr" onclick="clearTillCX()" style="display:none;background:#ef4444;color:#fff;border:none;border-radius:9px;padding:7px 9px;font-size:12px;cursor:pointer">✕</button></div></div>
         <div style="font-size:13px;font-weight:800;margin-bottom:8px">🧺 Basket</div>
         <div id="pos-basket"><div style="color:var(--ink3);font-size:13px;text-align:center;padding:8px">Tap products to add</div></div>
@@ -1018,6 +1007,18 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         </div>
         <button class="btn" style="width:100%;margin-top:8px;background:var(--bg2)" onclick="posClear()">Clear basket</button>
       </div>
+      <div id="quick-grid" style="margin:0 16px 10px"></div>
+      <!-- FAST-SALE DEPARTMENT TILES (like evoPOS right panel) -->
+      <!-- Shop-type header + dynamic department tiles -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 6px">
+        <div id="pos-shoptype-lab" style="font-size:12px;font-weight:800;color:var(--ink3)">🛒 RETAIL</div>
+        <button onclick="openShopTypePicker()" style="background:var(--purple-bg,#eef2ff);color:var(--purple);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer">Change shop</button>
+      </div>
+      <div id="dept-quick-tiles" style="display:flex;gap:8px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>
+      <div style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none" id="dept-keys"></div>
+      <div id="pos-cats" style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none"></div>
+      <div id="pos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:10px"></div>
+
       <!-- Manual price NUMPAD modal - like evoPOS -->
       <div class="modal" id="manualModal"><div class="modal-box" style="max-width:320px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -1065,19 +1066,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:13px;font-weight:800">🧾 Recent Transactions</div><button class="btn-xs btn-gray" onclick="loadPOSSales()">↻</button></div>
         <div id="pos-history" style="font-size:13px;color:var(--ink3)">Loading...</div>
       </div>
-      <div style="margin:12px 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
-        <div style="font-size:13px;font-weight:800;margin-bottom:8px">⚙️ POS Settings</div>
-        <div class="field" style="margin-bottom:8px"><label class="field-label">VAT number (prints on receipts)</label><input id="pos-vatno" placeholder="GB123456789" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
-        <div class="field" style="margin-bottom:8px"><label class="field-label">Staff discount %</label><input id="pos-staffdisc" type="number" placeholder="10" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
-        <div class="field" style="margin-bottom:8px"><label class="field-label">Stripe Payment Link (card payments)</label><input id="pos-stripe" placeholder="https://buy.stripe.com/..." style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
-        <div class="field" style="margin-bottom:8px"><label class="field-label">Receipt footer message</label><input id="pos-footer" placeholder="Thank you for shopping with us!" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
-        <div class="field" style="margin-bottom:8px"><label class="field-label">🤖 Claude AI Key</label><input id="pos-ai-key" type="password" placeholder="sk-ant-..." style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px" oninput="if(this.value){localStorage.setItem('sl_anth_key',this.value);window.ANTH_KEY=this.value;}"></div>
-        <div class="field" style="margin-bottom:8px"><label class="field-label">🌍 Phone Country Code</label><select id="pos-country" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px;background:#fafafa"><option value="+44">🇬🇧 UK +44</option><option value="+1">🇺🇸 US +1</option><option value="+91">🇮🇳 India +91</option><option value="+353">🇮🇪 Ireland +353</option></select></div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-purple" style="flex:1" onclick="savePOSSettings()">💾 Save</button>
-          <button class="btn btn-gray" style="flex:1" onclick="reprintLast()">🖨 Reprint last</button>
-        </div>
-      </div>
+
       <div style="margin:12px 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="font-size:13px;font-weight:800">📑 Reports</div>
@@ -1103,7 +1092,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div onclick="switchTab('till');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">💰</div><div style="font-size:11px;font-weight:700">Loyalty Till</div></div>
         <div onclick="switchTab('products');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🛍️</div><div style="font-size:11px;font-weight:700">Stock</div></div>
         <div onclick="switchTab('customers');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">👥</div><div style="font-size:11px;font-weight:700">Members</div></div>
-        <div onclick="switchTab('settings');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">⚙️</div><div style="font-size:11px;font-weight:700">Settings</div></div>
+        <div onclick="closeMoreDrawer();openPOSSettings()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">⚙️</div><div style="font-size:11px;font-weight:700">POS Settings</div></div>
         <div onclick="switchTab('ai');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🤖</div><div style="font-size:11px;font-weight:700">AI Agent</div></div>
         <div onclick="switchTab('inbox');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">📬</div><div style="font-size:11px;font-weight:700" id="m-inbox-lab2">Inbox</div></div>
       </div>
@@ -1857,6 +1846,7 @@ function downloadCSV(type){
 function markMsgsRead(){txt("m-inbox-lab","Inbox")}
 
 function openBackOfficeDrawer(){var d=document.getElementById('boDrawer');if(d)d.classList.add('show');}
+function openPOSSettings(){var m=document.getElementById('posSettingsModal');if(m)m.classList.add('on');if(typeof loadPOSSettings==='function')loadPOSSettings();}
 function closeBackOfficeDrawer(){var d=document.getElementById('boDrawer');if(d)d.classList.remove('show');}
 function switchTab(name){
   if(!document.getElementById(name+'-screen')){T('That section is coming soon');name='overview';}
@@ -3467,5 +3457,24 @@ try{
   window.addEventListener('load', function(){ setH(); setTimeout(setH,300); setTimeout(setH,800); });
 })();
 </script>
+<div class="modal" id="posSettingsModal"><div class="modal-box" style="max-width:420px;max-height:85vh;overflow-y:auto">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="font-size:17px;font-weight:800">⚙️ POS Settings</div>
+    <button onclick="closeModal('posSettingsModal')" style="background:var(--bg);border:none;border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer">✕</button>
+  </div>
+      <div style="margin:12px 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
+        <div style="font-size:13px;font-weight:800;margin-bottom:8px">⚙️ POS Settings</div>
+        <div class="field" style="margin-bottom:8px"><label class="field-label">VAT number (prints on receipts)</label><input id="pos-vatno" placeholder="GB123456789" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
+        <div class="field" style="margin-bottom:8px"><label class="field-label">Staff discount %</label><input id="pos-staffdisc" type="number" placeholder="10" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
+        <div class="field" style="margin-bottom:8px"><label class="field-label">Stripe Payment Link (card payments)</label><input id="pos-stripe" placeholder="https://buy.stripe.com/..." style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
+        <div class="field" style="margin-bottom:8px"><label class="field-label">Receipt footer message</label><input id="pos-footer" placeholder="Thank you for shopping with us!" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px"></div>
+        <div class="field" style="margin-bottom:8px"><label class="field-label">🤖 Claude AI Key</label><input id="pos-ai-key" type="password" placeholder="sk-ant-..." style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px" oninput="if(this.value){localStorage.setItem('sl_anth_key',this.value);window.ANTH_KEY=this.value;}"></div>
+        <div class="field" style="margin-bottom:8px"><label class="field-label">🌍 Phone Country Code</label><select id="pos-country" style="width:100%;padding:11px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:13px;background:#fafafa"><option value="+44">🇬🇧 UK +44</option><option value="+1">🇺🇸 US +1</option><option value="+91">🇮🇳 India +91</option><option value="+353">🇮🇪 Ireland +353</option></select></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-purple" style="flex:1" onclick="savePOSSettings()">💾 Save</button>
+          <button class="btn btn-gray" style="flex:1" onclick="reprintLast()">🖨 Reprint last</button>
+        </div>
+      </div>
+</div></div>
 </body>
 </html>
