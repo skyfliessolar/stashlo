@@ -1157,6 +1157,27 @@ const sget=(t,q)=>fetch(SU+'/rest/v1/'+t+'?select=*'+(q?'&'+q:''),{headers:HS()}
 const spost=(t,d,c)=>fetch(SU+'/rest/v1/'+t+(c?'?on_conflict='+c:''),{method:'POST',headers:{...HS(),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json());
 const spat=(t,q,d)=>fetch(SU+'/rest/v1/'+t+'?'+q,{method:'PATCH',headers:{...HS(),'Prefer':'return=minimal'},body:JSON.stringify(d)}).then(r=>r.ok?r:r.json().then(e=>Promise.reject(e)));
 const sdel=(t,q)=>fetch(SU+'/rest/v1/'+t+'?'+q,{method:'DELETE',headers:HS()});
+// ===== ADMIN ORDER MANAGEMENT (soft-delete / restore / permanent purge) =====
+function adminSoftDeleteOrder(id){
+  if(!confirm("Move this order to Deleted? It can be restored."))return;
+  spat('orders','id=eq.'+id,{deleted:true,deleted_at:Date.now()})
+    .then(function(){T('🗑 Order moved to deleted','success');loadOrders();})
+    .catch(function(){
+      // column missing → can't soft delete; offer permanent
+      if(confirm("Soft-delete unavailable (no 'deleted' column). Permanently delete instead?")){adminPurgeOrder(id);}
+    });
+}
+function adminRestoreOrder(id){
+  spat('orders','id=eq.'+id,{deleted:false,deleted_at:null})
+    .then(function(){T('♻️ Order restored','success');loadOrders();})
+    .catch(function(){T('Restore failed','error');});
+}
+function adminPurgeOrder(id){
+  if(!confirm("⛔ PERMANENTLY delete this order? This CANNOT be undone."))return;
+  sdel('orders','id=eq.'+id)
+    .then(function(r){if(r.ok||r.status===204||r.status===200){T('⛔ Permanently deleted','success');loadOrders();}else{T('Delete failed','error');}})
+    .catch(function(){T('Delete failed','error');});
+}
 
 // ── UI HELPERS ─────────────────────────────────────────────
 function T(m,type='info'){
@@ -1211,7 +1232,7 @@ function showApp(){
 function loadAll(){loadMerchants();loadCustomers();loadOrders();loadStashProds();loadBroadcasts();loadBilling();loadSupport();}
 function loadMerchants(){sget('merchants','order=created_at.desc&limit=200').then(d=>{MERCHANTS=Array.isArray(d)?d:[];txt('d-shops',MERCHANTS.length);txt('sd-merchants',MERCHANTS.length);renderMerchants();renderActivity()}).catch(()=>{})}
 function loadCustomers(){sget('users','order=created_at.desc&limit=200').then(d=>{CUSTOMERS=Array.isArray(d)?d:[];txt('d-users',CUSTOMERS.length);txt('sd-customers',CUSTOMERS.length);renderCustomers()}).catch(()=>{})}
-function loadOrders(){sget('orders','order=created_at.desc&limit=100').then(d=>{ORDERS=Array.isArray(d)?d:[];txt('d-orders',ORDERS.length);renderOrders()}).catch(()=>{})}
+function loadOrders(){sget('orders','order=created_at.desc&limit=200').then(d=>{ORDERS=Array.isArray(d)?d:[];txt('d-orders',ORDERS.filter(function(o){return !o.deleted;}).length);renderOrders()}).catch(()=>{})}
 function loadStashProds(){sget('stashlo_products','order=created_at.desc').then(d=>{STASH_PRODS=Array.isArray(d)?d:[];renderStashProds()}).catch(()=>{})}
 function loadBroadcasts(){sget('broadcasts','order=sent_at.desc&limit=20').then(d=>{BROADCASTS=Array.isArray(d)?d:[];txt('d-broadcasts',BROADCASTS.length);renderBroadcasts()}).catch(()=>{});loadPendingBroadcasts();}
 function loadPendingBroadcasts(){
@@ -1291,18 +1312,28 @@ function renderCustomers(list){
 function renderOrders(){
   const el=document.getElementById('orders-list');if(!el)return;
   const sc={pending:'b-amber',confirmed:'b-green',ready:'b-blue',completed:'b-purple',rejected:'b-red',cancelled:'b-red'};
-  el.innerHTML=ORDERS.length?ORDERS.map(o=>`
-    <div class="ic">
-      <div class="ic-row">
-        <div>
-          <div class="ic-name">${o.product_name||'Order'} ×${o.quantity||1}</div>
-          <div class="ic-sub">£${parseFloat(o.total||0).toFixed(2)} · ${o.type||'collect'} · <span class="badge ${sc[o.status]||'b-amber'}">${o.status||'pending'}</span></div>
-          <div class="ic-sub">${o.created_at?new Date(o.created_at).toLocaleString().slice(0,15):'—'}</div>
-        </div>
-        <div style="font-size:18px;font-weight:900;color:var(--purple)">£${parseFloat(o.total||0).toFixed(2)}</div>
-      </div>
-    </div>`).join('')
-    :'<div class="empty"><div class="empty-ico">📦</div><div class="empty-txt">No orders yet</div></div>';
+  const active=ORDERS.filter(function(o){return !o.deleted;});
+  const deleted=ORDERS.filter(function(o){return o.deleted;});
+  function card(o){
+    var acts=o.deleted
+      ? '<div style="display:flex;gap:6px;margin-top:8px"><button onclick="adminRestoreOrder(\''+o.id+'\')" style="flex:1;background:#dcfce7;color:#15803d;border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:800;cursor:pointer">♻️ Restore</button><button onclick="adminPurgeOrder(\''+o.id+'\')" style="flex:1;background:#fee2e2;color:#b91c1c;border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:800;cursor:pointer">⛔ Delete forever</button></div>'
+      : '<div style="display:flex;gap:6px;margin-top:8px"><button onclick="adminSoftDeleteOrder(\''+o.id+'\')" style="flex:1;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:9px;padding:8px;font-size:12px;font-weight:800;cursor:pointer">🗑 Delete</button></div>';
+    return '<div class="ic"'+(o.deleted?' style="opacity:.7"':'')+'>'
+      +'<div class="ic-row"><div>'
+      +'<div class="ic-name">'+(o.product_name||'Order')+' ×'+(o.quantity||1)+(o.deleted?' <span style="color:#b91c1c;font-size:11px">(deleted)</span>':'')+'</div>'
+      +'<div class="ic-sub">£'+parseFloat(o.total||0).toFixed(2)+' · '+(o.type||'collect')+' · <span class="badge '+(sc[o.status]||'b-amber')+'">'+(o.status||'pending')+'</span></div>'
+      +'<div class="ic-sub">'+(o.created_at?new Date(o.created_at).toLocaleString().slice(0,15):'—')+'</div>'
+      +'</div><div style="font-size:18px;font-weight:900;color:var(--purple)">£'+parseFloat(o.total||0).toFixed(2)+'</div></div>'
+      +acts+'</div>';
+  }
+  var html='';
+  if(active.length){ html+=active.map(card).join(''); }
+  else { html+='<div class="empty"><div class="empty-ico">📦</div><div class="empty-txt">No active orders</div></div>'; }
+  if(deleted.length){
+    html+='<div style="margin:18px 0 8px;font-size:13px;font-weight:800;color:#b91c1c">🗑 Deleted Orders ('+deleted.length+')</div>';
+    html+=deleted.map(card).join('');
+  }
+  el.innerHTML=html;
 }
 
 function renderStashProds(){

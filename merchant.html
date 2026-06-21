@@ -1224,9 +1224,12 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <button class="btn btn-gray" style="flex:1" onclick="updateOrderSt('out_for_delivery')">🏃 Out for Delivery</button>
       <button class="btn btn-primary" style="flex:1" onclick="updateOrderSt('completed')">🎉 Delivered</button>
     </div>
-    <div style="padding:0 16px 16px;display:flex;gap:8px">
+    <div style="padding:0 16px 8px;display:flex;gap:8px">
       <button class="btn btn-red" style="flex:1" onclick="updateOrderSt('rejected')">✗ Reject</button>
       <button class="btn btn-gray" style="flex:1" onclick="closeModal('orderModal')">Close</button>
+    </div>
+    <div style="padding:0 16px 16px">
+      <button class="btn" style="width:100%;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca" onclick="deleteOrderConfirm()">🗑 Delete this order</button>
     </div>
   </div>
 </div>
@@ -1346,7 +1349,7 @@ function loadMerchant(){
   }).catch(()=>{})
 }
 function loadProducts(){get("products","merchant_id=eq."+MID+"&order=created_at.desc").then(d=>{PRODUCTS=Array.isArray(d)?d:[];renderProducts();renderQuickGrid();if(typeof renderPOSGrid==="function")renderPOSGrid();txt("d-products",PRODUCTS.filter(p=>p.active!==false).length)}).catch(()=>{})}
-function loadOrders(){get("orders","merchant_id=eq."+MID+"&order=created_at.desc&limit=50").then(d=>{ORDERS=Array.isArray(d)?d:[];renderOrders();renderPending();txt("d-orders",ORDERS.filter(o=>o.status==="pending").length)}).catch(()=>{})}
+function loadOrders(){get("orders","merchant_id=eq."+MID+"&order=created_at.desc&limit=50").then(d=>{ORDERS=(Array.isArray(d)?d:[]).filter(function(o){return !o.deleted;});renderOrders();renderPending();txt("d-orders",ORDERS.filter(o=>o.status==="pending").length)}).catch(()=>{})}
 function loadCustomers(){get("merchant_customers","merchant_id=eq."+MID+"&order=last_updated.desc&limit=100").then(d=>{CUSTOMERS=Array.isArray(d)?d:[];renderCustomers();txt("d-members",CUSTOMERS.length);const nc=document.getElementById("notify-count");if(nc)nc.textContent=CUSTOMERS.length}).catch(()=>{})}
 function loadTxns(){get("transactions","merchant_id=eq."+MID+"&order=timestamp.desc&limit=100").then(d=>{TXNS=Array.isArray(d)?d:[];const rev=TXNS.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);txt("d-revenue",rev.toFixed(2));txt("d-sales",TXNS.length);renderTxns();renderRecentSales()}).catch(()=>{})}
 function loadInbox(){get("broadcasts","order=sent_at.desc&limit=30").then(d=>{const bs=Array.isArray(d)?d:[];const el=document.getElementById("inbox-list");if(!el)return;const badge=document.getElementById("m-inbox-lab");if(badge)badge.textContent=bs.length?"Inbox ("+bs.length+")":"Inbox";el.innerHTML=bs.map(b=>`<div class="ic" style="border-left:4px solid var(--purple)"><div class="ic-name">📢 ${b.title||"Message"}</div><div class="ic-sub" style="margin-top:6px;line-height:1.5">${b.body||""}</div>${b.image_url?`<img src="${b.image_url}" style="width:100%;max-height:120px;object-fit:cover;border-radius:var(--r8);margin-top:8px" onerror="this.style.display='none'">`:""}  <div class="ic-sub" style="margin-top:6px;color:var(--ink4)">${b.sent_at?new Date(b.sent_at).toLocaleString().slice(0,15):"—"}</div></div>`).join("")||"<div class=\"empty\"><div class=\"empty-ico\">📬</div><div class=\"empty-txt\">No messages yet</div></div>"}).catch(()=>{})}
@@ -1500,6 +1503,23 @@ function openOrderDet(id){
 function updateOrderSt(s){
   if(!CUR_ORDER)return;
   pat("orders","id=eq."+CUR_ORDER.id,{status:s}).then(()=>{T("✅ Order marked "+s,"success");closeModal("orderModal");loadOrders()}).catch(()=>T("Failed","error"))
+}
+function deleteOrderConfirm(){
+  if(!CUR_ORDER)return;
+  // Soft-delete: mark as deleted so admin can restore. Keeps an audit trail.
+  if(!confirm("Delete this order? It will be moved to deleted (admin can restore it)."))return;
+  pat("orders","id=eq."+CUR_ORDER.id,{deleted:true,deleted_at:Date.now()})
+    .then(function(res){
+      if(res&&res.rows&&res.rows.length){
+        T("🗑 Order deleted","success");closeModal("orderModal");loadOrders();
+      } else {
+        // column 'deleted' may not exist — fall back to hard delete
+        del("orders","id=eq."+CUR_ORDER.id).then(function(){T("🗑 Order deleted","success");closeModal("orderModal");loadOrders();}).catch(function(){T("Delete failed","error");});
+      }
+    })
+    .catch(function(){
+      del("orders","id=eq."+CUR_ORDER.id).then(function(){T("🗑 Order deleted","success");closeModal("orderModal");loadOrders();}).catch(function(){T("Delete failed","error");});
+    });
 }
 
 let RC_DATA=null;
