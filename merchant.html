@@ -835,7 +835,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 
   <!-- PRODUCTS -->
   <div class="screen" id="products-screen">
-    <div class="sh"><span class="sh-t">Products</span><button class="sh-btn" onclick="openAddProd()">+ Add</button></div>
+    <div class="sh"><span style="display:flex;align-items:center"><button onclick="switchTab('overview')" style="background:var(--purple3);color:var(--purple);border:none;border-radius:8px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;margin-right:8px;flex-shrink:0">‹</button><span class="sh-t">Products</span></span><button class="sh-btn" onclick="openAddProd()">+ Add</button></div>
     <div id="products-list"></div>
   </div>
 
@@ -847,13 +847,13 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 
   <!-- CUSTOMERS -->
   <div class="screen" id="customers-screen">
-    <div class="sh"><span class="sh-t">Loyalty Members</span><button class="sh-btn" onclick="openModal('notifyModal')">📢 Notify</button></div>
+    <div class="sh"><span style="display:flex;align-items:center"><button onclick="switchTab('overview')" style="background:var(--purple3);color:var(--purple);border:none;border-radius:8px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;margin-right:8px;flex-shrink:0">‹</button><span class="sh-t">Loyalty Members</span></span><button class="sh-btn" onclick="openModal('notifyModal')">📢 Notify</button></div>
     <div id="customers-list"></div>
   </div>
 
   <!-- SETTINGS -->
   <div class="screen" id="settings-screen">
-    <div class="sh"><span class="sh-t">Shop Settings</span></div>
+    <div class="sh"><span style="display:flex;align-items:center"><button onclick="switchTab('overview')" style="background:var(--purple3);color:var(--purple);border:none;border-radius:8px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;margin-right:8px;flex-shrink:0">‹</button><span class="sh-t">Shop Settings</span></span></div>
     <!-- Shop type + POS section customise -->
     <div class="setting-card">
       <div class="setting-title">🏪 Shop Type &amp; POS Sections</div>
@@ -992,7 +992,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 
   <!-- INBOX -->
   <div class="screen" id="inbox-screen">
-    <div class="sh"><span class="sh-t">📬 Inbox</span><span style="font-size:13px;color:var(--purple);font-weight:600;cursor:pointer" onclick="markMsgsRead()">Mark read</span></div>
+    <div class="sh"><span style="display:flex;align-items:center"><button onclick="switchTab('overview')" style="background:var(--purple3);color:var(--purple);border:none;border-radius:8px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;margin-right:8px;flex-shrink:0">‹</button><span class="sh-t">📬 Inbox</span></span><span style="font-size:13px;color:var(--purple);font-weight:600;cursor:pointer" onclick="markMsgsRead()">Mark read</span></div>
     <div id="inbox-list"></div>
   </div>
 
