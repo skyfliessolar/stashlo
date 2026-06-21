@@ -3797,7 +3797,7 @@ function showGeoPopup(card){
   if(existing)existing.remove();
   var popup=document.createElement('div');
   popup.id='geo-popup';
-  popup.style.cssText='position:fixed;bottom:80px;left:16px;right:16px;background:linear-gradient(135deg,'+( card.col1||'#6366F1')+','+( card.col2||'#8B5CF6')+');color:#fff;border-radius:20px;padding:14px 16px;z-index:800;box-shadow:0 8px 32px rgba(0,0,0,.3)';
+  popup.style.cssText='position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 140px);left:16px;right:16px;background:linear-gradient(135deg,'+( card.col1||'#6366F1')+','+( card.col2||'#8B5CF6')+');color:#fff;border-radius:20px;padding:14px 16px;z-index:800;box-shadow:0 8px 32px rgba(0,0,0,.3)';
   popup.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center">'
     +'<div><div style="font-size:13px;font-weight:800">📍 '+(card.shopName||card.label||'Nearby')+'</div>'
     +'<div style="font-size:11px;opacity:.8;margin-top:2px">You are near this card location</div></div>'
