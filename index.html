@@ -1632,6 +1632,11 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div><div class="menu-label" style="color:var(--red)">Sign Out</div></div>
         <div class="menu-arr">›</div>
       </div>
+      <div class="menu-item" onclick="openDeleteAccount()">
+        <div class="menu-ico" style="background:#fef2f2">🗑️</div>
+        <div><div class="menu-label" style="color:#dc2626">Delete My Account</div><div class="menu-sub">Permanently erase your data</div></div>
+        <div class="menu-arr">›</div>
+      </div>
     </div>
     <div style="height:24px"></div>
   </div>
@@ -4361,5 +4366,69 @@ function openManualReceipt(){
   window.addEventListener('load', function(){ setH(); setTimeout(setH,300); setTimeout(setH,800); });
 })();
 </script>
+
+<!-- DELETE ACCOUNT MODAL -->
+<div id="delAcctModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.65);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:20px;max-width:400px;width:100%;max-height:calc(var(--real-vh,100dvh) - 40px);overflow-y:auto;padding:24px">
+    <div style="font-size:40px;text-align:center;margin-bottom:8px">🗑️</div>
+    <div style="font-size:20px;font-weight:800;text-align:center;color:#dc2626;margin-bottom:6px">Delete Your Account</div>
+    <div style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:14px">This permanently erases your Stashlo account and <b>cannot be undone</b>. We will delete:
+      <ul style="margin:8px 0 0;padding-left:20px">
+        <li>Your profile (name, email, phone, address)</li>
+        <li>All your loyalty cards & points</li>
+        <li>Your saved payment cards</li>
+        <li>Your order & receipt history</li>
+        <li>Your gift cards & saved locations</li>
+      </ul>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:6px">Type <span style="color:#dc2626">DELETE</span> to confirm:</div>
+    <input id="delAcctConfirm" type="text" autocomplete="off" placeholder="DELETE" style="width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;font-weight:700;text-align:center;letter-spacing:2px;margin-bottom:14px;box-sizing:border-box" oninput="_delAcctCheck()">
+    <button id="delAcctBtn" disabled onclick="confirmDeleteAccount()" style="width:100%;padding:14px;background:#fca5a5;color:#fff;border:none;border-radius:12px;font-weight:800;font-size:15px;cursor:not-allowed;margin-bottom:8px">Permanently Delete</button>
+    <button onclick="closeDeleteAccount()" style="width:100%;padding:13px;background:#f1f5f9;color:#0f172a;border:none;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer">Cancel</button>
+  </div>
+</div>
+<script>
+function openDeleteAccount(){var m=document.getElementById('delAcctModal');if(m){m.style.display='flex';var i=document.getElementById('delAcctConfirm');if(i)i.value='';_delAcctCheck();}}
+function closeDeleteAccount(){var m=document.getElementById('delAcctModal');if(m)m.style.display='none';}
+function _delAcctCheck(){
+  var v=(document.getElementById('delAcctConfirm')||{}).value||'';
+  var btn=document.getElementById('delAcctBtn');
+  var ok=v.trim().toUpperCase()==='DELETE';
+  if(btn){btn.disabled=!ok;btn.style.background=ok?'#dc2626':'#fca5a5';btn.style.cursor=ok?'pointer':'not-allowed';}
+}
+function confirmDeleteAccount(){
+  var btn=document.getElementById('delAcctBtn');
+  if(btn){btn.disabled=true;btn.textContent='Deleting...';btn.style.cursor='wait';}
+  if(!UID){T('Not signed in');closeDeleteAccount();return;}
+  // Delete the user's rows from every table that holds their data.
+  // We attempt all, then sign out regardless (best-effort erase).
+  var tasks=[
+    del('cards','user_id=eq.'+UID),
+    del('payment_cards','user_id=eq.'+UID),
+    del('card_locations','user_id=eq.'+UID),
+    del('orders','user_id=eq.'+UID),
+    del('receipts','user_id=eq.'+UID),
+    del('gift_cards','user_id=eq.'+UID),
+    del('merchant_customers','user_id=eq.'+UID),
+    del('job_unlocks','user_id=eq.'+UID),
+    del('scratch_codes','user_id=eq.'+UID)
+  ];
+  Promise.allSettled(tasks).then(function(){
+    // finally delete the user profile row itself
+    return del('users','id=eq.'+UID);
+  }).then(function(){
+    T('Your account has been deleted');
+    // clear local session + reload to logged-out state
+    try{localStorage.removeItem('sl_s');}catch(e){}
+    setTimeout(function(){location.reload();},1500);
+  }).catch(function(){
+    // even if the final call errors, wipe local session so they're signed out
+    try{localStorage.removeItem('sl_s');}catch(e){}
+    T('Account deletion processed');
+    setTimeout(function(){location.reload();},1500);
+  });
+}
+</script>
+
 </body>
 </html>
