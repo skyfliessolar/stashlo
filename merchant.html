@@ -646,6 +646,18 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 
 
 <style id="modal-fix">
+/* Dynamically-created overlays (Fuel&VAT petrol-overlay, slOverlay sl-ov, etc) */
+#petrol-overlay{align-items:flex-end!important;height:var(--real-vh,100dvh)!important;max-height:var(--real-vh,100dvh)!important;bottom:0!important;top:auto!important}
+#petrol-overlay > div{max-height:calc(var(--real-vh,100dvh) - 24px)!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 70px)!important}
+.sl-ov{height:var(--real-vh,100dvh)!important;max-height:var(--real-vh,100dvh)!important;bottom:0!important;top:auto!important;align-items:center!important}
+.sl-ov > div,.sl-ov-box{max-height:calc(var(--real-vh,100dvh) - 40px)!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px)!important}
+/* Inline-styled More drawer: lift above the iOS toolbar */
+#more-drawer{
+  bottom:calc(env(safe-area-inset-bottom,0px))!important;
+  max-height:calc(var(--real-vh,100dvh) - 30px)!important;
+  overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 80px)!important;
+}
 /* iOS-safe bottom sheets: container is exactly the visible height; sheet fits inside it */
 .modal,.bo-modal{
   position:fixed!important;
