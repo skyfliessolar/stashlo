@@ -2149,20 +2149,38 @@ function brandStyle(name){
 
 // ===== GEOFENCE LOYALTY POPUP =====
 var _geoWatch=null;
+var _geoLastPopup={};
+function _geoCheck(lat,lng){
+  // Re-read saved locations FRESH each time (so newly-saved cards count without restart)
+  var saved=[];try{saved=JSON.parse(localStorage.getItem('sl_cardlocs_'+UID)||'[]');}catch(e){}
+  if(!saved.length)return;
+  if(document.getElementById('geo-popup'))return; // one popup at a time
+  var now=Date.now();
+  for(var i=0;i<saved.length;i++){
+    var loc=saved[i];
+    if(loc.lat==null||loc.lng==null)continue;
+    var dlat=lat-loc.lat,dlng=lng-loc.lng;
+    var dist=Math.sqrt(dlat*dlat+dlng*dlng)*111000; // metres (approx)
+    // Don't re-pop the same card within 5 min
+    if(dist<250 && (now-(_geoLastPopup[loc.cardId]||0))>300000){
+      _geoLastPopup[loc.cardId]=now;
+      showGeoPopup(loc);
+      return;
+    }
+  }
+}
 function startGeofence(){
   if(!navigator.geolocation)return;
+  stopGeofence();
   try{
-    var saved=JSON.parse(localStorage.getItem('sl_cardlocs_'+UID)||'[]');
-    if(!saved.length)return;
+    // Immediate one-shot check (don't wait for the watch to fire)
+    navigator.geolocation.getCurrentPosition(function(pos){
+      _geoCheck(pos.coords.latitude,pos.coords.longitude);
+    },function(){},{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+    // Continuous watch
     _geoWatch=navigator.geolocation.watchPosition(function(pos){
-      var lat=pos.coords.latitude,lng=pos.coords.longitude;
-      saved.forEach(function(loc){
-        if(document.getElementById('geo-popup'))return;
-        var dlat=lat-loc.lat,dlng=lng-loc.lng;
-        var dist=Math.sqrt(dlat*dlat+dlng*dlng)*111000;
-        if(dist<200){showGeoPopup(loc);}
-      });
-    },{enableHighAccuracy:true,maximumAge:30000});
+      _geoCheck(pos.coords.latitude,pos.coords.longitude);
+    },function(){},{enableHighAccuracy:true,maximumAge:30000});
   }catch(e){}
 }
 function stopGeofence(){if(_geoWatch!=null){navigator.geolocation.clearWatch(_geoWatch);_geoWatch=null;}}
