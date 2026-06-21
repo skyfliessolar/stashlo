@@ -2249,14 +2249,23 @@ try{
   }
 }catch(e){}
 // screen visibility failsafe (reduced-motion devices)
-setInterval(function(){
-  try{
-    var vis=document.querySelector('.screen[style*="block"], .screen.on, .screen.active');
-    document.querySelectorAll('#app .screen').forEach(function(s){
-      if(getComputedStyle(s).display!=='none'&&parseFloat(getComputedStyle(s).opacity)<0.05){s.style.opacity='1';}
-    });
-  }catch(e){}
-},700);
+// Visibility failsafe: forces any screen stuck at opacity 0 back to visible.
+// Runs a handful of times at startup only — NOT forever. Running getComputedStyle
+// on every screen every 700ms permanently caused synchronous reflows that froze
+// the UI on heavy screens (e.g. Orders with many cards).
+(function(){
+  var _visChecks=0;
+  var _visInt=setInterval(function(){
+    _visChecks++;
+    try{
+      document.querySelectorAll('#app .screen').forEach(function(s){
+        var cs=getComputedStyle(s);
+        if(cs.display!=='none'&&parseFloat(cs.opacity)<0.05){s.style.opacity='1';}
+      });
+    }catch(e){}
+    if(_visChecks>=8){clearInterval(_visInt);} // stop after ~5.6s
+  },700);
+})();
 // auth visibility failsafe: even if animations fail, the form MUST appear
 setTimeout(function(){
   try{
@@ -3477,6 +3486,9 @@ function goTab(n){
   var app=document.getElementById('app');
   if(app)app.classList.toggle('home-active',n==='home');
   
+  // Stop the order-chat poll when navigating away (restarts when a chat is opened).
+  // Prevents a background 4s poll from running while you're on another tab.
+  try{if(n!=='orders'&&typeof stopChatPoll==='function')stopChatPoll();}catch(e){}
   // ═══ Tab handlers ═══
   if(n==='orders'){setTimeout(function(){purchTab('all');},100);}
   if(n==='cards'){setTimeout(function(){fCards('n');if(typeof renderAllCards==='function')renderAllCards();},80);}
