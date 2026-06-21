@@ -1345,7 +1345,7 @@ function loadMerchant(){
     selectLoyalty(LT,true);
   }).catch(()=>{})
 }
-function loadProducts(){get("products","merchant_id=eq."+MID+"&order=created_at.desc").then(d=>{PRODUCTS=Array.isArray(d)?d:[];renderProducts();txt("d-products",PRODUCTS.filter(p=>p.active!==false).length)}).catch(()=>{})}
+function loadProducts(){get("products","merchant_id=eq."+MID+"&order=created_at.desc").then(d=>{PRODUCTS=Array.isArray(d)?d:[];renderProducts();renderQuickGrid();if(typeof renderPOSGrid==="function")renderPOSGrid();txt("d-products",PRODUCTS.filter(p=>p.active!==false).length)}).catch(()=>{})}
 function loadOrders(){get("orders","merchant_id=eq."+MID+"&order=created_at.desc&limit=50").then(d=>{ORDERS=Array.isArray(d)?d:[];renderOrders();renderPending();txt("d-orders",ORDERS.filter(o=>o.status==="pending").length)}).catch(()=>{})}
 function loadCustomers(){get("merchant_customers","merchant_id=eq."+MID+"&order=last_updated.desc&limit=100").then(d=>{CUSTOMERS=Array.isArray(d)?d:[];renderCustomers();txt("d-members",CUSTOMERS.length);const nc=document.getElementById("notify-count");if(nc)nc.textContent=CUSTOMERS.length}).catch(()=>{})}
 function loadTxns(){get("transactions","merchant_id=eq."+MID+"&order=timestamp.desc&limit=100").then(d=>{TXNS=Array.isArray(d)?d:[];const rev=TXNS.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);txt("d-revenue",rev.toFixed(2));txt("d-sales",TXNS.length);renderTxns();renderRecentSales()}).catch(()=>{})}
@@ -2314,7 +2314,7 @@ function posGuard(){
   var inTrial=true; // Free for all Stashlo merchants
   if(MDATA.pos_enabled||inTrial){
   setTimeout(renderQuickGrid,800);
-    pay.style.display='none';main.style.display='block';renderPOSGrid();loadPOSSales();renderDeptKeys();try{renderDeptTiles();}catch(e){}
+    pay.style.display='none';main.style.display='block';renderPOSGrid();renderQuickGrid();loadPOSSales();renderDeptKeys();try{renderDeptTiles();}catch(e){}
     if(inTrial&&!document.getElementById('trial-banner')){
       var days=Math.ceil((trialMs-(Date.now()-createdAt))/86400000);
       var tb=document.createElement('div');tb.id='trial-banner';
