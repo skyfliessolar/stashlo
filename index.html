@@ -1991,7 +1991,7 @@ const BRANDS=[
 function H(){return{'apikey':SK,'Authorization':'Bearer '+(TOK||SK),'Content-Type':'application/json','Prefer':'return=representation'}}
 function get(t,q){return fetch(SU+'/rest/v1/'+t+'?select=*'+(q?'&'+q:''),{headers:H()}).then(r=>r.json())}
 function post(t,d,c){return fetch(SU+'/rest/v1/'+t+(c?'?on_conflict='+c:''),{method:'POST',headers:{...H(),Prefer:c?'resolution=merge-duplicates,return=representation':'return=representation'},body:JSON.stringify(d)}).then(r=>r.json())}
-function pat(t,q,d){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'PATCH',headers:{...H(),'Prefer':'return=minimal'},body:JSON.stringify(d)}).then(r=>r.ok?r:r.json().then(e=>Promise.reject(e)))}
+function pat(t,q,d){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'PATCH',headers:{...H(),'Prefer':'return=representation'},body:JSON.stringify(d)}).then(function(r){return r.ok?r.json().then(function(rows){return {ok:true,rows:Array.isArray(rows)?rows:[]};}):r.json().then(function(e){return Promise.reject(e);});});}
 function del(t,q){return fetch(SU+'/rest/v1/'+t+'?'+q,{method:'DELETE',headers:H()})}
 function T(m,type){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2800)}
 function V(id){const e=document.getElementById(id);return e?e.value.trim():''}
@@ -3128,12 +3128,39 @@ function saveProf(){
   if(addr)updates.address=addr;
   if(dob)updates.date_of_birth=dob;
   PROF=Object.assign(PROF||{},updates);
+  function ok(res){
+    // res.rows is the array the DB returned. Empty = nothing was written (RLS or wrong id).
+    if(res&&res.rows&&res.rows.length>0){
+      PROF=Object.assign(PROF||{},res.rows[0]);
+      T('✅ Profile saved','success');cmo('editProfMo');loadProf();return true;
+    }
+    return false;
+  }
   pat('users','id=eq.'+UID,updates)
-    .then(function(){T('✅ Profile saved','success');cmo('editProfMo');loadProf();})
-    .catch(function(){
-      if(dob){var u2={name:name,display_name:(V('ep-dn')||name)};if(phone)u2.phone=phone;if(addr)u2.address=addr;
-        pat('users','id=eq.'+UID,u2).then(function(){T('✅ Saved','success');cmo('editProfMo');loadProf();}).catch(function(){T('Save failed — check connection','error');});
-      } else {T('Save failed — check connection','error');}
+    .then(function(res){
+      if(ok(res))return;
+      // 0 rows updated — retry without DOB in case that column is missing
+      if(dob){
+        var u2={name:name,display_name:(V('ep-dn')||name)};if(phone)u2.phone=phone;if(addr)u2.address=addr;
+        pat('users','id=eq.'+UID,u2).then(function(r2){
+          if(ok(r2)){T('✅ Saved (date of birth not stored)','success');}
+          else{T('Could not save — permission denied on your account','error');}
+        }).catch(function(){T('Could not save — please try again','error');});
+      } else {
+        T('Could not save — permission denied on your account','error');
+      }
+    })
+    .catch(function(e){
+      // a real HTTP error (column missing, etc). Retry without DOB.
+      if(dob){
+        var u3={name:name,display_name:(V('ep-dn')||name)};if(phone)u3.phone=phone;if(addr)u3.address=addr;
+        pat('users','id=eq.'+UID,u3).then(function(r3){
+          if(ok(r3)){T('✅ Saved (date of birth not stored)','success');}
+          else{T('Could not save — please try again','error');}
+        }).catch(function(err){T('Save failed: '+((err&&(err.message||err.hint))||'try again'),'error');});
+      } else {
+        T('Save failed: '+((e&&(e.message||e.hint))||'try again'),'error');
+      }
     });
 }
 
