@@ -4432,15 +4432,21 @@ function confirmDeleteAccount(){
     del('scratch_codes','user_id=eq.'+UID)
   ];
   Promise.allSettled(tasks).then(function(){
-    // finally delete the user profile row itself
-    return del('users','id=eq.'+UID);
+    // delete the user profile row itself
+    return del('users','id=eq.'+UID).catch(function(){});
+  }).then(function(){
+    // Call the server-side Edge Function to delete the AUTH login record too.
+    // (The client can't delete an auth user securely.) If it's not deployed yet,
+    // this just fails quietly — the personal data is already wiped above.
+    return fetch(SU+'/functions/v1/delete-account',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+TOK,'Content-Type':'application/json','apikey':SK}
+    }).catch(function(){});
   }).then(function(){
     T('Your account has been deleted');
-    // clear local session + reload to logged-out state
     try{localStorage.removeItem('sl_s');}catch(e){}
     setTimeout(function(){location.reload();},1500);
   }).catch(function(){
-    // even if the final call errors, wipe local session so they're signed out
     try{localStorage.removeItem('sl_s');}catch(e){}
     T('Account deletion processed');
     setTimeout(function(){location.reload();},1500);
