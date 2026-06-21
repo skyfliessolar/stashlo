@@ -4190,7 +4190,84 @@ function manualBrandAdd(){
 }
 
 function scanCardToAdd(){
-  T('Camera scan to add card — coming soon','info');
+  // Real barcode/QR scanner for plastic loyalty cards.
+  // Tries the native BarcodeDetector first, falls back to jsQR.
+  var ov=document.createElement('div');
+  ov.id='card-scan-ov';
+  ov.style.cssText='position:fixed;inset:0;background:#000;z-index:10000';
+  ov.innerHTML='<video id="csv" autoplay playsinline muted style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
+    +'<div style="position:absolute;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 16px;background:linear-gradient(180deg,rgba(0,0,0,.6),transparent);color:#fff;font-weight:800;font-size:16px;text-align:center">📷 Scan your loyalty card barcode</div>'
+    +'<div style="position:absolute;top:50%;left:8%;right:8%;transform:translateY(-50%);height:140px;border:3px solid rgba(16,185,129,.9);border-radius:16px;pointer-events:none"></div>'
+    +'<div style="position:absolute;top:50%;left:10%;right:10%;height:2px;background:#10b981;box-shadow:0 0 12px #10b981;pointer-events:none"></div>'
+    +'<button id="cs-x" style="position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:16px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:20px;cursor:pointer;z-index:2">✕</button>'
+    +'<div style="position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);left:0;right:0;text-align:center;color:#fff;font-weight:700;font-size:14px;text-shadow:0 2px 6px #000;padding:0 20px">Hold the barcode inside the box. Or tap ✕ to type it in.</div>';
+  document.body.appendChild(ov);
+
+  var stream=null,raf=null;
+  function stop(){
+    if(raf)cancelAnimationFrame(raf);
+    if(stream)stream.getTracks().forEach(function(t){t.stop();});
+    var e=document.getElementById('card-scan-ov');if(e)e.remove();
+  }
+  function got(value){
+    if(!value)return;
+    stop();
+    // Put the scanned number into the card-number field and advance the flow.
+    var f=document.getElementById('fc-n');
+    if(f)f.value=String(value).replace(/\s+/g,'');
+    T('✅ Card barcode captured','success');
+    // If a brand is already chosen, jump to the details step; otherwise prompt brand pick.
+    try{
+      if(typeof CUR_BRAND!=='undefined' && CUR_BRAND){
+        var bs=document.getElementById('brands-step'),cs=document.getElementById('card-step');
+        if(bs&&cs){bs.style.display='none';cs.style.display='block';}
+      } else {
+        T('Now pick the brand for this card','info');
+      }
+    }catch(e){}
+  }
+  document.getElementById('cs-x').onclick=stop;
+
+  if('BarcodeDetector' in window){
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}}).then(function(st){
+      stream=st;var v=document.getElementById('csv');v.srcObject=st;
+      var det=new BarcodeDetector({formats:['code_128','ean_13','ean_8','upc_a','upc_e','code_39','itf','qr_code']});
+      var last='',lastT=0;
+      function loop(){
+        if(!document.getElementById('card-scan-ov'))return;
+        det.detect(v).then(function(cs){
+          if(cs&&cs.length&&cs[0].rawValue){got(cs[0].rawValue);return;}
+          raf=requestAnimationFrame(loop);
+        }).catch(function(){raf=requestAnimationFrame(loop);});
+      }
+      v.onloadedmetadata=loop;
+    }).catch(function(){T('Camera permission needed — check your browser settings','error');stop();});
+  } else {
+    // Fallback: load jsQR (already may be present) and decode frames.
+    function startJsQR(){
+      navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(st){
+        stream=st;var v=document.getElementById('csv');v.srcObject=st;
+        var cv=document.createElement('canvas');var ctx=cv.getContext('2d');
+        function tick(){
+          if(!document.getElementById('card-scan-ov'))return;
+          if(v.readyState===v.HAVE_ENOUGH_DATA){
+            cv.width=v.videoWidth;cv.height=v.videoHeight;ctx.drawImage(v,0,0);
+            try{var img=ctx.getImageData(0,0,cv.width,cv.height);var code=window.jsQR&&window.jsQR(img.data,img.width,img.height);if(code&&code.data){got(code.data);return;}}catch(e){}
+          }
+          raf=requestAnimationFrame(tick);
+        }
+        tick();
+      }).catch(function(){T('Camera permission needed','error');stop();});
+    }
+    if(window.jsQR){startJsQR();}
+    else{
+      var sc=document.createElement('script');
+      sc.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+      sc.onload=startJsQR;
+      sc.onerror=function(){T('Scanner unavailable — please type the number','error');stop();};
+      document.head.appendChild(sc);
+    }
+  }
 }
 
 
