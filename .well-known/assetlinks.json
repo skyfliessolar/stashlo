@@ -7,17 +7,8 @@
       "namespace": "android_app",
       "package_name": "com.stashlo.app",
       "sha256_cert_fingerprints": [
-        "PLACEHOLDER_REPLACE_WITH_PWABUILDER_FINGERPRINT"
+        "15:7E:00:2F:47:28:CB:80:F3:FC:00:53:1C:A0:78:B9:70:82:48:97:C2:F7:69:55:1F:9D:44:63:F6:A2:09:44"
       ]
-    }
-  },
-  {
-    "relation": [
-      "delegate_permission/common.handle_all_urls"
-    ],
-    "target": {
-      "namespace": "web",
-      "site": "https://stashlo.com"
     }
   }
 ]
