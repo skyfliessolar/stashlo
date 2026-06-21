@@ -1465,7 +1465,19 @@ function saveProd(){
   const btn=document.querySelector("#prodModal .btn-primary");if(btn){btn.textContent="Saving...";btn.disabled=true;}
   const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",barcode:V("p-barcode")||null,stock:parseInt(document.getElementById("p-stock").value||0),category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked};
   const action=eid?pat("products","id=eq."+eid,data):post("products",{...data,created_at:Date.now()});
-  action.then(()=>{T("✅ "+name+" saved!","success");closeModal("prodModal");loadProducts();if(btn){btn.textContent="💾 Save Product";btn.disabled=false}})
+  action.then((res)=>{
+      T("✅ "+name+" saved!","success");closeModal("prodModal");
+      // If this product was added via the Quick Sale "+ Add New Product" flow,
+      // auto-add it to quick favourites so it shows on the till immediately.
+      try{
+        if(window._afterProdSaveAddFav && !eid){
+          var newId=(Array.isArray(res)&&res[0]&&res[0].id)?res[0].id:(res&&res.id);
+          if(newId){var favs=getQuickFavs()||[];if(favs.indexOf(newId)<0)favs.push(newId);setQuickFavs(favs);}
+        }
+      }catch(e){}
+      window._afterProdSaveAddFav=false;
+      loadProducts();if(btn){btn.textContent="💾 Save Product";btn.disabled=false}
+    })
   .catch(()=>{const e=document.getElementById("p-err");if(e){e.textContent="Save failed — try again";e.style.display="block";}if(btn){btn.textContent="💾 Save Product";btn.disabled=false}})
 }
 function confirmDelProd(id,name){
@@ -2831,8 +2843,9 @@ function editQuickFavs(){
   }).join('');
   var html='<div style="font-size:17px;font-weight:800;margin-bottom:4px">⚡ Edit Quick Sale</div>'
     +'<div style="font-size:12px;color:#64748b;margin-bottom:14px">Tap to add/remove your fast-selling products. They show as one-tap buttons on the till.</div>'
-    +'<div style="max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch">'+rows+'</div>'
-    +'<button onclick="_saveFavs()" style="width:100%;margin-top:12px;padding:14px;background:#6366F1;color:#fff;border:none;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer">💾 Save Quick Sale</button>';
+    +'<div style="max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch">'+rows+'</div>'
+    +'<button onclick="_quickAddNewProduct()" style="width:100%;margin-top:10px;padding:13px;background:#fff;color:#6366F1;border:2px dashed #6366F1;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">➕ Add a New Product</button>'
+    +'<button onclick="_saveFavs()" style="width:100%;margin-top:8px;padding:14px;background:#6366F1;color:#fff;border:none;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer">💾 Save Quick Sale</button>';
   slOverlay(html,480);
 }
 function _toggleFav(id,el){
@@ -2843,6 +2856,15 @@ function _toggleFav(id,el){
   el.style.background=on?'#eef2ff':'#fff';
   var chk=el.querySelector('.fav-check');
   if(chk){chk.style.border='2px solid '+(on?'#6366F1':'#cbd5e1');chk.style.background=on?'#6366F1':'#fff';chk.textContent=on?'✓':'';}
+}
+function _quickAddNewProduct(){
+  // Close the quick-sale overlay, then open the Add Product form.
+  if(typeof slClose==='function')slClose();
+  if(typeof openAddProd==='function'){
+    openAddProd();
+    // After they save, the new product is auto-added to quick favourites so it shows on the till.
+    window._afterProdSaveAddFav=true;
+  } else { T('Open Products to add','error'); }
 }
 function _saveFavs(){
   var els=document.querySelectorAll('[data-id][data-on]');
