@@ -1088,7 +1088,11 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 
 #app{min-height:0!important;max-height:none!important}
 </style>
-</head>
+<style id="modal-fix">
+.modal,.bo-modal,.mo{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;height:var(--real-vh,100dvh)!important;max-height:var(--real-vh,100dvh)!important;align-items:flex-end!important;overflow:hidden!important}
+.modal-box,.bo-content,.mo-box{max-height:calc(var(--real-vh,100dvh) - 24px)!important;display:flex!important;flex-direction:column!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 90px)!important}
+.modal-box,.bo-content,.mo-box,.shop-selector-content{animation:none!important;transform:none!important}
+</style></head>
 <body>
 
 <!-- SPLASH -->

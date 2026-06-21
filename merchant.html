@@ -643,7 +643,31 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 #app .bottomnav{position:static!important;flex:0 0 auto!important;left:auto!important;right:auto!important;bottom:auto!important;transform:none!important;width:100%!important;max-width:100%!important;z-index:5!important;min-height:56px!important;height:auto!important;padding-top:6px!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 22px)!important;box-sizing:border-box!important;background:#fff!important;border-top:1px solid var(--bg2,#e2e8f0)!important;box-shadow:0 -2px 16px rgba(15,23,42,.08)!important;display:grid!important;grid-template-columns:repeat(5,1fr)!important}
 .bottomnav .nb{min-width:0!important}
 </style>
-</head>
+
+
+<style id="modal-fix">
+/* iOS-safe bottom sheets: container is exactly the visible height; sheet fits inside it */
+.modal,.bo-modal{
+  position:fixed!important;
+  left:0!important;right:0!important;bottom:0!important;top:auto!important;
+  height:var(--real-vh,100dvh)!important;
+  max-height:var(--real-vh,100dvh)!important;
+  align-items:flex-end!important;
+  overflow:hidden!important;
+}
+.modal-box,.bo-content{
+  max-height:calc(var(--real-vh,100dvh) - 24px)!important;
+  display:flex!important;flex-direction:column!important;
+  overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 90px)!important;
+}
+
+/* Kill residual slide-transform that pushed sheets 60px below the fold */
+.modal-box,.bo-content,.mo-box,.shop-selector-content{
+  animation:none!important;
+  transform:none!important;
+}
+</style></head>
 <body>
 
 <div id="splash">
@@ -1400,11 +1424,12 @@ function openAddProd(){
   document.getElementById("p-price").value="";document.getElementById("p-emoji").value="";
   document.getElementById("p-collect").checked=true;document.getElementById("p-delivery").checked=false;document.getElementById("p-active").checked=true;
   const pe=document.getElementById("p-err");if(pe)pe.style.display="none";
-  const pv=document.getElementById("p-vat");if(pv)pv.value=(p&&p.vat_rate!=null)?String(p.vat_rate):"20";
-  const pc=document.getElementById("p-cost");if(pc)pc.value=(p&&p.cost_price)||"";
-  const pcat=document.getElementById("p-cat");if(pcat)pcat.value=(p&&p.pos_category)||"general";
-  const pbc=document.getElementById("p-barcode");if(pbc)pbc.value=(p&&p.barcode)||"";
-  const pst=document.getElementById("p-stock");if(pst)pst.value=(p&&p.stock!=null)?p.stock:"";
+  // Adding a NEW product — use defaults, no existing product 'p' here (this was the bug)
+  const pv=document.getElementById("p-vat");if(pv)pv.value="20";
+  const pc=document.getElementById("p-cost");if(pc)pc.value="";
+  const pcat=document.getElementById("p-cat");if(pcat)pcat.value="general";
+  const pbc=document.getElementById("p-barcode");if(pbc)pbc.value="";
+  const pst=document.getElementById("p-stock");if(pst)pst.value="";
   openModal("prodModal");
 }
 function editProd(id){
