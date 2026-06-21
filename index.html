@@ -110,7 +110,7 @@ a{color:inherit;text-decoration:none}
 .auth-switch span{color:var(--purple);font-weight:600;cursor:pointer}
 
 /* APP SHELL */
-#app{display:none;flex-direction:column;min-height:100vh;max-width:430px;margin:0 auto;position:relative}
+#app{display:none;flex-direction:column;min-height:0;max-width:430px;margin:0 auto;position:relative}
 
 /* HEADER */
 .app-head{padding-top:max(env(safe-area-inset-top,0px),14px);position:sticky;top:0;z-index:100;background:var(--card);padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
@@ -481,7 +481,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 }
 @keyframes authGrad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 /* App background */
-#app{background:var(--bg);min-height:100vh}
+#app{background:var(--bg);min-height:0}
 /* Cards */
 .sl-card{
   background:var(--card);border-radius:var(--r20);
@@ -567,7 +567,7 @@ html,body{overflow-x:hidden;overflow-y:auto!important;-webkit-overflow-scrolling
 /* ===== SCROLL FIX ===== */
 html{overflow-x:hidden!important;overflow-y:scroll!important;-webkit-overflow-scrolling:touch!important}
 body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;height:auto!important}
-#app{overflow-y:auto!important;min-height:100%}
+#app{overflow-y:auto!important;min-height:0}
 #app .screen{overflow-y:auto!important;-webkit-overflow-scrolling:touch!important}
 
 /* ===== OVERLAY FIX: sl-ov always centred in viewport ===== */
@@ -1032,7 +1032,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 #app{
   position:relative;
   display:flex!important;flex-direction:column!important;
-  height:100vh;height:100dvh;            /* dynamic vh follows iOS toolbar */
+  height:100vh;height:100dvh;height:var(--real-vh,100dvh);            /* dynamic vh follows iOS toolbar */
   max-width:480px;margin:0 auto;
   overflow:hidden!important;
 }
@@ -1085,6 +1085,8 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   max-height:none!important;
 }
 #app .screen.on{ height:auto!important; }
+
+#app{min-height:0!important;max-height:none!important}
 </style>
 </head>
 <body>
@@ -4303,23 +4305,29 @@ function openManualReceipt(){
 })();
 </script>
 
-<script id="layout-diag">
+<script id="vh-fix">
 (function(){
-  function show(){
+  function setH(){
     try{
-      var nav=document.querySelector('.bottom-nav,.bottomnav');
-      var nb=nav?nav.getBoundingClientRect():{bottom:0,top:0};
-      var vv=window.visualViewport||{height:window.innerHeight,offsetTop:0};
-      var d=document.getElementById('_ldiag');
-      if(!d){d=document.createElement('div');d.id='_ldiag';d.onclick=function(){d.remove();};
-        d.style.cssText='position:fixed;top:70px;left:8px;z-index:2147483647;background:rgba(0,0,0,.85);color:#0f0;font:11px monospace;padding:8px 10px;border-radius:8px;max-width:200px;pointer-events:auto';
-        document.body.appendChild(d);}
-      var hidden=Math.max(0,Math.round(nb.bottom-(vv.height+vv.offsetTop)));
-      d.innerHTML='innerH:'+window.innerHeight+'<br>visualVP h:'+Math.round(vv.height)+'<br>navBottom:'+Math.round(nb.bottom)+'<br>navTop:'+Math.round(nb.top)+'<br>HIDDEN below fold:'+hidden+'px'+(hidden>2?' ⚠️':' ✅')+'<br>(tap to close)';
+      var vv=window.visualViewport;
+      var h = vv ? vv.height : window.innerHeight;
+      var app=document.getElementById('app');
+      var auth=document.getElementById('auth');
+      // Pin to the REAL visible height so the bottom nav can't fall below the fold
+      if(app) app.style.height = h + 'px';
+      if(auth) auth.style.height = h + 'px';
+      document.documentElement.style.setProperty('--real-vh', h+'px');
     }catch(e){}
   }
-  if(window.visualViewport){window.visualViewport.addEventListener('resize',show);window.visualViewport.addEventListener('scroll',show);}
-  window.addEventListener('load',function(){setTimeout(show,800);setTimeout(show,2000);});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', setH);
+    window.visualViewport.addEventListener('scroll', setH);
+  }
+  window.addEventListener('resize', setH);
+  window.addEventListener('orientationchange', function(){ setTimeout(setH,150); setTimeout(setH,400); });
+  setH();
+  document.addEventListener('DOMContentLoaded', setH);
+  window.addEventListener('load', function(){ setH(); setTimeout(setH,300); setTimeout(setH,800); });
 })();
 </script>
 </body>
