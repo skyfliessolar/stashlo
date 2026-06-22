@@ -1380,6 +1380,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div id="shop-suggest"></div>
       </div>
     </div>
+    <div style="padding:0 16px 8px"><button onclick="scanShopQR()" style="width:100%;padding:13px;background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">📷 Scan shop QR to add</button></div>
     <div id="shop-results" style="padding:0 16px"></div>
     <div class="sh" style="padding-top:4px"><span class="sh-t">📍 Nearby Shops</span></div>
     <div id="nearby-strip"><div style="color:var(--sub);font-size:12px;padding:6px 0">Finding shops near you...</div></div>
@@ -2619,6 +2620,54 @@ function renderShops(shops,el,hideModal){
       <div class="shop-info"><div class="shop-name">${s.name}</div><div class="shop-meta">ID: ${s.shop_id||'—'} • ${fmtLoy(s).slice(0,40)}</div></div>
       <button class="shop-btn">View →</button>
     </div>`).join('')
+}
+function scanShopQR(){
+  // Scan a shop's QR (encodes its Shop ID e.g. SL-SKY1) and open it to add.
+  function got(raw,cleanup){
+    cleanup();
+    var code=String(raw||'').trim().toUpperCase();
+    // The shop QR encodes the shop_id. Look the shop up by shop_id.
+    get('merchants','shop_id=eq.'+encodeURIComponent(code)).then(function(d){
+      var s=Array.isArray(d)&&d[0]?d[0]:null;
+      if(s){openShopById(s.id);}
+      else{T('No shop found for '+code,'error');}
+    }).catch(function(){T('Lookup failed','error');});
+  }
+  function ui(){
+    var ov=document.createElement('div');ov.id='shopqr-ov';
+    ov.style.cssText='position:fixed;inset:0;background:#000;z-index:10000;display:flex;flex-direction:column';
+    ov.innerHTML='<video id="sq-vid" autoplay playsinline muted style="flex:1;width:100%;height:100%;object-fit:cover"></video>'
+      +'<div style="position:absolute;top:calc(env(safe-area-inset-top,0px) + 16px);left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:16px;text-shadow:0 2px 6px #000">Scan the shop\x27s QR code</div>'
+      +'<button id="sq-x" style="position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:16px;width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:19px;z-index:2">✕</button>'
+      +'<div style="position:absolute;top:50%;left:10%;right:10%;transform:translateY(-50%);height:200px;border:3px solid #8B5CF6;border-radius:18px;pointer-events:none"></div>';
+    document.body.appendChild(ov);return ov;
+  }
+  if('BarcodeDetector' in window){
+    var ov=ui();var stream=null,raf=null;
+    var stop=function(){if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(function(t){t.stop()});var e=document.getElementById('shopqr-ov');if(e)e.remove();};
+    ov.querySelector('#sq-x').onclick=stop;
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(st){
+      stream=st;var v=document.getElementById('sq-vid');v.srcObject=st;
+      var det=new BarcodeDetector({formats:['qr_code','code_128']});
+      var loop=function(){
+        if(!document.getElementById('shopqr-ov'))return;
+        det.detect(v).then(function(cs){if(cs&&cs.length&&cs[0].rawValue){got(cs[0].rawValue,stop);return;}raf=requestAnimationFrame(loop);}).catch(function(){raf=requestAnimationFrame(loop);});
+      };
+      v.onloadedmetadata=loop;
+    }).catch(function(){T('Camera permission needed','error');stop();});
+  } else {
+    var ov=ui();var stream=null,raf=null;
+    var stop2=function(){if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(function(t){t.stop()});var e=document.getElementById('shopqr-ov');if(e)e.remove();};
+    ov.querySelector('#sq-x').onclick=stop2;
+    var startJsQR=function(){
+      navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(st){
+        stream=st;var v=document.getElementById('sq-vid');v.srcObject=st;var cv=document.createElement('canvas');var ctx=cv.getContext('2d');
+        var tick=function(){if(!document.getElementById('shopqr-ov'))return;if(v.readyState===v.HAVE_ENOUGH_DATA){cv.width=v.videoWidth;cv.height=v.videoHeight;ctx.drawImage(v,0,0);try{var img=ctx.getImageData(0,0,cv.width,cv.height);var code=window.jsQR&&window.jsQR(img.data,img.width,img.height);if(code&&code.data){got(code.data,stop2);return;}}catch(e){}}raf=requestAnimationFrame(tick);};
+        tick();
+      }).catch(function(){T('Camera permission needed','error');stop2();});
+    };
+    if(window.jsQR)startJsQR();else{var sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';sc.onload=startJsQR;sc.onerror=function(){T('Scanner unavailable','error');stop2();};document.head.appendChild(sc);}
+  }
 }
 function openShopById(mid){
   // mid must be a UUID (Supabase merchants.id), not a brand id
