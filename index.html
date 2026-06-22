@@ -2774,7 +2774,22 @@ function submitOrder(){
 var ORDER_STEPS=['placed','preparing','ready','dispatched','in_transit','out_for_delivery','delivered'];
 var ORDER_LABELS={'placed':'Order placed','preparing':'Merchant preparing','ready':'Ready for pickup','dispatched':'Driver assigned','in_transit':'On the way','out_for_delivery':'Out for delivery','delivered':'Delivered 🎉'};
 function renderOrderTimeline(status){
-  var cur=ORDER_STEPS.indexOf(status||'placed');
+  // Map merchant status values onto the customer timeline steps.
+  var STATUS_MAP={
+    'pending':'placed','placed':'placed',
+    'confirmed':'preparing','preparing':'preparing','accepted':'preparing',
+    'ready':'ready',
+    'dispatched':'dispatched',
+    'in_transit':'in_transit',
+    'out_for_delivery':'out_for_delivery',
+    'completed':'delivered','delivered':'delivered','collected':'delivered'
+  };
+  var mapped=STATUS_MAP[status]||status||'placed';
+  // Rejected/cancelled: show a clear message instead of the progress bar.
+  if(status==='rejected'||status==='cancelled'){
+    return '<div style="background:#fef2f2;color:#dc2626;border-radius:10px;padding:10px;text-align:center;font-weight:800;font-size:13px">✗ Order '+status+'</div>';
+  }
+  var cur=ORDER_STEPS.indexOf(mapped);
   return '<div style="display:flex;align-items:center;overflow-x:auto;gap:0;padding:10px 0;scrollbar-width:none">'
     +ORDER_STEPS.map(function(s,i){
       var done=i<=cur,active=i===cur;
@@ -2783,7 +2798,7 @@ function renderOrderTimeline(status){
       var line=i<ORDER_STEPS.length-1?'<div style="height:3px;flex:1;min-width:16px;background:'+(done&&i<cur?'#6366F1':'#e2e8f0')+';flex-shrink:0"></div>':'';
       return dot+line;
     }).join('')+'</div>'
-    +'<div style="font-size:12px;font-weight:800;color:#4338ca;text-align:center">'+( ORDER_LABELS[status||'placed']||status||'Placed')+'</div>';
+    +'<div style="font-size:12px;font-weight:800;color:#4338ca;text-align:center">'+( ORDER_LABELS[mapped]||mapped||'Placed')+'</div>';
 }
 function loadOrders(){
   get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=30').then(d=>{
