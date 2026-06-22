@@ -1630,13 +1630,16 @@ function addCustomerManually(phone){
 // ═══ ADD NEW CUSTOMER TO POS (with auto barcode) ═══
 function openPOSAddCustomer(scannedId){
   var mo=document.createElement('div');mo.className='mo on';
-  var isPhone=/^[0-9]{10,}$/.test(scannedId.replace(/\D/g,''));
-  var phone=isPhone?scannedId.replace(/\D/g,''):prompt('Phone number for this customer?')||'';
-  if(!phone){T('Phone required to create customer','error');return;}
+  var sid=String(scannedId||'');
+  var lidMatch=sid.match(/SL-[A-Z0-9]+/i);
+  var presetLid=lidMatch?lidMatch[0].toUpperCase():'';
+  var isPhone=/^[0-9]{10,}$/.test(sid.replace(/\D/g,''));
+  // Phone is OPTIONAL now. If they scanned a loyalty code, we use it directly.
+  var phone=isPhone?sid.replace(/\D/g,''):'';
   
   var html='<div class="mo-box"><div class="mo-head"><span class="mo-title">👤 New Customer</span><button class="mo-x" id="poc-x">✕</button></div>';
   html+='<div class="fl"><label class="field-label">Customer name</label><input id="poc-name" class="fi" placeholder="e.g. John Smith" autofocus></div>';
-  html+='<div class="fl"><label class="field-label">Phone</label><input class="fi" value="'+phone+'" readonly></div>';
+  html+='<div class="fl"><label class="field-label">Phone (optional)</label><input id="poc-phone" class="fi" value="'+phone+'" placeholder="optional"></div>';
   html+='<div style="padding:12px;background:var(--bg2);border-radius:10px;font-size:13px;color:var(--ink3)"><strong>What happens:</strong><br>1. New customer profile created<br>2. Loyalty ID generated (SL-XXXXXX)<br>3. Shop-specific barcode for this location<br>4. Customer can view in their app</div>';
   html+='<button class="sl-btn btn btn-p" id="poc-add" style="width:100%;margin-top:12px">✅ Create customer & barcode</button>';
   html+='</div>';
@@ -1646,17 +1649,20 @@ function openPOSAddCustomer(scannedId){
   document.getElementById('poc-x').onclick=function(){mo.remove();};
   document.getElementById('poc-add').onclick=function(){
     var name=(document.getElementById('poc-name').value||'').trim()||'Customer';
+    var phoneInp=document.getElementById('poc-phone');
+    var phone2=(phoneInp&&phoneInp.value?phoneInp.value:phone).replace(/\D/g,'');
     var btn=document.getElementById('poc-add');btn.disabled=true;btn.textContent='Creating...';
     
-    // Generate loyalty ID (SL-XXXXXX format)
-    var chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';var lid='SL-';
-    for(var i=0;i<6;i++)lid+=chars[Math.floor(Math.random()*chars.length)];
+    // Use the SCANNED loyalty ID if we have one; otherwise generate a fresh SL-XXXXXX.
+    var lid=presetLid;
+    if(!lid){var chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';lid='SL-';for(var i=0;i<6;i++)lid+=chars[Math.floor(Math.random()*chars.length)];}
     
-    // Create in users table
+    // email must be unique; use phone if given, else the loyalty id.
+    var email=(phone2?phone2:lid.toLowerCase())+'@stashlo.local';
     post('users',{
-      email:phone+'@stashlo.local',
+      email:email,
       name:name,
-      phone:phone,
+      phone:phone2||null,
       loyalty_id:lid,
       created_at:Date.now(),
       total_points:0,
@@ -1668,7 +1674,7 @@ function openPOSAddCustomer(scannedId){
       post('merchant_customers',{
         merchant_id:MID,
         user_id:uid,
-        phone:phone,
+        phone:phone2||null,
         name:name,
         points:0,
         visit_count:0,
@@ -1677,8 +1683,10 @@ function openPOSAddCustomer(scannedId){
         last_updated:Date.now()
       }).then(function(){
         mo.remove();
-        T('✅ Customer '+name+' created!\n📲 ID: '+lid,'success');
-        window._TILL_CX={id:uid,name:name,phone:phone,loyalty_id:lid,total_points:0,sl_credit:0};
+        T('✅ '+name+' created · '+lid,'success');
+        // Attach the new customer to the till so this sale earns them points.
+        if(typeof _setTillCustomer==='function'){_setTillCustomer({id:uid,name:name,phone:phone2||null,loyalty_id:lid,total_points:0,sl_credit:0});}
+        window._TILL_CX={id:uid,name:name,phone:phone2||null,loyalty_id:lid,total_points:0,sl_credit:0};
         // Update till display
         var nm=document.getElementById('pos-cx-name');if(nm)nm.textContent='✅ '+name;
         var ps=document.getElementById('pos-cx-pts');if(ps)ps.textContent='New customer · '+lid;
@@ -3281,27 +3289,85 @@ function openScanCustomer(){
 
 // ===== POS CUSTOMER LOOKUP =====
 function posScanCustQR(){
-  var raw=prompt('Scan customer barcode (SL-XXXXXX):','');
-  if(!raw)return;
-  
-  // Query for customer in merchant_customers
-  fetch(SBURL+'/rest/v1/merchant_customers?or=(shop_barcode.eq.'+raw+',user_id.eq.'+raw+')',{headers:SBHEADERS})
-    .then(r=>r.json())
-    .then(d=>{
-      if(d.length>0){
-        var cust=d[0];
-        POS.customer_id=cust.user_id;
-        POS.customer_name=cust.name;
-        POS.customer_phone=cust.phone;
-        docId('pos-cust-name').textContent='👤 '+cust.name+' ('+cust.phone+')';
-        T('✅ Customer found: '+cust.name,'success');
-      } else {
-        T('Customer not found. Create new?','warning');
-        var newName=prompt('Enter customer name:','');
-        if(newName) createPosCustomer(newName, raw);
-      }
-    })
-    .catch(e=>{T('Error scanning: '+e.message,'error');console.error(e);});
+  // Real camera scan of the customer's Stashlo QR or barcode (no typing).
+  function got(raw,cleanup){
+    var m=String(raw).match(/SL-[A-Z0-9]+/i);
+    var lid=(m?m[0]:String(raw)).toUpperCase();
+    cleanup();
+    attachTillCustomerByLid(lid);
+  }
+  function ui(){
+    var ov=document.createElement('div');ov.id='cust-scan-ov';
+    ov.style.cssText='position:fixed;inset:0;background:#000;z-index:980;display:flex;flex-direction:column';
+    ov.innerHTML='<video id="cs2-vid" autoplay playsinline muted style="flex:1;width:100%;height:100%;object-fit:cover"></video>'
+      +'<div style="position:absolute;top:calc(env(safe-area-inset-top,0px) + 16px);left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:16px;text-shadow:0 2px 6px #000">Scan customer Stashlo code</div>'
+      +'<button id="cs2-x" style="position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:16px;width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:19px;z-index:2">X</button>'
+      +'<div style="position:absolute;top:50%;left:8%;right:8%;transform:translateY(-50%);height:150px;border:3px solid #34d399;border-radius:18px;pointer-events:none"></div>'
+      +'<div style="position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);left:0;right:0;text-align:center;color:#fff;font-weight:700;text-shadow:0 2px 6px #000;padding:0 20px">Hold the QR or barcode in the box</div>';
+    document.body.appendChild(ov);return ov;
+  }
+  if('BarcodeDetector' in window){
+    var ov=ui();var stream=null,raf=null;
+    var stop=function(){if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(function(t){t.stop()});var e=document.getElementById('cust-scan-ov');if(e)e.remove();};
+    ov.querySelector('#cs2-x').onclick=stop;
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}}).then(function(st){
+      stream=st;var v=document.getElementById('cs2-vid');v.srcObject=st;
+      var det=new BarcodeDetector({formats:['qr_code','code_128','ean_13','code_39']});
+      var loop=function(){
+        if(!document.getElementById('cust-scan-ov'))return;
+        det.detect(v).then(function(cs){
+          if(cs&&cs.length&&cs[0].rawValue){got(cs[0].rawValue,stop);return;}
+          raf=requestAnimationFrame(loop);
+        }).catch(function(){raf=requestAnimationFrame(loop);});
+      };
+      v.onloadedmetadata=loop;
+    }).catch(function(){T('Camera permission needed','error');stop();});
+  } else {
+    var ov=ui();var stream=null,raf=null;
+    var stop2=function(){if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(function(t){t.stop()});var e=document.getElementById('cust-scan-ov');if(e)e.remove();};
+    ov.querySelector('#cs2-x').onclick=stop2;
+    var startJsQR=function(){
+      navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(st){
+        stream=st;var v=document.getElementById('cs2-vid');v.srcObject=st;
+        var cv=document.createElement('canvas');var ctx=cv.getContext('2d');
+        var tick=function(){
+          if(!document.getElementById('cust-scan-ov'))return;
+          if(v.readyState===v.HAVE_ENOUGH_DATA){cv.width=v.videoWidth;cv.height=v.videoHeight;ctx.drawImage(v,0,0);try{var img=ctx.getImageData(0,0,cv.width,cv.height);var code=window.jsQR&&window.jsQR(img.data,img.width,img.height);if(code&&code.data){got(code.data,stop2);return;}}catch(e){}}
+          raf=requestAnimationFrame(tick);
+        };
+        tick();
+      }).catch(function(){T('Camera permission needed','error');stop2();});
+    };
+    if(window.jsQR)startJsQR();else{var sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';sc.onload=startJsQR;sc.onerror=function(){T('Scanner unavailable','error');stop2();};document.head.appendChild(sc);}
+  }
+}
+// Shared: attach a customer to the till by loyalty ID; create if new (no phone needed).
+function attachTillCustomerByLid(lid,onDone){
+  lid=String(lid||'').trim().toUpperCase();
+  var m=lid.match(/SL-[A-Z0-9]+/);if(m)lid=m[0];
+  if(!/^SL-[A-Z0-9]{4,}$/.test(lid)){T('Not a valid Stashlo ID','error');return;}
+  get('users','loyalty_id=eq.'+encodeURIComponent(lid)).then(function(d){
+    var u=Array.isArray(d)&&d[0]?d[0]:null;
+    if(u){_setTillCustomer(u);_ensureMerchantCustomer(u);if(onDone)onDone(u);}
+    else{openPOSAddCustomer(lid);}
+  }).catch(function(){T('Lookup failed','error');});
+}
+function _setTillCustomer(u){
+  window._TILL_CX=u;window._TILL_CX._REDEEM=0;
+  var nm=document.getElementById('pos-cx-name');
+  var ps=document.getElementById('pos-cx-pts');
+  var clr=document.getElementById('pos-cx-clr');
+  if(nm)nm.textContent='💎 '+(u.name||u.loyalty_id||'Customer');
+  if(ps)ps.textContent=(u.total_points||0)+' pts · Credit £'+parseFloat(u.sl_credit||0).toFixed(2);
+  if(clr)clr.style.display='inline-block';
+  T('✅ '+(u.name||u.loyalty_id)+' attached','success');
+}
+function _ensureMerchantCustomer(u){
+  get('merchant_customers','merchant_id=eq.'+MID+'&user_id=eq.'+u.id).then(function(d){
+    if(!(Array.isArray(d)&&d.length)){
+      post('merchant_customers',{merchant_id:MID,user_id:u.id,phone:u.phone||null,name:u.name||'Customer',points:0,visit_count:0,total_spend:0,shop_barcode:u.loyalty_id,last_updated:Date.now()}).catch(function(){});
+    }
+  }).catch(function(){});
 }
 
 function createPosCustomer(name, barcode){
@@ -3324,8 +3390,8 @@ function closePCSOv(){
   if(window._pcsSI)clearInterval(window._pcsSI);
 }
 function posTypeCustId(){
-  var id=prompt('Enter customer Stashlo ID (SL-XXXXXX) or phone number:');
-  if(id)lookupTillCX(id.trim().toUpperCase());
+  var id=prompt('Enter customer Stashlo ID (SL-XXXXXX):');
+  if(id)attachTillCustomerByLid(id.trim().toUpperCase());
 }
 function lookupTillCX(raw){
   T('Looking up customer...');
