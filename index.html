@@ -1399,7 +1399,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px">
         <button id="pt-all" onclick="purchTab('all')" style="flex-shrink:0;background:var(--purple);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer">All</button>
         <button id="pt-pos" onclick="purchTab('pos');ordTab('txns')" style="flex-shrink:0;background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">🧾 POS Receipts</button>
-        <button id="pt-orders" onclick="purchTab('orders');ordTab('orders')" style="flex-shrink:0;background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">📦 Shop Orders</button>
+        <button id="pt-orders" onclick="purchTab('orders')" style="flex-shrink:0;background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">📦 Shop Orders</button>
       </div>
     </div>
     <span id="ord-tab-orders" style="display:none"></span><span id="ord-tab-txns" style="display:none"></span>
@@ -4001,14 +4001,8 @@ function ordTab(tab){
   }
 }
 
-// Override loadOrders to use ordTab
-var _origLoadOrders=loadOrders;
-loadOrders=function(){
-  _origLoadOrders();
-  // Auto-select first tab
-  var ob=document.getElementById('ord-tab-orders');
-  if(ob&&ob.style.background!=='var(--purple)')ordTab('orders');
-};
+// (Removed ordTab override — purchTab is the single source of truth for the
+//  Orders screen tabs; ordTab targeted a hidden legacy element and conflicted.)
 
 
 // ═══ PURCHASE HISTORY — unified all purchases tab ═══
@@ -4068,13 +4062,13 @@ function purchTab(tab){
       });
     }).catch(function(){el.innerHTML='<div style="padding:20px;color:var(--sub)">Could not load</div>';});
   } else if(tab==='orders'){
-    renderOrders();
-    // Also move orders-list into purchases-list
-    setTimeout(function(){
-      var ol=document.getElementById('orders-list');
-      var pl=document.getElementById('purchases-list');
-      if(ol&&pl){pl.innerHTML=ol.innerHTML;}
-    },500);
+    // Render shop orders directly into the visible purchases-list (tappable rows).
+    get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=30').then(function(od){
+      var os=(Array.isArray(od)?od:[]).filter(function(o){return !o.deleted;});
+      el.innerHTML=os.length
+        ?os.map(function(o){return renderPurchRow(o,'orders');}).join('')
+        :'<div style="text-align:center;padding:32px;color:var(--sub)"><div style="font-size:40px">📦</div><div>No shop orders yet</div><div style="font-size:12px;margin-top:6px">Browse shops to place an order</div></div>';
+    }).catch(function(){el.innerHTML='<div style="padding:20px;color:var(--sub)">Could not load orders</div>';});
   }
 }
 
