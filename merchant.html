@@ -1216,19 +1216,9 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <button class="modal-close" onclick="closeModal('orderModal')">✕</button>
     </div>
     <div class="modal-body" id="order-detail-body"></div>
-    <div class="modal-footer">
-      <button class="btn btn-green" style="flex:1" onclick="assignDriverAndDispatch()">🚚 Dispatch</button>
-      <button class="btn btn-primary" style="flex:1" onclick="updateOrderSt('in_transit')">🛵 In Transit</button>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn btn-gray" style="flex:1" onclick="updateOrderSt('out_for_delivery')">🏃 Out for Delivery</button>
-      <button class="btn btn-primary" style="flex:1" onclick="updateOrderSt('completed')">🎉 Delivered</button>
-    </div>
-    <div style="padding:0 16px 8px;display:flex;gap:8px">
-      <button class="btn btn-red" style="flex:1" onclick="updateOrderSt('rejected')">✗ Reject</button>
-      <button class="btn btn-gray" style="flex:1" onclick="closeModal('orderModal')">Close</button>
-    </div>
-    <div style="padding:0 16px 16px">
+    <div id="order-actions" style="padding:0 16px"></div>
+    <div style="padding:12px 16px 16px">
+      <button class="btn btn-gray" style="width:100%;margin-bottom:8px" onclick="closeModal('orderModal')">Close</button>
       <button class="btn" style="width:100%;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca" onclick="deleteOrderConfirm()">🗑 Delete this order</button>
     </div>
   </div>
@@ -1498,7 +1488,41 @@ function openOrderDet(id){
   const o=ORDERS.find(x=>x.id===id);if(!o)return;CUR_ORDER=o;
   const sc={pending:"b-pending",confirmed:"b-ready",ready:"b-ready",completed:"b-done",rejected:"b-rejected"};
   document.getElementById("order-detail-body").innerHTML=`<div style="background:var(--purple3);border-radius:var(--r12);padding:16px;margin-bottom:14px"><div style="font-size:12px;color:var(--ink3);margin-bottom:6px">ORDER #${o.id?o.id.slice(0,8).toUpperCase():"—"}</div><div style="font-size:18px;font-weight:800">${o.product_name||"Order"}</div><div style="font-size:14px;color:var(--ink3)">Qty: ${o.quantity||1} · <strong style="color:var(--purple)">£${parseFloat(o.total||0).toFixed(2)}</strong></div></div><div class="ic" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between"><div style="font-size:12px;font-weight:700;color:var(--ink3)">Status</div><span class="badge ${sc[o.status]||"b-pending"}">${o.status}</span></div></div><div class="ic" style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:6px">Order Type</div><div style="font-size:15px;font-weight:700">${o.type==="collect"?"🏪 Click & Collect":"🚚 Delivery"}</div>${o.collect_time?"<div style='font-size:13px;color:var(--ink3);margin-top:4px'>Collect at: "+o.collect_time+"</div>":""}${o.delivery_address?"<div style='font-size:13px;color:var(--ink3);margin-top:4px'>Address: "+o.delivery_address+"</div>":""}</div>${o.note?"<div class='ic' style='margin-bottom:10px'><div style='font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:4px'>Note</div><div style='font-size:14px'>"+o.note+"</div></div>":""}<div class="ic"><div style="font-size:12px;font-weight:700;color:var(--ink3);margin-bottom:4px">Ordered</div><div style="font-size:13px">${o.created_at?new Date(o.created_at).toLocaleString():"—"}</div></div>`;
+  // Build context-appropriate action buttons based on order type + current status.
+  renderOrderActions(o);
   openModal("orderModal");
+}
+function renderOrderActions(o){
+  var box=document.getElementById("order-actions");if(!box)return;
+  var s=o.status||"pending";
+  var isDelivery=(o.type!=="collect");
+  var btns=[];
+  function b(label,status,cls){return '<button class="btn '+(cls||"btn-primary")+'" style="flex:1;min-width:120px" onclick="updateOrderSt(\''+status+'\')">'+label+'</button>';}
+  if(s==="pending"){
+    // A new order: accept or reject.
+    btns.push(b("✅ Accept","confirmed","btn-green"));
+    btns.push(b("✗ Reject","rejected","btn-red"));
+  } else if(s==="confirmed"||s==="preparing"){
+    if(isDelivery){
+      btns.push('<button class="btn btn-green" style="flex:1;min-width:120px" onclick="assignDriverAndDispatch()">🚚 Dispatch</button>');
+    } else {
+      btns.push(b("📦 Ready for Collection","ready","btn-green"));
+    }
+    btns.push(b("✗ Reject","rejected","btn-red"));
+  } else if(s==="ready"){
+    if(isDelivery){
+      btns.push('<button class="btn btn-green" style="flex:1;min-width:120px" onclick="assignDriverAndDispatch()">🚚 Dispatch</button>');
+    } else {
+      btns.push(b("🎉 Collected / Done","completed","btn-primary"));
+    }
+  } else if(s==="dispatched"||s==="in_transit"){
+    btns.push(b("🏃 Out for Delivery","out_for_delivery","btn-gray"));
+    btns.push(b("🎉 Delivered","completed","btn-primary"));
+  } else if(s==="out_for_delivery"){
+    btns.push(b("🎉 Delivered","completed","btn-primary"));
+  }
+  // completed/rejected/cancelled: no further actions (just Close/Delete below)
+  box.innerHTML = btns.length ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">'+btns.join("")+'</div>' : '';
 }
 function updateOrderSt(s){
   if(!CUR_ORDER)return;
