@@ -2202,8 +2202,18 @@ function closePOSScanner(){
   var o=document.getElementById('scan-ov');if(o)o.remove();
 }
 function posScanHit(code){
-  var p=PRODUCTS.find(function(x){return String(x.barcode||'')===String(code)});
   var hint=document.getElementById('scan-hint');
+  // FIRST: is this a customer Stashlo loyalty code (SL-XXXXXX)? If so, attach the
+  // customer to the till instead of looking for a product. One scanner, both jobs.
+  var lm=String(code).match(/SL-[A-Z0-9]{4,}/i);
+  if(lm){
+    beepPOS();
+    if(hint)hint.textContent='👤 Customer '+lm[0].toUpperCase();
+    closePOSScanner();
+    attachTillCustomerByLid(lm[0].toUpperCase());
+    return;
+  }
+  var p=PRODUCTS.find(function(x){return String(x.barcode||'')===String(code)});
   if(p){
     if(STOCK_IN){beepPOS();closePOSScanner();stockInAdd(p);return}
     if(p.stock!=null&&p.stock<=0){if(hint)hint.textContent='⛔ '+p.name+' is OUT OF STOCK';return}
