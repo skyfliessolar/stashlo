@@ -2874,6 +2874,40 @@ function cancelOrder(orderId,productName){
     </div>`;
   document.getElementById('orders-list').prepend(div);
 }
+function openPurchaseDetail(itemJson,type){
+  var item;try{item=JSON.parse(decodeURIComponent(itemJson));}catch(e){return;}
+  var isOrder=(type==='orders');
+  var ref='#'+String(item.receipt_no||item.id||'').slice(0,8).toUpperCase();
+  var name=item.product_name||item.merchant_name||item.shop_name||(isOrder?'Order':'Receipt');
+  var amount='£'+parseFloat(item.total||item.amount||0).toFixed(2);
+  var when=item.created_at?new Date(item.created_at).toLocaleString('en-GB'):'';
+  var status=item.status||(isOrder?'pending':'paid');
+  var sl={pending:'🕐 Pending',confirmed:'✅ Confirmed',ready:'📦 Ready',completed:'🎉 Done',rejected:'❌ Rejected',cancelled:'❌ Cancelled',paid:'✅ Paid'};
+  var canCancel = isOrder && (status==='pending'||status==='confirmed');
+  var ov=document.getElementById('purch-detail-ov');
+  if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.id='purch-detail-ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center';
+  ov.onclick=function(e){if(e.target===ov)ov.remove();};
+  var pts=item.points_earned?'<div style="font-size:13px;color:var(--green);font-weight:700;margin-top:4px">+'+item.points_earned+' points earned</div>':'';
+  ov.innerHTML='<div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:calc(var(--real-vh,100dvh) - 40px);overflow-y:auto;padding:22px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-size:18px;font-weight:800">'+(isOrder?'📦 Order':'🧾 Receipt')+'</div><button onclick="document.getElementById(\'purch-detail-ov\').remove()" style="background:var(--bg);border:none;border-radius:8px;width:36px;height:36px;font-size:16px;cursor:pointer">✕</button></div>'
+    +'<div style="background:var(--purple-bg);border-radius:14px;padding:16px;margin-bottom:14px">'
+    +'<div style="font-family:monospace;font-size:12px;color:var(--sub);margin-bottom:4px">'+ref+'</div>'
+    +'<div style="font-size:17px;font-weight:800">'+name+'</div>'
+    +'<div style="font-size:13px;color:var(--sub);margin-top:4px">Qty: '+(item.quantity||1)+' · '+amount+'</div>'
+    +pts+'</div>'
+    +'<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)"><span style="color:var(--sub);font-size:13px">Status</span><span style="font-weight:700;font-size:13px">'+(sl[status]||status)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)"><span style="color:var(--sub);font-size:13px">Total</span><span style="font-weight:800;color:var(--purple)">'+amount+'</span></div>'
+    +(item.type?'<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)"><span style="color:var(--sub);font-size:13px">Type</span><span style="font-weight:700;font-size:13px">'+(item.type==='collect'?'🏪 Collect':'🚚 Delivery')+'</span></div>':'')
+    +'<div style="display:flex;justify-content:space-between;padding:10px 0"><span style="color:var(--sub);font-size:13px">When</span><span style="font-size:13px">'+when+'</span></div>'
+    +'<div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">'
+    +(isOrder?'<button onclick="document.getElementById(\'purch-detail-ov\').remove();openOrderChat(\''+item.id+'\',\''+(name).replace(/\x27/g,'')+'\')" style="width:100%;padding:13px;background:var(--purple-bg);color:var(--purple);border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">💬 Message the shop</button>':'')
+    +(canCancel?'<button onclick="confirmCancelOrder(\''+item.id+'\');document.getElementById(\'purch-detail-ov\').remove();" style="width:100%;padding:13px;background:var(--red-bg);color:var(--red);border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">✕ Cancel this order</button>':'')
+    +'</div></div>';
+  document.body.appendChild(ov);
+}
 function confirmCancelOrder(orderId){
   pat('orders','id=eq.'+orderId+'&user_id=eq.'+UID,{status:'cancelled'})
   .then(()=>{T('Order cancelled');const c=document.getElementById('cancel-confirm-'+orderId);if(c)c.remove();loadOrders();})
@@ -3980,7 +4014,8 @@ function purchTab(tab){
     var amount='£'+parseFloat(item.total||item.amount||0).toFixed(2);
     var date=new Date(item.created_at||Date.now()).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
     var pts=item.points_earned?'+'+item.points_earned+' pts':'';
-    return '<div style="background:var(--card);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer;box-shadow:var(--sh)" onclick="void(0)">'
+    var _itemJson=encodeURIComponent(JSON.stringify(item));
+    return '<div style="background:var(--card);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer;box-shadow:var(--sh)" onclick="openPurchaseDetail(\''+_itemJson+'\',\''+type+'\')">'
       +'<div style="width:40px;height:40px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'+icon+'</div>'
       +'<div style="flex:1;min-width:0">'
       +'<div style="font-weight:800;font-size:14px">'+name+'</div>'
