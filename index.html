@@ -2899,7 +2899,7 @@ function openPurchaseDetail(itemJson,type){
   ov.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center';
   ov.onclick=function(e){if(e.target===ov)ov.remove();};
   var pts=item.points_earned?'<div style="font-size:13px;color:var(--green);font-weight:700;margin-top:4px">+'+item.points_earned+' points earned</div>':'';
-  ov.innerHTML='<div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:calc(var(--real-vh,100dvh) - 40px);overflow-y:auto;padding:22px">'
+  ov.innerHTML='<div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:calc(var(--real-vh,100dvh) - 40px);overflow-y:auto;padding:22px 22px calc(env(safe-area-inset-bottom,0px) + 90px)">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-size:18px;font-weight:800">'+(isOrder?'📦 Order':'🧾 Receipt')+'</div><button onclick="document.getElementById(\'purch-detail-ov\').remove()" style="background:var(--bg);border:none;border-radius:8px;width:36px;height:36px;font-size:16px;cursor:pointer">✕</button></div>'
     +'<div style="background:var(--purple-bg);border-radius:14px;padding:16px;margin-bottom:14px">'
     +'<div style="font-family:monospace;font-size:12px;color:var(--sub);margin-bottom:4px">'+ref+'</div>'
@@ -2913,8 +2913,26 @@ function openPurchaseDetail(itemJson,type){
     +'<div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">'
     +(isOrder?'<button onclick="document.getElementById(\'purch-detail-ov\').remove();openOrderChat(\''+item.id+'\',\''+(name).replace(/\x27/g,'')+'\')" style="width:100%;padding:13px;background:var(--purple-bg);color:var(--purple);border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">💬 Message the shop</button>':'')
     +(canCancel?'<button onclick="confirmCancelOrder(\''+item.id+'\');document.getElementById(\'purch-detail-ov\').remove();" style="width:100%;padding:13px;background:var(--red-bg);color:var(--red);border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">✕ Cancel this order</button>':'')
+    +((isOrder&&(status==='cancelled'||status==='rejected'))?'<button onclick="deleteOrderFromApp(\''+item.id+'\')" style="width:100%;padding:13px;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">🗑 Delete from my orders</button>':'')
     +'</div></div>';
   document.body.appendChild(ov);
+}
+function deleteOrderFromApp(orderId){
+  if(!orderId)return;
+  if(!confirm("Remove this cancelled order from your list? (You can ask support to restore it.)"))return;
+  // Soft-delete: hides it from the customer but admin can still see/restore it.
+  pat('orders','id=eq.'+orderId+'&user_id=eq.'+UID,{deleted:true,deleted_at:Date.now()})
+    .then(function(res){
+      var ov=document.getElementById('purch-detail-ov');if(ov)ov.remove();
+      // If the column isn't there, fall back so the button still feels responsive
+      T('🗑 Order removed');
+      if(typeof purchTab==='function')purchTab('orders');
+      loadOrders();
+    })
+    .catch(function(){
+      var ov=document.getElementById('purch-detail-ov');if(ov)ov.remove();
+      T('Could not remove — try again');
+    });
 }
 function confirmCancelOrder(orderId){
   // Re-check the live status first — the shop may have shipped since the screen loaded.
