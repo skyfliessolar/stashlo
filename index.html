@@ -2173,7 +2173,8 @@ function _geoCheck(lat,lng){
     // Don't re-pop the same card within 5 min
     if(dist<250 && (now-(_geoLastPopup[loc.cardId]||0))>300000){
       _geoLastPopup[loc.cardId]=now;
-      showGeoPopup(loc);
+      // Popup now shows when the user TAPS the phone notification (see showLoyaltyReminder),
+      // not automatically — avoids a double alert (notification + popup) for the same visit.
       return;
     }
   }
@@ -2340,6 +2341,13 @@ function boot(){
   txt('h-greet',greet());
   loadTheme3D();loadProf();loadCards();loadOrders();buildBrands();loadStashloProd();loadPaymentCards();
   setTimeout(function(){loadInbox();startGPS();loadMyRewards();try{startGeofence();}catch(e){}},2000);
+  // When the app regains focus after a notification tap, show the pending card popup.
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden && window._pendingGeoCard){
+      var c=window._pendingGeoCard;window._pendingGeoCard=null;
+      if(typeof showGeoPopup==='function'){setTimeout(function(){showGeoPopup(c);},300);}
+    }
+  });
   setInterval(()=>checkUnreadChats&&checkUnreadChats(),30000);
 }
 function genLoyaltyId(){const ch='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let s='SL-';for(let i=0;i<6;i++)s+=ch[Math.floor(Math.random()*ch.length)];return s}
@@ -2557,7 +2565,17 @@ function saveNotifTime(key){LAST_NOTIF[key]=Date.now();try{localStorage.setItem(
 function showLoyaltyReminder(card,shopName){
   const msg='💳 Don\'t forget your '+card.shopName+' card at '+shopName+'! You have '+(card.points||0)+' points.';
   if('Notification' in window&&Notification.permission==='granted'){
-    try{new Notification('Stashlo Loyalty Reminder 💳',{body:msg,tag:'loyalty_'+card.card_id,renotify:false})}catch(e){}
+    try{
+      var n=new Notification('Stashlo Loyalty Reminder 💳',{body:msg,tag:'loyalty_'+card.card_id,renotify:false});
+      // Tapping the notification brings the app forward and shows the in-app card popup.
+      n.onclick=function(){
+        try{window.focus();}catch(e){}
+        try{if(n.close)n.close();}catch(e){}
+        // remember which card so the popup shows the right one when the app regains focus
+        window._pendingGeoCard=card;
+        if(typeof showGeoPopup==='function'){showGeoPopup(card);}
+      };
+    }catch(e){}
   }
   T(msg);
 }
