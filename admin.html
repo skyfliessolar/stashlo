@@ -1180,6 +1180,24 @@ function adminPurgeOrder(id){
 }
 
 // ── UI HELPERS ─────────────────────────────────────────────
+function adminCancelOrder(id){
+  if(!confirm("Cancel this order? (admin override — works at any stage)"))return;
+  spat('orders','id=eq.'+id,{status:'cancelled'})
+    .then(function(){T('✕ Order cancelled','success');loadOrders();})
+    .catch(function(){T('Cancel failed','error');});
+}
+function adminEditOrderStatus(id){
+  var o=(ORDERS||[]).find(function(x){return x.id===id;});
+  var cur=o?o.status:'';
+  var opts=['pending','confirmed','ready','dispatched','in_transit','out_for_delivery','completed','rejected','cancelled'];
+  var s=prompt("Set order status to one of:\n"+opts.join(", ")+"\n\nCurrent: "+cur,cur||'pending');
+  if(!s)return;
+  s=s.trim().toLowerCase();
+  if(opts.indexOf(s)===-1){T('Invalid status','error');return;}
+  spat('orders','id=eq.'+id,{status:s})
+    .then(function(){T('✅ Status set to '+s,'success');loadOrders();})
+    .catch(function(){T('Update failed','error');});
+}
 function T(m,type='info'){
   const e=document.getElementById('toast');
   e.textContent=m;
@@ -1317,7 +1335,7 @@ function renderOrders(){
   function card(o){
     var acts=o.deleted
       ? '<div style="display:flex;gap:6px;margin-top:8px"><button onclick="adminRestoreOrder(\''+o.id+'\')" style="flex:1;background:#dcfce7;color:#15803d;border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:800;cursor:pointer">♻️ Restore</button><button onclick="adminPurgeOrder(\''+o.id+'\')" style="flex:1;background:#fee2e2;color:#b91c1c;border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:800;cursor:pointer">⛔ Delete forever</button></div>'
-      : '<div style="display:flex;gap:6px;margin-top:8px"><button onclick="adminSoftDeleteOrder(\''+o.id+'\')" style="flex:1;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:9px;padding:8px;font-size:12px;font-weight:800;cursor:pointer">🗑 Delete</button></div>';
+      : '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button onclick="adminCancelOrder(\''+o.id+'\')" style="flex:1;min-width:90px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:9px;padding:8px;font-size:12px;font-weight:800;cursor:pointer">✕ Cancel</button><button onclick="adminEditOrderStatus(\''+o.id+'\')" style="flex:1;min-width:90px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:9px;padding:8px;font-size:12px;font-weight:800;cursor:pointer">✏️ Status</button><button onclick="adminSoftDeleteOrder(\''+o.id+'\')" style="flex:1;min-width:90px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:9px;padding:8px;font-size:12px;font-weight:800;cursor:pointer">🗑 Delete</button></div>';
     return '<div class="ic"'+(o.deleted?' style="opacity:.7"':'')+'>'
       +'<div class="ic-row"><div>'
       +'<div class="ic-name">'+(o.product_name||'Order')+' ×'+(o.quantity||1)+(o.deleted?' <span style="color:#b91c1c;font-size:11px">(deleted)</span>':'')+'</div>'

@@ -1521,12 +1521,61 @@ function renderOrderActions(o){
   } else if(s==="out_for_delivery"){
     btns.push(b("🎉 Delivered","completed","btn-primary"));
   }
-  // completed/rejected/cancelled: no further actions (just Close/Delete below)
-  box.innerHTML = btns.length ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">'+btns.join("")+'</div>' : '';
+  // Merchant override: can EDIT and CANCEL their own order at ANY active stage,
+  // including after dispatch (unlike customers, who can only cancel before shipping).
+  var done=(s==="completed"||s==="rejected"||s==="cancelled");
+  var extra=[];
+  if(!done){
+    extra.push('<button class="btn btn-gray" style="flex:1;min-width:120px" onclick="openEditOrder()">✏️ Edit order</button>');
+    extra.push('<button class="btn btn-red" style="flex:1;min-width:120px" onclick="merchantCancelOrder()">✕ Cancel order</button>');
+  }
+  var html = btns.length ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">'+btns.join("")+'</div>' : '';
+  if(extra.length) html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;padding-top:8px;border-top:1px solid var(--bg2)">'+extra.join("")+'</div>';
+  box.innerHTML = html;
 }
 function updateOrderSt(s){
   if(!CUR_ORDER)return;
   pat("orders","id=eq."+CUR_ORDER.id,{status:s}).then(()=>{T("✅ Order marked "+s,"success");closeModal("orderModal");loadOrders()}).catch(()=>T("Failed","error"))
+}
+function merchantCancelOrder(){
+  if(!CUR_ORDER)return;
+  // Merchant can cancel their own order at any stage (even after dispatch).
+  if(!confirm("Cancel this order? The customer will see it as cancelled."))return;
+  pat("orders","id=eq."+CUR_ORDER.id,{status:"cancelled"})
+    .then(()=>{T("✕ Order cancelled","success");closeModal("orderModal");loadOrders();})
+    .catch(()=>T("Failed to cancel","error"));
+}
+function openEditOrder(){
+  if(!CUR_ORDER)return;
+  var o=CUR_ORDER;
+  var unit = (o.quantity&&o.total)? (parseFloat(o.total)/parseFloat(o.quantity)) : parseFloat(o.total||0);
+  var ov=document.getElementById("editOrderOv");if(ov)ov.remove();
+  ov=document.createElement("div");
+  ov.id="editOrderOv";
+  ov.style.cssText="position:fixed;inset:0;z-index:10001;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center";
+  ov.onclick=function(e){if(e.target===ov)ov.remove();};
+  ov.innerHTML='<div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:calc(var(--real-vh,100dvh) - 40px);overflow-y:auto;padding:22px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-size:18px;font-weight:800">✏️ Edit Order</div><button onclick="document.getElementById(\'editOrderOv\').remove()" style="background:var(--bg2);border:none;border-radius:8px;width:36px;height:36px;font-size:16px;cursor:pointer">✕</button></div>'
+    +'<div style="font-size:13px;color:var(--ink3);margin-bottom:12px">'+(o.product_name||"Order")+' · unit £'+unit.toFixed(2)+'</div>'
+    +'<label style="font-size:12px;font-weight:700;color:var(--ink3)">Quantity</label>'
+    +'<input id="eo-qty" type="number" min="1" value="'+(o.quantity||1)+'" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:10px;font-size:15px;margin:6px 0 14px;box-sizing:border-box">'
+    +'<label style="font-size:12px;font-weight:700;color:var(--ink3)">Note to customer (optional)</label>'
+    +'<input id="eo-note" type="text" value="'+((o.merchant_note||"").replace(/"/g,"&quot;"))+'" placeholder="e.g. Item swapped, ready in 10 min" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:10px;font-size:15px;margin:6px 0 16px;box-sizing:border-box">'
+    +'<div id="eo-newtotal" style="font-size:13px;color:var(--ink3);margin-bottom:14px">New total: £'+parseFloat(o.total||0).toFixed(2)+'</div>'
+    +'<button onclick="saveEditOrder('+unit+')" style="width:100%;padding:14px;background:var(--purple);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer">💾 Save changes</button>'
+    +'</div>';
+  document.body.appendChild(ov);
+  var q=document.getElementById("eo-qty");
+  if(q)q.oninput=function(){var nt=(parseFloat(q.value)||1)*unit;var el=document.getElementById("eo-newtotal");if(el)el.textContent="New total: £"+nt.toFixed(2);};
+}
+function saveEditOrder(unit){
+  if(!CUR_ORDER)return;
+  var qty=Math.max(1,parseInt((document.getElementById("eo-qty")||{}).value)||1);
+  var note=(document.getElementById("eo-note")||{}).value||"";
+  var total=qty*unit;
+  pat("orders","id=eq."+CUR_ORDER.id,{quantity:qty,total:total,merchant_note:note})
+    .then(()=>{T("✅ Order updated","success");var ov=document.getElementById("editOrderOv");if(ov)ov.remove();closeModal("orderModal");loadOrders();})
+    .catch(()=>T("Failed to update","error"));
 }
 function deleteOrderConfirm(){
   if(!CUR_ORDER)return;
