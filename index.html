@@ -4062,12 +4062,33 @@ function purchTab(tab){
       });
     }).catch(function(){el.innerHTML='<div style="padding:20px;color:var(--sub)">Could not load</div>';});
   } else if(tab==='orders'){
-    // Render shop orders directly into the visible purchases-list (tappable rows).
-    get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=30').then(function(od){
+    // Render shop orders grouped into clear sections (tappable rows).
+    get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=50').then(function(od){
       var os=(Array.isArray(od)?od:[]).filter(function(o){return !o.deleted;});
-      el.innerHTML=os.length
-        ?os.map(function(o){return renderPurchRow(o,'orders');}).join('')
-        :'<div style="text-align:center;padding:32px;color:var(--sub)"><div style="font-size:40px">📦</div><div>No shop orders yet</div><div style="font-size:12px;margin-top:6px">Browse shops to place an order</div></div>';
+      if(!os.length){
+        el.innerHTML='<div style="text-align:center;padding:32px;color:var(--sub)"><div style="font-size:40px">📦</div><div>No shop orders yet</div><div style="font-size:12px;margin-top:6px">Browse shops to place an order</div></div>';
+        return;
+      }
+      // Bucket by state
+      var pending=[],active=[],completed=[],cancelled=[];
+      os.forEach(function(o){
+        var s=(o.status||'pending').toLowerCase();
+        if(s==='pending'){pending.push(o);}
+        else if(s==='cancelled'||s==='rejected'){cancelled.push(o);}
+        else if(s==='completed'||s==='collected'||s==='delivered'){completed.push(o);}
+        else {active.push(o);} // confirmed, ready, dispatched, in_transit, out_for_delivery
+      });
+      function section(title,arr,color){
+        if(!arr.length)return '';
+        return '<div style="font-size:13px;font-weight:800;color:'+color+';margin:16px 4px 8px">'+title+' ('+arr.length+')</div>'
+          +arr.map(function(o){return renderPurchRow(o,'orders');}).join('');
+      }
+      var html='';
+      html+=section('💳 Awaiting Payment / Confirmation',pending,'#c2410c');
+      html+=section('⏳ In Progress',active,'#1d4ed8');
+      html+=section('✅ Completed',completed,'#15803d');
+      html+=section('❌ Cancelled',cancelled,'#dc2626');
+      el.innerHTML=html;
     }).catch(function(){el.innerHTML='<div style="padding:20px;color:var(--sub)">Could not load orders</div>';});
   }
 }
