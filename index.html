@@ -2850,7 +2850,7 @@ function renderOrders(){
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button onclick="openOrderChat('${o.id}','${(o.product_name||'Order').replace(/'/g,'')}')" style="background:var(--purple-bg);color:var(--purple);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">💬 Chat</button>
         ${o.status==='completed'?`<button onclick="saveReceipt('${o.id}')" style="background:var(--green-bg);color:#065f46;border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">🧾 Receipt</button>`:''}
-        ${(o.status==='pending'||o.status==='confirmed')?`<button onclick="cancelOrder('${o.id}','${(o.product_name||'Order').replace(/'/g,'')}')" style="background:var(--red-bg);color:var(--red);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">✕ Cancel</button>`:''}
+        ${canCancelOrder(o.status)?`<button onclick="cancelOrder('${o.id}','${(o.product_name||'Order').replace(/'/g,'')}')" style="background:var(--red-bg);color:var(--red);border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">✕ Cancel</button>`:''}
         <div style="font-size:11px;color:#aaa;align-self:center">${o.created_at?new Date(o.created_at).toLocaleDateString():''}</div>
       </div>
     </div>
@@ -2858,6 +2858,14 @@ function renderOrders(){
   </div>`;
   document.getElementById('orders-list').innerHTML=ORDERS.length?ORDERS.map(h).join(''):'<div class="empty" style="padding:40px 16px"><i>📦</i><p>No orders yet<br>Browse shops to place an order</p></div>';
   (document.getElementById('home-orders')||{innerHTML:''}).innerHTML=ORDERS.length?ORDERS.slice(0,2).map(h).join(''):'<div class="empty" style="padding:20px 16px"><i>📦</i><p>No orders yet</p></div>';
+}
+function canCancelOrder(status){
+  // Customer may cancel ONLY before the shop ships/hands it over.
+  // Cancellable: pending, confirmed, preparing, ready (collect, not yet picked up).
+  // NOT cancellable once shipping has started or it's finished.
+  var s=(status||'pending').toLowerCase();
+  var blocked=['dispatched','in_transit','out_for_delivery','delivered','completed','collected','rejected','cancelled'];
+  return blocked.indexOf(s)===-1;
 }
 function cancelOrder(orderId,productName){
   if(!orderId)return;
@@ -2883,7 +2891,7 @@ function openPurchaseDetail(itemJson,type){
   var when=item.created_at?new Date(item.created_at).toLocaleString('en-GB'):'';
   var status=item.status||(isOrder?'pending':'paid');
   var sl={pending:'🕐 Pending',confirmed:'✅ Confirmed',ready:'📦 Ready',completed:'🎉 Done',rejected:'❌ Rejected',cancelled:'❌ Cancelled',paid:'✅ Paid'};
-  var canCancel = isOrder && (status==='pending'||status==='confirmed');
+  var canCancel = isOrder && canCancelOrder(status);
   var ov=document.getElementById('purch-detail-ov');
   if(ov)ov.remove();
   ov=document.createElement('div');
@@ -2909,9 +2917,18 @@ function openPurchaseDetail(itemJson,type){
   document.body.appendChild(ov);
 }
 function confirmCancelOrder(orderId){
-  pat('orders','id=eq.'+orderId+'&user_id=eq.'+UID,{status:'cancelled'})
-  .then(()=>{T('Order cancelled');const c=document.getElementById('cancel-confirm-'+orderId);if(c)c.remove();loadOrders();})
-  .catch(()=>T('Could not cancel — contact the shop'));
+  // Re-check the live status first — the shop may have shipped since the screen loaded.
+  get('orders','id=eq.'+orderId+'&user_id=eq.'+UID).then(function(rows){
+    var o=Array.isArray(rows)&&rows[0]?rows[0]:null;
+    if(o && !canCancelOrder(o.status)){
+      T('Too late to cancel — this order has already been '+(o.status||'processed'));
+      loadOrders();
+      var c=document.getElementById('cancel-confirm-'+orderId);if(c)c.remove();
+      return;
+    }
+    return pat('orders','id=eq.'+orderId+'&user_id=eq.'+UID,{status:'cancelled'})
+      .then(()=>{T('Order cancelled');const c=document.getElementById('cancel-confirm-'+orderId);if(c)c.remove();loadOrders();});
+  }).catch(()=>T('Could not cancel — contact the shop'));
 }
 
 // ===== ORDER CHAT (working, polling) =====
