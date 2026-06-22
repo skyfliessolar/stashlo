@@ -806,10 +806,10 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
     </div>
     <div id="scan-result" style="display:none" class="ic"><div style="font-weight:700;margin-bottom:6px">Scanned:</div><div id="scan-val" style="font-size:16px;color:var(--purple);font-weight:800;margin-bottom:10px"></div><div id="scan-customer-info"></div></div>
     <div style="text-align:center;margin-top:16px">
-      <p style="font-size:13px;color:var(--ink3);margin-bottom:12px">Or enter phone manually:</p>
+      <p style="font-size:13px;color:var(--ink3);margin-bottom:12px">Or enter the Stashlo ID manually:</p>
       <div style="display:flex;gap:10px">
-        <div class="field" style="flex:1;margin:0"><input id="manual-phone" style="width:100%;padding:13px 14px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px;background:#fafafa" placeholder="07700 900000" onkeydown="if(event.key==='Enter')lookupCustomer()"></div>
-        <button onclick="lookupCustomer()" style="background:var(--purple);color:#fff;border-radius:var(--r12);padding:13px 18px;font-weight:700;font-size:14px">Lookup</button>
+        <div class="field" style="flex:1;margin:0"><input id="manual-phone" style="width:100%;padding:13px 14px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px;background:#fafafa" placeholder="SL-XXXXXX" onkeydown="if(event.key==='Enter')scanTabLookup()"></div>
+        <button onclick="scanTabLookup()" style="background:var(--purple);color:#fff;border-radius:var(--r12);padding:13px 18px;font-weight:700;font-size:14px">Add / Lookup</button>
       </div>
     </div>
     <div id="customer-lookup-result" style="margin-top:12px"></div>
@@ -921,6 +921,8 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <div class="setting-sub">Share with customers to find your shop</div>
       <div style="background:var(--purple3);border-radius:var(--r12);padding:16px;text-align:center">
         <div style="font-size:28px;font-weight:900;color:var(--purple);letter-spacing:2px" id="s-shopid-display">—</div>
+        <div id="s-shop-qr" style="margin:12px auto 0;width:160px;height:160px"></div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:6px">Customers scan this QR to add your shop</div>
         <button onclick="copyShopId()" style="margin-top:10px;background:var(--purple);color:#fff;border-radius:var(--r12);padding:10px 20px;font-weight:700;font-size:13px">📋 Copy ID</button>
       </div>
     </div>
@@ -1100,6 +1102,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       </div></div>
       <div style="margin:12px 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:13px;font-weight:800">🧾 Recent Transactions</div><button class="btn-xs btn-gray" onclick="loadPOSSales()">↻</button></div>
+        <input id="txn-search" placeholder="🔍 Search by ref, amount, date, time, or CASH/CARD" oninput="filterTxns()" style="width:100%;padding:10px 12px;border:2px solid var(--bg2);border-radius:10px;font-size:13px;margin-bottom:8px;box-sizing:border-box">
         <div id="pos-history" style="font-size:13px;color:var(--ink3)">Loading...</div>
       </div>
 
@@ -1328,6 +1331,7 @@ function loadMerchant(){
     const sb=document.getElementById("shop-id-btn");if(sb)sb.textContent="📋 "+(MDATA.shop_id||"—");
     txt("loyalty-rule-text",fmtRule());txt("d-shopid",MDATA.shop_id||"—");
     txt("s-shopid-display",MDATA.shop_id||"—");
+    try{var _sq=document.getElementById("s-shop-qr");if(_sq&&MDATA.shop_id){_sq.innerHTML='<img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(MDATA.shop_id)+'" style="width:160px;height:160px;border-radius:10px" alt="Shop QR">';}}catch(e){}
     LT=MDATA.loyalty_type||"points";
     const sn=document.getElementById("s-name");if(sn)sn.value=MDATA.name||"";
     const sa=document.getElementById("s-addr");if(sa)sa.value=MDATA.address||"";
@@ -1439,17 +1443,26 @@ function openAddProd(){
 }
 function editProd(id){
   const p=PRODUCTS.find(x=>x.id===id);if(!p)return;
-  document.getElementById("edit-prod-id").value=id;
-  document.getElementById("prod-modal-title").textContent="Edit Product";
-  document.getElementById("p-name").value=p.name||"";
-  document.getElementById("p-price").value=p.price||"";
-  document.getElementById("p-emoji").value=p.emoji||"";
-  document.getElementById("p-desc").value=p.description||"";
-  const pc=document.getElementById("p-cat");if(pc)pc.value=p.category||"other";
-  document.getElementById("p-collect").checked=p.collect!==false;
-  document.getElementById("p-delivery").checked=!!p.delivery;
-  document.getElementById("p-active").checked=p.active!==false;
-  const pe=document.getElementById("p-err");if(pe)pe.style.display="none";
+  function setV(fid,val){var el=document.getElementById(fid);if(el)el.value=(val==null?"":val);}
+  function setC(fid,on){var el=document.getElementById(fid);if(el)el.checked=on;}
+  setV("edit-prod-id",id);
+  var title=document.getElementById("prod-modal-title");if(title)title.textContent="Edit Product";
+  setV("p-name",p.name);
+  setV("p-price",p.price);
+  setV("p-emoji",p.emoji);
+  setV("p-desc",p.description);
+  // Populate ALL fields so saving doesn't wipe them.
+  setV("p-vat",p.vat_rate!=null?p.vat_rate:"20");
+  setV("p-cost",p.cost_price!=null?p.cost_price:"");
+  setV("p-stock",p.stock!=null?p.stock:"");
+  setV("p-barcode",p.barcode);
+  // Category: prefer pos_category (used by the till) then category.
+  var pc=document.getElementById("p-cat");if(pc)pc.value=p.pos_category||p.category||"general";
+  setC("p-collect",p.collect!==false);
+  setC("p-delivery",!!p.delivery);
+  setC("p-active",p.active!==false);
+  var pe=document.getElementById("p-err");if(pe)pe.style.display="none";
+  if(typeof prodMargin==="function"){try{prodMargin();}catch(e){}}
   openModal("prodModal");
 }
 function saveProd(){
@@ -1596,6 +1609,13 @@ function deleteOrderConfirm(){
 }
 
 let RC_DATA=null;
+function scanTabLookup(){
+  var v=(document.getElementById('manual-phone')||{}).value||'';
+  v=v.trim().toUpperCase();
+  if(!v){T('Enter the Stashlo ID (SL-XXXXXX)','error');return;}
+  // Unified: attach existing customer OR open the no-phone add-customer modal.
+  attachTillCustomerByLid(v);
+}
 function lookupCustomer(){
   const ph=V("scan-phone")||V("till-phone");
   if(!ph){T("Enter a phone number or Stashlo ID","error");return}
@@ -2029,7 +2049,7 @@ function startScan(){
     const v=document.getElementById("video");if(v){v.srcObject=stream;v.play();}
     const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js";
     sc.onload=()=>{const cv=document.createElement("canvas");const ctx=cv.getContext("2d");
-      (function tick(){if(!scanActive)return;if(v&&v.readyState===v.HAVE_ENOUGH_DATA){cv.width=v.videoWidth;cv.height=v.videoHeight;ctx.drawImage(v,0,0);const img=ctx.getImageData(0,0,cv.width,cv.height);const code=window.jsQR&&window.jsQR(img.data,img.width,img.height);if(code){SCAN_PHONE=code.data;document.getElementById("scan-val").textContent=code.data;document.getElementById("scan-result").style.display="block";document.getElementById("manual-phone").value=code.data;lookupCustomer();return;}}requestAnimationFrame(tick)})();
+      (function tick(){if(!scanActive)return;if(v&&v.readyState===v.HAVE_ENOUGH_DATA){cv.width=v.videoWidth;cv.height=v.videoHeight;ctx.drawImage(v,0,0);const img=ctx.getImageData(0,0,cv.width,cv.height);const code=window.jsQR&&window.jsQR(img.data,img.width,img.height);if(code){var _m=String(code.data).match(/SL-[A-Z0-9]+/i);var _lid=(_m?_m[0]:code.data).toUpperCase();document.getElementById("scan-val").textContent=_lid;document.getElementById("scan-result").style.display="block";document.getElementById("manual-phone").value=_lid;scanActive=false;attachTillCustomerByLid(_lid);return;}}requestAnimationFrame(tick)})();
     };document.head.appendChild(sc);
   }).catch(()=>T("Camera not available — use manual entry","error"));
 }
@@ -2265,11 +2285,36 @@ function cmComplete(){
 }
 function loadPOSSales(){
   var el=document.getElementById('pos-history');if(!el)return;
-  get('pos_sales','merchant_id=eq.'+MID+'&order=created_at.desc&limit=20').then(function(d){
+  get('pos_sales','merchant_id=eq.'+MID+'&order=created_at.desc&limit=100').then(function(d){
     var s=Array.isArray(d)?d:[];
-    if(!s.length){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--ink3);font-size:13px">No sales yet — tap products to add, then checkout</div>';return}
-    var Q=String.fromCharCode(39);
-    el.innerHTML=s.map(function(x,i){
+    window._POS_HIST=s;
+    renderTxnList(s);
+  }).catch(function(){el.innerHTML='Could not load sales';});
+}
+function filterTxns(){
+  var q=((document.getElementById('txn-search')||{}).value||'').trim().toLowerCase();
+  var all=window._POS_HIST||[];
+  if(!q){renderTxnList(all);return;}
+  var f=all.filter(function(x){
+    var dt=new Date(x.created_at||0);
+    var hay=[
+      String(x.id||''),
+      String(x.total||''),
+      (x.method||''),
+      dt.toLocaleDateString(),
+      dt.toLocaleTimeString(),
+      String(x.customer_id||''),
+      String(x.customer_lid||'')
+    ].join(' ').toLowerCase();
+    return hay.indexOf(q)!==-1;
+  });
+  renderTxnList(f);
+}
+function renderTxnList(s){
+  var el=document.getElementById('pos-history');if(!el)return;
+  if(!s.length){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--ink3);font-size:13px">No matching transactions</div>';return}
+  var Q=String.fromCharCode(39);
+  el.innerHTML=s.map(function(x,i){
       var dt=new Date(x.created_at||0);var neg=parseFloat(x.total||0)<0;
       var items='';try{JSON.parse(x.items||'[]').forEach(function(it){items+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bg2)"><span style="color:var(--ink2)">'+it.n+' x'+it.q+'</span><span style="font-weight:700">£'+(it.p*(it.q||1)).toFixed(2)+'</span></div>';});}catch(e){}
       return '<div id="ptx-'+i+'" style="border-radius:12px;overflow:hidden;margin-bottom:6px;border:1.5px solid var(--bg2)">'
@@ -2289,8 +2334,6 @@ function loadPOSSales(){
         +'<div style="font-size:10px;color:var(--ink4);margin-top:6px">Ref: '+(x.id||'').slice(0,8).toUpperCase()+' · '+dt.toLocaleDateString()+'</div>'
         +'</div></div>';
     }).join('');
-    window._POS_HIST=s;
-  }).catch(function(){el.innerHTML='Could not load sales';});
 }
 function toggleTxnDetail(i){
   var det=document.getElementById('ptx-det-'+i);
