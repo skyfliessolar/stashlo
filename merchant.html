@@ -3465,6 +3465,37 @@ function _setTillCustomer(u){
   if(ps)ps.textContent=(u.total_points||0)+' pts · Credit £'+parseFloat(u.sl_credit||0).toFixed(2);
   if(clr)clr.style.display='inline-block';
   T('✅ '+(u.name||u.loyalty_id)+' attached','success');
+  // If we're on the SCAN tab, show a "Give Points" panel (for shops that use
+  // their OWN till but want to award Stashlo points by entering the amount).
+  var info=document.getElementById('scan-customer-info');
+  if(info){
+    info.innerHTML='<div style="background:#f5f3ff;border-radius:14px;padding:16px;margin-top:8px">'
+      +'<div style="font-weight:800;font-size:15px;margin-bottom:4px">💎 '+(u.name||u.loyalty_id)+'</div>'
+      +'<div style="font-size:13px;color:var(--ink3);margin-bottom:12px">'+(u.total_points||0)+' points · '+(u.loyalty_id||'')+'</div>'
+      +'<label style="font-size:12px;font-weight:700;color:var(--ink3)">Purchase amount (£)</label>'
+      +'<input id="gp-amount" type="number" inputmode="decimal" placeholder="0.00" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:10px;font-size:16px;margin:6px 0 10px;box-sizing:border-box" oninput="gpPreview()">'
+      +'<div id="gp-preview" style="font-size:13px;color:var(--purple);font-weight:700;margin-bottom:12px"></div>'
+      +'<button onclick="giveCustomerPoints()" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer">💎 Add Loyalty Points</button>'
+      +'<div style="font-size:11px;color:var(--ink3);text-align:center;margin-top:8px">Use this when the sale went through your own till</div>'
+      +'</div>';
+  }
+}
+function gpPreview(){
+  var amt=parseFloat((document.getElementById('gp-amount')||{}).value)||0;
+  var el=document.getElementById('gp-preview');
+  if(el&&amt>0){var loy=calcLoy(amt);el.textContent='Will add '+loy.desc;}
+  else if(el){el.textContent='';}
+}
+function giveCustomerPoints(){
+  var cx=window._TILL_CX;
+  if(!cx||!cx.id){T('Scan a customer first','error');return;}
+  var amt=parseFloat((document.getElementById('gp-amount')||{}).value)||0;
+  if(amt<=0){T('Enter the purchase amount','error');return;}
+  // Award points WITHOUT creating a POS sale (the sale went through another till).
+  awardLoyaltyForSale(cx, amt, null);
+  // Reset the panel
+  var ga=document.getElementById('gp-amount');if(ga)ga.value='';
+  var gp=document.getElementById('gp-preview');if(gp)gp.textContent='';
 }
 function _ensureMerchantCustomer(u){
   get('merchant_customers','merchant_id=eq.'+MID+'&user_id=eq.'+u.id).then(function(d){
