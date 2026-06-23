@@ -2420,37 +2420,38 @@ function posRefund(id){
   }).catch(function(){T('Refund failed — pos_sales.refund column missing? Run migration','error');});
 }
 function awardLoyaltyForSale(cust, amount, sale){
-  // How many points for this spend, per the shop's loyalty rule.
+  // Points for this spend, per the shop's loyalty rule.
   var loy=calcLoy(amount); var pts=loy.pts||0;
   var uid=cust.id; var lid=cust.loyalty_id||'';
   if(!uid){T('⚠️ Customer has no ID — cannot award points','error');return;}
   if(!MID){T('⚠️ Shop ID missing — cannot award points','error');return;}
-  var cardId='local-'+MID;
-  // 1) The customer's LOCAL card for THIS shop. Match by user_id and EITHER the
-  //    card_id OR the merchant_id (covers any card_id format mismatch).
-  get('cards','user_id=eq.'+uid+'&or=(card_id.eq.'+cardId+',merchant_id.eq.'+MID+')').then(function(d){
-    var card=Array.isArray(d)&&d[0]?d[0]:null;
-    if(card){
-      var np=(card.points||0)+pts;
-      return pat('cards','user_id=eq.'+uid+'&card_id=eq.'+card.card_id,{points:np,visit_count:(card.visit_count||0)+1,total_spend:(parseFloat(card.total_spend||0)+amount)})
-        .then(function(){T('💎 +'+pts+' pts → '+(cust.name||lid)+' (now '+np+')','success');})
-        .catch(function(e){T('⚠️ Card update failed: '+(e&&e.message||e),'error');});
-    } else {
-      // Customer hadn't added this shop yet — create the local card so points land.
-      return post('cards',{user_id:uid,card_id:cardId,merchant_id:MID,name:(MDATA&&MDATA.name)||'Shop',shop_name:(MDATA&&MDATA.name)||'Shop',emoji:(MDATA&&MDATA.logo_emoji)||'🏪',color:'#1e1b4b',type:'local',points:pts,threshold:(MDATA&&MDATA.loyalty_threshold)||100,added_at:Date.now(),visit_count:1,total_spend:amount,rewards_redeemed:0},'user_id,card_id')
-        .then(function(){T('💎 New card + '+pts+' pts → '+(cust.name||lid),'success');})
-        .catch(function(e){T('⚠️ Card create failed: '+(e&&e.message||e),'error');});
-    }
-  }).catch(function(e){T('⚠️ Card lookup failed: '+(e&&e.message||e),'error');});
-  // 2) Update merchant_customers tally for this shop.
+  // ── SOURCE OF TRUTH: merchant_customers ──
+  // The merchant CAN write this (it's their own shop's customer record), and the
+  // customer app reads points from here and shows them on the shop's card.
+  // (The cards-table write is blocked by RLS for a non-owner, so we don't rely on it.)
   get('merchant_customers','merchant_id=eq.'+MID+'&user_id=eq.'+uid).then(function(d){
     var mc=Array.isArray(d)&&d[0]?d[0]:null;
+    var newPts;
     if(mc){
-      pat('merchant_customers','merchant_id=eq.'+MID+'&user_id=eq.'+uid,{points:(mc.points||0)+pts,visit_count:(mc.visit_count||0)+1,total_spend:(parseFloat(mc.total_spend||0)+amount),last_updated:Date.now()}).catch(function(){});
+      newPts=(mc.points||0)+pts;
+      return pat('merchant_customers','merchant_id=eq.'+MID+'&user_id=eq.'+uid,{points:newPts,visit_count:(mc.visit_count||0)+1,total_spend:(parseFloat(mc.total_spend||0)+amount),last_updated:Date.now()})
+        .then(function(){T('💎 +'+pts+' pts → '+(cust.name||lid)+' (now '+newPts+' at this shop)','success');});
     } else {
-      post('merchant_customers',{merchant_id:MID,user_id:uid,phone:cust.phone||null,name:cust.name||'Customer',points:pts,visit_count:1,total_spend:amount,shop_barcode:lid,last_updated:Date.now()}).catch(function(){});
+      newPts=pts;
+      return post('merchant_customers',{merchant_id:MID,user_id:uid,phone:cust.phone||null,name:cust.name||'Customer',shop_name:(MDATA&&MDATA.name)||'Shop',emoji:(MDATA&&MDATA.logo_emoji)||'🏪',points:pts,visit_count:1,total_spend:amount,threshold:(MDATA&&MDATA.loyalty_threshold)||100,shop_barcode:lid,last_updated:Date.now(),added_at:Date.now()},'merchant_id,user_id')
+        .then(function(){T('💎 +'+pts+' pts → '+(cust.name||lid)+' (joined + '+pts+' pts)','success');});
     }
-  }).catch(function(){});
+  }).then(function(){
+    // Best-effort: also try to bump the customer's cards row (works only if RLS allows).
+    var cardId='local-'+MID;
+    get('cards','user_id=eq.'+uid+'&or=(card_id.eq.'+cardId+',merchant_id.eq.'+MID+')').then(function(d){
+      var card=Array.isArray(d)&&d[0]?d[0]:null;
+      if(card){pat('cards','user_id=eq.'+uid+'&card_id=eq.'+card.card_id,{points:(card.points||0)+pts,visit_count:(card.visit_count||0)+1,total_spend:(parseFloat(card.total_spend||0)+amount)}).catch(function(){});}
+    }).catch(function(){});
+  }).catch(function(e){
+    T('⚠️ Could not add points: '+(e&&(e.message||e.hint||e.code)||'unknown'),'error');
+  });
+
   // 3) Tag the pos_sale with the customer so it's traceable.
   if(sale&&sale.id){pat('pos_sales','id=eq.'+sale.id,{customer_id:uid,customer_lid:lid}).catch(function(){});}
   // 4) Bump the customer's global total_points too (their headline number).
