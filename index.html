@@ -381,7 +381,7 @@ body.t3d .mo-box,body.t3d .mo-box-mid{animation:rise3d .32s cubic-bezier(.2,.8,.
 /* Swipeable ID slides */
 .id-slides{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;gap:12px;scrollbar-width:none}
 .id-slides::-webkit-scrollbar{display:none}
-.id-slide{flex:0 0 100%;scroll-snap-align:center;background:#fff;border-radius:14px;padding:14px;text-align:center}
+.id-slide{flex:0 0 100%;scroll-snap-align:center;background:#fff;border-radius:16px;padding:20px 16px;text-align:center;min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
 .id-dots{display:flex;justify-content:center;gap:6px;margin-top:10px}
 .id-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.35)}
 .id-dot.on{background:#fff}
@@ -3092,9 +3092,9 @@ function openCardDet(cardId){
     qrBox=document.createElement('div');qrBox.id='cd-qr-box';qrBox.style.cssText='text-align:center;margin-bottom:10px';
     bcWrap.insertBefore(qrBox,bcWrap.firstChild);
   }
-  if(qrBox){qrBox.innerHTML='<div style="font-size:11px;font-weight:700;color:#4b0082;margin-bottom:4px">SCAN QR (fastest)</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(num)+'" style="width:170px;max-width:80%;border-radius:10px">';}
+  if(qrBox){qrBox.innerHTML='<div style="font-size:11px;font-weight:700;color:#4b0082;margin-bottom:4px">SCAN QR (fastest)</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(num)+'" style="width:170px;max-width:80%;border-radius:10px">';}
   if(typeof JsBarcode!=='undefined'){
-    try{JsBarcode(svg,num,{format:'CODE128',width:2,height:64,displayValue:true,fontSize:13,margin:12,background:'#ffffff',lineColor:'#000000'});svg.style.display='block';svg.style.maxWidth='100%';}
+    try{JsBarcode(svg,num,{format:'CODE128',width:1.8,height:110,displayValue:true,fontSize:14,textMargin:6,margin:10,background:'#ffffff',lineColor:'#000000'});svg.style.display='block';svg.style.width='100%';svg.style.maxWidth='260px';}
     catch(e){svg.style.display='none';bcWrap.innerHTML+='<div style="font-size:22px;font-weight:900;letter-spacing:4px;padding:12px 0;color:#0d0d1a">'+num+'</div>';}
   }else{svg.style.display='none';}
   document.getElementById('cd-loc-btn').setAttribute('data-cid',c.card_id||c.id);
