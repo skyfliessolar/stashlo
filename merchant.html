@@ -3634,13 +3634,15 @@ posCheckout=function(method){
   _ock0(method);
 };
 
-/* --- INTERCEPT finalizeSale for auto-receipt + deduct points --- */
+/* --- INTERCEPT finalizeSale for auto-receipt + redemption deduction --- */
+/* Note: the INNER finalizeSale already awards loyalty points to window._TILL_CX
+   via awardLoyaltyForSale BEFORE we clear. Here we just send the e-receipt and
+   apply any points/credit the customer chose to REDEEM, then clear the banner. */
 var _ofs=finalizeSale;
 finalizeSale=function(method){
-  _ofs(method);
-  if(!_TILL_CX)return;
-  var cx=_TILL_CX;_TILL_CX=null;
-  var ban=document.getElementById('pos-loyalty-banner');if(ban)ban.style.display='none';
+  var cx=window._TILL_CX; // capture BEFORE the inner call clears nothing (award reads it)
+  _ofs(method);           // saves sale + awards points to the attached customer
+  if(!cx){return;}        // no customer attached -> inner call already warned
   setTimeout(function(){
     if(cx._REDEEM>0){var np=Math.max(0,(cx.total_points||0)-Math.round(cx._REDEEM*100));post('users',{id:cx.id,total_points:np},'id').catch(function(){});}
     if(cx._REDEEM_CR>0){var nc=Math.max(0,parseFloat(cx.sl_credit||0)-cx._REDEEM_CR);post('users',{id:cx.id,sl_credit:nc},'id').catch(function(){});}
@@ -3650,7 +3652,9 @@ finalizeSale=function(method){
       post('receipts',{user_id:cx.id,merchant_name:MDATA.name||'Shop',receipt_no:'POS-'+(s.id||'').slice(0,8).toUpperCase(),items:its,total:s.total,created_at:Date.now()})
       .then(function(){T('📲 Receipt sent to '+(cx.name||'customer'),'success');}).catch(function(){});
     }
-  },1800);
+    // Now clear the till customer for the next sale (correct banner).
+    if(typeof clearTillCX==='function')clearTillCX();
+  },1500);
 };
 
 function posPrintLast(){if(window._LAST_SALE)printReceipt(window._LAST_SALE);else T('No sale this session','error');}
