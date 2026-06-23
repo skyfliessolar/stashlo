@@ -1681,9 +1681,10 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
           <button class="mo-x" onclick="closeCardDet()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;flex-shrink:0">✕</button>
         </div>
         <!-- BARCODE — always visible, no scroll needed -->
-        <div class="bc-bg" id="bc-wrap" style="margin:0;border-radius:14px;padding:14px">
-          <svg id="bc-svg" style="width:100%;height:80px"></svg>
-          <div id="bc-num" style="text-align:center;font-family:monospace;font-size:13px;font-weight:700;color:#0d0d1a;margin-top:6px;letter-spacing:2px"></div>
+        <div class="bc-bg" id="bc-wrap" style="margin:0;border-radius:16px;padding:18px 14px;text-align:center">
+          <div style="height:1px;background:#eee;margin:14px auto;max-width:200px"></div>
+          <svg id="bc-svg" style="width:100%;max-width:230px;height:64px;margin:0 auto"></svg>
+          <div id="bc-num" style="text-align:center;font-family:ui-monospace,monospace;font-size:15px;font-weight:800;color:#0d0d1a;margin-top:10px;letter-spacing:3px"></div>
         </div>
         <!-- QR alternative -->
         <div id="bc-qr-wrap" style="display:none;background:#fff;border-radius:14px;padding:14px;text-align:center">
@@ -3092,9 +3093,9 @@ function openCardDet(cardId){
     qrBox=document.createElement('div');qrBox.id='cd-qr-box';qrBox.style.cssText='text-align:center;margin-bottom:10px';
     bcWrap.insertBefore(qrBox,bcWrap.firstChild);
   }
-  if(qrBox){qrBox.innerHTML='<div style="font-size:11px;font-weight:700;color:#4b0082;margin-bottom:4px">SCAN QR (fastest)</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(num)+'" style="width:170px;max-width:80%;border-radius:10px">';}
+  if(qrBox){qrBox.innerHTML='<div style="font-size:10px;font-weight:800;letter-spacing:1px;color:#6366F1;margin-bottom:8px;text-transform:uppercase">Scan QR — fastest</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(num)+'" style="width:190px;height:190px;border-radius:12px;display:block;margin:0 auto">';}
   if(typeof JsBarcode!=='undefined'){
-    try{JsBarcode(svg,num,{format:'CODE128',width:1.8,height:110,displayValue:true,fontSize:14,textMargin:6,margin:10,background:'#ffffff',lineColor:'#000000'});svg.style.display='block';svg.style.width='100%';svg.style.maxWidth='260px';}
+    try{JsBarcode(svg,num,{format:'CODE128',width:1.6,height:64,displayValue:false,margin:8,background:'#ffffff',lineColor:'#000000'});svg.style.display='block';svg.style.width='100%';svg.style.maxWidth='230px';svg.style.margin='0 auto';}
     catch(e){svg.style.display='none';bcWrap.innerHTML+='<div style="font-size:22px;font-weight:900;letter-spacing:4px;padding:12px 0;color:#0d0d1a">'+num+'</div>';}
   }else{svg.style.display='none';}
   document.getElementById('cd-loc-btn').setAttribute('data-cid',c.card_id||c.id);
