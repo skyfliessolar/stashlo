@@ -1167,7 +1167,8 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <div class="field"><label class="field-label">Description</label><input id="p-desc" placeholder="Optional description"></div>
       <label class="check-row"><input type="checkbox" id="p-collect" checked> <div><div style="font-weight:700">Click & Collect</div><div style="font-size:12px;color:var(--ink3)">Customers can collect in-store</div></div></label>
       <label class="check-row"><input type="checkbox" id="p-delivery"> <div><div style="font-weight:700">Delivery</div><div style="font-size:12px;color:var(--ink3)">Available for home delivery</div></div></label>
-      <label class="check-row" style="margin-bottom:16px"><input type="checkbox" id="p-active" checked> <div><div style="font-weight:700">Active / Visible</div><div style="font-size:12px;color:var(--ink3)">Show to customers</div></div></label>
+      <label class="check-row"><input type="checkbox" id="p-active" checked> <div><div style="font-weight:700">Active / Visible</div><div style="font-size:12px;color:var(--ink3)">Show to customers</div></div></label>
+      <label class="check-row" style="margin-bottom:16px"><input type="checkbox" id="p-loyalty" checked> <div><div style="font-weight:700">💎 Earns loyalty points</div><div style="font-size:12px;color:var(--ink3)">Turn OFF for fuel, lottery, tobacco, etc.</div></div></label>
       <button class="btn btn-primary" onclick="saveProd()">💾 Save Product</button>
       <button class="btn btn-gray" onclick="closeModal('prodModal')">Cancel</button>
       <div id="p-err" style="color:var(--red);font-size:12px;padding:10px;background:var(--red3);border-radius:var(--r8);margin-top:8px;display:none"></div>
@@ -1461,6 +1462,7 @@ function editProd(id){
   setC("p-collect",p.collect!==false);
   setC("p-delivery",!!p.delivery);
   setC("p-active",p.active!==false);
+  setC("p-loyalty",!p.no_loyalty);
   var pe=document.getElementById("p-err");if(pe)pe.style.display="none";
   if(typeof prodMargin==="function"){try{prodMargin();}catch(e){}}
   openModal("prodModal");
@@ -1469,7 +1471,7 @@ function saveProd(){
   const name=V("p-name"),price=parseFloat(document.getElementById("p-price").value||0),eid=V("edit-prod-id");
   if(!name||price<=0){const e=document.getElementById("p-err");if(e){e.textContent="Name and price required";e.style.display="block";}return}
   const btn=document.querySelector("#prodModal .btn-primary");if(btn){btn.textContent="Saving...";btn.disabled=true;}
-  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",barcode:V("p-barcode")||null,stock:parseInt(document.getElementById("p-stock").value||0),category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked};
+  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",barcode:V("p-barcode")||null,stock:parseInt(document.getElementById("p-stock").value||0),category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked,no_loyalty:!(document.getElementById("p-loyalty")||{checked:true}).checked};
   const action=eid?pat("products","id=eq."+eid,data):post("products",{...data,created_at:Date.now()});
   action.then((res)=>{
       T("✅ "+name+" saved!","success");closeModal("prodModal");
@@ -2480,7 +2482,12 @@ function finalizeSale(method){
     // ===== AWARD LOYALTY POINTS to the attached customer (if any) =====
     try{
       if(window._TILL_CX && window._TILL_CX.id){
-        awardLoyaltyForSale(window._TILL_CX, gross, saved);
+        // Only the loyalty-eligible part of the basket earns points (fuel etc. excluded).
+        var _loyAmt=0;POS_BASKET.forEach(function(b){if(!b.no_loyalty)_loyAmt+=(b.price*b.qty);});
+        // Apply the same discount proportionally to the eligible amount.
+        if(gross>0 && disc>0){_loyAmt=_loyAmt*((gross)/(gross+disc));}
+        if(_loyAmt>0){ awardLoyaltyForSale(window._TILL_CX, _loyAmt, saved); }
+        else { T('No loyalty points (items excluded from loyalty)','info'); }
       } else {
         // Diagnostic: tell the merchant WHY no points (no customer attached).
         T('⚠️ No customer attached — scan a customer before completing the sale to award points','error');
@@ -2633,7 +2640,7 @@ function posAdd(pid){
   if(STOCK_IN){stockInAdd(p);return}
   if(WASTE_MODE){wasteProduct(p);return}
   const ex=POS_BASKET.find(function(b){return b.id===pid});
-  if(ex)ex.qty++;else POS_BASKET.push({id:p.id,name:p.name,price:parseFloat(p.price||0),vat:vatRate(p),qty:1,emoji:p.emoji||'',cost:parseFloat(p.cost_price||0),cat:p.pos_category||'general'});
+  if(ex)ex.qty++;else POS_BASKET.push({id:p.id,name:p.name,price:parseFloat(p.price||0),vat:vatRate(p),qty:1,emoji:p.emoji||'',cost:parseFloat(p.cost_price||0),cat:p.pos_category||'general',no_loyalty:!!p.no_loyalty});
   renderBasket();
 }
 function posScanAdd(q){
