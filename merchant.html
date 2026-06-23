@@ -2377,12 +2377,13 @@ function awardLoyaltyForSale(cust, amount, sale){
   if(!uid){T('⚠️ Customer has no ID — cannot award points','error');return;}
   if(!MID){T('⚠️ Shop ID missing — cannot award points','error');return;}
   var cardId='local-'+MID;
-  // 1) The customer's LOCAL card for THIS shop (cards table, keyed by user_id + card_id).
-  get('cards','user_id=eq.'+uid+'&card_id=eq.'+cardId).then(function(d){
+  // 1) The customer's LOCAL card for THIS shop. Match by user_id and EITHER the
+  //    card_id OR the merchant_id (covers any card_id format mismatch).
+  get('cards','user_id=eq.'+uid+'&or=(card_id.eq.'+cardId+',merchant_id.eq.'+MID+')').then(function(d){
     var card=Array.isArray(d)&&d[0]?d[0]:null;
     if(card){
       var np=(card.points||0)+pts;
-      return pat('cards','user_id=eq.'+uid+'&card_id=eq.'+cardId,{points:np,visit_count:(card.visit_count||0)+1,total_spend:(parseFloat(card.total_spend||0)+amount)})
+      return pat('cards','user_id=eq.'+uid+'&card_id=eq.'+card.card_id,{points:np,visit_count:(card.visit_count||0)+1,total_spend:(parseFloat(card.total_spend||0)+amount)})
         .then(function(){T('💎 +'+pts+' pts → '+(cust.name||lid)+' (now '+np+')','success');})
         .catch(function(e){T('⚠️ Card update failed: '+(e&&e.message||e),'error');});
     } else {

@@ -3788,14 +3788,14 @@ function openMyQRv2(){
   h+='<div style="color:rgba(255,255,255,.65);font-size:12px;text-align:center;margin:14px 0 8px">Swipe between QR and barcode</div>';
   h+='<div class="id-slides" id="id-slides">';
   h+='<div class="id-slide"><div style="font-size:12px;font-weight:700;color:#4b0082;margin-bottom:8px">SCAN QR</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=210x210&data='+encodeURIComponent(lid)+'" style="width:200px;max-width:100%;border-radius:10px"><div style="font-family:monospace;font-weight:800;margin-top:8px;letter-spacing:2px;color:#1e1b4b">'+lid+'</div></div>';
-  h+='<div class="id-slide"><div style="font-size:12px;font-weight:700;color:#4b0082;margin-bottom:8px">SCAN BARCODE</div><svg id="myid-bc2"></svg><div style="font-family:monospace;font-weight:800;margin-top:8px;letter-spacing:2px;color:#1e1b4b">'+lid+'</div></div>';
+  h+='<div class="id-slide"><div style="font-size:12px;font-weight:700;color:#4b0082;margin-bottom:8px">SCAN BARCODE</div><svg id="myid-bc2" style="width:100%;max-width:280px;height:auto"></svg><div style="font-family:monospace;font-weight:800;margin-top:8px;letter-spacing:2px;color:#1e1b4b">'+lid+'</div></div>';
   h+='</div><div class="id-dots"><div class="id-dot on" id="idd0"></div><div class="id-dot" id="idd1"></div></div>';
-  h+='<div style="color:rgba(255,255,255,.55);font-size:11px;text-align:center;margin-top:12px">Merchants scan either code to add your points instantly</div></div>';
+  h+='<div style="color:rgba(255,255,255,.55);font-size:11px;text-align:center;margin-top:12px">💡 QR scans fastest — show this first. Swipe for barcode.</div></div>';
   m.innerHTML=h;
   document.body.appendChild(m);
   document.getElementById('myqr2-x').onclick=function(){m.remove()};
   m.addEventListener('click',function(e){if(e.target===m)m.remove();});
-  try{JsBarcode(document.getElementById('myid-bc2'),lid,{format:'CODE128',width:2.2,height:74,displayValue:false,margin:6});}catch(e){}
+  try{JsBarcode(document.getElementById('myid-bc2'),lid,{format:'CODE128',width:1.6,height:90,displayValue:true,fontSize:14,textMargin:4,margin:14,background:'#ffffff',lineColor:'#000000'});}catch(e){}
   const sl=document.getElementById('id-slides');
   sl.addEventListener('scroll',function(){
     const idx=Math.round(sl.scrollLeft/sl.clientWidth);
