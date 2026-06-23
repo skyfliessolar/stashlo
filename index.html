@@ -3072,13 +3072,30 @@ function openCardDet(cardId){
   const pct=c.threshold?Math.min(100,Math.round((c.points||0)/c.threshold*100)):0;
   const fillEl=document.getElementById('cd-pts-fill');if(fillEl)fillEl.style.width=pct+'%';
   const thrEl=document.getElementById('cd-threshold');if(thrEl)thrEl.textContent=c.threshold?'Target: '+c.threshold+' pts':'';
-  // Barcode
-  const num=String(c.card_number||c.card_id||c.id||'0000000000');
+  // Barcode — what the shop scans to identify the customer.
+  // LOCAL cards: use the customer's SHORT loyalty id (SL-XXXXXX), never the long
+  // 'local-<uuid>' card_id (that was ~40 chars and unscannable).
+  // NATIONAL cards (Nectar etc.): use their real card_number.
+  var num;
+  if(c.type==='national'){
+    num=String(c.card_number||c.card_id||'0000000000');
+  } else {
+    num=String((PROF&&PROF.loyalty_id)||c.card_number||c.card_id||'0000000000');
+  }
   txt('bc-e',c.emoji||'🛍️');txt('bc-name',c.shopName||c.name);txt('bc-num',num);
-  const svg=document.getElementById('bc-svg');
+  // Show BOTH a QR (scans best) and the barcode, side by side.
+  var bcWrap=document.getElementById('bc-wrap');
+  var svg=document.getElementById('bc-svg');
+  // Inject a QR above the barcode if not already there.
+  var qrBox=document.getElementById('cd-qr-box');
+  if(!qrBox && bcWrap){
+    qrBox=document.createElement('div');qrBox.id='cd-qr-box';qrBox.style.cssText='text-align:center;margin-bottom:10px';
+    bcWrap.insertBefore(qrBox,bcWrap.firstChild);
+  }
+  if(qrBox){qrBox.innerHTML='<div style="font-size:11px;font-weight:700;color:#4b0082;margin-bottom:4px">SCAN QR (fastest)</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(num)+'" style="width:170px;max-width:80%;border-radius:10px">';}
   if(typeof JsBarcode!=='undefined'){
-    try{JsBarcode(svg,num,{format:'CODE128',width:2,height:60,displayValue:true,fontSize:12,margin:6,background:'#ffffff',lineColor:'#0d0d1a'});svg.style.display='block';}
-    catch(e){svg.style.display='none';document.getElementById('bc-wrap').innerHTML+='<div style="font-size:22px;font-weight:900;letter-spacing:4px;padding:12px 0;color:#0d0d1a">'+num+'</div>';}
+    try{JsBarcode(svg,num,{format:'CODE128',width:2,height:64,displayValue:true,fontSize:13,margin:12,background:'#ffffff',lineColor:'#000000'});svg.style.display='block';svg.style.maxWidth='100%';}
+    catch(e){svg.style.display='none';bcWrap.innerHTML+='<div style="font-size:22px;font-weight:900;letter-spacing:4px;padding:12px 0;color:#0d0d1a">'+num+'</div>';}
   }else{svg.style.display='none';}
   document.getElementById('cd-loc-btn').setAttribute('data-cid',c.card_id||c.id);
   document.getElementById('cd-rows').innerHTML=`
