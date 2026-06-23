@@ -2964,8 +2964,22 @@ function openPurchaseDetail(itemJson,type){
     +(isOrder?'<button onclick="document.getElementById(\'purch-detail-ov\').remove();openOrderChat(\''+item.id+'\',\''+(name).replace(/\x27/g,'')+'\')" style="width:100%;padding:13px;background:var(--purple-bg);color:var(--purple);border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">💬 Message the shop</button>':'')
     +(canCancel?'<button onclick="confirmCancelOrder(\''+item.id+'\');document.getElementById(\'purch-detail-ov\').remove();" style="width:100%;padding:13px;background:var(--red-bg);color:var(--red);border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">✕ Cancel this order</button>':'')
     +((isOrder&&(status==='cancelled'||status==='rejected'))?'<button onclick="deleteOrderFromApp(\''+item.id+'\')" style="width:100%;padding:13px;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">🗑 Delete from my orders</button>':'')
+    +((!isOrder)?'<button onclick="deleteReceiptFromApp(\''+item.id+'\')" style="width:100%;padding:13px;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">🗑 Remove from my list</button>':'')
     +'</div></div>';
   document.body.appendChild(ov);
+}
+function deleteReceiptFromApp(rid){
+  if(!rid)return;
+  if(!confirm("Remove this receipt from your list?"))return;
+  // Soft-delete the receipt so it disappears from the customer's view.
+  pat('receipts','id=eq.'+rid+'&user_id=eq.'+UID,{deleted:true}).then(function(){
+    var ov=document.getElementById('purch-detail-ov');if(ov)ov.remove();
+    T('🗑 Receipt removed');
+    if(typeof purchTab==='function')purchTab(window._PURCH_TAB||'all');
+  }).catch(function(){
+    var ov=document.getElementById('purch-detail-ov');if(ov)ov.remove();
+    T('Could not remove — try again');
+  });
 }
 function deleteOrderFromApp(orderId){
   if(!orderId)return;
@@ -2974,9 +2988,9 @@ function deleteOrderFromApp(orderId){
   pat('orders','id=eq.'+orderId+'&user_id=eq.'+UID,{deleted:true,deleted_at:Date.now()})
     .then(function(res){
       var ov=document.getElementById('purch-detail-ov');if(ov)ov.remove();
-      // If the column isn't there, fall back so the button still feels responsive
       T('🗑 Order removed');
-      if(typeof purchTab==='function')purchTab('orders');
+      // Refresh whichever purchases tab the user is currently viewing.
+      if(typeof purchTab==='function')purchTab(window._PURCH_TAB||'all');
       loadOrders();
     })
     .catch(function(){
@@ -4104,6 +4118,7 @@ function ordTab(tab){
 
 // ═══ PURCHASE HISTORY — unified all purchases tab ═══
 function purchTab(tab){
+  window._PURCH_TAB=tab;
   var tabs=['all','pos','orders'];
   tabs.forEach(function(t){
     var btn=document.getElementById('pt-'+t);
@@ -4145,9 +4160,9 @@ function purchTab(tab){
           :'<div style="text-align:center;padding:32px;color:var(--sub)"><div style="font-size:40px">🧾</div><div>No POS receipts yet</div></div>';
         return;
       }
-      // all — merge with orders
+      // all — merge with orders (exclude soft-deleted orders)
       get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=30').then(function(od){
-        var os=Array.isArray(od)?od:[];
+        var os=(Array.isArray(od)?od:[]).filter(function(o){return !o.deleted;});
         var combined=rs.map(function(r){return{...r,_type:'pos'};})
           .concat(os.map(function(o){return{...o,_type:'orders'};}))
           .sort(function(a,b){return(b.created_at||0)-(a.created_at||0);});
