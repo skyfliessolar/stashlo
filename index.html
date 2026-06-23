@@ -3413,13 +3413,25 @@ function openMyQR(){
   let m=document.getElementById('myQRMo');
   if(!m){
     m=document.createElement('div');m.id='myQRMo';m.className='mo';
-    m.innerHTML='<div class="mo-box-mid" style="text-align:center"><div class="mo-head"><span class="mo-title">My Stashlo ID</span><button class="mo-x" onclick="cmo(&quot;myQRMo&quot;)">\u2715</button></div><div style="background:linear-gradient(135deg,var(--purple),var(--purple2));border-radius:16px;padding:20px"><div style="font-size:13px;color:rgba(255,255,255,.8)">Show this at any Stashlo shop</div><div id="myqr-img" style="background:#fff;border-radius:12px;padding:14px;margin:12px auto;max-width:220px"></div><div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:2px;font-family:monospace" id="myqr-id"></div><div style="background:#fff;border-radius:10px;padding:8px;margin-top:12px"><svg id="myqr-bc"></svg></div></div><div style="font-size:12px;color:var(--sub);margin-top:12px">\ud83d\udd12 Merchants scan this to add points instantly</div></div>';
+    m.innerHTML='<div class="mo-box-mid" style="text-align:center;padding-bottom:8px">'
+      +'<div class="mo-head"><span class="mo-title">My Stashlo ID</span><button class="mo-x" onclick="cmo(&quot;myQRMo&quot;)">\u2715</button></div>'
+      +'<div style="background:linear-gradient(160deg,#6366F1,#8B5CF6 60%,#a855f7);border-radius:24px;padding:26px 22px;box-shadow:0 16px 40px rgba(99,102,241,.35);position:relative;overflow:hidden">'
+        +'<div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:rgba(255,255,255,.12);border-radius:50%"></div>'
+        +'<div style="position:absolute;bottom:-40px;left:-20px;width:100px;height:100px;background:rgba(255,255,255,.08);border-radius:50%"></div>'
+        +'<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:rgba(255,255,255,.85);text-transform:uppercase">Stashlo Loyalty</div>'
+        +'<div style="font-size:12.5px;color:rgba(255,255,255,.8);margin-top:3px">Show at checkout to collect points</div>'
+        +'<div id="myqr-img" style="background:#fff;border-radius:18px;padding:16px;margin:18px auto 14px;width:200px;height:200px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.18)"></div>'
+        +'<div style="display:inline-block;background:rgba(255,255,255,.18);border-radius:30px;padding:8px 18px;backdrop-filter:blur(4px)"><span style="font-size:18px;font-weight:800;color:#fff;letter-spacing:3px;font-family:ui-monospace,monospace" id="myqr-id"></span></div>'
+        +'<div style="background:#fff;border-radius:12px;padding:12px 10px 8px;margin-top:16px"><svg id="myqr-bc" style="width:100%;max-width:240px;height:auto"></svg></div>'
+      +'</div>'
+      +'<div style="font-size:12px;color:var(--sub);margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px">\ud83d\udca1 <span>QR scans fastest — just show this screen</span></div>'
+    +'</div>';
     document.body.appendChild(m);
     m.addEventListener('click',e=>{if(e.target===m)cmo('myQRMo')});
   }
   document.getElementById('myqr-id').textContent=PROF.loyalty_id;
-  document.getElementById('myqr-img').innerHTML='<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(PROF.loyalty_id)+'" style="width:100%;border-radius:8px" alt="QR">';
-  try{JsBarcode(document.getElementById('myqr-bc'),PROF.loyalty_id,{format:'CODE128',width:2,height:50,displayValue:true,fontSize:13,margin:4});}catch(e){}
+  document.getElementById('myqr-img').innerHTML='<img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(PROF.loyalty_id)+'" style="width:100%;border-radius:8px" alt="QR">';
+  try{JsBarcode(document.getElementById('myqr-bc'),PROF.loyalty_id,{format:'CODE128',width:1.8,height:70,displayValue:true,fontSize:13,textMargin:4,margin:8});}catch(e){}
   omo('myQRMo');
 }
 
