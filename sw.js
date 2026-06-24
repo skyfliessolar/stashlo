@@ -1,5 +1,5 @@
-// Stashlo Service Worker v23 - stashlo.com
-const CACHE = 'stashlo-v83';
+// Stashlo Service Worker v24 - stashlo.com
+const CACHE = 'stashlo-v84';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE = [
   '/',
@@ -9,7 +9,9 @@ const PRECACHE = [
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
-  '/offline.html'
+  '/offline.html',
+  '/privacy.html',
+  '/terms.html'
 ];
 
 // Install - precache core files
