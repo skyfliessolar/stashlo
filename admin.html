@@ -2101,7 +2101,7 @@ function loadAdminReceipts(){
         +'<div class="ic-sub">'+(r.receipt_no||'—')+(pm?' · '+pm:'')+' · VAT £'+parseFloat(r.vat||0).toFixed(2)+'</div>'
         +'<div class="ic-sub">'+when+' · user '+(r.user_id||'').slice(0,8)+(r.customer_email?' · '+r.customer_email:'')+'</div>'
         +'</div>'
-        +(r.deleted?'<button class="sl-btn btn-xs btn-green" onclick="restoreReceipt('+Q+r.id+Q+')">↩ Restore</button>':'')
+        +(r.deleted?'<button class="sl-btn btn-xs btn-green" onclick="restoreReceipt('+Q+r.id+Q+')">↩ Restore</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="purgeReceipt('+Q+r.id+Q+')">⛔ Delete forever</button>':'')
         +'</div></div>';
     }).join(''):'<div class="empty"><div class="empty-ico">🧾</div><div class="empty-txt">No receipts'+(delOnly?' deleted':' found')+'</div></div>';
   }).catch(function(){el.innerHTML='<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-txt">Could not load — run receipts migration</div></div>'});
@@ -2110,6 +2110,12 @@ function restoreReceipt(id){
   spat('receipts','id=eq.'+id,{deleted:false})
   .then(function(){T('↩ Receipt restored to customer','success');logAudit('restore_receipt',id);loadAdminReceipts();})
   .catch(function(){T('Failed - receipts.deleted column missing?','error');});
+}
+function purgeReceipt(id){
+  if(!confirm('Permanently delete this receipt? This CANNOT be undone.'))return;
+  sdel('receipts','id=eq.'+id)
+  .then(function(r){if(r.ok||r.status===204||r.status===200){T('⛔ Receipt permanently deleted','success');logAudit('purge_receipt',id);loadAdminReceipts();}else{T('Delete failed','error');}})
+  .catch(function(){T('Delete failed','error');});
 }
 function saveReceiptLimit(){
   var v=(document.getElementById('admrcp-limit')||{}).value||'10';

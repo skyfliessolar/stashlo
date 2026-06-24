@@ -1134,6 +1134,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div onclick="closeMoreDrawer();openPOSSettings()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">⚙️</div><div style="font-size:11px;font-weight:700">POS Settings</div></div>
         <div onclick="switchTab('ai');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🤖</div><div style="font-size:11px;font-weight:700">AI Agent</div></div>
         <div onclick="switchTab('inbox');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">📬</div><div style="font-size:11px;font-weight:700" id="m-inbox-lab2">Inbox</div></div>
+        <div onclick="closeMoreDrawer();openJobsSection()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">💼</div><div style="font-size:11px;font-weight:700">Post Jobs</div></div>
       </div>
     </div>
   </div>
@@ -2069,6 +2070,21 @@ function markMsgsRead(){txt("m-inbox-lab","Inbox")}
 function openBackOfficeDrawer(){var d=document.getElementById('boDrawer');if(d)d.classList.add('show');}
 function openPOSSettings(){var m=document.getElementById('posSettingsModal');if(m)m.classList.add('on');if(typeof loadPOSSettings==='function')loadPOSSettings();}
 function closeBackOfficeDrawer(){var d=document.getElementById('boDrawer');if(d)d.classList.remove('show');}
+function openJobsSection(){
+  switchTab('settings');
+  setTimeout(function(){
+    var t=document.getElementById('job-title');
+    if(t){
+      var card=t.closest('.setting-card')||t.parentElement;
+      // Find the "Post a Job" heading to scroll to.
+      var heads=document.querySelectorAll('.setting-title');
+      var target=null;
+      heads.forEach(function(hd){if(/Post a Job/i.test(hd.textContent))target=hd;});
+      (target||t).scrollIntoView({behavior:'smooth',block:'start'});
+      t.focus();
+    }
+  },350);
+}
 function switchTab(name){
   if(!document.getElementById(name+'-screen')){T('That section is coming soon');name='overview';}
   document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("on");s.scrollTop=0;});
