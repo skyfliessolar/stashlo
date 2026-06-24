@@ -1889,13 +1889,27 @@ function loadJobApprovals(){
     el.innerHTML=JOB_APPROVALS.length?JOB_APPROVALS.map(u=>{
       const job=jobs.find(j=>j.id===u.job_id)||{};
       const person=ppl.find(p=>p.id===u.user_id)||{};
-      return '<div class="ic"><div class="ic-row"><div><div class="ic-name">💼 '+(job.title||'Job')+'</div><div class="ic-sub">'+(person.email||'Customer')+' · £'+(u.amount||1)+' · '+(u.plan==='5'?'Monthly all-jobs':'Single job')+'</div><div class="ic-sub">'+(u.status==='approved'?'✅ Approved':'⏳ Pending approval')+'</div></div>'+(u.status!=='approved'?'<button class="sl-btn btn-xs btn-green" onclick="approveJobUnlock(\''+u.id+'\',\''+(person.email||'')+'\')">✓ Approve</button>':'')+'</div></div>';
+      var statusLabel=u.status==='approved'?'✅ Approved':(u.status==='blocked'?'⛔ Blocked':'⏳ Pending approval');
+      var actions='';
+      if(u.status==='pending_approval'){
+        actions='<div style="display:flex;gap:6px"><button class="sl-btn btn-xs btn-green" onclick="approveJobUnlock(\''+u.id+'\',\''+(person.email||'')+'\')">✓ Approve</button><button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="blockJobUnlock(\''+u.id+'\',\''+(person.email||'')+'\')">⛔ Block</button></div>';
+      } else if(u.status==='approved'){
+        actions='<button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="blockJobUnlock(\''+u.id+'\',\''+(person.email||'')+'\')">⛔ Block</button>';
+      } else if(u.status==='blocked'){
+        actions='<button class="sl-btn btn-xs btn-green" onclick="approveJobUnlock(\''+u.id+'\',\''+(person.email||'')+'\')">✓ Approve</button>';
+      }
+      return '<div class="ic"><div class="ic-row"><div><div class="ic-name">💼 '+(job.title||'Job')+'</div><div class="ic-sub">'+(person.email||'Customer')+' · £'+(u.amount||1)+' · '+(u.plan==='5'?'Monthly all-jobs':'Single job')+'</div><div class="ic-sub">'+statusLabel+'</div></div>'+actions+'</div></div>';
     }).join(''):'<div class="empty"><div class="empty-ico">💼</div><div class="empty-txt">No job unlock requests</div></div>';
   }).catch(()=>{el.innerHTML='<div class="empty"><div class="empty-txt">Could not load</div></div>'});
 }
 function approveJobUnlock(id,email){
   spat('job_unlocks','id=eq.'+id,{status:'approved'})
   .then(()=>{T('✅ Unlock approved for '+email,'success');logAudit('approve_job_unlock',email);loadJobApprovals();}).catch(()=>T('Failed','error'));
+}
+function blockJobUnlock(id,email){
+  if(!confirm('Block this unlock? The customer will NOT see the job contact details.'))return;
+  spat('job_unlocks','id=eq.'+id,{status:'blocked'})
+  .then(()=>{T('⛔ Unlock blocked for '+email,'success');logAudit('block_job_unlock',email);loadJobApprovals();}).catch(()=>T('Failed','error'));
 }
 
 // ===== AUDIT LOG VIEWER =====
