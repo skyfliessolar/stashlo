@@ -1140,6 +1140,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div onclick="switchTab('ai');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🤖</div><div style="font-size:11px;font-weight:700">AI Agent</div></div>
         <div onclick="switchTab('inbox');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">📬</div><div style="font-size:11px;font-weight:700" id="m-inbox-lab2">Inbox</div></div>
         <div onclick="switchTab('jobs');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">💼</div><div style="font-size:11px;font-weight:700">Jobs</div></div>
+        <div onclick="merchantEmailSupport();closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">✉️</div><div style="font-size:11px;font-weight:700">Support</div></div>
       </div>
     </div>
   </div>
@@ -1851,7 +1852,7 @@ function loadMerchRewards(){
     const el=document.getElementById("mrewards-list");if(!el)return;
     el.innerHTML=M_REWARDS.length?M_REWARDS.map(r=>'<div class="ic"><div class="ic-row"><div><div class="ic-name">'+(r.emoji||"\ud83c\udf81")+' '+r.name+'</div><div class="ic-sub">'+(r.points_cost||0)+' points'+(r.active?'':' \u00b7 inactive')+'</div></div><button class="btn-xs btn-del" onclick="delMerchReward(\''+r.id+'\')">\u2715</button></div></div>').join("")
     :'<div style="text-align:center;padding:16px;color:var(--ink3);font-size:13px">No rewards yet \u2014 create one like "Free juice \u00b7 100 pts"</div>';
-  }).catch(()=>{var el=document.getElementById('mrewards-list');if(el)el.innerHTML='<div style="color:var(--ink3);font-size:13px;padding:8px">Rewards unavailable. Contact support@stashlo.app</div>';});
+  }).catch(()=>{var el=document.getElementById('mrewards-list');if(el)el.innerHTML='<div style="color:var(--ink3);font-size:13px;padding:8px">Rewards unavailable. Contact support@stashlo.com</div>';});
 }
 function createMerchReward(){
   const name=V("mr-name"),pts=parseInt(document.getElementById("mr-pts").value||0),emoji=V("mr-emoji")||detectEmoji(name)||"\ud83c\udf81";
@@ -1922,7 +1923,7 @@ async function aiSuggestReply(){
 // ===== ACCESS RESTRICTION CHECK (unpaid fees) =====
 function checkRestriction(){
   if(MDATA.suspended){
-    document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#0f172a"><div style="background:#1e293b;border-radius:20px;padding:32px;text-align:center;max-width:360px"><div style="font-size:48px">\u26d4</div><h2 style="color:#f87171;margin:12px 0 8px">Account Suspended</h2><p style="color:#94a3b8;font-size:14px">Your merchant account has been suspended by Stashlo. Contact support@stashlo.app</p></div></div>';
+    document.body.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#0f172a"><div style="background:#1e293b;border-radius:20px;padding:32px;text-align:center;max-width:360px"><div style="font-size:48px">\u26d4</div><h2 style="color:#f87171;margin:12px 0 8px">Account Suspended</h2><p style="color:#94a3b8;font-size:14px">Your merchant account has been suspended by Stashlo. Contact support@stashlo.com</p></div></div>';
     return true;
   }
   if(MDATA.restricted){
@@ -2075,6 +2076,11 @@ function markMsgsRead(){txt("m-inbox-lab","Inbox")}
 function openBackOfficeDrawer(){var d=document.getElementById('boDrawer');if(d)d.classList.add('show');}
 function openPOSSettings(){var m=document.getElementById('posSettingsModal');if(m)m.classList.add('on');if(typeof loadPOSSettings==='function')loadPOSSettings();}
 function closeBackOfficeDrawer(){var d=document.getElementById('boDrawer');if(d)d.classList.remove('show');}
+function merchantEmailSupport(){
+  var sid=(typeof MDATA!=='undefined'&&MDATA&&MDATA.shop_id)?MDATA.shop_id:'';
+  var subj='Stashlo Merchant Support'+(sid?(' — '+sid):'');
+  window.location.href='mailto:merchant@stashlo.com?subject='+encodeURIComponent(subj);
+}
 function openJobsSection(){ switchTab('jobs'); }
 function switchTab(name){
   if(!document.getElementById(name+'-screen')){T('That section is coming soon');name='overview';}
