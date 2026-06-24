@@ -840,6 +840,25 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   </div>
 
   <!-- ORDERS -->
+  <div class="screen" id="jobs-screen">
+    <div class="sh"><span style="display:flex;align-items:center"><button onclick="switchTab('overview')" style="background:var(--purple3);color:var(--purple);border:none;border-radius:8px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;margin-right:8px;flex-shrink:0">‹</button><span class="sh-t">💼 Jobs</span></span></div>
+    <div class="setting-card">
+      <div class="setting-title">📢 Post a Job</div>
+      <div class="setting-sub">Find staff from the local community. Approved listings appear in the customer app.</div>
+      <div class="field"><label class="field-label">Job Title ★</label><input id="job-title" placeholder="e.g. Part-time Barista"></div>
+      <div class="field"><label class="field-label">Type</label>
+        <select id="job-type"><option value="part-time">Part-time</option><option value="full-time">Full-time</option><option value="weekend">Weekend only</option><option value="temporary">Temporary</option></select>
+      </div>
+      <div class="field"><label class="field-label">Salary</label><input id="job-salary" placeholder="e.g. £11/hr"></div>
+      <div class="field"><label class="field-label">Description</label><textarea id="job-desc" rows="3" placeholder="Describe the role..." style="resize:none"></textarea></div>
+      <div class="field"><label class="field-label">Contact Email ★</label><input id="job-email" placeholder="hiring@yourshop.com"></div>
+      <button onclick="postJob()" style="width:100%;padding:14px;background:var(--purple);color:#fff;border-radius:var(--r12);font-weight:700;font-size:14px">📢 Post Job</button>
+    </div>
+    <div class="setting-card">
+      <div class="sh" style="margin:0 0 8px"><span class="sh-t" style="font-size:14px">Your Posted Jobs</span></div>
+      <div id="jobs-list"></div>
+    </div>
+  </div>
   <div class="screen" id="orders-screen">
     <div class="sh"><span class="sh-t">Customer Orders</span><div style="display:flex;gap:8px"><button class="sh-btn" onclick="downloadCSV('orders')">⬇ CSV</button><button class="sh-btn" onclick="loadOrders()">🔄</button></div></div>
     <div id="orders-list"></div>
@@ -948,20 +967,6 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       </div>
       <button class="btn btn-purple" style="width:100%" onclick="createMerchReward()">➕ Create Reward</button>
       <div id="mrewards-list" style="margin-top:10px"></div>
-    </div>
-    <div class="setting-card">
-      <div class="setting-title">💼 Post a Job</div>
-      <div class="setting-sub">Find staff from the local community</div>
-      <div class="field"><label class="field-label">Job Title ★</label><input id="job-title" placeholder="e.g. Part-time Barista"></div>
-      <div class="field"><label class="field-label">Type</label>
-        <select id="job-type"><option value="part-time">Part-time</option><option value="full-time">Full-time</option><option value="weekend">Weekend only</option><option value="temporary">Temporary</option></select>
-      </div>
-      <div class="field"><label class="field-label">Salary</label><input id="job-salary" placeholder="e.g. £11/hr"></div>
-      <div class="field"><label class="field-label">Description</label><textarea id="job-desc" rows="3" placeholder="Describe the role..." style="resize:none"></textarea></div>
-      <div class="field"><label class="field-label">Contact Email ★</label><input id="job-email" placeholder="hiring@yourshop.com"></div>
-      <button onclick="postJob()" style="width:100%;padding:14px;background:var(--purple);color:#fff;border-radius:var(--r12);font-weight:700;font-size:14px">📢 Post Job</button>
-      <div class="sh" style="margin-top:16px"><span class="sh-t" style="font-size:14px">Posted Jobs</span></div>
-      <div id="jobs-list"></div>
     </div>
     <button onclick="saveSettings()" style="width:100%;padding:16px;background:var(--purple);color:#fff;border-radius:var(--r12);font-weight:700;font-size:15px;margin-top:8px;margin-bottom:30px">💾 Save All Settings</button>
   </div>
@@ -1134,7 +1139,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div onclick="closeMoreDrawer();openPOSSettings()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">⚙️</div><div style="font-size:11px;font-weight:700">POS Settings</div></div>
         <div onclick="switchTab('ai');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🤖</div><div style="font-size:11px;font-weight:700">AI Agent</div></div>
         <div onclick="switchTab('inbox');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">📬</div><div style="font-size:11px;font-weight:700" id="m-inbox-lab2">Inbox</div></div>
-        <div onclick="closeMoreDrawer();openJobsSection()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">💼</div><div style="font-size:11px;font-weight:700">Post Jobs</div></div>
+        <div onclick="switchTab('jobs');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">💼</div><div style="font-size:11px;font-weight:700">Jobs</div></div>
       </div>
     </div>
   </div>
@@ -2070,21 +2075,7 @@ function markMsgsRead(){txt("m-inbox-lab","Inbox")}
 function openBackOfficeDrawer(){var d=document.getElementById('boDrawer');if(d)d.classList.add('show');}
 function openPOSSettings(){var m=document.getElementById('posSettingsModal');if(m)m.classList.add('on');if(typeof loadPOSSettings==='function')loadPOSSettings();}
 function closeBackOfficeDrawer(){var d=document.getElementById('boDrawer');if(d)d.classList.remove('show');}
-function openJobsSection(){
-  switchTab('settings');
-  setTimeout(function(){
-    var t=document.getElementById('job-title');
-    if(t){
-      var card=t.closest('.setting-card')||t.parentElement;
-      // Find the "Post a Job" heading to scroll to.
-      var heads=document.querySelectorAll('.setting-title');
-      var target=null;
-      heads.forEach(function(hd){if(/Post a Job/i.test(hd.textContent))target=hd;});
-      (target||t).scrollIntoView({behavior:'smooth',block:'start'});
-      t.focus();
-    }
-  },350);
-}
+function openJobsSection(){ switchTab('jobs'); }
 function switchTab(name){
   if(!document.getElementById(name+'-screen')){T('That section is coming soon');name='overview';}
   document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("on");s.scrollTop=0;});
@@ -2105,8 +2096,8 @@ function switchTab(name){
   if(name==="inbox")loadInbox();
   if(name==="settings"){loadAccounting();loadMerchRewards();}
   if(name==="pos")posGuard();
-  if(name==="settings")loadJobs();
-  if(["till","products","customers","settings","ai","inbox"].includes(name)){const mb=document.getElementById("nb-more-btn");if(mb)mb.classList.add("on");}
+  if(name==="jobs")loadJobs();
+  if(["till","products","customers","settings","ai","inbox","jobs"].includes(name)){const mb=document.getElementById("nb-more-btn");if(mb)mb.classList.add("on");}
 }
 
 let scanActive=false;
