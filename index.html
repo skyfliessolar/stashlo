@@ -1821,9 +1821,18 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       </div>
       <input type="radio" name="ot" value="collect" checked style="display:none">
       <input type="radio" name="ot" value="delivery" style="display:none">
-      <!-- Collect form -->
+      <!-- Collect form: collection-point picker -->
       <div id="o-cf">
         <div class="fl">
+          <label>📍 Find a collection point near you</label>
+          <div style="display:flex;gap:8px">
+            <input class="fi" id="o-postcode" type="text" placeholder="Enter your postcode (e.g. SW1A 1AA)" style="flex:1;text-transform:uppercase">
+            <button onclick="findCollectionPoints()" style="background:var(--purple);color:#fff;border:none;border-radius:10px;padding:0 16px;font-weight:700;font-size:13px;cursor:pointer">Search</button>
+          </div>
+        </div>
+        <div id="o-cp-list" style="margin-top:4px"></div>
+        <input type="hidden" id="o-cp-chosen">
+        <div class="fl" style="margin-top:10px">
           <label>Preferred collect time (optional)</label>
           <input class="fi" id="o-ct" type="text" placeholder="e.g. Today 3pm, ASAP">
         </div>
@@ -2782,6 +2791,67 @@ function chQty(d){
   inp.value=v;n.textContent=v;
   const p=curOrderProd;if(p)txt('o-total','£'+(parseFloat(p.price||0)*v).toFixed(2));
 }
+// ===== COLLECTION POINTS (Temu-style pickup picker) =====
+// Fixed/partner collection points. Add more here, or load from a Supabase table later.
+var COLLECTION_POINTS=[
+  {id:'cp-liverpool',name:'Liverpool Street Point',addr:'Liverpool Street, London EC2M 7PY',lat:51.5178,lng:-0.0823,hours:'Mon–Sat 8am–8pm'},
+  {id:'cp-shepherds',name:"Shepherd's Bush Point",addr:"Shepherd's Bush, London W12 8PP",lat:51.5043,lng:-0.2065,hours:'Mon–Sun 9am–7pm'},
+  {id:'cp-croydon',name:'Croydon Point',addr:'High Street, Croydon CR0 1NA',lat:51.3762,lng:-0.0982,hours:'Mon–Sat 8am–7pm'}
+];
+function haversineMiles(la1,lo1,la2,lo2){
+  function r(d){return d*Math.PI/180;}
+  var R=3958.8; // miles
+  var dLa=r(la2-la1),dLo=r(lo2-lo1);
+  var a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dLo/2)*Math.sin(dLo/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function findCollectionPoints(){
+  var pcEl=document.getElementById('o-postcode');
+  var listEl=document.getElementById('o-cp-list');
+  var pc=(pcEl?pcEl.value:'').trim();
+  if(!pc){listEl.innerHTML='<div style="font-size:12px;color:var(--sub);padding:8px">Enter your postcode to find nearby points.</div>';return;}
+  listEl.innerHTML='<div style="font-size:12px;color:var(--sub);padding:8px">🔍 Finding points near '+pc.toUpperCase()+'…</div>';
+  // UK postcode -> coordinates via free postcodes.io (no key needed).
+  fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(pc.replace(/\s+/g,'')))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d||d.status!==200||!d.result){renderCollectionPoints(null);return;}
+      var here={lat:d.result.latitude,lng:d.result.longitude};
+      var ranked=COLLECTION_POINTS.map(function(cp){
+        return Object.assign({},cp,{dist:haversineMiles(here.lat,here.lng,cp.lat,cp.lng)});
+      }).sort(function(a,b){return a.dist-b.dist;});
+      renderCollectionPoints(ranked);
+    })
+    .catch(function(){renderCollectionPoints(null);});
+}
+function renderCollectionPoints(points){
+  var listEl=document.getElementById('o-cp-list');if(!listEl)return;
+  if(!points){
+    // Postcode lookup failed — show all points unsorted so they can still pick.
+    listEl.innerHTML='<div style="font-size:12px;color:#b45309;background:#fef3c7;border-radius:8px;padding:8px;margin-bottom:6px">Couldn\'t read that postcode — showing all points.</div>'+
+      COLLECTION_POINTS.map(function(cp){return cpRow(cp,null);}).join('');
+    return;
+  }
+  if(!points.length){listEl.innerHTML='<div style="font-size:12px;color:var(--sub);padding:8px">No collection points found.</div>';return;}
+  listEl.innerHTML=points.map(function(cp){return cpRow(cp,cp.dist);}).join('');
+}
+function cpRow(cp,dist){
+  var distLabel=(dist!=null)?('<span style="color:var(--purple);font-weight:700">'+dist.toFixed(1)+' mi</span>'):'';
+  return '<div onclick="chooseCP(\''+cp.id+'\')" id="cprow-'+cp.id+'" style="border:2px solid var(--bg2);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+    +'<div><div style="font-weight:800;font-size:14px">📍 '+cp.name+'</div>'
+    +'<div style="font-size:12px;color:var(--sub);margin-top:2px">'+cp.addr+'</div>'
+    +'<div style="font-size:11px;color:var(--sub);margin-top:2px">🕑 '+cp.hours+'</div></div>'
+    +'<div style="text-align:right;white-space:nowrap">'+distLabel+'</div></div>';
+}
+function chooseCP(id){
+  var cp=COLLECTION_POINTS.find(function(x){return x.id===id;});
+  if(!cp)return;
+  document.getElementById('o-cp-chosen').value=cp.name+' — '+cp.addr;
+  // Highlight the selected row.
+  COLLECTION_POINTS.forEach(function(x){var r=document.getElementById('cprow-'+x.id);if(r){r.style.border='2px solid var(--bg2)';r.style.background='';}});
+  var sel=document.getElementById('cprow-'+id);
+  if(sel){sel.style.border='2px solid var(--purple)';sel.style.background='var(--purple-bg)';}
+}
 function selOType(t){
   const r=document.querySelector('input[name="ot"][value="'+t+'"]');if(r)r.checked=true;
   document.getElementById('ot-c').classList.toggle('sel',t==='collect');
@@ -2825,12 +2895,20 @@ function pickPayMethod(id,label){
 function submitOrder(){
   const p=curOrderProd;if(!p||!UID){sErr('o-err','Error — please try again');return}
   const type=document.querySelector('input[name="ot"]:checked')?.value||'collect';
+  if(type==='collect'){
+    var _cp=(document.getElementById('o-cp-chosen')||{}).value||'';
+    if(!_cp){ T('Please search your postcode and pick a collection point','error'); return; }
+  }
   const qty=Math.max(1,parseInt(document.getElementById('o-qty').value)||1);
   const total=parseFloat(p.price||0)*qty;
   const mid=p.merchant_id;
   if(type==='delivery'&&!V('o-da')){sErr('o-err','Delivery address required');return}
   const btn=document.querySelector('#orderMo .btn-p');if(btn){btn.textContent='Placing order…';btn.disabled=true;}
-  post('orders',{user_id:UID,merchant_id:mid,product_id:p.id,product_name:p.name,product_emoji:p.emoji||'📦',quantity:qty,total,type,status:'pending',delivery_address:V('o-da'),collect_time:V('o-ct'),note:V('o-note'),created_at:Date.now()})
+  // For collection orders, store the chosen collection point in delivery_address
+  // (so the merchant sees where to hold/send it); delivery orders use the typed address.
+  var _collectPoint=(document.getElementById('o-cp-chosen')||{}).value||'';
+  var _addr = (type==='collect') ? (_collectPoint||'Shop counter') : V('o-da');
+  post('orders',{user_id:UID,merchant_id:mid,product_id:p.id,product_name:p.name,product_emoji:p.emoji||'📦',quantity:qty,total,type,status:'pending',delivery_address:_addr,collection_point:_collectPoint,collect_time:V('o-ct'),note:V('o-note'),created_at:Date.now()})
   .then(d=>{
     if(btn){btn.textContent='✅ Place Order';btn.disabled=false;}
     if(d&&d.code){sErr('o-err',d.message||'Order failed');return}
