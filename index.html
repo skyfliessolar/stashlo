@@ -2810,22 +2810,38 @@ function findCollectionPoints(){
   var listEl=document.getElementById('o-cp-list');
   var pc=(pcEl?pcEl.value:'').trim();
   if(!pc){listEl.innerHTML='<div style="font-size:12px;color:var(--sub);padding:8px">Enter your postcode to find nearby points.</div>';return;}
-  listEl.innerHTML='<div style="font-size:12px;color:var(--sub);padding:8px">🔍 Finding points near '+pc.toUpperCase()+'…</div>';
-  // UK postcode -> coordinates via free postcodes.io (no key needed).
+  listEl.innerHTML='<div style="font-size:12px;color:var(--sub);padding:8px">🔍 Finding collection points near '+pc.toUpperCase()+'…</div>';
+  // UK postcode -> coordinates via free postcodes.io (no key needed). Works anywhere in the UK.
   fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(pc.replace(/\s+/g,'')))
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d||d.status!==200||!d.result){renderCollectionPoints(null);return;}
       var here={lat:d.result.latitude,lng:d.result.longitude};
-      var ranked=COLLECTION_POINTS.map(function(cp){
-        return Object.assign({},cp,{dist:haversineMiles(here.lat,here.lng,cp.lat,cp.lng)});
-      }).sort(function(a,b){return a.dist-b.dist;});
-      renderCollectionPoints(ranked);
+      // Fixed/branded points.
+      var fixed=COLLECTION_POINTS.map(function(cp){
+        return Object.assign({},cp,{dist:haversineMiles(here.lat,here.lng,cp.lat,cp.lng),kind:'point'});
+      });
+      // ALSO pull partner shops (merchants that have a location) and treat each as
+      // a collection point, sorted by the same distance.
+      get('merchants','lat=not.is.null&lng=not.is.null&select=id,name,shop_id,lat,lng,address,logo_emoji')
+        .then(function(ms){
+          var shops=(Array.isArray(ms)?ms:[]).filter(function(s){return s.lat&&s.lng;}).map(function(s){
+            return {id:'shop-'+s.id,name:(s.logo_emoji||'🏪')+' '+(s.name||'Partner shop'),addr:s.address||'Partner shop',lat:parseFloat(s.lat),lng:parseFloat(s.lng),hours:'See shop',dist:haversineMiles(here.lat,here.lng,parseFloat(s.lat),parseFloat(s.lng)),kind:'shop'};
+          });
+          var all=fixed.concat(shops).sort(function(a,b){return a.dist-b.dist;}).slice(0,12);
+          renderCollectionPoints(all);
+        })
+        .catch(function(){
+          // If shops can't load, still show the fixed points.
+          renderCollectionPoints(fixed.sort(function(a,b){return a.dist-b.dist;}));
+        });
     })
     .catch(function(){renderCollectionPoints(null);});
 }
+var _CP_SHOWN=[];
 function renderCollectionPoints(points){
   var listEl=document.getElementById('o-cp-list');if(!listEl)return;
+  _CP_SHOWN=points||COLLECTION_POINTS;
   if(!points){
     // Postcode lookup failed — show all points unsorted so they can still pick.
     listEl.innerHTML='<div style="font-size:12px;color:#b45309;background:#fef3c7;border-radius:8px;padding:8px;margin-bottom:6px">Couldn\'t read that postcode — showing all points.</div>'+
@@ -2844,11 +2860,11 @@ function cpRow(cp,dist){
     +'<div style="text-align:right;white-space:nowrap">'+distLabel+'</div></div>';
 }
 function chooseCP(id){
-  var cp=COLLECTION_POINTS.find(function(x){return x.id===id;});
+  var cp=(_CP_SHOWN||[]).find(function(x){return x.id===id;})||COLLECTION_POINTS.find(function(x){return x.id===id;});
   if(!cp)return;
   document.getElementById('o-cp-chosen').value=cp.name+' — '+cp.addr;
   // Highlight the selected row.
-  COLLECTION_POINTS.forEach(function(x){var r=document.getElementById('cprow-'+x.id);if(r){r.style.border='2px solid var(--bg2)';r.style.background='';}});
+  (_CP_SHOWN||[]).forEach(function(x){var r=document.getElementById('cprow-'+x.id);if(r){r.style.border='2px solid var(--bg2)';r.style.background='';}});
   var sel=document.getElementById('cprow-'+id);
   if(sel){sel.style.border='2px solid var(--purple)';sel.style.background='var(--purple-bg)';}
 }
