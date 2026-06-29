@@ -7,7 +7,8 @@
       "namespace": "android_app",
       "package_name": "com.stashlo.app",
       "sha256_cert_fingerprints": [
-        "15:7E:00:2F:47:28:CB:80:F3:FC:00:53:1C:A0:78:B9:70:82:48:97:C2:F7:69:55:1F:9D:44:63:F6:A2:09:44"
+        "15:7E:00:2F:47:28:CB:80:F3:FC:00:53:1C:A0:78:B9:70:82:48:97:C2:F7:69:55:1F:9D:44:63:F6:A2:09:44",
+        "08:2F:30:F6:4F:FD:4A:AD:47:D4:BD:FF:DE:32:43:84:56:9A:47:A6:EB:E8:74:68:E9:0F:F2:8E:C4:F7:1F:99"
       ]
     }
   }
