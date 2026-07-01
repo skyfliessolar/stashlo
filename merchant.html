@@ -1678,9 +1678,14 @@ function doAwardPoints(uid,lid,name){
   if(amt<=0){T('Enter the amount spent','error');return;}
   var cust=window._AWARD_CX||{id:uid,loyalty_id:lid,name:name};
   awardLoyaltyForSale(cust, amt, null);
+  var loy=(typeof calcLoy==='function')?calcLoy(amt):{pts:Math.round(amt)};
+  // Auto-send a receipt to the customer's account, tagged as ALREADY awarded so
+  // they can't claim points on it again (prevents double points).
+  var ts=Date.now();
+  post('receipts',{user_id:uid,merchant_id:MID,merchant_name:(MDATA&&MDATA.name)||'Shop',shop_name:(MDATA&&MDATA.name)||'Shop',receipt_no:'AWD-'+ts.toString(36).toUpperCase(),items:'💎 Points awarded in-store · '+(loy.pts||0)+' pts',total:amt,payment_method:'external',points_awarded:true,created_at:ts}).catch(function(){});
   // Reset the panel after awarding.
   setTimeout(function(){
-    var info=document.getElementById('scan-customer-info');if(info)info.innerHTML='<div style="padding:12px;color:#15803d;font-weight:700">✅ Points added to '+name+'. Scan another customer anytime.</div>';
+    var info=document.getElementById('scan-customer-info');if(info)info.innerHTML='<div style="padding:12px;color:#15803d;font-weight:700">✅ Points added to '+name+' and receipt sent. Scan another customer anytime.</div>';
   },400);
 }
 function lookupCustomer(){
@@ -2475,7 +2480,7 @@ function deliverReceipt(saleId,lid){
     var u=Array.isArray(d)&&d[0];
     if(!u){T('No customer with ID '+lid,'error');return}
     var items='';try{items=JSON.parse(s.items||'[]').map(function(it){return it.n+' x'+it.q}).join(', ')}catch(e){}
-    post('receipts',{user_id:u.id,merchant_id:MID,merchant_name:MDATA.name||'Shop',shop_name:MDATA.name||'Shop',receipt_no:'POS-'+(s.id||'').slice(0,8).toUpperCase(),items:items,total:s.total,vat:parseFloat((s.vat_total||s.vat||0).toFixed(2)),payment_method:s.method||'cash',created_at:Date.now()})
+    post('receipts',{user_id:u.id,merchant_id:MID,merchant_name:MDATA.name||'Shop',shop_name:MDATA.name||'Shop',receipt_no:'POS-'+(s.id||'').slice(0,8).toUpperCase(),items:items,total:s.total,vat:parseFloat((s.vat_total||s.vat||0).toFixed(2)),payment_method:s.method||'cash',points_awarded:true,created_at:Date.now()})
     .then(function(){T('📲 Receipt sent to '+lid,'success');})
     .catch(function(){T('Send failed','error');});
   });
