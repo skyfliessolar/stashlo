@@ -1832,7 +1832,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
           <label>📍 Find a collection point near you</label>
           <div style="display:flex;gap:8px">
             <input class="fi" id="o-postcode" type="text" autocapitalize="characters" autocomplete="postal-code" enterkeyhint="search" placeholder="Enter postcode e.g. CR0 2JG" style="flex:1" onfocus="setTimeout(function(){this.scrollIntoView({behavior:'smooth',block:'center'})}.bind(this),300)" onkeydown="if(event.key==='Enter'){event.preventDefault();findCollectionPoints();}">
-            <button onclick="findCollectionPoints()" style="background:var(--purple);color:#fff;border:none;border-radius:10px;padding:0 16px;font-weight:700;font-size:13px;cursor:pointer">Search</button>
+            <button onclick="findCollectionPoints()" style="background:var(--purple);color:#fff;border:none;border-radius:10px;padding:0 16px;font-weight:700;font-size:13px;cursor:pointer">Search</button><button onclick="useMyLocationCP()" title="Use my location" style="background:#10b981;color:#fff;border:none;border-radius:10px;padding:0 12px;font-weight:700;font-size:15px;cursor:pointer">📍</button>
           </div>
         </div>
         <div id="o-cp-list" style="margin-top:4px"></div>
@@ -2810,6 +2810,32 @@ function haversineMiles(la1,lo1,la2,lo2){
   var a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dLo/2)*Math.sin(dLo/2);
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
+function _rankAndRenderCP(here){
+  // Shared ranking: fixed points + partner shops, sorted by distance from `here`.
+  var fixed=COLLECTION_POINTS.map(function(cp){
+    return Object.assign({},cp,{dist:haversineMiles(here.lat,here.lng,cp.lat,cp.lng),kind:'point'});
+  });
+  get('merchants','lat=not.is.null&lng=not.is.null&select=id,name,shop_id,lat,lng,address,logo_emoji')
+    .then(function(ms){
+      var shops=(Array.isArray(ms)?ms:[]).filter(function(s){return s.lat&&s.lng;}).map(function(s){
+        return {id:'shop-'+s.id,name:(s.logo_emoji||'🏪')+' '+(s.name||'Partner shop'),addr:s.address||'Partner shop',lat:parseFloat(s.lat),lng:parseFloat(s.lng),hours:'See shop',dist:haversineMiles(here.lat,here.lng,parseFloat(s.lat),parseFloat(s.lng)),kind:'shop'};
+      });
+      renderCollectionPoints(fixed.concat(shops).sort(function(a,b){return a.dist-b.dist;}).slice(0,12));
+    })
+    .catch(function(){renderCollectionPoints(fixed.sort(function(a,b){return a.dist-b.dist;}));});
+}
+function useMyLocationCP(){
+  var listEl=document.getElementById('o-cp-list');
+  if(!navigator.geolocation){T('Location not available — enter your postcode','error');return;}
+  if(listEl)listEl.innerHTML='<div style="font-size:12px;color:var(--sub);padding:8px">📍 Finding you…</div>';
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var here={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    try{localStorage.setItem('stashlo_last_loc',JSON.stringify(here));}catch(e){}
+    _rankAndRenderCP(here);
+  },function(){
+    if(listEl)listEl.innerHTML='<div style="font-size:12px;color:#b45309;background:#fef3c7;border-radius:8px;padding:8px">Couldn\'t get your location — type your postcode instead.</div>';
+  },{timeout:8000,maximumAge:120000});
+}
 function findCollectionPoints(){
   var pcEl=document.getElementById('o-postcode');
   var listEl=document.getElementById('o-cp-list');
@@ -2821,6 +2847,7 @@ function findCollectionPoints(){
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d||d.status!==200||!d.result){renderCollectionPoints(null);return;}
+      try{localStorage.setItem('stashlo_last_pc',pc.toUpperCase());localStorage.setItem('stashlo_last_loc',JSON.stringify({lat:d.result.latitude,lng:d.result.longitude}));}catch(e){}
       var here={lat:d.result.latitude,lng:d.result.longitude};
       // Fixed/branded points.
       var fixed=COLLECTION_POINTS.map(function(cp){
@@ -2874,6 +2901,19 @@ function chooseCP(id){
   if(sel){sel.style.border='2px solid var(--purple)';sel.style.background='var(--purple-bg)';}
 }
 function selOType(t){
+  if(t==='collect'){
+    setTimeout(function(){
+      try{
+        var pcEl=document.getElementById('o-postcode');
+        var saved=localStorage.getItem('stashlo_last_pc');
+        var list=document.getElementById('o-cp-list');
+        if(pcEl&&saved&&!pcEl.value){
+          pcEl.value=saved;
+          if(list&&!list.innerHTML)findCollectionPoints(); // auto-show their nearby points
+        }
+      }catch(e){}
+    },200);
+  }
   const r=document.querySelector('input[name="ot"][value="'+t+'"]');if(r)r.checked=true;
   document.getElementById('ot-c').classList.toggle('sel',t==='collect');
   document.getElementById('ot-d').classList.toggle('sel',t==='delivery');
