@@ -3575,6 +3575,56 @@ function rcpYearInit(){
   sel.innerHTML=opts.map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>'}).join('');
   sel.value=String(y);
 }
+// ===== CLAIM POINTS from an external-till receipt =====
+function claimPoints(i){
+  var r=RECEIPTS[i];if(!r)return;
+  var mo=document.createElement('div');mo.className='mo on';
+  var html=['<div class="mo-box">'];
+  html.push('<div class="mo-head"><span class="mo-title">💎 Claim points</span><button class="mo-x" id="cp-x">X</button></div>');
+  html.push('<div style="font-size:13px;color:var(--sub);margin-bottom:12px">Send this receipt to the shop so they can add your loyalty points.</div>');
+  if(r.image_url){html.push('<img src="'+r.image_url+'" style="width:100%;max-height:160px;object-fit:cover;border-radius:12px;margin-bottom:12px">');}
+  html.push('<div class="fl"><label>Shop</label><select class="fi" id="cp-shop"><option value="">— Search my shops —</option></select></div>');
+  html.push('<div style="text-align:center;font-size:12px;color:var(--sub);margin:6px 0">or</div>');
+  html.push('<div class="fl"><label>Enter shop / merchant ID</label><input class="fi" id="cp-mid" placeholder="e.g. SL-SKY1" style="text-transform:uppercase"></div>');
+  html.push('<div class="fl"><label>Receipt total (£)</label><input class="fi" id="cp-amt" type="number" step="0.01" value="'+(parseFloat(r.total||0)||'')+'"></div>');
+  html.push('<button class="sl-btn btn btn-p" style="width:100%" id="cp-send">Send request to shop</button>');
+  html.push('</div>');
+  mo.innerHTML=html.join('');
+  document.body.appendChild(mo);
+  document.getElementById('cp-x').onclick=function(){mo.remove();};
+  // Populate the shop dropdown from the customer's local shops (cards) so they can pick a registered merchant.
+  get('cards','user_id=eq.'+UID+'&type=eq.local').then(function(cs){
+    var sel=document.getElementById('cp-shop');if(!sel)return;
+    (Array.isArray(cs)?cs:[]).forEach(function(c){
+      var o=document.createElement('option');o.value=c.merchant_id||'';o.textContent=(c.emoji||'🏪')+' '+(c.shop_name||c.name||'Shop');sel.appendChild(o);
+    });
+  }).catch(function(){});
+  document.getElementById('cp-send').onclick=function(){doClaimPoints(this,r);};
+}
+async function doClaimPoints(btn,r){
+  btn.disabled=true;btn.textContent='Sending…';
+  var mid=(document.getElementById('cp-shop')||{}).value||'';
+  var typedId=((document.getElementById('cp-mid')||{}).value||'').trim().toUpperCase();
+  var amt=parseFloat((document.getElementById('cp-amt')||{}).value||0)||0;
+  // If they typed a shop code, look up the merchant id.
+  var shopId='';
+  if(!mid && typedId){
+    shopId=typedId;
+    try{
+      var ms=await get('merchants','shop_id=eq.'+encodeURIComponent(typedId)+'&select=id,name');
+      if(Array.isArray(ms)&&ms.length){mid=ms[0].id;}
+    }catch(e){}
+  }
+  if(!mid && !shopId){btn.disabled=false;btn.textContent='Send request to shop';T('Pick a shop or enter a shop ID','error');return;}
+  try{
+    await post('points_requests',{user_id:UID,user_lid:(PROF&&PROF.loyalty_id)||'',user_name:(PROF&&PROF.name)||'',merchant_id:mid||null,shop_id:shopId||null,shop_name:r.merchant_name||'',amount:amt,image_url:r.image_url||null,status:'pending',created_at:Date.now()});
+    var box=btn.closest('.mo');if(box)box.remove();
+    T('✅ Sent! The shop will review and add your points.','success');
+  }catch(e){
+    btn.disabled=false;btn.textContent='Send request to shop';
+    T('⚠️ Could not send — check connection','error');
+  }
+}
 function loadReceipts(){
   rcpYearInit();
   const el=document.getElementById('receipts-list');if(!el)return;
@@ -3594,7 +3644,7 @@ txt('rcp-total','£'+tot.toFixed(2));txt('rcp-count',RECEIPTS.length+' receipts'
     if(!RECEIPTS.length){el.innerHTML='<div class="empty"><i>🧾</i><p>No receipts in this period.<br>Scan one with 📷 or save from completed orders.</p></div>';return}
     el.innerHTML=RECEIPTS.map(function(r,i){return '<div class="ic" style="margin:0 0 10px">'
       +(r.image_url?'<img src="'+r.image_url+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:10px" onclick="window.open(String.fromCharCode(39)+r.image_url" onerror="this.style.display=String.fromCharCode(39)+String.fromCharCode(39)">':'')
-      +'<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">🧾 '+(r.merchant_name||'Receipt')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.receipt_no||'')+' · '+(r.created_at?new Date(r.created_at).toLocaleString().slice(0,17):'')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.items||'')+'</div></div><div style="text-align:right"><div style="font-size:17px;font-weight:800;color:var(--purple)">£'+parseFloat(r.total||0).toFixed(2)+'</div><div style="margin-top:6px"><button onclick="downloadReceiptPDF('+i+')" style="background:var(--purple-bg);color:var(--purple);border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">⬇ PDF</button> <button onclick="deleteReceipt('+i+')" style="background:#fef2f2;color:#ef4444;border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">🗑</button></div></div></div></div>'}).join('');
+      +'<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">🧾 '+(r.merchant_name||'Receipt')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.receipt_no||'')+' · '+(r.created_at?new Date(r.created_at).toLocaleString().slice(0,17):'')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.items||'')+'</div></div><div style="text-align:right"><div style="font-size:17px;font-weight:800;color:var(--purple)">£'+parseFloat(r.total||0).toFixed(2)+'</div><div style="margin-top:6px"><button onclick="claimPoints('+i+')" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">💎 Claim points</button> <button onclick="downloadReceiptPDF('+i+')" style="background:var(--purple-bg);color:var(--purple);border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">⬇ PDF</button> <button onclick="deleteReceipt('+i+')" style="background:#fef2f2;color:#ef4444;border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">🗑</button></div></div></div></div>'}).join('');
     // fix image handlers cleanly
     Array.prototype.forEach.call(el.querySelectorAll('img'),function(im,i){
       im.onclick=function(){window.open(RECEIPTS[i]&&RECEIPTS[i].image_url||'#','_blank')};

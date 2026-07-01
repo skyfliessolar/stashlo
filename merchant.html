@@ -841,7 +841,12 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   </div>
 
   <!-- ORDERS -->
-  <div class="screen" id="jobs-screen">
+  <div class="screen" id="claims-screen">
+    <div class="sh"><span style="display:flex;align-items:center"><button onclick="switchTab('overview')" style="background:var(--purple3);color:var(--purple);border:none;border-radius:8px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;margin-right:8px;flex-shrink:0">‹</button><span class="sh-t">🧾 Receipt Claims</span></span></div>
+    <div style="font-size:13px;color:var(--ink3);margin-bottom:12px">Customers who bought using your other till can send their receipt here. Review the photo and add their loyalty points.</div>
+    <div id="claims-list"></div>
+  </div>
+    <div class="screen" id="jobs-screen">
     <div class="sh"><span style="display:flex;align-items:center"><button onclick="switchTab('overview')" style="background:var(--purple3);color:var(--purple);border:none;border-radius:8px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;margin-right:8px;flex-shrink:0">‹</button><span class="sh-t">💼 Jobs</span></span></div>
     <div class="setting-card">
       <div class="setting-title">📢 Post a Job</div>
@@ -1141,6 +1146,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div onclick="switchTab('ai');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🤖</div><div style="font-size:11px;font-weight:700">AI Agent</div></div>
         <div onclick="switchTab('inbox');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">📬</div><div style="font-size:11px;font-weight:700" id="m-inbox-lab2">Inbox</div></div>
         <div onclick="switchTab('jobs');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">💼</div><div style="font-size:11px;font-weight:700">Jobs</div></div>
+        <div onclick="switchTab('claims');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;position:relative"><div style="font-size:24px;margin-bottom:4px">🧾</div><div style="font-size:11px;font-weight:700">Receipt Claims</div><span id="claims-badge" style="display:none;position:absolute;top:6px;right:14px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;border-radius:10px;padding:1px 6px"></span></div>
         <div onclick="merchantEmailSupport();closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">✉️</div><div style="font-size:11px;font-weight:700">Support</div></div>
         <div onclick="window.open('https://stashlo.com/privacy.html','_blank');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🔒</div><div style="font-size:11px;font-weight:700">Privacy</div></div>
         <div onclick="window.open('https://stashlo.com/terms.html','_blank');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">📄</div><div style="font-size:11px;font-weight:700">Terms</div></div>
@@ -1980,6 +1986,59 @@ function postJob(){
   .then(()=>{T("✅ Job posted!","success");["job-title","job-salary","job-email"].forEach(id=>{const e=document.getElementById(id);if(e)e.value=""});document.getElementById("job-desc").value="";loadJobs()})
   .catch(()=>T("Failed to post job","error"))
 }
+// ===== RECEIPT CLAIMS (external-till receipts -> approve points) =====
+function loadClaims(){
+  var el=document.getElementById('claims-list');if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--ink3)">Loading…</div>';
+  // Requests aimed at this merchant (by merchant_id) that are still pending.
+  get('points_requests','merchant_id=eq.'+MID+'&order=created_at.desc').then(function(d){
+    var rows=Array.isArray(d)?d:[];
+    var pending=rows.filter(function(r){return r.status==='pending';});
+    // Update the badge in the More drawer.
+    var badge=document.getElementById('claims-badge');
+    if(badge){if(pending.length){badge.style.display='block';badge.textContent=pending.length;}else{badge.style.display='none';}}
+    if(!rows.length){el.innerHTML='<div style="text-align:center;padding:30px;color:var(--ink3)">🧾<br>No receipt claims yet.</div>';return;}
+    el.innerHTML=rows.map(function(r){
+      var statusChip=r.status==='approved'?'<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">✅ Approved '+(r.points_awarded||0)+' pts</span>':(r.status==='rejected'?'<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">⛔ Rejected</span>':'<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:800">⏳ Pending</span>');
+      var actions='';
+      if(r.status==='pending'){
+        actions='<div style="display:flex;gap:8px;margin-top:10px">'
+          +'<input id="cpts-'+r.id+'" type="number" placeholder="Points" value="'+Math.max(0,Math.round(parseFloat(r.amount||0)))+'" style="width:80px;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:13px">'
+          +'<button onclick="approveClaim(\''+r.id+'\')" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;padding:8px;font-weight:800;font-size:13px;cursor:pointer">✓ Approve &amp; add points</button>'
+          +'<button onclick="rejectClaim(\''+r.id+'\')" style="background:#fef2f2;color:#dc2626;border:none;border-radius:8px;padding:8px 12px;font-weight:800;font-size:13px;cursor:pointer">⛔</button>'
+          +'</div>';
+      }
+      return '<div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px">'
+        +(r.image_url?'<img src="'+r.image_url+'" onclick="window.open(\''+r.image_url+'\',\'_blank\')" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-bottom:10px;cursor:pointer">':'')
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-weight:800;font-size:14px">'+(r.user_name||'Customer')+'</div><div style="font-size:12px;color:var(--ink3)">'+(r.user_lid||'')+' · '+(r.shop_name||'')+'</div><div style="font-size:12px;color:var(--ink3)">Receipt total: £'+parseFloat(r.amount||0).toFixed(2)+'</div></div>'+statusChip+'</div>'
+        +actions
+        +'</div>';
+    }).join('');
+  }).catch(function(){el.innerHTML='<div style="text-align:center;padding:20px;color:#ef4444">Could not load claims (is the points_requests table created?)</div>';});
+}
+function approveClaim(id){
+  var ptsEl=document.getElementById('cpts-'+id);
+  var pts=Math.max(0,Math.round(parseFloat((ptsEl&&ptsEl.value)||0)))||0;
+  if(pts<=0){T('Enter points to award','error');return;}
+  // Fetch the request to get the customer, then award + mark approved.
+  get('points_requests','id=eq.'+id).then(function(d){
+    var r=(Array.isArray(d)&&d[0])||null;if(!r){T('Not found','error');return;}
+    var cust={id:r.user_id,name:r.user_name,loyalty_id:r.user_lid};
+    // Reuse the same loyalty engine used by the till (writes merchant_customers).
+    if(typeof awardLoyaltyForSale==='function'){
+      awardLoyaltyForSale(cust, pts, {id:'claim-'+id, _fixedPoints:pts});
+    }
+    pat('points_requests','id=eq.'+id,{status:'approved',points_awarded:pts,decided_at:Date.now()})
+      .then(function(){T('✅ '+pts+' points added to '+(r.user_name||'customer'),'success');loadClaims();})
+      .catch(function(){T('Awarded, but status update failed','error');});
+  }).catch(function(){T('Failed','error');});
+}
+function rejectClaim(id){
+  if(!confirm('Reject this receipt claim? The customer will not get points.'))return;
+  pat('points_requests','id=eq.'+id,{status:'rejected',decided_at:Date.now()})
+    .then(function(){T('Claim rejected','success');loadClaims();})
+    .catch(function(){T('Failed','error');});
+}
 function loadJobs(){
   get("jobs","merchant_id=eq."+MID+"&active=eq.true&order=created_at.desc").then(d=>{
     const jobs=Array.isArray(d)?d:[];
@@ -2106,7 +2165,8 @@ function switchTab(name){
   if(name==="settings"){loadAccounting();loadMerchRewards();}
   if(name==="pos")posGuard();
   if(name==="jobs")loadJobs();
-  if(["till","products","customers","settings","ai","inbox","jobs"].includes(name)){const mb=document.getElementById("nb-more-btn");if(mb)mb.classList.add("on");}
+  if(name==="claims")loadClaims();
+  if(["till","products","customers","settings","ai","inbox","jobs","claims"].includes(name)){const mb=document.getElementById("nb-more-btn");if(mb)mb.classList.add("on");}
 }
 
 let scanActive=false;
