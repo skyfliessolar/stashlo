@@ -1176,7 +1176,14 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div class="field"><label class="field-label">Stock count</label><input id="p-stock" type="number" placeholder="0" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"></div>
       </div>
       <div class="field"><label class="field-label">POS category</label><select id="p-cat" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"><option value="general">General</option><option value="grocery">Grocery</option><option value="crisps">Crisps & snacks</option><option value="juice">Juice & drinks</option><option value="alcohol">Alcohol</option><option value="vapes">Vapes</option><option value="tobacco">Tobacco</option><option value="cigarettes">Cigarettes</option><option value="car">Car accessories</option></select></div>
-      <div class="field"><label class="field-label">Emoji Icon</label><input id="p-emoji" placeholder="☕" maxlength="4"></div>
+      <div class="field"><label class="field-label">Product Photo (optional — shown instead of the emoji)</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div id="p-photo-preview" style="width:56px;height:56px;border-radius:12px;background:var(--bg2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><span id="p-photo-placeholder" style="font-size:22px">🖼️</span><img id="p-photo-img" style="display:none;width:100%;height:100%;object-fit:cover"></div>
+          <label style="flex:1;text-align:center;padding:10px;background:var(--purple-bg);color:var(--purple);border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">📷 Upload photo<input type="file" accept="image/*" onchange="handleProductPhotoUpload(this)" style="display:none"></label>
+        </div>
+        <input type="hidden" id="p-image-url">
+      </div>
+      <div class="field"><label class="field-label">Emoji Icon (used if no photo)</label><input id="p-emoji" placeholder="☕" maxlength="4"></div>
       <div class="field"><label class="field-label">Category</label>
         <select id="p-cat"><option value="drinks">Drinks</option><option value="food">Food</option><option value="snacks">Snacks</option><option value="retail">Retail</option><option value="service">Service</option><option value="other">Other</option></select>
       </div>
@@ -1370,7 +1377,7 @@ function fmtRule(){const t=MDATA.loyalty_type||"points",v=MDATA.loyalty_value||1
 
 function renderProducts(){
   const el=document.getElementById("products-list");if(!el)return;
-  el.innerHTML=PRODUCTS.length?PRODUCTS.map(p=>`<div class="ic"><div class="ic-row"><div><div class="ic-name">${p.emoji||"🛍️"} ${p.name}</div><div class="ic-sub">£${parseFloat(p.price||0).toFixed(2)} · ${p.category||"other"} ${p.active===false?"<span style='color:var(--red)'>· Hidden</span>":""}</div><div style="display:flex;gap:6px;margin-top:6px">${p.collect!==false?"<span style='font-size:11px;background:var(--green3);color:#065f46;padding:3px 8px;border-radius:6px;font-weight:700'>Collect</span>":""}${p.delivery?"<span style='font-size:11px;background:var(--blue3);color:var(--blue);padding:3px 8px;border-radius:6px;font-weight:700'>Delivery</span>":""}</div></div><div class="ic-acts"><button class="btn-xs btn-edit" onclick="editProd('${p.id}')">✏️</button><button class="btn-xs btn-del" onclick="confirmDelProd('${p.id}','${p.name.replace(/'/g,"")}')">🗑</button></div></div></div>`).join("")
+  el.innerHTML=PRODUCTS.length?PRODUCTS.map(p=>`<div class="ic"><div class="ic-row" style="align-items:center">${p.image_url?`<img src="${p.image_url}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;margin-right:10px;flex-shrink:0">`:""}<div><div class="ic-name">${p.image_url?"":(p.emoji||"🛍️")+" "} ${p.name}</div><div class="ic-sub">£${parseFloat(p.price||0).toFixed(2)} · ${p.category||"other"} ${p.active===false?"<span style='color:var(--red)'>· Hidden</span>":""}</div><div style="display:flex;gap:6px;margin-top:6px">${p.collect!==false?"<span style='font-size:11px;background:var(--green3);color:#065f46;padding:3px 8px;border-radius:6px;font-weight:700'>Collect</span>":""}${p.delivery?"<span style='font-size:11px;background:var(--blue3);color:var(--blue);padding:3px 8px;border-radius:6px;font-weight:700'>Delivery</span>":""}</div></div><div class="ic-acts"><button class="btn-xs btn-edit" onclick="editProd('${p.id}')">✏️</button><button class="btn-xs btn-del" onclick="confirmDelProd('${p.id}','${p.name.replace(/'/g,"")}')">🗑</button></div></div></div>`).join("")
     :"<div class=\"empty\"><div class=\"empty-ico\">🛍️</div><div class=\"empty-txt\">No products yet<br>Tap + Add to create</div></div>";
 }
 function renderOrders(){
@@ -1448,6 +1455,8 @@ function openAddProd(){
   document.getElementById("prod-modal-title").textContent="Add Product";
   ["p-name","p-desc"].forEach(id=>{const e=document.getElementById(id);if(e)e.value=""});
   document.getElementById("p-price").value="";document.getElementById("p-emoji").value="";
+  document.getElementById("p-image-url").value="";
+  (function(){var img=document.getElementById("p-photo-img");var ph=document.getElementById("p-photo-placeholder");if(img){img.style.display="none";img.src="";}if(ph)ph.style.display="block";})();
   document.getElementById("p-collect").checked=true;document.getElementById("p-delivery").checked=false;document.getElementById("p-active").checked=true;
   const pe=document.getElementById("p-err");if(pe)pe.style.display="none";
   // Adding a NEW product — use defaults, no existing product 'p' here (this was the bug)
@@ -1468,6 +1477,12 @@ function editProd(id){
   setV("p-price",p.price);
   setV("p-emoji",p.emoji);
   setV("p-desc",p.description);
+  setV("p-image-url",p.image_url||"");
+  (function(){
+    var img=document.getElementById("p-photo-img");var ph=document.getElementById("p-photo-placeholder");
+    if(p.image_url){ if(img){img.src=p.image_url;img.style.display="block";} if(ph)ph.style.display="none"; }
+    else { if(img){img.style.display="none";img.src="";} if(ph)ph.style.display="block"; }
+  })();
   // Populate ALL fields so saving doesn't wipe them.
   setV("p-vat",p.vat_rate!=null?p.vat_rate:"20");
   setV("p-cost",p.cost_price!=null?p.cost_price:"");
@@ -1487,7 +1502,7 @@ function saveProd(){
   const name=V("p-name"),price=parseFloat(document.getElementById("p-price").value||0),eid=V("edit-prod-id");
   if(!name||price<=0){const e=document.getElementById("p-err");if(e){e.textContent="Name and price required";e.style.display="block";}return}
   const btn=document.querySelector("#prodModal .btn-primary");if(btn){btn.textContent="Saving...";btn.disabled=true;}
-  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",barcode:V("p-barcode")||null,stock:parseInt(document.getElementById("p-stock").value||0),category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked,no_loyalty:!(document.getElementById("p-loyalty")||{checked:true}).checked};
+  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",image_url:V("p-image-url")||null,vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",barcode:V("p-barcode")||null,stock:parseInt(document.getElementById("p-stock").value||0),category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked,no_loyalty:!(document.getElementById("p-loyalty")||{checked:true}).checked};
   const action=eid?pat("products","id=eq."+eid,data):post("products",{...data,created_at:Date.now()});
   action.then((res)=>{
       T("✅ "+name+" saved!","success");closeModal("prodModal");
@@ -2114,6 +2129,21 @@ function renderAI(){
   el.scrollTop=el.scrollHeight;
 }
 
+async function handleProductPhotoUpload(input){
+  const file=input.files[0];if(!file)return;if(file.size>2*1024*1024){T("Max 2MB","error");return}
+  T("Uploading photo…");
+  try{
+    const ext=(file.name.split(".").pop()||"jpg").toLowerCase();
+    const name="products/"+MID+"/"+Date.now()+"."+ext;
+    const res=await fetch(SU+"/storage/v1/object/stashlo-images/"+name,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+(TOK||SK),"Content-Type":file.type||"image/jpeg","x-upsert":"true"},body:file});
+    if(!res.ok)throw new Error("Upload failed");
+    const url=SU+"/storage/v1/object/public/stashlo-images/"+name;
+    document.getElementById("p-image-url").value=url;
+    const img=document.getElementById("p-photo-img");const ph=document.getElementById("p-photo-placeholder");
+    if(img){img.src=url;img.style.display="block";}if(ph)ph.style.display="none";
+    T("✅ Photo added — tap Save Product to keep it","success");
+  }catch(e){T("Upload failed: "+e.message,"error")}
+}
 async function handleLogoUpload(input){
   const file=input.files[0];if(!file)return;if(file.size>2*1024*1024){T("Max 2MB","error");return}
   T("Uploading...");
