@@ -2029,9 +2029,10 @@ function approveClaim(id){
   get('points_requests','id=eq.'+id).then(function(d){
     var r=(Array.isArray(d)&&d[0])||null;if(!r){T('Not found','error');return;}
     var cust={id:r.user_id,name:r.user_name,loyalty_id:r.user_lid};
-    // Reuse the same loyalty engine used by the till (writes merchant_customers).
+    // Award the EXACT points the merchant typed (via _fixedPoints); pass the
+    // receipt total as the spend so total_spend/visits update correctly.
     if(typeof awardLoyaltyForSale==='function'){
-      awardLoyaltyForSale(cust, pts, {id:'claim-'+id, _fixedPoints:pts});
+      awardLoyaltyForSale(cust, parseFloat(r.amount||0)||0, {id:'claim-'+id, _fixedPoints:pts});
     }
     pat('points_requests','id=eq.'+id,{status:'approved',points_awarded:pts,decided_at:Date.now()})
       .then(function(){T('✅ '+pts+' points added to '+(r.user_name||'customer'),'success');loadClaims();})
@@ -2503,8 +2504,12 @@ function posRefund(id){
   }).catch(function(){T('Refund failed — pos_sales.refund column missing? Run migration','error');});
 }
 function awardLoyaltyForSale(cust, amount, sale){
-  // Points for this spend, per the shop's loyalty rule.
-  var loy=calcLoy(amount); var pts=loy.pts||0;
+  // Points for this spend, per the shop's loyalty rule — UNLESS a fixed points
+  // override is supplied (e.g. approving a receipt claim where the merchant typed
+  // the exact points to give).
+  var pts;
+  if(sale && sale._fixedPoints!=null){ pts=Math.max(0,Math.round(sale._fixedPoints)); }
+  else { var loy=calcLoy(amount); pts=loy.pts||0; }
   var uid=cust.id; var lid=cust.loyalty_id||'';
   if(!uid){T('⚠️ Customer has no ID — cannot award points','error');return;}
   if(!MID){T('⚠️ Shop ID missing — cannot award points','error');return;}
