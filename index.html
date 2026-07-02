@@ -1346,6 +1346,12 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       </div>
     </div>
 
+    <!-- SUNGLASSES (Stashlo products, category=sunglasses) -->
+    <div id="home-sunglasses-sec" style="display:none">
+      <div class="sh pt16" style="display:flex;justify-content:space-between;align-items:center"><span class="sh-t">🕶️ Sunglasses</span><span onclick="goTab('shop')" style="font-size:12px;font-weight:700;color:var(--purple);cursor:pointer">See all ›</span></div>
+      <div class="prods-grid" id="home-sunglasses" style="padding:0 16px"></div>
+    </div>
+
     </div><!-- home close -->
   <div class="screen" id="cards-screen">
     <div class="tab-row" style="margin-top:12px">
@@ -2371,7 +2377,7 @@ function boot(){
   document.getElementById('auth').style.display='none';
   document.getElementById('app').style.display='flex';
   txt('h-greet',greet());
-  loadTheme3D();loadProf();loadCards();loadOrders();buildBrands();loadStashloProd();loadPaymentCards();
+  loadTheme3D();loadProf();loadCards();loadOrders();buildBrands();loadStashloProd();loadHomeSunglasses();loadPaymentCards();
   setTimeout(function(){loadInbox();startGPS();loadMyRewards();try{startGeofence();}catch(e){}},2000);
   // When the app regains focus after a notification tap, show the pending card popup.
   document.addEventListener('visibilitychange',function(){
@@ -2764,6 +2770,16 @@ function updateMyShops(){
     </div>`).join(''):'<div class="empty" style="padding:20px"><i>🏪</i><p>Find a shop and add it here</p></div>';
 }
 
+// ===== HOME: SUNGLASSES SECTION =====
+function loadHomeSunglasses(){
+  get('stashlo_products','active=eq.true&category=eq.sunglasses&order=created_at.desc&limit=8').then(d=>{
+    const ps=Array.isArray(d)?d:[];
+    const sec=document.getElementById('home-sunglasses-sec'),el=document.getElementById('home-sunglasses');
+    if(!ps.length||!sec||!el){if(sec)sec.style.display='none';return}
+    sec.style.display='block';
+    el.innerHTML=ps.map(p=>pCard(p,{id:'stashlo',name:'Stashlo Store',loyalty_type:'points',loyalty_threshold:100})).join('');
+  }).catch(()=>{})
+}
 // ===== STASHLO PRODUCTS =====
 function loadStashloProd(){
   get('stashlo_products','active=eq.true&order=created_at.desc').then(d=>{
@@ -3909,7 +3925,7 @@ function goTab(n){
   // ═══ Tab handlers ═══
   if(n==='orders'){setTimeout(function(){purchTab('all');},100);}
   if(n==='cards'){setTimeout(function(){fCards('n');if(typeof renderAllCards==='function')renderAllCards();},80);}
-  if(n==='shop'){updateMyShops();loadStashloProd();loadNearbyStrip();loadAllMerchants();}
+  if(n==='shop'){updateMyShops();loadStashloProd();loadHomeSunglasses();loadNearbyStrip();loadAllMerchants();}
   if(n==='inbox')loadInbox();
   if(n==='offers'){setTimeout(function(){if(typeof rwTab==='function')rwTab('scratch');loadMyRewards();},100);}
   if(n==='jobs')loadJobs();
