@@ -1346,10 +1346,14 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       </div>
     </div>
 
-    <!-- SUNGLASSES (Stashlo products, category=sunglasses) -->
-    <div id="home-sunglasses-sec" style="display:none">
-      <div class="sh pt16" style="display:flex;justify-content:space-between;align-items:center"><span class="sh-t" onclick="openCategoryView('sunglasses','🕶️ Sunglasses')" style="cursor:pointer">🕶️ Sunglasses</span><span onclick="openCategoryView('sunglasses','🕶️ Sunglasses')" style="font-size:12px;font-weight:700;color:var(--purple);cursor:pointer">See all ›</span></div>
-      <div class="prods-grid" id="home-sunglasses" style="padding:0 16px"></div>
+    <!-- SUNGLASSES: one button -> full category view -->
+    <div id="home-sunglasses-sec" style="display:none;padding:16px 16px 0">
+      <div onclick="openCategoryView('sunglasses','🕶️ Sunglasses')" style="background:linear-gradient(135deg,#0f172a,#334155);border-radius:18px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 6px 16px rgba(15,23,42,.3)">
+        <img src="img/products/sunglasses-c1.jpg" style="width:56px;height:56px;border-radius:14px;object-fit:cover;flex-shrink:0" onerror="this.outerHTML='<div style=&quot;width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:26px&quot;>🕶️</div>'">
+        <div style="flex:1"><div style="font-weight:900;font-size:16px;color:#fff">🕶️ Sunglasses</div>
+        <div id="home-sunglasses-count" style="font-size:12px;color:rgba(255,255,255,.8);margin-top:2px">Shop all styles</div></div>
+        <div style="color:#fff;font-size:20px">›</div>
+      </div>
     </div>
     <!-- ELECTRONICS (Stashlo products, category=electronics) -->
     <div id="home-electronics-sec" style="display:none">
@@ -2813,7 +2817,14 @@ function _loadHomeCat(cat,secId,gridId){
   }).catch(()=>{})
 }
 function loadHomeSunglasses(){
-  _loadHomeCat('sunglasses','home-sunglasses-sec','home-sunglasses');
+  // Sunglasses: one button — just show it (with a count) if any exist.
+  get('stashlo_products','active=eq.true&category=eq.sunglasses&select=id&limit=50').then(d=>{
+    const n=Array.isArray(d)?d.length:0;
+    const sec=document.getElementById('home-sunglasses-sec');
+    if(sec)sec.style.display=n?'block':'none';
+    const c=document.getElementById('home-sunglasses-count');
+    if(c&&n)c.textContent=n+' styles — tap to shop';
+  }).catch(()=>{});
   _loadHomeCat('electronics','home-electronics-sec','home-electronics');
 }
 function loadHomeElectronics(){
