@@ -1189,6 +1189,9 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
           <label style="flex:1;text-align:center;padding:10px;background:var(--purple-bg);color:var(--purple);border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">📷 Upload photo<input type="file" accept="image/*" onchange="handleProductPhotoUpload(this)" style="display:none"></label>
         </div>
         <input type="hidden" id="p-image-url">
+        <div id="p-gallery" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"></div>
+        <label style="display:inline-block;padding:8px 12px;background:var(--purple-bg);color:var(--purple);border-radius:10px;font-weight:700;font-size:12px;cursor:pointer">➕ Add more photos<input type="file" accept="image/*" multiple style="display:none" onchange="mAddPhotos(this)"></label>
+        <input type="hidden" id="p-images">
       </div>
       <div class="field"><label class="field-label">Emoji Icon (used if no photo)</label><input id="p-emoji" placeholder="☕" maxlength="4"></div>
       <div class="field"><label class="field-label">Category</label>
@@ -1463,6 +1466,7 @@ function openAddProd(){
   ["p-name","p-desc"].forEach(id=>{const e=document.getElementById(id);if(e)e.value=""});
   document.getElementById("p-price").value="";document.getElementById("p-emoji").value="";
   document.getElementById("p-image-url").value="";
+  (function(){const e=document.getElementById("p-images");if(e){e.value="[]";mRenderGallery([]);}})();
   (function(){var img=document.getElementById("p-photo-img");var ph=document.getElementById("p-photo-placeholder");if(img){img.style.display="none";img.src="";}if(ph)ph.style.display="block";})();
   document.getElementById("p-collect").checked=true;document.getElementById("p-delivery").checked=false;document.getElementById("p-active").checked=true;
   const pe=document.getElementById("p-err");if(pe)pe.style.display="none";
@@ -1485,6 +1489,7 @@ function editProd(id){
   setV("p-emoji",p.emoji);
   setV("p-desc",p.description);
   setV("p-image-url",p.image_url||"");
+  (function(){const g=Array.isArray(p.images)?p.images:[];const e=document.getElementById("p-images");if(e){e.value=JSON.stringify(g);mRenderGallery(g);}})();
   (function(){
     var img=document.getElementById("p-photo-img");var ph=document.getElementById("p-photo-placeholder");
     if(p.image_url){ if(img){img.src=p.image_url;img.style.display="block";} if(ph)ph.style.display="none"; }
@@ -1509,7 +1514,7 @@ function saveProd(){
   const name=V("p-name"),price=parseFloat(document.getElementById("p-price").value||0),eid=V("edit-prod-id");
   if(!name||price<=0){const e=document.getElementById("p-err");if(e){e.textContent="Name and price required";e.style.display="block";}return}
   const btn=document.querySelector("#prodModal .btn-primary");if(btn){btn.textContent="Saving...";btn.disabled=true;}
-  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",image_url:V("p-image-url")||null,vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",barcode:V("p-barcode")||null,stock:parseInt(document.getElementById("p-stock").value||0),category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked,no_loyalty:!(document.getElementById("p-loyalty")||{checked:true}).checked};
+  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",image_url:V("p-image-url")||null,vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",barcode:V("p-barcode")||null,stock:parseInt(document.getElementById("p-stock").value||0),category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked,no_loyalty:!(document.getElementById("p-loyalty")||{checked:true}).checked};try{const _g=JSON.parse(document.getElementById("p-images").value||"[]");data.images=_g;if(!data.image_url&&_g.length)data.image_url=_g[0];}catch(e){}
   const action=eid?pat("products","id=eq."+eid,data):post("products",{...data,created_at:Date.now()});
   action.then((res)=>{
       T("✅ "+name+" saved!","success");closeModal("prodModal");
@@ -2152,6 +2157,30 @@ function renderAI(){
   el.scrollTop=el.scrollHeight;
 }
 
+async function mAddPhotos(input){
+  const files=[...(input.files||[])];if(!files.length)return;
+  let arr=[];try{arr=JSON.parse(document.getElementById("p-images").value||"[]")}catch(e){}
+  for(const f of files){
+    if(f.size>2*1024*1024){T("Max 2MB each","error");continue}
+    T("Uploading…");
+    try{
+      const name="products/"+MID+"/"+Date.now()+"-"+Math.random().toString(36).slice(2,6)+"."+((f.name.split(".").pop()||"jpg").toLowerCase());
+      const res=await fetch(SU+"/storage/v1/object/stashlo-images/"+name,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+(TOK||SK),"Content-Type":f.type||"image/jpeg","x-upsert":"true"},body:f});
+      if(!res.ok)throw 0;
+      arr.push(SU+"/storage/v1/object/public/stashlo-images/"+name);
+    }catch(e){T("Upload failed","error")}
+  }
+  document.getElementById("p-images").value=JSON.stringify(arr);
+  mRenderGallery(arr);T("✅ "+arr.length+" photo(s) attached","success");
+}
+function mRenderGallery(arr){
+  const g=document.getElementById("p-gallery");if(!g)return;
+  g.innerHTML=(arr||[]).map((u,i)=>'<div style="position:relative"><img src="'+u+'" style="width:54px;height:54px;border-radius:8px;object-fit:cover"><span onclick="mRemovePhoto('+i+')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer">×</span></div>').join('');
+}
+function mRemovePhoto(i){
+  let arr=[];try{arr=JSON.parse(document.getElementById("p-images").value||"[]")}catch(e){}
+  arr.splice(i,1);document.getElementById("p-images").value=JSON.stringify(arr);mRenderGallery(arr);
+}
 async function handleProductPhotoUpload(input){
   const file=input.files[0];if(!file)return;if(file.size>2*1024*1024){T("Max 2MB","error");return}
   T("Uploading photo…");

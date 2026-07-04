@@ -775,6 +775,16 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   <!-- PRODUCTS SCREEN -->
   <div class="screen" id="products-screen">
     <div class="sh"><span class="sh-t">🛍️ Stashlo Products</span><button class="sh-btn" onclick="openAddProd()">+ Add</button></div>
+    <div class="ic" style="margin-bottom:14px">
+      <div style="font-weight:800;margin-bottom:4px">📍 Collection Points (Stashlo store)</div>
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Where customers can collect Stashlo products. Add by postcode.</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="acp-name" placeholder="Name e.g. Croydon Point" style="flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px">
+        <input id="acp-pc" placeholder="Postcode" style="width:110px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px;text-transform:uppercase">
+        <button class="sl-btn btn-xs btn-green" onclick="addAdminCP()">+ Add</button>
+      </div>
+      <div id="acp-list"></div>
+    </div>
     <div id="stashlo-products-list"></div>
   </div>
 
@@ -939,6 +949,9 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div style="border:2px dashed var(--bg2);border-radius:var(--r12);padding:16px;text-align:center;cursor:pointer;background:#fafafa" onclick="document.getElementById('sp-img-file').click()">
           <input type="file" id="sp-img-file" accept="image/*" style="display:none" onchange="previewUpload(this,'sp-img-prev')">
           <img id="sp-img-prev" style="display:none;width:70px;height:70px;border-radius:var(--r8);object-fit:cover;margin-bottom:8px">
+          <div id="sp-gallery" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"></div>
+          <label style="display:inline-block;padding:8px 12px;background:var(--purple3);color:var(--purple);border-radius:var(--r8);font-weight:700;font-size:12px;cursor:pointer">➕ Add more photos<input type="file" accept="image/*" multiple style="display:none" onchange="spAddPhotos(this)"></label>
+          <input type="hidden" id="sp-images">
           <div style="font-size:13px;color:var(--ink3)">📸 Upload image</div>
         </div>
       </div>
@@ -1546,7 +1559,57 @@ function deleteCustomer(){
 }
 
 // ── PRODUCTS ───────────────────────────────────────────────
+async function spAddPhotos(input){
+  const files=[...(input.files||[])];if(!files.length)return;
+  let arr=[];try{arr=JSON.parse(document.getElementById('sp-images').value||'[]')}catch(e){}
+  for(const f of files){
+    if(f.size>2*1024*1024){T('Max 2MB each','error');continue}
+    T('Uploading…');
+    try{
+      const name='stashlo/'+Date.now()+'-'+Math.random().toString(36).slice(2,6)+'.'+((f.name.split('.').pop()||'jpg').toLowerCase());
+      const res=await fetch(SU+'/storage/v1/object/stashlo-images/'+name,{method:'POST',headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':f.type||'image/jpeg','x-upsert':'true'},body:f});
+      if(!res.ok)throw 0;
+      arr.push(SU+'/storage/v1/object/public/stashlo-images/'+name);
+    }catch(e){T('Upload failed','error')}
+  }
+  document.getElementById('sp-images').value=JSON.stringify(arr);
+  spRenderGallery(arr);
+  T('✅ '+arr.length+' photo(s) attached','success');
+}
+function spRenderGallery(arr){
+  const g=document.getElementById('sp-gallery');if(!g)return;
+  g.innerHTML=(arr||[]).map((u,i)=>'<div style="position:relative"><img src="'+u+'" style="width:54px;height:54px;border-radius:8px;object-fit:cover"><span onclick="spRemovePhoto('+i+')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer">×</span></div>').join('');
+}
+function spRemovePhoto(i){
+  let arr=[];try{arr=JSON.parse(document.getElementById('sp-images').value||'[]')}catch(e){}
+  arr.splice(i,1);document.getElementById('sp-images').value=JSON.stringify(arr);spRenderGallery(arr);
+}
+function loadAdminCPs(){
+  sget('collection_points','order=created_at.desc').then(d=>{
+    const el=document.getElementById('acp-list');if(!el)return;
+    const cps=Array.isArray(d)?d:[];
+    el.innerHTML=cps.length?cps.map(c=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;margin-bottom:6px"><div><div style="font-weight:700;font-size:13px">📍 '+(c.name||'Point')+'</div><div style="font-size:11px;color:var(--ink3)">'+(c.address||'')+'</div></div><button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="delAdminCP('+c.id+')">🗑</button></div>').join(''):'<div style="font-size:12px;color:var(--ink3);padding:6px">No collection points yet.</div>';
+  }).catch(()=>{const el=document.getElementById('acp-list');if(el)el.innerHTML='<div style="font-size:12px;color:var(--red)">Run the collection_points SQL first.</div>';});
+}
+function addAdminCP(){
+  const name=(document.getElementById('acp-name').value||'').trim();
+  const pc=(document.getElementById('acp-pc').value||'').trim();
+  if(!name||!pc){T('Enter a name and postcode','error');return}
+  T('📍 Looking up '+pc.toUpperCase()+'…');
+  fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(pc.replace(/\s+/g,'')))
+    .then(r=>r.json()).then(d=>{
+      if(!d||d.status!==200||!d.result){T('Postcode not found','error');return}
+      spost('collection_points',{name,address:(d.result.admin_ward||'')+', '+(d.result.admin_district||'')+' '+pc.toUpperCase(),lat:d.result.latitude,lng:d.result.longitude,active:true,created_at:Date.now()})
+        .then(()=>{T('✅ Collection point added','success');document.getElementById('acp-name').value='';document.getElementById('acp-pc').value='';loadAdminCPs();})
+        .catch(()=>T('Save failed — table exists?','error'));
+    }).catch(()=>T('Lookup failed','error'));
+}
+function delAdminCP(id){
+  if(!confirm('Remove this collection point?'))return;
+  sdel('collection_points','id=eq.'+id).then(()=>{T('Removed','success');loadAdminCPs();}).catch(()=>T('Failed','error'));
+}
 function openAddProd(){
+  const _si=document.getElementById('sp-images');if(_si){_si.value='[]';spRenderGallery([]);}
   CUR_PROD_ID=null;
   document.getElementById('prod-modal-title').textContent='Add Product';
   ['sp-name','sp-cat','sp-desc'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
@@ -1570,6 +1633,8 @@ function editProd(id){
   document.getElementById('sp-delivery').checked=!!p.delivery;
   const prev=document.getElementById('sp-img-prev');
   if(p.image_url){prev.src=p.image_url;prev.style.display='block';}else prev.style.display='none';
+  const imgs=Array.isArray(p.images)?p.images:[];
+  document.getElementById('sp-images').value=JSON.stringify(imgs);spRenderGallery(imgs);
   showErr('sp-err','');
   openModal('prodModal');
 }
@@ -1587,6 +1652,7 @@ async function saveProd(){
   }
   const data={name,price,emoji:V('sp-emoji')||'📦',category:V('sp-cat')||'other',description:V('sp-desc'),collect:document.getElementById('sp-collect').checked,delivery:document.getElementById('sp-delivery').checked,active:true};
   if(imgUrl)data.image_url=imgUrl;
+  try{const _g=JSON.parse(document.getElementById('sp-images').value||'[]');data.images=_g;if(!data.image_url&&_g.length)data.image_url=_g[0];}catch(e){}
   const act=CUR_PROD_ID?spat('stashlo_products','id=eq.'+CUR_PROD_ID,data):spost('stashlo_products',{...data,created_at:Date.now()});
   act.then(()=>{T('✅ Product saved!','success');closeModal('prodModal');loadStashProds();if(btn){btn.textContent='💾 Save Product';btn.disabled=false;}})
   .catch(()=>{showErr('sp-err','Save failed — please try again');if(btn){btn.textContent='💾 Save Product';btn.disabled=false;}})
