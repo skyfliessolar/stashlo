@@ -1432,6 +1432,22 @@ function filterMerchants(q){const s=q.toLowerCase();renderMerchants(MERCHANTS.fi
 function filterCustomers(q){const s=q.toLowerCase();renderCustomers(CUSTOMERS.filter(c=>(c.name||'').toLowerCase().includes(s)||(c.email||'').toLowerCase().includes(s)||(c.phone||'').includes(s)))}
 
 // ── MERCHANT DETAIL (secure) ───────────────────────────────
+function adminSetPostcode(id){
+  var pc=prompt("Collection postcode for this shop (e.g. CR0 2JG):");
+  if(!pc)return;
+  pc=pc.trim();
+  T("📍 Looking up "+pc.toUpperCase()+"…");
+  fetch("https://api.postcodes.io/postcodes/"+encodeURIComponent(pc.replace(/\s+/g,"")))
+    .then(r=>r.json()).then(d=>{
+      if(!d||d.status!==200||!d.result){T("Postcode not found","error");return}
+      var m=MERCHANTS.find(x=>x.id===id)||{};
+      var upd={lat:d.result.latitude,lng:d.result.longitude};
+      if(!m.address)upd.address=(d.result.admin_ward||"")+", "+(d.result.admin_district||"")+" "+pc.toUpperCase();
+      spat("merchants","id=eq."+id,upd)
+        .then(()=>{T("✅ Collection point set for "+(m.name||"shop"),"success");logAudit("set_postcode",m.name||id);loadMerchants();})
+        .catch(()=>T("Save failed","error"));
+    }).catch(()=>T("Lookup failed","error"));
+}
 function openMerch(id){
   CUR_MERCH=MERCHANTS.find(m=>m.id===id);if(!CUR_MERCH)return;
   const m=CUR_MERCH;
@@ -1447,6 +1463,7 @@ function openMerch(id){
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bg2)">
       <button class="btn btn-edit" style="display:inline-flex;padding:10px 16px;border-radius:var(--r8);font-size:13px;font-weight:700;margin-right:8px" onclick="closeModal('merchantModal');editMerch('${m.id}')">✏️ Edit Merchant</button>
       <button class="sl-btn btn-xs btn-purple" onclick="openChargeForMerch('${m.id}')">💰 Charge</button>
+      <button class="sl-btn btn-xs btn-green" onclick="adminSetPostcode('${m.id}')">📍 Postcode</button>
     </div>`;
   openModal('merchantModal');
 }

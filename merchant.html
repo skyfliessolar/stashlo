@@ -900,6 +900,13 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <select id="s-cat"><option value="food">Food & Drink</option><option value="retail">Retail</option><option value="beauty">Beauty & Health</option><option value="services">Services</option><option value="other">Other</option></select>
       </div>
       <div class="field"><label class="field-label">Address</label><input id="s-addr" placeholder="Shop address"></div>
+      <div class="field"><label class="field-label">📍 Collection Postcode</label>
+        <div style="display:flex;gap:8px">
+          <input id="s-postcode" placeholder="e.g. CR0 2JG" autocapitalize="characters" style="flex:1">
+          <button onclick="saveCollectionPostcode()" style="background:var(--purple);color:#fff;border:none;border-radius:10px;padding:0 14px;font-weight:700;font-size:13px;cursor:pointer">Set</button>
+        </div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:4px">Customers can pick your shop as a collection point near this postcode.</div>
+      </div>
       <div class="field"><label class="field-label">Opening Hours</label><input id="s-hours" placeholder="e.g. Mon-Sat 9am-6pm"></div>
       <div class="field"><label class="field-label">Shop Location (GPS)</label>
         <div style="display:flex;gap:10px;align-items:center">
@@ -1989,6 +1996,22 @@ function saveSettings(){
   const lv=document.getElementById("lv-val"),lt=document.getElementById("lv-thresh");
   const upd={name:V("s-name"),category:document.getElementById("s-cat")?.value||"other",address:V("s-addr"),open_hours:V("s-hours"),logo_emoji:V("s-emoji")||"🏪",loyalty_type:LT,loyalty_value:lv?parseFloat(lv.value)||1:1,loyalty_threshold:lt?parseFloat(lt.value)||100:100};
   pat("merchants","id=eq."+MID,upd).then(()=>{T("✅ Settings saved!","success");loadMerchant()}).catch(()=>T("Save failed","error"))
+}
+function saveCollectionPostcode(){
+  var pc=(V("s-postcode")||"").trim();
+  if(!pc){T("Enter a postcode","error");return}
+  T("📍 Looking up "+pc.toUpperCase()+"…");
+  fetch("https://api.postcodes.io/postcodes/"+encodeURIComponent(pc.replace(/\s+/g,"")))
+    .then(r=>r.json()).then(d=>{
+      if(!d||d.status!==200||!d.result){T("Postcode not found — check it","error");return}
+      var upd={lat:d.result.latitude,lng:d.result.longitude};
+      var addr=V("s-addr");
+      if(!addr){upd.address=(d.result.admin_ward||"")+", "+(d.result.admin_district||"")+" "+pc.toUpperCase();
+        var ae=document.getElementById("s-addr");if(ae)ae.value=upd.address;}
+      pat("merchants","id=eq."+MID,upd)
+        .then(()=>T("✅ Collection point set — your shop now appears in customer pickup search","success"))
+        .catch(()=>T("Save failed","error"));
+    }).catch(()=>T("Lookup failed — check connection","error"));
 }
 function setShopLocation(){
   if(!navigator.geolocation){T("Location not available","error");return}

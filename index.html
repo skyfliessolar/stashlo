@@ -1355,10 +1355,14 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div style="color:#fff;font-size:20px">›</div>
       </div>
     </div>
-    <!-- ELECTRONICS (Stashlo products, category=electronics) -->
-    <div id="home-electronics-sec" style="display:none">
-      <div class="sh pt16" style="display:flex;justify-content:space-between;align-items:center"><span class="sh-t" onclick="openCategoryView('electronics','🔌 Electronics')" style="cursor:pointer">🔌 Electronics</span><span onclick="openCategoryView('electronics','🔌 Electronics')" style="font-size:12px;font-weight:700;color:var(--purple);cursor:pointer">See all ›</span></div>
-      <div class="prods-grid" id="home-electronics" style="padding:0 16px"></div>
+    <!-- ELECTRONICS: one button -> full category view -->
+    <div id="home-electronics-sec" style="display:none;padding:12px 16px 0">
+      <div onclick="openCategoryView('electronics','🔌 Electronics')" style="background:linear-gradient(135deg,#5B4CF0,#8B5CF6);border-radius:18px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 6px 16px rgba(91,76,240,.3)">
+        <img src="img/products/typec-cable.png" style="width:56px;height:56px;border-radius:14px;object-fit:cover;flex-shrink:0;background:#fff" onerror="this.outerHTML='<div style=&quot;width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:26px&quot;>🔌</div>'">
+        <div style="flex:1"><div style="font-weight:900;font-size:16px;color:#fff">🔌 Electronics</div>
+        <div id="home-electronics-count" style="font-size:12px;color:rgba(255,255,255,.85);margin-top:2px">Cables, chargers & more</div></div>
+        <div style="color:#fff;font-size:20px">›</div>
+      </div>
     </div>
 
     </div><!-- home close -->
@@ -2825,7 +2829,13 @@ function loadHomeSunglasses(){
     const c=document.getElementById('home-sunglasses-count');
     if(c&&n)c.textContent=n+' styles — tap to shop';
   }).catch(()=>{});
-  _loadHomeCat('electronics','home-electronics-sec','home-electronics');
+  get('stashlo_products','active=eq.true&category=eq.electronics&select=id&limit=50').then(d=>{
+    const n=Array.isArray(d)?d.length:0;
+    const sec=document.getElementById('home-electronics-sec');
+    if(sec)sec.style.display=n?'block':'none';
+    const c=document.getElementById('home-electronics-count');
+    if(c&&n)c.textContent=n+' items — tap to shop';
+  }).catch(()=>{});
 }
 function loadHomeElectronics(){
   get('stashlo_products','active=eq.true&category=eq.electronics&order=created_at.desc&limit=8').then(d=>{
