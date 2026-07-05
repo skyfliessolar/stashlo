@@ -1346,21 +1346,8 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       </div>
     </div>
 
-    <!-- SUNGLASSES: one button -> full category view -->
-    <div id="home-sunglasses-sec" style="display:none;padding:16px 16px 0">
-      <div onclick="openCategoryView('sunglasses','🕶️ Sunglasses')" style="background:linear-gradient(135deg,#0f172a,#334155);border-radius:18px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 6px 16px rgba(15,23,42,.3)">
-        <img src="img/products/sunglasses-c1.jpg" style="width:56px;height:56px;border-radius:14px;object-fit:cover;flex-shrink:0" onerror="this.outerHTML='<div style=&quot;width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:26px&quot;>🕶️</div>'">
-        <div style="flex:1"><div style="font-weight:900;font-size:16px;color:#fff">🕶️ Sunglasses</div>
-        <div id="home-sunglasses-count" style="font-size:12px;color:rgba(255,255,255,.8);margin-top:2px">Shop all styles</div></div>
-        <div style="color:#fff;font-size:20px">›</div>
-      </div>
-    </div>
-    <!-- ELECTRONICS: one button -> full category view -->
-    <div id="home-electronics-sec" style="display:none;padding:12px 16px 0">
-      <div onclick="openCategoryView('electronics','🔌 Electronics')" style="background:linear-gradient(135deg,#5B4CF0,#8B5CF6);border-radius:18px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:0 6px 16px rgba(91,76,240,.3)">
-        <img src="img/products/typec-cable.png" style="width:56px;height:56px;border-radius:14px;object-fit:cover;flex-shrink:0;background:#fff" onerror="this.outerHTML='<div style=&quot;width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:26px&quot;>🔌</div>'">
-        <div style="flex:1"><div style="font-weight:900;font-size:16px;color:#fff">🔌 Electronics</div>
-        <div id="home-electronics-count" style="font-size:12px;color:rgba(255,255,255,.85);margin-top:2px">Cables, chargers & more</div></div>
+    <!-- STORE CATEGORIES (dynamic) -->
+    <div id="home-cat-btns" style="display:none;padding:12px 16px 0"></div>
         <div style="color:#fff;font-size:20px">›</div>
       </div>
     </div>
@@ -1409,14 +1396,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
     <!-- Stashlo store -->
     <div id="stashlo-sec" style="display:none">
       <div class="sh pt16"><span class="sh-t">🌟 Stashlo Store</span></div>
-      <div id="store-cat-btns" style="padding:0 16px">
-        <div onclick="openCategoryView('sunglasses','🕶️ Sunglasses')" style="background:linear-gradient(135deg,#0f172a,#334155);border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:10px">
-          <div style="font-size:26px">🕶️</div><div style="flex:1"><div style="font-weight:800;color:#fff">Sunglasses</div><div style="font-size:11px;color:rgba(255,255,255,.8)">Shop all styles</div></div><div style="color:#fff">›</div>
-        </div>
-        <div onclick="openCategoryView('electronics','🔌 Electronics')" style="background:linear-gradient(135deg,#5B4CF0,#8B5CF6);border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:10px">
-          <div style="font-size:26px">🔌</div><div style="flex:1"><div style="font-weight:800;color:#fff">Electronics</div><div style="font-size:11px;color:rgba(255,255,255,.85)">Cables, chargers & more</div></div><div style="color:#fff">›</div>
-        </div>
-      </div>
+      <div id="store-cat-btns" style="padding:0 16px"></div>
       <div class="prods-grid" id="stashlo-prods"></div>
     </div>
   </div>
@@ -2398,7 +2378,7 @@ function boot(){
   document.getElementById('auth').style.display='none';
   document.getElementById('app').style.display='flex';
   txt('h-greet',greet());
-  loadTheme3D();loadProf();loadCards();loadOrders();buildBrands();loadStashloProd();loadHomeSunglasses();loadHomeElectronics();loadPaymentCards();
+  loadTheme3D();loadProf();loadCards();loadOrders();buildBrands();loadStashloProd();buildStoreCategories();loadPaymentCards();
   setTimeout(checkOfferPopup,1200);
   setTimeout(function(){loadInbox();startGPS();loadMyRewards();try{startGeofence();}catch(e){}},2000);
   // When the app regains focus after a notification tap, show the pending card popup.
@@ -2856,6 +2836,40 @@ function loadHomeElectronics(){
   }).catch(()=>{})
 }
 // ===== STASHLO PRODUCTS =====
+
+
+// Emoji + gradient per known category; anything else gets a default.
+var CAT_STYLE={
+  sunglasses:{e:'🕶️',g:'linear-gradient(135deg,#0f172a,#334155)',sub:'Shop all styles'},
+  electronics:{e:'🔌',g:'linear-gradient(135deg,#5B4CF0,#8B5CF6)',sub:'Cables, chargers & more'},
+  food:{e:'🍫',g:'linear-gradient(135deg,#f59e0b,#d97706)',sub:'Snacks, drinks & treats'},
+  drinks:{e:'🥤',g:'linear-gradient(135deg,#06b6d4,#0891b2)',sub:'Cold & hot drinks'},
+  grocery:{e:'🛒',g:'linear-gradient(135deg,#16a34a,#15803d)',sub:'Everyday essentials'},
+  toys:{e:'🧸',g:'linear-gradient(135deg,#ec4899,#db2777)',sub:'Fun for all ages'},
+  beauty:{e:'💄',g:'linear-gradient(135deg,#f43f5e,#e11d48)',sub:'Care & cosmetics'}
+};
+function _catMeta(cat){
+  var k=(cat||'').toLowerCase().trim();
+  return CAT_STYLE[k]||{e:'🛍️',g:'linear-gradient(135deg,#64748b,#475569)',sub:'Shop now'};
+}
+function _catTitle(cat){var s=(cat||'').trim();return s.charAt(0).toUpperCase()+s.slice(1);}
+function buildStoreCategories(){
+  get('stashlo_products','active=eq.true&select=category').then(function(d){
+    var rows=Array.isArray(d)?d:[];
+    var cats=[];rows.forEach(function(r){var c=(r.category||'other').toLowerCase().trim();if(c&&cats.indexOf(c)<0)cats.push(c);});
+    cats.sort();
+    var html=cats.map(function(c){
+      var m=_catMeta(c);var t=_catTitle(c);
+      return '<div onclick="openCategoryView(\''+c+'\',\''+m.e+' '+t+'\')" style="background:'+m.g+';border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:10px">'
+        +'<div style="font-size:26px">'+m.e+'</div><div style="flex:1"><div style="font-weight:800;color:#fff">'+t+'</div><div style="font-size:11px;color:rgba(255,255,255,.85)">'+m.sub+'</div></div><div style="color:#fff;font-size:18px">›</div></div>';
+    }).join('');
+    ['store-cat-btns','home-cat-btns'].forEach(function(id){
+      var el=document.getElementById(id);if(!el)return;
+      el.innerHTML=html;
+      if(id==='home-cat-btns')el.style.display=cats.length?'block':'none';
+    });
+  }).catch(function(){});
+}
 
 function checkOfferPopup(){
   // Show the newest admin offer once per broadcast (per device).
@@ -4032,7 +4046,7 @@ function goTab(n){
   // ═══ Tab handlers ═══
   if(n==='orders'){setTimeout(function(){purchTab('all');},100);}
   if(n==='cards'){setTimeout(function(){fCards('n');if(typeof renderAllCards==='function')renderAllCards();},80);}
-  if(n==='shop'){updateMyShops();loadStashloProd();loadHomeSunglasses();loadHomeElectronics();loadNearbyStrip();loadAllMerchants();}
+  if(n==='shop'){updateMyShops();loadStashloProd();buildStoreCategories();loadNearbyStrip();loadAllMerchants();}
   if(n==='inbox')loadInbox();
   if(n==='offers'){setTimeout(function(){if(typeof rwTab==='function')rwTab('scratch');loadMyRewards();},100);}
   if(n==='jobs')loadJobs();
