@@ -527,6 +527,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       </div>
       <div class="field"><label class="field-label">Title ★</label><input id="bc-title" placeholder="e.g. New Feature Launch!"></div>
       <div class="field"><label class="field-label">Message ★</label><textarea id="bc-body" placeholder="Your announcement..."></textarea></div>
+      <div class="field"><label class="field-label">🔗 Link to a product (optional)</label><select id="bc-product"><option value="">— None —</option></select><div style="font-size:11px;color:var(--ink3);margin-top:4px">Customers tapping the offer go straight to this product.</div></div>
       <div class="field">
         <label class="field-label">📸 Image (optional)</label>
         <div style="border:2px dashed var(--bg2);border-radius:var(--r12);padding:16px;text-align:center;cursor:pointer;background:#fafafa" onclick="document.getElementById('bc-img').click()">
@@ -1665,6 +1666,12 @@ function delProd(id){
 }
 
 // ── BROADCAST ──────────────────────────────────────────────
+function loadBcProducts(){
+  const sel=document.getElementById('bc-product');if(!sel)return;
+  sget('stashlo_products','active=eq.true&order=name.asc&limit=100').then(d=>{
+    (Array.isArray(d)?d:[]).forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=(p.emoji||'')+' '+p.name+' (£'+parseFloat(p.price||0).toFixed(2)+')';sel.appendChild(o);});
+  }).catch(()=>{});
+}
 async function sendBroadcast(){
   const title=V('bc-title'),body=document.getElementById('bc-body').value.trim(),audience=document.getElementById('bc-audience').value;
   if(!title||!body){T('Please fill title and message','error');return}
@@ -1672,7 +1679,7 @@ async function sendBroadcast(){
   let imgUrl=null;
   const imgFile=document.getElementById('bc-img')?.files[0];
   if(imgFile){try{imgUrl=await uploadImg(imgFile,'broadcasts');}catch(e){}}
-  spost('broadcasts',{title,body,audience,image_url:imgUrl,sent_at:Date.now()}).then(()=>{
+  spost('broadcasts',{title,body,audience,image_url:imgUrl,product_id:(document.getElementById('bc-product')||{}).value||null,sent_at:Date.now()}).then(()=>{
     T('✅ Broadcast sent to '+audience+'!','success');
     document.getElementById('bc-title').value='';document.getElementById('bc-body').value='';
     const p=document.getElementById('bc-img-prev');if(p){p.style.display='none';p.src='';}
@@ -2233,6 +2240,7 @@ function grantUserReceipts(){
 }
 
 function switchTab(name){
+  if(name==="broadcast")setTimeout(loadBcProducts,100);
   try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   var aliases={'shops':'merchants','users':'customers','receipts':'admreceipts'};
   if(aliases[name])name=aliases[name];
