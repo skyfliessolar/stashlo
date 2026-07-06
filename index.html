@@ -1023,6 +1023,15 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
 /* ===== UNIVERSAL BOTTOM-SAFE (buttons never hidden under home bar/nav) ===== */
 .modal-body > .btn:last-child,.modal-body > button:last-child{margin-bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}
 .modal-box,.mo-box,.bo-content{padding-bottom:max(24px,calc(env(safe-area-inset-bottom,0px) + 24px))}
+
+/* ===== BOTTOM-SHEET STICKY CTA (guaranteed visible above home bar) ===== */
+.mo-box{padding-bottom:0!important;position:relative}
+.o-cta-sticky{position:sticky;bottom:0;margin-top:8px;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 14px)!important;
+  background:linear-gradient(to top,var(--card) 70%,transparent);
+  z-index:5}
+/* keep inner scroll content clear of the sticky button */
+#orderMo .mo-box{padding-bottom:0!important}
 </style>
 
 
@@ -1891,7 +1900,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <span style="font-size:16px;font-weight:700">Total: <span style="color:var(--purple)" id="o-total">£0.00</span></span>
       </div>
-      <button class="sl-btn btn btn-p" style="width:100%" onclick="submitOrder()">✅ Place Order</button>
+      <button class="sl-btn btn btn-p o-cta-sticky" style="width:100%" onclick="submitOrder()">✅ Place Order</button>
     </div>
   </div>
 

@@ -398,6 +398,10 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
 /* ===== UNIVERSAL BOTTOM-SAFE (buttons never hidden under home bar/nav) ===== */
 .modal-body > .btn:last-child,.modal-body > button:last-child{margin-bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}
 .modal-box,.mo-box,.bo-content{padding-bottom:max(24px,calc(env(safe-area-inset-bottom,0px) + 24px))}
+
+/* ===== STICKY MODAL CTA (never hidden under home bar) ===== */
+.modal-body{padding-bottom:0!important}
+.modal-body > button:last-child,.modal-body > .btn:last-child,.modal-actions{position:sticky;bottom:0;margin-top:8px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 14px);background:linear-gradient(to top,var(--white,#fff) 72%,transparent);z-index:5}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
 
