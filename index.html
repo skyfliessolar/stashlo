@@ -2971,6 +2971,14 @@ function haversineMiles(la1,lo1,la2,lo2){
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 function _rankAndRenderCP(here){
+  // No location yet -> just show all fixed points (unsorted) so the user can still pick.
+  if(!here){
+    get('collection_points','active=eq.true&select=id,name,address,lat,lng,hours').then(function(cps){
+      var extra=(Array.isArray(cps)?cps:[]).filter(function(c){return c.lat&&c.lng;}).map(function(c){return {id:'acp-'+c.id,name:c.name||'Collection Point',addr:c.address||'',lat:c.lat,lng:c.lng,hours:c.hours||''};});
+      renderCollectionPoints(COLLECTION_POINTS.concat(extra));
+    }).catch(function(){renderCollectionPoints(COLLECTION_POINTS);});
+    return;
+  }
   // Shared ranking: fixed points + ADMIN points (collection_points table) + partner shops.
   var fixed=COLLECTION_POINTS.map(function(cp){
     return Object.assign({},cp,{dist:haversineMiles(here.lat,here.lng,cp.lat,cp.lng),kind:'point'});
@@ -3057,12 +3065,16 @@ function selOType(t){
       try{
         var pcEl=document.getElementById('o-postcode');
         var saved=localStorage.getItem('stashlo_last_pc');
+        var savedLoc=localStorage.getItem('stashlo_last_loc');
         var list=document.getElementById('o-cp-list');
-        if(pcEl&&saved&&!pcEl.value){
-          pcEl.value=saved;
-          if(list&&!list.innerHTML)findCollectionPoints(); // auto-show their nearby points
+        if(pcEl&&saved&&!pcEl.value)pcEl.value=saved;
+        // ALWAYS show collection points immediately so the customer can pick one.
+        if(list&&!list.innerHTML){
+          if(saved&&pcEl&&pcEl.value){ findCollectionPoints(); }        // have postcode -> ranked
+          else if(savedLoc){ try{_rankAndRenderCP(JSON.parse(savedLoc));}catch(e){renderCollectionPoints(COLLECTION_POINTS);} }
+          else { _rankAndRenderCP(null); }                              // no location yet -> show all points + partner shops
         }
-      }catch(e){}
+      }catch(e){ try{renderCollectionPoints(COLLECTION_POINTS);}catch(_){} }
     },200);
   }
   const r=document.querySelector('input[name="ot"][value="'+t+'"]');if(r)r.checked=true;
