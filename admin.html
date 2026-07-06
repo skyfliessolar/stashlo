@@ -394,6 +394,10 @@ body{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scro
   #app,.app-wrap{border-radius:28px;overflow:hidden;margin:20px auto;}
 }
 
+
+/* ===== UNIVERSAL BOTTOM-SAFE (buttons never hidden under home bar/nav) ===== */
+.modal-body > .btn:last-child,.modal-body > button:last-child{margin-bottom:calc(env(safe-area-inset-bottom,0px) + 12px)}
+.modal-box,.mo-box,.bo-content{padding-bottom:max(24px,calc(env(safe-area-inset-bottom,0px) + 24px))}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
 
