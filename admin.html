@@ -1229,7 +1229,9 @@ function V(id){const e=document.getElementById(id);return e?e.value.trim():''}
 function txt(id,v){const e=document.getElementById(id);if(e)e.textContent=v}
 function showErr(id,m){const e=document.getElementById(id);if(e){e.textContent=m;e.style.display=m?'block':'none'}}
 function openModal(id){const m=document.getElementById(id);if(m)m.classList.add('on');document.body.style.overflow='hidden'}
-function closeModal(id){const m=document.getElementById(id);if(m)m.classList.remove('on');document.body.style.overflow=''}
+function closeModal(id){const m=document.getElementById(id);if(m)m.classList.remove('on');document.body.style.overflow='';document.body.style.position='';}
+// Failsafe: ESC key force-closes any open modal (never let the screen stay blocked)
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){document.querySelectorAll('.modal.on').forEach(function(m){m.classList.remove('on')});document.body.style.overflow='';}});
 // Prevent body scroll when modal open, close on backdrop click
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('.modal').forEach(m=>{
@@ -1660,9 +1662,11 @@ async function saveProd(){
   const data={name,price,emoji:V('sp-emoji')||'📦',category:V('sp-cat')||'other',description:V('sp-desc'),collect:document.getElementById('sp-collect').checked,delivery:document.getElementById('sp-delivery').checked,active:true};
   if(imgUrl)data.image_url=imgUrl;
   try{const _g=JSON.parse(document.getElementById('sp-images').value||'[]');data.images=_g;if(!data.image_url&&_g.length)data.image_url=_g[0];}catch(e){}
+  const resetBtn=()=>{if(btn){btn.textContent='💾 Save Product';btn.disabled=false;}};
+  const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),12000));
   const act=CUR_PROD_ID?spat('stashlo_products','id=eq.'+CUR_PROD_ID,data):spost('stashlo_products',{...data,created_at:Date.now()});
-  act.then(()=>{T('✅ Product saved!','success');closeModal('prodModal');loadStashProds();if(btn){btn.textContent='💾 Save Product';btn.disabled=false;}})
-  .catch(()=>{showErr('sp-err','Save failed — please try again');if(btn){btn.textContent='💾 Save Product';btn.disabled=false;}})
+  Promise.race([act,timeout]).then(()=>{T('✅ Product saved!','success');closeModal('prodModal');loadStashProds();resetBtn();})
+  .catch(()=>{showErr('sp-err','Save failed or timed out — check connection and try again');resetBtn();})
 }
 
 function delProd(id){
