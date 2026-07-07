@@ -1206,7 +1206,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       </div>
       <div class="field"><label class="field-label">Emoji Icon (used if no photo)</label><input id="p-emoji" placeholder="☕" maxlength="4"></div>
       <div class="field"><label class="field-label">Category</label>
-        <select id="p-cat"><option value="drinks">Drinks</option><option value="food">Food</option><option value="snacks">Snacks</option><option value="retail">Retail</option><option value="service">Service</option><option value="other">Other</option></select>
+        <select id="p-shopcat"><option value="drinks">Drinks</option><option value="food">Food</option><option value="snacks">Snacks</option><option value="retail">Retail</option><option value="service">Service</option><option value="other">Other</option></select>
       </div>
       <div class="field"><label class="field-label">Description</label><input id="p-desc" placeholder="Optional description"></div>
       <label class="check-row"><input type="checkbox" id="p-collect" checked> <div><div style="font-weight:700">Click & Collect</div><div style="font-size:12px;color:var(--ink3)">Customers can collect in-store</div></div></label>
@@ -1512,7 +1512,8 @@ function editProd(id){
   setV("p-stock",p.stock!=null?p.stock:"");
   setV("p-barcode",p.barcode);
   // Category: prefer pos_category (used by the till) then category.
-  var pc=document.getElementById("p-cat");if(pc)pc.value=p.pos_category||p.category||"general";
+  var pc=document.getElementById("p-cat");if(pc)pc.value=p.pos_category||"general";
+  var psc=document.getElementById("p-shopcat");if(psc)psc.value=p.category||"other";
   setC("p-collect",p.collect!==false);
   setC("p-delivery",!!p.delivery);
   setC("p-active",p.active!==false);
@@ -1525,7 +1526,7 @@ function saveProd(){
   const name=V("p-name"),price=parseFloat(document.getElementById("p-price").value||0),eid=V("edit-prod-id");
   if(!name||price<=0){const e=document.getElementById("p-err");if(e){e.textContent="Name and price required";e.style.display="block";}return}
   const btn=document.querySelector("#prodModal .btn-primary");if(btn){btn.textContent="Saving...";btn.disabled=true;}
-  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",image_url:V("p-image-url")||null,vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",barcode:V("p-barcode")||null,stock:parseInt(document.getElementById("p-stock").value||0),category:document.getElementById("p-cat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked,no_loyalty:!(document.getElementById("p-loyalty")||{checked:true}).checked};try{const _g=JSON.parse(document.getElementById("p-images").value||"[]");data.images=_g;if(!data.image_url&&_g.length)data.image_url=_g[0];}catch(e){}
+  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",image_url:V("p-image-url")||null,vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",barcode:V("p-barcode")||null,stock:parseInt(document.getElementById("p-stock").value||0),category:document.getElementById("p-shopcat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked,no_loyalty:!(document.getElementById("p-loyalty")||{checked:true}).checked};try{const _g=JSON.parse(document.getElementById("p-images").value||"[]");data.images=_g;if(!data.image_url&&_g.length)data.image_url=_g[0];}catch(e){}
   const action=eid?pat("products","id=eq."+eid,data):post("products",{...data,created_at:Date.now()});
   action.then((res)=>{
       T("✅ "+name+" saved!","success");closeModal("prodModal");
