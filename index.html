@@ -1410,7 +1410,6 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
     <div id="stashlo-sec" style="display:none">
       <div class="sh pt16"><span class="sh-t">🌟 Stashlo Store</span></div>
       <div id="store-cat-btns" style="padding:0 16px"></div>
-      <div class="prods-grid" id="stashlo-prods"></div>
     </div>
   </div>
 
@@ -2918,12 +2917,11 @@ function checkOfferPopup(){
 }
 
 function loadStashloProd(){
-  get('stashlo_products','active=eq.true&order=created_at.desc').then(d=>{
-    const ps=Array.isArray(d)?d:[];
-    const sec=document.getElementById('stashlo-sec'),el=document.getElementById('stashlo-prods');
-    if(!ps.length||!sec||!el){if(sec)sec.style.display='none';return}
-    sec.style.display='block';
-    el.innerHTML=ps.map(p=>pCard(p,{id:'stashlo',name:'Stashlo Store',loyalty_type:'points',loyalty_threshold:100})).join('');
+  // Store shows CATEGORY BUTTONS only (built by buildStoreCategories); tapping a
+  // category opens the full product list. Just reveal the section if products exist.
+  get('stashlo_products','active=eq.true&select=id&limit=1').then(d=>{
+    const sec=document.getElementById('stashlo-sec');
+    if(sec)sec.style.display=(Array.isArray(d)&&d.length)?'block':'none';
   }).catch(()=>{})
 }
 
@@ -3130,7 +3128,7 @@ function submitOrder(){
   // (so the merchant sees where to hold/send it); delivery orders use the typed address.
   var _collectPoint=(document.getElementById('o-cp-chosen')||{}).value||'';
   var _addr = (type==='collect') ? (_collectPoint||'Shop counter') : V('o-da');
-  post('orders',{user_id:UID,merchant_id:mid,product_id:p.id,product_name:p.name,product_emoji:p.emoji||'📦',quantity:qty,total,type,status:'pending',delivery_address:_addr,collection_point:_collectPoint,collect_time:V('o-ct'),note:V('o-note'),created_at:Date.now()})
+  post('orders',{user_id:UID,user_lid:(PROF&&PROF.loyalty_id)||'',customer_name:(PROF&&PROF.name)||'',merchant_id:mid,product_id:p.id,product_name:p.name,product_emoji:p.emoji||'📦',quantity:qty,total,type,status:'pending',delivery_address:_addr,collection_point:_collectPoint,collect_time:V('o-ct'),note:V('o-note'),created_at:Date.now()})
   .then(d=>{
     if(btn){btn.textContent='✅ Place Order';btn.disabled=false;}
     if(d&&d.code){sErr('o-err',d.message||'Order failed');return}

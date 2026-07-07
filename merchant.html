@@ -1605,7 +1605,18 @@ function renderOrderActions(o){
 }
 function updateOrderSt(s){
   if(!CUR_ORDER)return;
-  pat("orders","id=eq."+CUR_ORDER.id,{status:s}).then(()=>{T("✅ Order marked "+s,"success");closeModal("orderModal");loadOrders()}).catch(()=>T("Failed","error"))
+  var o=CUR_ORDER;
+  var completing=(s==='completed'||s==='delivered'||s==='collected');
+  var upd={status:s};
+  // Award loyalty points ONCE, when the order is fulfilled (and not already awarded).
+  if(completing && !o.points_awarded){
+    var cust={id:o.user_id,name:o.customer_name||'Customer',loyalty_id:o.user_lid||''};
+    if(o.user_id && typeof awardLoyaltyForSale==='function'){
+      awardLoyaltyForSale(cust, parseFloat(o.total||0)||0, {id:'order-'+o.id});
+      upd.points_awarded=true;
+    }
+  }
+  pat("orders","id=eq."+o.id,upd).then(()=>{T("✅ Order marked "+s+(upd.points_awarded?" · points added":""),"success");closeModal("orderModal");loadOrders()}).catch(()=>T("Failed","error"))
 }
 function merchantCancelOrder(){
   if(!CUR_ORDER)return;
