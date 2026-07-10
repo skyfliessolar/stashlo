@@ -1153,6 +1153,30 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
     <div class="sl-btn nb" id="nb-more-btn" onclick="openMoreDrawer()"><span class="nb-ico">⋯</span><span class="nb-lab">More</span></div>
   </div>
   <div id="more-bd" onclick="closeMoreDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:298"></div>
+  <div class="screen" id="website-screen">
+    <div class="sh"><span style="display:flex;align-items:center"><button onclick="switchTab('overview')" style="background:var(--purple3);color:var(--purple);border:none;border-radius:8px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;margin-right:8px;flex-shrink:0">‹</button><span class="sh-t">🌐 Create Your Website</span></span></div>
+    <div class="setting-card">
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:12px">Fill in your details — Stashlo builds a professional one-page website for your business. Preview it instantly, then submit; the Stashlo team publishes it and contacts you about your link, domain and business email.</div>
+      <div class="field"><label class="field-label">Your name ★</label><input id="w-name" placeholder="Full name"></div>
+      <div class="field"><label class="field-label">Email ★</label><input id="w-email" type="email" placeholder="you@email.com"></div>
+      <div class="field"><label class="field-label">Phone</label><input id="w-phone" placeholder="07…"></div>
+      <div class="field"><label class="field-label">Business name ★</label><input id="w-bname" placeholder="e.g. Skyflies Coffee"></div>
+      <div class="field"><label class="field-label">Business type ★</label><select id="w-btype"><option value="restaurant">Restaurant</option><option value="food">Food / Takeaway</option><option value="grocery">Grocery</option><option value="hotel">Hotel</option><option value="shop">Shop / Retail</option><option value="services">Services</option><option value="other">Other</option></select></div>
+      <div class="field"><label class="field-label">Tagline</label><input id="w-tag" placeholder="e.g. The best coffee in Bristol"></div>
+      <div class="field"><label class="field-label">About your business</label><textarea id="w-about" placeholder="A few sentences about what you do…"></textarea></div>
+      <div class="field"><label class="field-label">Address</label><input id="w-addr" placeholder="Business address"></div>
+      <div class="field"><label class="field-label">Website name ★</label><input id="w-site" placeholder="e.g. skyflies-coffee" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'-')"><div style="font-size:11px;color:var(--ink3);margin-top:4px">Your link will look like: <b><span id="w-site-prev">yourname</span>.stashlo.site</b></div></div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0"><input type="checkbox" id="w-domain"> I want my own domain (e.g. .com / .co.uk) — Stashlo will quote a price</label>
+      <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0"><input type="checkbox" id="w-bmail"> I want a business email (e.g. info@mybusiness.com) — quoted too</label>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button onclick="previewWebsite()" style="flex:1;padding:14px;background:var(--purple3);color:var(--purple);border:none;border-radius:12px;font-weight:800;cursor:pointer">👁 Preview</button>
+        <button onclick="submitWebsite()" style="flex:1;padding:14px;background:var(--purple);color:#fff;border:none;border-radius:12px;font-weight:800;cursor:pointer">🚀 Submit</button>
+      </div>
+      <div id="w-status" style="font-size:12px;margin-top:10px"></div>
+    </div>
+    <div id="w-myreqs"></div>
+  </div>
+
   <div id="more-drawer" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--white);border-radius:20px 20px 0 0;z-index:299;padding-bottom:env(safe-area-inset-bottom,16px);box-shadow:0 -8px 40px rgba(0,0,0,.2)">
     <div style="width:40px;height:4px;background:var(--bg2);border-radius:4px;margin:12px auto 6px"></div>
     <div style="padding:6px 20px 18px">
@@ -1166,6 +1190,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div onclick="switchTab('inbox');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">📬</div><div style="font-size:11px;font-weight:700" id="m-inbox-lab2">Inbox</div></div>
         <div onclick="switchTab('jobs');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">💼</div><div style="font-size:11px;font-weight:700">Jobs</div></div>
         <div onclick="switchTab('claims');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;position:relative"><div style="font-size:24px;margin-bottom:4px">🧾</div><div style="font-size:11px;font-weight:700">Receipt Claims</div><span id="claims-badge" style="display:none;position:absolute;top:6px;right:14px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;border-radius:10px;padding:1px 6px"></span></div>
+        <div onclick="switchTab('website');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🌐</div><div style="font-size:11px;font-weight:700">Create Website</div></div>
         <div onclick="merchantEmailSupport();closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">✉️</div><div style="font-size:11px;font-weight:700">Support</div></div>
         <div onclick="window.open('https://stashlo.com/privacy.html','_blank');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🔒</div><div style="font-size:11px;font-weight:700">Privacy</div></div>
         <div onclick="window.open('https://stashlo.com/terms.html','_blank');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">📄</div><div style="font-size:11px;font-weight:700">Terms</div></div>
@@ -2040,6 +2065,67 @@ function saveSettings(){
   const upd={name:V("s-name"),category:document.getElementById("s-cat")?.value||"other",address:V("s-addr"),open_hours:V("s-hours"),logo_emoji:V("s-emoji")||"🏪",loyalty_type:LT,loyalty_value:lv?parseFloat(lv.value)||1:1,loyalty_threshold:lt?parseFloat(lt.value)||100:100};
   pat("merchants","id=eq."+MID,upd).then(()=>{T("✅ Settings saved!","success");loadMerchant()}).catch(()=>T("Save failed","error"))
 }
+
+// ===== WEBSITE BUILDER =====
+var W_THEMES={restaurant:{e:"🍽️",c1:"#7c2d12",c2:"#ea580c",hero:"Delicious food, made with love"},
+ food:{e:"🍔",c1:"#78350f",c2:"#f59e0b",hero:"Fresh. Fast. Tasty."},
+ grocery:{e:"🛒",c1:"#14532d",c2:"#16a34a",hero:"Everyday essentials, everyday value"},
+ hotel:{e:"🏨",c1:"#1e3a8a",c2:"#3b82f6",hero:"Your comfortable stay awaits"},
+ shop:{e:"🛍️",c1:"#312e81",c2:"#6366F1",hero:"Quality you can trust"},
+ services:{e:"🛠️",c1:"#134e4a",c2:"#0d9488",hero:"Professional service, done right"},
+ other:{e:"⭐",c1:"#0f172a",c2:"#64748b",hero:"Welcome"}};
+function buildWebsiteHTML(){
+  var t=W_THEMES[V("w-btype")||"other"]||W_THEMES.other;
+  var b=V("w-bname")||"My Business", tag=V("w-tag")||t.hero, ab=V("w-about")||"", ad=V("w-addr")||"", em=V("w-email")||"", ph=V("w-phone")||"";
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  return "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>"+esc(b)+"</title><style>"
+   +"*{margin:0;box-sizing:border-box}body{font-family:-apple-system,'Segoe UI',sans-serif;color:#1e293b;line-height:1.7}"
+   +".hero{background:linear-gradient(135deg,"+t.c1+","+t.c2+");color:#fff;padding:90px 20px;text-align:center}"
+   +".hero .e{font-size:64px}.hero h1{font-size:40px;margin:12px 0 8px}.hero p{font-size:18px;opacity:.9}"
+   +".sec{max-width:760px;margin:0 auto;padding:48px 20px}.sec h2{color:"+t.c1+";margin-bottom:14px}"
+   +".card{background:#f8fafc;border-radius:16px;padding:24px;margin-top:16px}"
+   +".contact div{margin:8px 0;font-size:15px}footer{background:"+t.c1+";color:#fff;text-align:center;padding:24px;font-size:13px}"
+   +"a{color:"+t.c2+"}</style></head><body>"
+   +"<div class=\"hero\"><div class=\"e\">"+t.e+"</div><h1>"+esc(b)+"</h1><p>"+esc(tag)+"</p></div>"
+   +(ab?"<div class=\"sec\"><h2>About us</h2><p>"+esc(ab)+"</p></div>":"")
+   +"<div class=\"sec\"><h2>Contact</h2><div class=\"card contact\">"
+   +(ad?"<div>📍 "+esc(ad)+"</div>":"")+(ph?"<div>📞 <a href=\"tel:"+esc(ph)+"\">"+esc(ph)+"</a></div>":"")
+   +(em?"<div>✉️ <a href=\"mailto:"+esc(em)+"\">"+esc(em)+"</a></div>":"")
+   +"</div></div><footer>© "+new Date().getFullYear()+" "+esc(b)+" · Website by Stashlo</footer></body></html>";
+}
+function previewWebsite(){
+  if(!V("w-bname")){T("Enter your business name first","error");return}
+  var html=buildWebsiteHTML();
+  var ov=document.createElement("div");
+  ov.style.cssText="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;flex-direction:column";
+  ov.innerHTML="<div style=\"display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#0f172a;color:#fff\"><b>👁 Website preview</b><button style=\"background:#ef4444;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer\">✕ Close</button></div><iframe style=\"flex:1;border:0;background:#fff\"></iframe>";
+  ov.querySelector("button").onclick=function(){ov.remove()};
+  document.body.appendChild(ov);
+  ov.querySelector("iframe").srcdoc=html;
+}
+function submitWebsite(){
+  var need=[["w-name","your name"],["w-email","email"],["w-bname","business name"],["w-site","website name"]];
+  for(var i=0;i<need.length;i++){if(!V(need[i][0])){T("Enter "+need[i][1],"error");return}}
+  var st=document.getElementById("w-status");st.textContent="Submitting…";
+  post("website_requests",{user_id:MID,requester_name:V("w-name"),email:V("w-email"),phone:V("w-phone"),
+    business_name:V("w-bname"),business_type:V("w-btype"),tagline:V("w-tag"),about_text:V("w-about"),
+    address:V("w-addr"),site_name:V("w-site"),html:buildWebsiteHTML(),
+    wants_domain:document.getElementById("w-domain").checked,wants_email:document.getElementById("w-bmail").checked,
+    status:"pending",created_at:Date.now()})
+  .then(function(){st.innerHTML="<span style=\"color:var(--green);font-weight:700\">✅ Submitted! The Stashlo team will publish your site and contact you at "+V("w-email")+" about your link"+(document.getElementById("w-domain").checked?", domain":"")+(document.getElementById("w-bmail").checked?", business email":"")+".</span>";loadMyWebsites();})
+  .catch(function(){st.innerHTML="<span style=\"color:var(--red)\">Failed — run the master SQL (website_requests table) and try again.</span>";});
+}
+function loadMyWebsites(){
+  get("website_requests","user_id=eq."+MID+"&order=created_at.desc").then(function(d){
+    var el=document.getElementById("w-myreqs");if(!el)return;
+    var rows=Array.isArray(d)?d:[];
+    el.innerHTML=rows.length?('<div class="setting-card"><div style="font-weight:800;margin-bottom:8px">My website requests</div>'+rows.map(function(r){
+      var s=r.status==="published"?'<span style="color:var(--green);font-weight:700">✅ LIVE'+(r.live_url?' — <a href="'+r.live_url+'" target="_blank">open</a>':'')+'</span>':(r.status==="rejected"?'<span style="color:var(--red)">❌ Rejected</span>':'<span style="color:#b45309">🕐 Pending</span>');
+      return '<div style="padding:10px;background:var(--bg);border-radius:10px;margin-bottom:6px"><b>'+(r.business_name||'')+'</b> · '+(r.site_name||'')+'<div style="font-size:12px;margin-top:4px">'+s+(r.fee>0?' · fee £'+parseFloat(r.fee).toFixed(2):'')+'</div></div>';
+    }).join('')+'</div>'):"";
+  }).catch(function(){});
+}
+
 function saveCollectionPostcode(){
   var pc=(V("s-postcode")||"").trim();
   if(!pc){T("Enter a postcode","error");return}
@@ -2271,6 +2357,7 @@ function merchantEmailSupport(){
 }
 function openJobsSection(){ switchTab('jobs'); }
 function switchTab(name){
+  if(name==="website")setTimeout(loadMyWebsites,100);
   if(!document.getElementById(name+'-screen')){T('That section is coming soon');name='overview';}
   document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("on");s.scrollTop=0;});
   document.querySelectorAll(".nb").forEach(b=>b.classList.remove("on"));

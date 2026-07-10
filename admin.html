@@ -592,6 +592,11 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   </div>
 
   <!-- JOB APPROVALS -->
+  <div class="screen" id="websites-screen">
+    <div class="sh"><span class="sh-t">🌐 Website Requests</span></div>
+    <div id="wr-list" style="padding:0 16px"></div>
+  </div>
+
   <div class="screen" id="jobapprovals-screen">
     <div style="padding:16px 16px 8px;font-size:18px;font-weight:800">💼 Job Unlock Approvals</div>
     <div style="margin:0 16px 12px;background:var(--purple3,#EEF2FF);border-radius:12px;padding:10px 14px;font-size:12px;font-weight:600">Customers paid £1/£5 to unlock job contacts — approve to reveal details</div>
@@ -735,6 +740,10 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div style="font-size:26px">🧾</div>
         <div style="font-size:13px;font-weight:700;margin-top:6px">Receipts</div>
         <div style="font-size:11px;color:var(--ink3)">Restore · limits</div>
+      </div>
+      <div onclick="switchTab('websites')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">🌐</div><div style="font-size:12px;font-weight:800;margin-top:4px">Websites</div>
+        <div style="font-size:11px;color:var(--ink3)" id="d-websites">—</div>
       </div>
       <div onclick="switchTab('jobapprovals')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:26px">💼</div>
@@ -1989,6 +1998,43 @@ function sendCustReset(email){
 
 // ===== JOB UNLOCK APPROVALS =====
 let JOB_APPROVALS=[];
+
+function loadWebsiteRequests(){
+  sget('website_requests','order=created_at.desc&limit=100').then(d=>{
+    const rows=Array.isArray(d)?d:[];
+    txt('d-websites',rows.filter(r=>r.status==='pending').length+' pending');
+    const el=document.getElementById('wr-list');if(!el)return;
+    el.innerHTML=rows.length?rows.map(r=>{
+      const s=r.status==='published'?'<span style="color:var(--green);font-weight:700">✅ LIVE</span>':(r.status==='rejected'?'<span style="color:var(--red)">❌</span>':'<span style="color:#b45309">🕐 pending</span>');
+      return '<div class="ic" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between"><b>'+(r.business_name||'?')+'</b>'+s+'</div>'
+        +'<div style="font-size:12px;color:var(--ink3);margin:4px 0">'+(r.site_name||'')+' · '+(r.business_type||'')+' · '+(r.requester_name||'')+' · '+(r.email||'')+(r.wants_domain?' · 🌍 wants domain':'')+(r.wants_email?' · ✉️ wants email':'')+(r.fee>0?' · fee £'+parseFloat(r.fee).toFixed(2):'')+'</div>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
+        +'<button class="sl-btn btn-xs btn-purple" onclick="wrPreview('+r.id+')">👁 Preview</button>'
+        +'<button class="sl-btn btn-xs" style="background:var(--ink);color:#fff" onclick="wrDownload('+r.id+')">⬇ HTML</button>'
+        +'<button class="sl-btn btn-xs" style="background:#b45309;color:#fff" onclick="wrFee('+r.id+')">£ Fee</button>'
+        +'<button class="sl-btn btn-xs btn-green" onclick="wrPublish('+r.id+')">🚀 Published</button>'
+        +'<button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="wrReject('+r.id+')">✕</button>'
+        +'</div></div>';
+    }).join(''):'<div class="ic" style="text-align:center;color:var(--ink3)">No website requests yet.</div>';
+    window._WRS=rows;
+  }).catch(()=>{const el=document.getElementById('wr-list');if(el)el.innerHTML='<div class="ic" style="color:var(--red)">Run the master SQL (website_requests table) first.</div>';});
+}
+function _wr(id){return (window._WRS||[]).find(r=>r.id===id)}
+function wrPreview(id){const r=_wr(id);if(!r||!r.html){T('No HTML stored','error');return}
+  const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;flex-direction:column';
+  ov.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#0f172a;color:#fff"><b>'+(r.business_name||'')+'</b><button style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer">✕</button></div><iframe style="flex:1;border:0;background:#fff"></iframe>';
+  ov.querySelector('button').onclick=()=>ov.remove();document.body.appendChild(ov);
+  ov.querySelector('iframe').srcdoc=r.html;}
+function wrDownload(id){const r=_wr(id);if(!r||!r.html){T('No HTML','error');return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([r.html],{type:'text/html'}));a.download=(r.site_name||'site')+'.html';a.click();
+  T('⬇ Downloaded — create repo '+(r.site_name||'site')+' on GitHub, upload as index.html, enable Pages','success');}
+function wrFee(id){const r=_wr(id);const f=prompt('Fee to charge (£) for '+(r&&r.business_name||'this site')+' (domain/email/hosting):', r&&r.fee||'0');
+  if(f===null)return;spat('website_requests','id=eq.'+id,{fee:parseFloat(f)||0}).then(()=>{T('Fee saved','success');loadWebsiteRequests();}).catch(()=>T('Failed','error'));}
+function wrPublish(id){const url=prompt('Live URL of the published site (e.g. https://username.github.io/sitename):','https://');
+  if(!url)return;spat('website_requests','id=eq.'+id,{status:'published',live_url:url,decided_at:Date.now()}).then(()=>{T('✅ Marked live — the requester sees the link in their app','success');logAudit('publish_website',url);loadWebsiteRequests();}).catch(()=>T('Failed','error'));}
+function wrReject(id){if(!confirm('Reject this website request?'))return;
+  spat('website_requests','id=eq.'+id,{status:'rejected',decided_at:Date.now()}).then(()=>{T('Rejected','success');loadWebsiteRequests();}).catch(()=>T('Failed','error'));}
+
 function loadJobApprovals(){
   const el=document.getElementById('job-approvals-list');if(!el)return;
   el.innerHTML='<div style="text-align:center;padding:14px;color:var(--ink3);font-size:13px">Loading...</div>';
@@ -2267,6 +2313,7 @@ function grantUserReceipts(){
 
 function switchTab(name){
   if(name==="broadcast")setTimeout(loadBcProducts,100);
+  if(name==="websites")setTimeout(loadWebsiteRequests,100);
   try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   var aliases={'shops':'merchants','users':'customers','receipts':'admreceipts'};
   if(aliases[name])name=aliases[name];

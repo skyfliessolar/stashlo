@@ -2384,7 +2384,7 @@ function boot(){
   document.getElementById('app').style.display='flex';
   txt('h-greet',greet());
   loadTheme3D();loadProf();loadCards();loadOrders();buildBrands();loadStashloProd();buildStoreCategories();loadPaymentCards();
-  setTimeout(checkOfferPopup,1200);
+  setTimeout(checkOfferPopup,1200);setTimeout(checkNearbyCard,4000);
   setTimeout(function(){loadInbox();startGPS();loadMyRewards();try{startGeofence();}catch(e){}},2000);
   // When the app regains focus after a notification tap, show the pending card popup.
   document.addEventListener('visibilitychange',function(){
@@ -2874,6 +2874,53 @@ function buildStoreCategories(){
       if(id==='home-cat-btns')el.style.display=cats.length?'block':'none';
     });
   }).catch(function(){});
+}
+
+
+// ===== LOCATION CARD AUTO-POPUP =====
+// When the customer is physically near a shop whose card they hold, surface
+// that card automatically (once per shop per 2h). Silent if no permission.
+function checkNearbyCard(){
+  if(!navigator.geolocation||!UID)return;
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var here={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    try{localStorage.setItem('stashlo_last_loc',JSON.stringify(here));}catch(e){}
+    Promise.all([
+      get('cards','user_id=eq.'+UID+'&select=card_id,shop_name,points,threshold'),
+      get('merchants','select=id,name,logo_emoji,lat,lng&lat=not.is.null')
+    ]).then(function(res){
+      var cards=Array.isArray(res[0])?res[0]:[], shops=Array.isArray(res[1])?res[1]:[];
+      if(!cards.length||!shops.length)return;
+      var best=null;
+      shops.forEach(function(s){
+        if(!s.lat||!s.lng)return;
+        var card=cards.find(function(c){return c.card_id===s.id||c.card_id==='local-'+s.id;});
+        if(!card)return;
+        var d=haversineMiles(here.lat,here.lng,parseFloat(s.lat),parseFloat(s.lng));
+        if(d<=0.15 && (!best||d<best.d))best={d:d,shop:s,card:card};
+      });
+      if(!best)return;
+      var key='stashlo_nearpop_'+best.shop.id;
+      var last=parseInt(localStorage.getItem(key)||'0');
+      if(Date.now()-last < 2*60*60*1000)return; // once per 2h per shop
+      try{localStorage.setItem(key,String(Date.now()));}catch(e){}
+      var ov=document.createElement('div');
+      ov.className='offer-pop';
+      ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1300;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px)';
+      ov.innerHTML='<div style="background:var(--card);border-radius:22px;max-width:330px;width:100%;padding:24px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)">'
+        +'<div style="font-size:44px">'+(best.shop.logo_emoji||'🏪')+'</div>'
+        +'<div style="font-weight:900;font-size:18px;margin-top:8px">You\'re at '+(best.shop.name||'a partner shop')+'!</div>'
+        +'<div style="font-size:13px;color:var(--sub);margin-top:6px">Your loyalty card is ready — '+(best.card.points||0)+' pts</div>'
+        +'<div style="display:flex;gap:8px;margin-top:16px">'
+        +'<button id="np-show" style="flex:1;background:var(--purple);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;cursor:pointer">💳 Show my card</button>'
+        +'<button id="np-later" style="background:var(--bg2);color:var(--ink);border:none;border-radius:12px;padding:13px 16px;font-weight:700;cursor:pointer">Later</button>'
+        +'</div></div>';
+      document.body.appendChild(ov);
+      ov.querySelector('#np-later').onclick=function(){ov.remove();};
+      ov.onclick=function(e){if(e.target===ov)ov.remove();};
+      ov.querySelector('#np-show').onclick=function(){ov.remove();goTab('cards');if(typeof openCard==='function'){try{openCard(best.card.card_id);}catch(e){}}};
+    }).catch(function(){});
+  },function(){},{timeout:6000,maximumAge:300000});
 }
 
 function checkOfferPopup(){
