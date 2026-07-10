@@ -546,6 +546,11 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
           <img id="bc-img-prev" style="display:none;max-width:200px;border-radius:var(--r8);margin-bottom:8px">
           <div id="bc-img-txt" style="font-size:13px;color:var(--ink3)">📎 Tap to attach image</div>
         </div>
+        <div style="border:2px dashed var(--bg2);border-radius:var(--r12);padding:16px;text-align:center;cursor:pointer;background:#fafafa;margin-top:8px" onclick="document.getElementById('bc-video').click()">
+          <input type="file" id="bc-video" accept="video/mp4,video/webm" style="display:none" onchange="previewBcVideo(this)">
+          <video id="bc-video-prev" style="display:none;max-width:220px;border-radius:var(--r8);margin-bottom:8px" controls muted></video>
+          <div id="bc-video-txt" style="font-size:13px;color:var(--ink3)">🎬 Tap to attach video (mp4/webm, max 20MB)</div>
+        </div>
       </div>
       <button class="btn btn-purple" id="bc-send-btn" onclick="sendBroadcast()">📢 Send Broadcast</button>
     </div>
@@ -1702,17 +1707,32 @@ function loadBcProducts(){
     (Array.isArray(d)?d:[]).forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=(p.emoji||'')+' '+p.name+' (£'+parseFloat(p.price||0).toFixed(2)+')';sel.appendChild(o);});
   }).catch(()=>{});
 }
+function previewBcVideo(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  if(f.size>20*1024*1024){T('Video too large — max 20MB','error');input.value='';return}
+  const v=document.getElementById('bc-video-prev');v.src=URL.createObjectURL(f);v.style.display='block';
+  const t=document.getElementById('bc-video-txt');if(t)t.style.display='none';
+}
 async function sendBroadcast(){
   const title=V('bc-title'),body=document.getElementById('bc-body').value.trim(),audience=document.getElementById('bc-audience').value;
   if(!title||!body){T('Please fill title and message','error');return}
   const btn=document.getElementById('bc-send-btn');if(btn){btn.textContent='Sending...';btn.disabled=true;}
   let imgUrl=null;
   const imgFile=document.getElementById('bc-img')?.files[0];
+  const vidFile=document.getElementById('bc-video')?.files[0];
+  let vidUrl=null;
+  if(vidFile&&vidFile.size<=20*1024*1024){
+    try{
+      const name='broadcasts/'+Date.now()+'-vid.'+((vidFile.name.split('.').pop()||'mp4').toLowerCase());
+      const res=await fetch(SU+'/storage/v1/object/stashlo-images/'+name,{method:'POST',headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':vidFile.type||'video/mp4','x-upsert':'true'},body:vidFile});
+      if(res.ok)vidUrl=SU+'/storage/v1/object/public/stashlo-images/'+name;
+    }catch(e){}
+  }
   if(imgFile){try{imgUrl=await uploadImg(imgFile,'broadcasts');}catch(e){}}
-  spost('broadcasts',{title,body,audience,image_url:imgUrl,product_id:(document.getElementById('bc-product')||{}).value||null,sent_at:Date.now()}).then(()=>{
+  spost('broadcasts',{title,body,audience,image_url:imgUrl,video_url:vidUrl,product_id:(document.getElementById('bc-product')||{}).value||null,sent_at:Date.now()}).then(()=>{
     T('✅ Broadcast sent to '+audience+'!','success');
     document.getElementById('bc-title').value='';document.getElementById('bc-body').value='';
-    const p=document.getElementById('bc-img-prev');if(p){p.style.display='none';p.src='';}
+    const p=document.getElementById('bc-img-prev');if(p){p.style.display='none';p.src='';}const pv=document.getElementById('bc-video-prev');if(pv){pv.style.display='none';pv.src='';}const vt=document.getElementById('bc-video-txt');if(vt)vt.style.display='block';const vi=document.getElementById('bc-video');if(vi)vi.value='';
     const t=document.getElementById('bc-img-txt');if(t)t.style.display='block';
     const fi=document.getElementById('bc-img');if(fi)fi.value='';
     loadBroadcasts();

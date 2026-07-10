@@ -1030,6 +1030,14 @@ body { overflow: hidden !important; height: 100vh !important; position: fixed; w
 /* ===== BOTTOM-SHEET CTA — simple, always fully visible ===== */
 #orderMo .mo-box{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 90px)!important}
 .o-cta-sticky{margin-top:14px;margin-bottom:calc(env(safe-area-inset-bottom,0px) + 8px)}
+
+/* ===== MOTION POLISH ===== */
+@keyframes slideUpIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.icard,.lc,.ic,.prods-grid>div,.pocket-card{animation:slideUpIn .3s ease both}
+.icard:nth-child(2){animation-delay:.05s}.icard:nth-child(3){animation-delay:.1s}
+button:active,.sl-btn:active,.lopt:active{transform:scale(.96);transition:transform .08s}
+@keyframes ptsPulse{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}
+.pts-pulse{animation:ptsPulse .5s ease}
 </style>
 
 
@@ -2932,7 +2940,7 @@ function checkOfferPopup(){
     var ov=document.createElement('div');
     ov.className="offer-pop";ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;--offer:1;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px)';
     ov.innerHTML='<div style="background:var(--card);border-radius:22px;max-width:340px;width:100%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);animation:rise3d .3s ease">'
-      +(b.image_url?'<img src="'+b.image_url+'" style="width:100%;max-height:200px;object-fit:cover">':'<div style="height:90px;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;font-size:44px">🎉</div>')
+      +(b.video_url?'<video src="'+b.video_url+'" style="width:100%;max-height:220px;background:#000" controls autoplay muted playsinline></video>':(b.image_url?'<img src="'+b.image_url+'" style="width:100%;max-height:200px;object-fit:cover">':'<div style="height:90px;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;font-size:44px">🎉</div>'))
       +'<div style="padding:20px">'
       +'<div style="font-weight:900;font-size:18px">'+(b.title||'New offer!')+'</div>'
       +'<div style="font-size:14px;color:var(--sub);margin-top:8px;line-height:1.5">'+(b.body||'')+'</div>'
@@ -3598,7 +3606,7 @@ function renderInbox(){
           <div class="icard-from">${m._from||'Stashlo'}</div>
           <div class="icard-title">${m.title||'Notification'}</div>
           <div class="icard-body">${m.body||''}</div>
-          ${m.image_url?`<img src="${m.image_url}" style="width:100%;border-radius:10px;margin-top:8px;max-height:160px;object-fit:cover" onerror="this.style.display='none'">` :''}
+          ${m.video_url?`<video src="${m.video_url}" style="width:100%;border-radius:10px;margin-top:8px;max-height:200px;background:#000" controls playsinline preload="metadata"></video>`:(m.image_url?`<img src="${m.image_url}" style="width:100%;border-radius:10px;margin-top:8px;max-height:160px;object-fit:cover" onerror="this.style.display='none'">` :'')}
           <div style="font-size:11px;color:#a0a0b5;margin-top:5px">${m.sent_at?new Date(m.sent_at).toLocaleString().slice(0,15):'—'}</div>
         </div>
         ${!rd?'<div style="width:8px;height:8px;background:var(--purple);border-radius:50%;flex-shrink:0;margin-top:4px"></div>':''}
