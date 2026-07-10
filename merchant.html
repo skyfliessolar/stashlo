@@ -943,6 +943,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <div class="setting-title">Loyalty Programme</div>
       <div class="setting-sub">Choose how customers earn rewards</div>
       <div class="loyalty-opts">
+        <div class="lopt" id="lopt-off" onclick="selectLoyalty('off')"><div class="lopt-ico">🚫</div><div class="lopt-name">Off</div><div class="lopt-desc">No loyalty programme</div></div>
         <div class="lopt" id="lopt-points" onclick="selectLoyalty('points')"><div class="lopt-ico">⭐</div><div class="lopt-name">Points</div><div class="lopt-desc">Earn points per £1</div></div>
         <div class="lopt" id="lopt-percentage" onclick="selectLoyalty('percentage')"><div class="lopt-ico">💸</div><div class="lopt-name">Cashback %</div><div class="lopt-desc">% back on purchases</div></div>
         <div class="lopt" id="lopt-discount" onclick="selectLoyalty('discount')"><div class="lopt-ico">💷</div><div class="lopt-name">Discount</div><div class="lopt-desc">£X off when spend £Y</div></div>
@@ -1388,12 +1389,25 @@ function loadMerchant(){
   }).catch(()=>{})
 }
 function loadProducts(){get("products","merchant_id=eq."+MID+"&order=created_at.desc").then(d=>{PRODUCTS=Array.isArray(d)?d:[];renderProducts();renderQuickGrid();if(typeof renderPOSGrid==="function")renderPOSGrid();txt("d-products",PRODUCTS.filter(p=>p.active!==false).length)}).catch(()=>{})}
-function loadOrders(){get("orders","merchant_id=eq."+MID+"&order=created_at.desc&limit=50").then(d=>{ORDERS=(Array.isArray(d)?d:[]).filter(function(o){return !o.deleted;});renderOrders();renderPending();txt("d-orders",ORDERS.filter(o=>o.status==="pending").length)}).catch(()=>{})}
+function _reverseCancelledPoints(list){
+  // For orders cancelled after earning points, deduct them once (merchant has RLS write).
+  (list||[]).forEach(function(o){
+    if(o.status==='cancelled' && o.points_reversal_due && !o.points_reversed && o.user_id){
+      var loy=(typeof calcLoy==='function')?calcLoy(parseFloat(o.total||0)):{pts:Math.round(o.total||0)};
+      var neg=-(Math.abs(loy.pts||Math.round(o.total||0)));
+      if(typeof awardLoyaltyForSale==='function' && neg<0){
+        awardLoyaltyForSale({id:o.user_id,name:o.customer_name||'Customer',loyalty_id:o.user_lid||''}, 0, {id:'cancel-'+o.id,_fixedPoints:neg});
+      }
+      pat('orders','id=eq.'+o.id,{points_reversed:true}).catch(function(){});
+    }
+  });
+}
+function loadOrders(){get("orders","merchant_id=eq."+MID+"&order=created_at.desc&limit=50").then(d=>{ORDERS=(Array.isArray(d)?d:[]).filter(function(o){return !o.deleted;});_reverseCancelledPoints(ORDERS);renderOrders();renderPending();txt("d-orders",ORDERS.filter(o=>o.status==="pending").length)}).catch(()=>{})}
 function loadCustomers(){get("merchant_customers","merchant_id=eq."+MID+"&order=last_updated.desc&limit=100").then(d=>{CUSTOMERS=Array.isArray(d)?d:[];renderCustomers();txt("d-members",CUSTOMERS.length);const nc=document.getElementById("notify-count");if(nc)nc.textContent=CUSTOMERS.length}).catch(()=>{})}
 function loadTxns(){get("transactions","merchant_id=eq."+MID+"&order=timestamp.desc&limit=100").then(d=>{TXNS=Array.isArray(d)?d:[];const rev=TXNS.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);txt("d-revenue",rev.toFixed(2));txt("d-sales",TXNS.length);renderTxns();renderRecentSales()}).catch(()=>{})}
 function loadInbox(){get("broadcasts","order=sent_at.desc&limit=30").then(d=>{const bs=Array.isArray(d)?d:[];const el=document.getElementById("inbox-list");if(!el)return;const badge=document.getElementById("m-inbox-lab");if(badge)badge.textContent=bs.length?"Inbox ("+bs.length+")":"Inbox";el.innerHTML=bs.map(b=>`<div class="ic" style="border-left:4px solid var(--purple)"><div class="ic-name">📢 ${b.title||"Message"}</div><div class="ic-sub" style="margin-top:6px;line-height:1.5">${b.body||""}</div>${b.image_url?`<img src="${b.image_url}" style="width:100%;max-height:120px;object-fit:cover;border-radius:var(--r8);margin-top:8px" onerror="this.style.display='none'">`:""}  <div class="ic-sub" style="margin-top:6px;color:var(--ink4)">${b.sent_at?new Date(b.sent_at).toLocaleString().slice(0,15):"—"}</div></div>`).join("")||"<div class=\"empty\"><div class=\"empty-ico\">📬</div><div class=\"empty-txt\">No messages yet</div></div>"}).catch(()=>{})}
 
-function calcLoy(amt){const t=MDATA.loyalty_type||"points",v=parseFloat(MDATA.loyalty_value||1),th=parseFloat(MDATA.loyalty_threshold||100);if(t==="points"){const pts=Math.floor(amt*v);return{pts,desc:"+"+pts+" pts ("+v+" per £1)"};}if(t==="percentage"){const pts=Math.floor(amt*v);return{pts,desc:"+"+v+"% cashback ("+pts+" pts)"};}if(t==="stamp")return{pts:1,desc:"+1 stamp"};if(t==="discount"){return{pts:Math.floor(amt),desc:"+"+Math.floor(amt)+" pts"}}return{pts:Math.floor(amt),desc:"+"+Math.floor(amt)+" pts"}}
+function calcLoy(amt){const t=MDATA.loyalty_type||"points",v=parseFloat(MDATA.loyalty_value||1),th=parseFloat(MDATA.loyalty_threshold||100);if(t==="off"){return{pts:0,desc:"Loyalty off"};}if(t==="points"){const pts=Math.floor(amt*v);return{pts,desc:"+"+pts+" pts ("+v+" per £1)"};}if(t==="percentage"){const pts=Math.floor(amt*v);return{pts,desc:"+"+v+"% cashback ("+pts+" pts)"};}if(t==="stamp")return{pts:1,desc:"+1 stamp"};if(t==="discount"){return{pts:Math.floor(amt),desc:"+"+Math.floor(amt)+" pts"}}return{pts:Math.floor(amt),desc:"+"+Math.floor(amt)+" pts"}}
 function fmtRule(){const t=MDATA.loyalty_type||"points",v=MDATA.loyalty_value||1,th=MDATA.loyalty_threshold||100;if(t==="points")return"⭐ "+v+" point per £1 • Reward at "+th+" points";if(t==="percentage")return"💸 "+v+"% cashback on every purchase";if(t==="stamp")return"🎫 Stamp per visit • Reward every "+th+" visits";if(t==="discount")return"💷 £"+v+" off when spending £"+th;return"Loyalty points"}
 
 function renderProducts(){
@@ -1466,7 +1480,7 @@ function addBonus(ph,curPts){
   if(!pts||pts<=0)return;
   get("merchant_customers","merchant_id=eq."+MID+"&phone=eq."+encodeURIComponent(ph)).then(d=>{
     const cu=Array.isArray(d)&&d[0]?d[0]:{points:0,visit_count:0,total_spend:0};
-    post("merchant_customers",{merchant_id:MID,phone:ph,points:(cu.points||0)+pts,visit_count:cu.visit_count||0,total_spend:cu.total_spend||0,last_updated:Date.now()},"merchant_id,phone")
+    post("merchant_customers",{merchant_id:MID,phone:ph,points:Math.max(0,(cu.points||0)+pts),visit_count:cu.visit_count||0,total_spend:cu.total_spend||0,last_updated:Date.now()},"merchant_id,phone")
     .then(()=>{T("+"+pts+" bonus points!","success");loadCustomers()})
   })
 }
@@ -2011,7 +2025,8 @@ function sendNotification(){
 }
 
 function selectLoyalty(t,noSave){
-  LT=t;["points","percentage","discount","stamp"].forEach(x=>{const e=document.getElementById("lopt-"+x);if(e)e.classList.toggle("on",x===t)});
+  LT=t;["off","points","percentage","discount","stamp"].forEach(x=>{const e=document.getElementById("lopt-"+x);if(e)e.classList.toggle("on",x===t)});
+  if(t==="off"){const vs=document.getElementById("loyalty-val-section");if(vs)vs.style.display="none";if(!noSave&&typeof saveSettings==="function"){}return;}
   const vs=document.getElementById("loyalty-val-section"),vf=document.getElementById("loyalty-val-fields");
   if(!vs||!vf)return;vs.style.display="block";
   const v=MDATA.loyalty_value||1,th=MDATA.loyalty_threshold||100;
@@ -2613,7 +2628,7 @@ function awardLoyaltyForSale(cust, amount, sale){
   // override is supplied (e.g. approving a receipt claim where the merchant typed
   // the exact points to give).
   var pts;
-  if(sale && sale._fixedPoints!=null){ pts=Math.max(0,Math.round(sale._fixedPoints)); }
+  if(sale && sale._fixedPoints!=null){ pts=Math.round(sale._fixedPoints); if(!(sale.id&&String(sale.id).indexOf("cancel-")===0))pts=Math.max(0,pts); }
   else { var loy=calcLoy(amount); pts=loy.pts||0; }
   var uid=cust.id; var lid=cust.loyalty_id||'';
   if(!uid){T('⚠️ Customer has no ID — cannot award points','error');return;}
@@ -2639,7 +2654,7 @@ function awardLoyaltyForSale(cust, amount, sale){
     var cardId='local-'+MID;
     get('cards','user_id=eq.'+uid+'&or=(card_id.eq.'+cardId+',merchant_id.eq.'+MID+')').then(function(d){
       var card=Array.isArray(d)&&d[0]?d[0]:null;
-      if(card){pat('cards','user_id=eq.'+uid+'&card_id=eq.'+card.card_id,{points:(card.points||0)+pts,visit_count:(card.visit_count||0)+1,total_spend:(parseFloat(card.total_spend||0)+amount)}).catch(function(){});}
+      if(card){pat('cards','user_id=eq.'+uid+'&card_id=eq.'+card.card_id,{points:Math.max(0,(card.points||0)+pts),visit_count:(card.visit_count||0)+1,total_spend:(parseFloat(card.total_spend||0)+amount)}).catch(function(){});}
     }).catch(function(){});
   }).catch(function(e){
     T('⚠️ Could not add points: '+(e&&(e.message||e.hint||e.code)||'unknown'),'error');
@@ -2650,7 +2665,7 @@ function awardLoyaltyForSale(cust, amount, sale){
   // 4) Bump the customer's global total_points too (their headline number).
   get('users','id=eq.'+uid+'&select=total_points').then(function(d){
     var u=Array.isArray(d)&&d[0]?d[0]:null;
-    if(u){pat('users','id=eq.'+uid,{total_points:(u.total_points||0)+pts}).catch(function(){});}
+    if(u){pat('users','id=eq.'+uid,{total_points:Math.max(0,(u.total_points||0)+pts)}).catch(function(){});}
   }).catch(function(){});
 }
 function finalizeSale(method){
