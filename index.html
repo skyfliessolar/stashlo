@@ -4387,12 +4387,14 @@ function goTab(n){
   var scr=document.getElementById(n+'-screen');
   if(scr){scr.classList.add('on');scr.scrollTop=0;}
   var nb=document.getElementById('nb-'+n);if(nb)nb.classList.add('on');
+  try{var _vf=document.getElementById('voice-fab');if(_vf)_vf.style.display=(n==='me')?'none':'flex';}catch(e){}
   try{window.scrollTo(0,0);}catch(e){}
   try{if(navigator.vibrate)navigator.vibrate(6);}catch(e){}
   
   // ═══ Home header toggle ═══
   var app=document.getElementById('app');
   if(app)app.classList.toggle('home-active',n==='home');
+  if(n==='me')setTimeout(function(){if(typeof loadMySites==='function')loadMySites();},200);
   
   // Stop the order-chat poll when navigating away (restarts when a chat is opened).
   // Prevents a background 4s poll from running while you're on another tab.

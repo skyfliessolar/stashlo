@@ -2166,7 +2166,7 @@ function loadClaims(){
   var el=document.getElementById('claims-list');if(!el)return;
   el.innerHTML='<div style="text-align:center;padding:20px;color:var(--ink3)">Loading…</div>';
   // Requests aimed at this merchant (by merchant_id) that are still pending.
-  get('points_requests','merchant_id=eq.'+MID+'&order=created_at.desc').then(function(d){
+  get('points_requests','merchant_id=eq.'+MID+'&order=created_at.desc').then(function(d){ d=(Array.isArray(d)?d:[]).filter(function(x){return x.status!=='deleted';});
     var rows=Array.isArray(d)?d:[];
     var pending=rows.filter(function(r){return r.status==='pending';});
     // Update the badge in the More drawer.
@@ -2180,7 +2180,7 @@ function loadClaims(){
         actions='<div style="display:flex;gap:8px;margin-top:10px">'
           +'<input id="cpts-'+r.id+'" type="number" placeholder="Points" value="'+Math.max(0,Math.round(parseFloat(r.amount||0)))+'" style="width:80px;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:13px">'
           +'<button onclick="approveClaim(\''+r.id+'\')" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;padding:8px;font-weight:800;font-size:13px;cursor:pointer">✓ Approve &amp; add points</button>'
-          +'<button onclick="rejectClaim(\''+r.id+'\')" style="background:#fef2f2;color:#dc2626;border:none;border-radius:8px;padding:8px 12px;font-weight:800;font-size:13px;cursor:pointer">⛔</button>'
+          +'<button onclick="rejectClaim(\''+r.id+'\')" style="background:#fef2f2;color:#dc2626;border:none;border-radius:8px;padding:8px 12px;font-weight:800;font-size:13px;cursor:pointer">⛔</button>'+'<button onclick="delClaim(\''+r.id+'\')" style="background:#374151;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:800;font-size:13px;cursor:pointer">🗑</button>'
           +'</div>';
       }
       return '<div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px">'
@@ -2190,6 +2190,13 @@ function loadClaims(){
         +'</div>';
     }).join('');
   }).catch(function(){el.innerHTML='<div style="text-align:center;padding:20px;color:#ef4444">Could not load claims (is the points_requests table created?)</div>';});
+}
+function delClaim(id){
+  if(!confirm('Delete this receipt claim permanently?'))return;
+  del('points_requests','id=eq.'+id).then(function(){T('🗑 Claim deleted','success');loadClaims();}).catch(function(){
+    // fallback: soft-hide if delete is blocked by RLS
+    pat('points_requests','id=eq.'+id,{status:'deleted'}).then(function(){T('Claim removed','success');loadClaims();}).catch(function(){T('Failed to delete','error');});
+  });
 }
 function approveClaim(id){
   var ptsEl=document.getElementById('cpts-'+id);
@@ -3110,13 +3117,20 @@ function parsePosVoice(s){
   if(method==='cash'&&tendered!=null){
     var chg=tendered-tot;
     if(chg<0){_pvSay('Cash given '+tendered.toFixed(2)+' is less than total '+tot.toFixed(2));T('⚠️ Tendered £'+tendered.toFixed(2)+' < total £'+tot.toFixed(2),'error');return;}
-    posCheckout('cash');
-    setTimeout(function(){var t=document.getElementById('cm-tendered');if(t){t.value=tendered;if(typeof cmChange==='function')cmChange();}},350);
-    _pvSay('Change due '+chg.toFixed(2)+' pounds');
+    // record the cash sale immediately, then announce change
+    window._VOICE_CHANGE=chg;
+    if(typeof finalizeSale==='function'){finalizeSale('cash');}
+    else{posCheckout('cash');}
+    T('💵 Cash £'+tendered.toFixed(2)+' · Change due £'+chg.toFixed(2));
+    _pvSay('Cash sale complete. Change due '+chg.toFixed(2)+' pounds.');
     return;
   }
-  if(method==='card'){posCheckout('card');_pvSay('Card payment. '+tot.toFixed(2)+' pounds');return;}
-  _pvSay((added.length?('Added '+added.join(', ')+'. '):'')+'Total '+tot.toFixed(2)+' pounds');
+  if(method==='card'){
+    if(typeof finalizeSale==='function'){finalizeSale('card');_pvSay('Card sale complete. '+tot.toFixed(2)+' pounds. Receipt saved.');}
+    else{posCheckout('card');}
+    return;
+  }
+  _pvSay((added.length?('Added '+added.join(', ')+'. '):'')+'Total '+tot.toFixed(2)+' pounds. Say cash or card to complete.');
 }
 
 function posClear(){POS_BASKET=[];renderBasket();}
