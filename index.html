@@ -1709,7 +1709,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 
   <!-- BOTTOM NAV (5 tabs) -->
   <div id="err-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;font-size:12px;font-weight:700;padding:8px 16px;text-align:center"></div>
-  <button id="voice-fab" onclick="startVoice()" title="Voice assistant" style="position:fixed;right:16px;bottom:calc(var(--nav-h,66px) + var(--safe-bot,0px) + 14px);z-index:250;width:52px;height:52px;border-radius:50%;background:var(--purple);color:#fff;border:none;font-size:22px;box-shadow:0 6px 18px rgba(99,102,241,.45);cursor:pointer">🎤</button>
+  <button id="voice-fab" onclick="startVoice()" title="Voice assistant" aria-label="Voice assistant. Tap and say a shop name to open its loyalty card." style="position:fixed;right:16px;bottom:calc(var(--nav-h,66px) + var(--safe-bot,0px) + 14px);z-index:250;width:52px;height:52px;border-radius:50%;background:var(--purple);color:#fff;border:none;font-size:22px;box-shadow:0 6px 18px rgba(99,102,241,.45);cursor:pointer">🎤</button>
   <div class="bottom-nav">
     <div class="sl-btn nb on" id="nb-home" onclick="goTab('home')"><span class="nb-ico">🏠</span><span class="nb-lab">Home</span></div>
     <div class="sl-btn nb" id="nb-cards" onclick="goTab('cards')"><span class="nb-ico">💳</span><span class="nb-lab">Cards</span></div>
@@ -3047,12 +3047,38 @@ function startVoice(){
   };
   rec.onerror=function(e){if(e.error==='not-allowed')T('Allow microphone access to use voice','error');};
   rec.onend=function(){VOICE.on=false;var b=document.getElementById('voice-fab');if(b){b.style.background='var(--purple)';b.textContent='🎤';}};
-  try{rec.start();T('🎤 Listening… say e.g. "show my nectar card", "orders", "my points", "close"');}catch(e){VOICE.on=false;}
+  var started=false;
+  var go=function(){if(started)return;started=true;try{rec.start();T('🎤 Listening…');}catch(e){VOICE.on=false;}};
+  try{
+    var u=new SpeechSynthesisUtterance('How can I help?');u.lang='en-GB';
+    u.onend=go;speechSynthesis.speak(u);
+    setTimeout(go,1600); // fallback if speech is muted
+  }catch(e){go();}
 }
 function _voiceSay(msg){
   try{var u=new SpeechSynthesisUtterance(msg);u.lang='en-GB';speechSynthesis.speak(u);}catch(e){}
 }
+function _voiceFindCard(s){
+  // Fuzzy: open a card if its shop name (or a distinctive word of it) is heard.
+  var best=null;
+  (CARDS||[]).forEach(function(c){
+    var name=(c.shop_name||c.name||'').toLowerCase().trim();if(!name)return;
+    if(s.indexOf(name)>=0){best={c:c,score:name.length+10};return;}
+    name.split(/\s+/).forEach(function(w){
+      if(w.length>=4&&s.indexOf(w)>=0&&(!best||w.length>best.score))best={c:c,score:w.length};
+    });
+  });
+  return best&&best.c;
+}
 function handleVoiceCommand(s){
+  // SHORT CLUES first: 'nectar', 'skyflies card', 'open nectar'…
+  var hit=_voiceFindCard(s);
+  if(hit && !/\bpoints?\b/.test(s)){
+    goTab('cards');
+    setTimeout(function(){try{openCardDet(hit.card_id);}catch(e){}},350);
+    _voiceSay((hit.shop_name||'Your card')+'. '+(parseInt(hit.points)||0)+' points.');
+    return;
+  }
   // 1. close anything open
   if(/\bclose\b|\bgo back\b|\bdismiss\b/.test(s)){
     document.querySelectorAll('.offer-pop').forEach(function(x){x.remove()});
@@ -3075,7 +3101,8 @@ function handleVoiceCommand(s){
   // 4. navigation
   var tabs={home:'home',card:'cards',cards:'cards',wallet:'cards',store:'shop',shop:'shop',order:'orders',orders:'orders',offer:'offers',offers:'offers',inbox:'inbox',message:'inbox',receipt:'receipts',receipts:'receipts',job:'jobs',jobs:'jobs',profile:'me',account:'me',settings:'me'};
   for(var k in tabs){if(s.indexOf(k)>=0){goTab(tabs[k]);_voiceSay('Opening '+k);return;}}
-  T('Try: "show my <shop> card", "my points", "orders", "close"');
+  if(/\bhelp\b|\bwhat can\b/.test(s)){_voiceSay('Say a shop name to open its card. Or say orders, points, store, or close.');T('🎤 Say a shop name, "orders", "my points", "store", or "close"');return;}
+  T('Try: a shop name, "my points", "orders", "close"');_voiceSay('Sorry, I did not catch that. Say a shop name, or say help.');
 }
 
 function checkNearbyCard(){
@@ -3089,19 +3116,39 @@ function checkNearbyCard(){
     ]).then(function(res){
       var cards=Array.isArray(res[0])?res[0]:[], shops=Array.isArray(res[1])?res[1]:[];
       if(!cards.length||!shops.length)return;
-      var best=null;
+      var matches=[];
       shops.forEach(function(s){
         if(!s.lat||!s.lng)return;
         var card=cards.find(function(c){return c.card_id===s.id||c.card_id==='local-'+s.id;});
         if(!card)return;
         var d=haversineMiles(here.lat,here.lng,parseFloat(s.lat),parseFloat(s.lng));
-        if(d<=0.15 && (!best||d<best.d))best={d:d,shop:s,card:card};
+        if(d<=0.15)matches.push({d:d,shop:s,card:card});
       });
-      if(!best)return;
-      var key='stashlo_nearpop_'+best.shop.id;
-      var last=parseInt(localStorage.getItem(key)||'0');
-      if(Date.now()-last < 2*60*60*1000)return; // once per 2h per shop
-      try{localStorage.setItem(key,String(Date.now()));}catch(e){}
+      // cooldown per shop (2h)
+      matches=matches.filter(function(m){
+        var last=parseInt(localStorage.getItem('stashlo_nearpop_'+m.shop.id)||'0');
+        return Date.now()-last>=2*60*60*1000;
+      }).sort(function(a,b){return a.d-b.d}).slice(0,4);
+      if(!matches.length)return;
+      matches.forEach(function(m){try{localStorage.setItem('stashlo_nearpop_'+m.shop.id,String(Date.now()));}catch(e){}});
+      if(matches.length>1){
+        // SHOPPING CENTRE: several of your shops nearby — let the user pick.
+        var ov2=document.createElement('div');ov2.className='offer-pop';
+        ov2.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1300;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px)';
+        ov2.innerHTML='<div style="background:var(--card);border-radius:22px;max-width:330px;width:100%;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.4)">'
+          +'<div style="font-weight:900;font-size:17px;text-align:center">📍 Your cards near you</div>'
+          +'<div style="font-size:12px;color:var(--sub);text-align:center;margin-top:4px">Pick the shop you\u2019re visiting</div>'
+          +matches.map(function(m,i){return '<button data-i="'+i+'" style="display:flex;width:100%;align-items:center;gap:10px;background:var(--bg);border:none;border-radius:14px;padding:12px;margin-top:8px;cursor:pointer;text-align:left"><span style="font-size:24px">'+(m.shop.logo_emoji||'🏪')+'</span><span style="flex:1"><b>'+(m.shop.name||'Shop')+'</b><br><span style="font-size:11px;color:var(--sub)">'+(m.d<0.02?'right here':(Math.round(m.d*1609))+'m away')+' · '+(m.card.points||0)+' pts</span></span><span>›</span></button>'}).join('')
+          +'<button id="np2-close" style="width:100%;background:var(--bg2);color:var(--ink);border:none;border-radius:12px;padding:11px;font-weight:700;margin-top:10px;cursor:pointer">Not now</button></div>';
+        document.body.appendChild(ov2);
+        ov2.querySelector('#np2-close').onclick=function(){ov2.remove()};
+        ov2.onclick=function(e){if(e.target===ov2)ov2.remove()};
+        ov2.querySelectorAll('button[data-i]').forEach(function(btn){
+          btn.onclick=function(){var m=matches[parseInt(btn.dataset.i)];ov2.remove();goTab('cards');setTimeout(function(){try{openCardDet(m.card.card_id);}catch(e){}},350);};
+        });
+        return;
+      }
+      var best=matches[0];
       var ov=document.createElement('div');
       ov.className='offer-pop';
       ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1300;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px)';
