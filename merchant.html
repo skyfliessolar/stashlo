@@ -3029,6 +3029,38 @@ function startPosVoice(){
   try{rec.start();T('🎤 e.g. "10 pound diesel card" · "coca cola" · "cash 10 pound fuel 20 pound"');}catch(e){PVOICE.on=false;}
 }
 function _pvTotal(){var t=0;POS_BASKET.forEach(function(b){t+=b.price*b.qty});return t;}
+
+// Clean a spoken product name into a proper, correctly-cased product name.
+function _normProdName(raw){
+  if(!raw)return '';
+  var s=' '+raw.toLowerCase().trim()+' ';
+  // normalise spoken sizes/units to canonical forms
+  s=s.replace(/(\d+)\s*(?:c\.?l|centilitre?s?|centiliter?s?)\b/g,'$1cl');
+  s=s.replace(/(\d+)\s*(?:m\.?l|millilitre?s?|milliliter?s?)\b/g,'$1ml');
+  s=s.replace(/(\d+)\s*(?:l|litre?s?|liter?s?)\b/g,'$1L');
+  s=s.replace(/(\d+)\s*(?:g|gram?s?|gramme?s?)\b/g,'$1g');
+  s=s.replace(/(\d+)\s*(?:kg|kilo?s?|kilogram?s?)\b/g,'$1kg');
+  s=s.replace(/(\d+)\s*(?:cc)\b/g,'$1cc');
+  s=s.replace(/(\d+)\s*(?:pack|pk)\b/g,'$1-pack');
+  s=s.replace(/\s+/g,' ').trim();
+  // Title-case words, but keep unit tokens (70cl, 1L, 500ml) lowercase-unit
+  return s.split(' ').map(function(w){
+    if(/^\d/.test(w))return w.replace(/L$/,'L'); // keep 70cl / 1L / 500ml as-is
+    return w.charAt(0).toUpperCase()+w.slice(1);
+  }).join(' ');
+}
+// Remember a new voice/manual product so next time the name+price auto-fill.
+function _rememberProduct(name,price){
+  try{
+    if(!name||!(price>0))return;
+    var exists=(PRODUCTS||[]).some(function(p){return (p.name||'').toLowerCase()===name.toLowerCase();});
+    if(exists)return;
+    var row={merchant_id:MID,name:name,price:price,category:'general',pos_category:'general',active:true,no_loyalty:false,created_at:Date.now()};
+    if(typeof PRODUCTS!=='undefined')PRODUCTS.push(Object.assign({id:'local_'+Date.now()},row));
+    post('products',row).catch(function(){}); // best-effort; RLS/offline safe
+  }catch(e){}
+}
+
 function parsePosVoice(s){
   s=' '+s.replace(/£/g,' ').replace(/\s+/g,' ').trim()+' ';
   // corrections / undo
@@ -3037,12 +3069,22 @@ function parsePosVoice(s){
   if(/\btotal\b/.test(s)&&!/\d/.test(s)){_pvSay('Total is '+_pvTotal().toFixed(2)+' pounds');return;}
   var method=/\bcard\b/.test(s)?'card':(/\bcash\b/.test(s)?'cash':null);
   // split into (amount, words) pairs
-  var re=/(\d+(?:\.\d+)?)\s*(?:pounds?|pound|quid|p\b)?\s*([a-z][a-z ]*?)?(?=\d|$)/g, mt, pairs=[];
-  var stripped=s.replace(/\b(cash|card|change|and|of|for|a|the|please)\b/g,' ');
-  while((mt=re.exec(stripped))!==null){
-    pairs.push({amt:parseFloat(mt[1]),name:(mt[2]||'').trim()});
-    if(re.lastIndex===mt.index)re.lastIndex++;
+  var stripped=s.replace(/\b(cash|card|change|and|the|please)\b/g,' ').replace(/\s+/g,' ').trim();
+  // Split on "<price> pound(s)" so a size like 70cl stays inside the item name.
+  // e.g. "10 pound diesel 5 pound yards red wine 70cl"
+  var pairs=[];
+  var segs=stripped.split(/(\d+(?:\.\d+)?)\s*(?:pounds?|pound|quid|p)\b/i);
+  // segs = ['', '10', ' diesel ', '5', ' yards red wine 70cl']
+  for(var i=1;i<segs.length;i+=2){
+    var amt=parseFloat(segs[i]);
+    var nm=(segs[i+1]||'').replace(/^\s*(?:of|for|a)\s+/,'').trim();
+    // a trailing bare number (cash tendered) has no name and no "pound" -> handled below
+    pairs.push({amt:amt,name:nm});
   }
+  // trailing tendered amount: a number AFTER the last item with no "pound" word (cash)
+  var tail=segs[segs.length-1]||'';
+  var tnum=tail.match(/(\d+(?:\.\d+)?)\s*$/);
+  if(tnum&&pairs.length){pairs.push({amt:parseFloat(tnum[1]),name:''});pairs[pairs.length-2].name=pairs[pairs.length-2].name.replace(/\s*\d+(?:\.\d+)?\s*$/,'').trim();}
   // name-only (no digits): saved-product lookup e.g. "coca cola"
   if(!pairs.length){
     var q=stripped.trim();
@@ -3058,8 +3100,10 @@ function parsePosVoice(s){
   pairs.forEach(function(p,i){
     if(!p.name){ if(method==='cash')tendered=p.amt; return; }
     // saved product said WITH no explicit different price? User rule: amount spoken wins.
-    POS_BASKET.push({id:'voice_'+Date.now()+'_'+i,name:p.name.replace(/\b\w/g,function(c){return c.toUpperCase()}),price:p.amt,vat:(typeof _MP_VAT!=='undefined'?_MP_VAT:0),qty:1,emoji:'🎤',cost:0,cat:'general'});
-    added.push(p.name+' '+p.amt.toFixed(2));
+    var _nm=_normProdName(p.name);
+    POS_BASKET.push({id:'voice_'+Date.now()+'_'+i,name:_nm,price:p.amt,vat:(typeof _MP_VAT!=='undefined'?_MP_VAT:0),qty:1,emoji:'🎤',cost:0,cat:'general'});
+    _rememberProduct(_nm,p.amt);
+    added.push(_nm+' '+p.amt.toFixed(2));
   });
   renderBasket();
   var tot=_pvTotal();
