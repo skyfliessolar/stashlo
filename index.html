@@ -1709,6 +1709,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 
   <!-- BOTTOM NAV (5 tabs) -->
   <div id="err-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;font-size:12px;font-weight:700;padding:8px 16px;text-align:center"></div>
+  <button id="voice-fab" onclick="startVoice()" title="Voice assistant" style="position:fixed;right:16px;bottom:calc(var(--nav-h,66px) + var(--safe-bot,0px) + 14px);z-index:250;width:52px;height:52px;border-radius:50%;background:var(--purple);color:#fff;border:none;font-size:22px;box-shadow:0 6px 18px rgba(99,102,241,.45);cursor:pointer">🎤</button>
   <div class="bottom-nav">
     <div class="sl-btn nb on" id="nb-home" onclick="goTab('home')"><span class="nb-ico">🏠</span><span class="nb-lab">Home</span></div>
     <div class="sl-btn nb" id="nb-cards" onclick="goTab('cards')"><span class="nb-ico">💳</span><span class="nb-lab">Cards</span></div>
@@ -3028,6 +3029,55 @@ function redeemPromo(){
   }).catch(function(){st.innerHTML='<span style="color:var(--red)">Failed — run the promo SQL first</span>';});
 }
 
+
+// ===== VOICE ASSISTANT (Web Speech API) =====
+var VOICE={rec:null,on:false};
+function voiceSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition);}
+function startVoice(){
+  if(!voiceSupported()){T('Voice not supported on this browser — works best in Chrome on Android','error');return}
+  if(VOICE.on){try{VOICE.rec.stop();}catch(e){}return}
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  var rec=new SR();rec.lang='en-GB';rec.interimResults=false;rec.maxAlternatives=1;
+  VOICE.rec=rec;VOICE.on=true;
+  var btn=document.getElementById('voice-fab');if(btn){btn.style.background='#ef4444';btn.textContent='👂';}
+  rec.onresult=function(e){
+    var said=(e.results[0][0].transcript||'').toLowerCase().trim();
+    T('🎤 "'+said+'"');
+    handleVoiceCommand(said);
+  };
+  rec.onerror=function(e){if(e.error==='not-allowed')T('Allow microphone access to use voice','error');};
+  rec.onend=function(){VOICE.on=false;var b=document.getElementById('voice-fab');if(b){b.style.background='var(--purple)';b.textContent='🎤';}};
+  try{rec.start();T('🎤 Listening… say e.g. "show my nectar card", "orders", "my points", "close"');}catch(e){VOICE.on=false;}
+}
+function _voiceSay(msg){
+  try{var u=new SpeechSynthesisUtterance(msg);u.lang='en-GB';speechSynthesis.speak(u);}catch(e){}
+}
+function handleVoiceCommand(s){
+  // 1. close anything open
+  if(/\bclose\b|\bgo back\b|\bdismiss\b/.test(s)){
+    document.querySelectorAll('.offer-pop').forEach(function(x){x.remove()});
+    document.querySelectorAll('.mo.on,.modal.on').forEach(function(x){x.classList.remove('on')});
+    document.body.style.overflow='';_voiceSay('Closed');return;
+  }
+  // 2. "my points" -> speak total
+  if(/\bpoints?\b/.test(s)&&/\bmy\b|\bhow many\b|\btotal\b/.test(s)){
+    var tot=(CARDS||[]).reduce(function(a,c){return a+(parseInt(c.points)||0)},0);
+    T('💎 You have '+tot+' points');_voiceSay('You have '+tot+' points');return;
+  }
+  // 3. "<shop> card" -> open the matching card
+  var m=s.match(/(?:show |open |my )*(.+?)\s*card/);
+  if(m&&m[1]){
+    var q=m[1].replace(/\b(show|open|my|the)\b/g,'').trim();
+    var card=(CARDS||[]).find(function(c){return (c.shop_name||c.name||'').toLowerCase().indexOf(q)>=0});
+    if(card){goTab('cards');setTimeout(function(){try{openCardDet(card.card_id);}catch(e){}},350);_voiceSay('Here is your '+(card.shop_name||'card'));return;}
+    T('No card matching "'+q+'" — say the shop name','error');_voiceSay('I could not find a '+q+' card');return;
+  }
+  // 4. navigation
+  var tabs={home:'home',card:'cards',cards:'cards',wallet:'cards',store:'shop',shop:'shop',order:'orders',orders:'orders',offer:'offers',offers:'offers',inbox:'inbox',message:'inbox',receipt:'receipts',receipts:'receipts',job:'jobs',jobs:'jobs',profile:'me',account:'me',settings:'me'};
+  for(var k in tabs){if(s.indexOf(k)>=0){goTab(tabs[k]);_voiceSay('Opening '+k);return;}}
+  T('Try: "show my <shop> card", "my points", "orders", "close"');
+}
+
 function checkNearbyCard(){
   if(!navigator.geolocation||!UID)return;
   navigator.geolocation.getCurrentPosition(function(pos){
@@ -3066,7 +3116,7 @@ function checkNearbyCard(){
       document.body.appendChild(ov);
       ov.querySelector('#np-later').onclick=function(){ov.remove();};
       ov.onclick=function(e){if(e.target===ov)ov.remove();};
-      ov.querySelector('#np-show').onclick=function(){ov.remove();goTab('cards');if(typeof openCard==='function'){try{openCard(best.card.card_id);}catch(e){}}};
+      ov.querySelector('#np-show').onclick=function(){ov.remove();goTab('cards');setTimeout(function(){try{openCardDet(best.card.card_id);}catch(e){}},350);};
     }).catch(function(){});
   },function(){},{timeout:6000,maximumAge:300000});
 }
