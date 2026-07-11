@@ -4381,6 +4381,7 @@ function payJobNow(){
 
 // ===== NAVIGATION =====
 function goTab(n){
+  try{var _vf=document.getElementById('voice-fab');if(_vf)_vf.style.display=(n==='me')?'none':'flex';}catch(e){}
   // ═══ Base screen switcher ═══
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on');});
   document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on');});
