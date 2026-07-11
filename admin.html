@@ -2037,7 +2037,7 @@ function loadPromos(){
   sget('promo_codes','order=created_at.desc&limit=50').then(d=>{
     const el=document.getElementById('pc-list');if(!el)return;
     const rows=Array.isArray(d)?d:[];
-    el.innerHTML=rows.length?rows.map(p=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;margin-bottom:6px"><div><b>'+p.code+'</b> · +'+(p.points||0)+' pts · '+(p.used_count||0)+'/'+(p.max_uses||'∞')+' used'+(p.expires_at?' · exp '+new Date(p.expires_at).toLocaleDateString():'')+(p.active?'':' · <span style=\'color:var(--red)\'>OFF</span>')+'</div><button class="sl-btn btn-xs" style="background:'+(p.active?'#7f1d1d':'var(--green)')+';color:#fff" onclick="togglePromo(\''+p.code+'\','+(!p.active)+')">'+(p.active?'Disable':'Enable')+'</button></div>').join(''):'<div style="font-size:12px;color:var(--ink3)">No codes yet.</div>';
+    el.innerHTML=rows.length?rows.map(p=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;margin-bottom:6px"><div><b>'+p.code+'</b> · +'+(p.points||0)+' pts · '+(p.used_count||0)+'/'+(p.max_uses||'∞')+' used'+(p.expires_at?' · exp '+new Date(p.expires_at).toLocaleDateString():'')+(p.active?'':' · <span style=\'color:var(--red)\'>OFF</span>')+'</div><button class="sl-btn btn-xs" style="background:'+(p.active?'#7f1d1d':'var(--green)')+';color:#fff" onclick="togglePromo(\''+p.code+'\','+(!p.active)+')">'+(p.active?'Disable':'Enable')+'</button> <button class="sl-btn btn-xs" style="background:#374151;color:#fff" onclick="delPromo(\''+p.code+'\')">🗑</button></div>').join(''):'<div style="font-size:12px;color:var(--ink3)">No codes yet.</div>';
   }).catch(()=>{const el=document.getElementById('pc-list');if(el)el.innerHTML='<div style="font-size:12px;color:var(--red)">Run the promo SQL first.</div>';});
 }
 function addPromo(){
@@ -2045,13 +2045,20 @@ function addPromo(){
   const pts=parseInt(document.getElementById('pc-points').value)||0;
   const mx=parseInt(document.getElementById('pc-max').value)||null;
   const exp=document.getElementById('pc-exp').value?new Date(document.getElementById('pc-exp').value+'T23:59:59').getTime():null;
-  if(!code||!pts){T('Enter a code and points','error');return}
+  if(!code){T('Enter a code','error');return}
+  if(!pts||pts<1){T('Enter POINTS value (e.g. 10) — this is what the customer receives','error');return}
   spost('promo_codes',{code,points:pts,max_uses:mx,expires_at:exp,active:true,used_count:0,created_at:Date.now()})
     .then(()=>{T('✅ Code '+code+' created','success');logAudit('create_promo',code);['pc-code','pc-points','pc-max','pc-exp'].forEach(i=>document.getElementById(i).value='');loadPromos();})
     .catch(()=>T('Failed — table exists?','error'));
 }
 function togglePromo(code,on){
-  spat('promo_codes','code=eq.'+encodeURIComponent(code),{active:on}).then(()=>{T(on?'Enabled':'Disabled','success');loadPromos();}).catch(()=>T('Failed','error'));
+  spat('promo_codes','code=eq.'+encodeURIComponent(code),{active:on})
+    .then(()=>{T(on?'✅ Enabled':'Disabled','success');loadPromos();})
+    .catch(e=>T('Failed: '+((e&&e.message)||JSON.stringify(e)).slice(0,80),'error'));
+}
+function delPromo(code){
+  if(!confirm('Delete code '+code+'?'))return;
+  sdel('promo_codes','code=eq.'+encodeURIComponent(code)).then(()=>{T('Deleted','success');loadPromos();}).catch(e=>T('Failed: '+((e&&e.message)||'').slice(0,60),'error'));
 }
 
 function loadWebsiteRequests(){
@@ -2067,7 +2074,8 @@ function loadWebsiteRequests(){
         +'<button class="sl-btn btn-xs btn-purple" onclick="wrPreview('+r.id+')">👁 Preview</button>'
         +'<button class="sl-btn btn-xs" style="background:var(--ink);color:#fff" onclick="wrDownload('+r.id+')">⬇ HTML</button>'
         +'<button class="sl-btn btn-xs" style="background:#b45309;color:#fff" onclick="wrFee('+r.id+')">£ Fee</button>'
-        +'<button class="sl-btn btn-xs btn-green" onclick="wrPublish('+r.id+')">🚀 Published</button>'
+        +'<button class="sl-btn btn-xs btn-green" onclick="wrAutoPublish('+r.id+')">⚡ Auto-publish</button>'
+        +'<button class="sl-btn btn-xs btn-green" onclick="wrPublish('+r.id+')">🔗 Set link</button>'
         +'<button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="wrReject('+r.id+')">✕</button>'
         +'</div></div>';
     }).join(''):'<div class="ic" style="text-align:center;color:var(--ink3)">No website requests yet.</div>';
@@ -2085,6 +2093,25 @@ function wrDownload(id){const r=_wr(id);if(!r||!r.html){T('No HTML','error');ret
   T('⬇ Downloaded — create repo '+(r.site_name||'site')+' on GitHub, upload as index.html, enable Pages','success');}
 function wrFee(id){const r=_wr(id);const f=prompt('Fee to charge (£) for '+(r&&r.business_name||'this site')+' (domain/email/hosting):', r&&r.fee||'0');
   if(f===null)return;spat('website_requests','id=eq.'+id,{fee:parseFloat(f)||0}).then(()=>{T('Fee saved','success');loadWebsiteRequests();}).catch(()=>T('Failed','error'));}
+async function wrAutoPublish(id){
+  const r=_wr(id);if(!r||!r.html){T('No HTML stored','error');return}
+  let pat=localStorage.getItem('stashlo_gh_pat');
+  if(!pat){pat=prompt('Paste YOUR GitHub token (repo scope). Stored only in THIS browser:');if(!pat)return;localStorage.setItem('stashlo_gh_pat',pat.trim());}
+  const H={'Authorization':'Bearer '+pat.trim(),'Accept':'application/vnd.github+json','Content-Type':'application/json'};
+  const repo=(r.site_name||'site').toLowerCase().replace(/[^a-z0-9-]/g,'-');
+  T('⚡ Publishing '+repo+'…');
+  try{
+    const me=await (await fetch('https://api.github.com/user',{headers:H})).json();
+    if(!me.login)throw new Error('Bad token — check scopes');
+    await fetch('https://api.github.com/user/repos',{method:'POST',headers:H,body:JSON.stringify({name:repo,description:'Website by Stashlo for '+(r.business_name||''),homepage:'',private:false})}); // 422 if exists = fine
+    const put=await fetch('https://api.github.com/repos/'+me.login+'/'+repo+'/contents/index.html',{method:'PUT',headers:H,body:JSON.stringify({message:'Publish website via Stashlo',content:btoa(unescape(encodeURIComponent(r.html)))})});
+    if(!put.ok&&put.status!==422){const e=await put.json();throw new Error(e.message||'upload failed');}
+    await fetch('https://api.github.com/repos/'+me.login+'/'+repo+'/pages',{method:'POST',headers:H,body:JSON.stringify({source:{branch:'main',path:'/'}})}).catch(()=>{});
+    const url='https://'+me.login+'.github.io/'+repo+'/';
+    await spat('website_requests','id=eq.'+id,{status:'published',live_url:url,decided_at:Date.now()});
+    T('✅ LIVE: '+url+' (Pages may take ~1 min)','success');logAudit('auto_publish_website',url);loadWebsiteRequests();
+  }catch(e){T('Publish failed: '+(e.message||'').slice(0,80),'error');}
+}
 function wrPublish(id){const url=prompt('Live URL of the published site (e.g. https://username.github.io/sitename):','https://');
   if(!url)return;spat('website_requests','id=eq.'+id,{status:'published',live_url:url,decided_at:Date.now()}).then(()=>{T('✅ Marked live — the requester sees the link in their app','success');logAudit('publish_website',url);loadWebsiteRequests();}).catch(()=>T('Failed','error'));}
 function wrReject(id){if(!confirm('Reject this website request?'))return;

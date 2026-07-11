@@ -1627,6 +1627,12 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       </div>
       <div id="promo-status" style="font-size:12px;margin-top:6px"></div>
     </div>
+    <div class="ic" style="margin:12px 16px 0">
+      <div style="font-weight:800;margin-bottom:6px">🌐 Get your own website</div>
+      <div style="font-size:12px;color:var(--sub);margin-bottom:8px">Stashlo builds you a professional website — free preview, published by our team.</div>
+      <button onclick="openSiteBuilder()" style="width:100%;background:var(--purple);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;cursor:pointer">🌐 Create my website</button>
+      <div id="cw-myreqs" style="margin-top:8px"></div>
+    </div>
     <div id="prof-summary" style="margin:14px 16px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 2px 16px -4px rgba(99,102,241,.10)"></div>
     <div style="padding:24px 16px 16px">
       <div class="prof-avatar">👤</div>
@@ -2909,6 +2915,67 @@ function buildStoreCategories(){
 // that card automatically (once per shop per 2h). Silent if no permission.
 
 // ===== BIRTHDAY OFFER =====
+
+// ===== CUSTOMER WEBSITE BUILDER =====
+var CW_THEMES={restaurant:["🍽️","#7c2d12","#ea580c"],food:["🍔","#78350f","#f59e0b"],grocery:["🛒","#14532d","#16a34a"],hotel:["🏨","#1e3a8a","#3b82f6"],shop:["🛍️","#312e81","#6366F1"],services:["🛠️","#134e4a","#0d9488"],other:["⭐","#0f172a","#64748b"]};
+function cwHTML(d){
+  var t=CW_THEMES[d.business_type]||CW_THEMES.other;
+  function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  var wa=(d.phone||"").replace(/[^0-9]/g,"");
+  return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>"+esc(d.business_name)+"</title><style>*{margin:0;box-sizing:border-box}body{font-family:-apple-system,'Segoe UI',sans-serif;color:#1e293b;line-height:1.7}.hero{background:linear-gradient(135deg,"+t[1]+","+t[2]+");color:#fff;padding:90px 20px;text-align:center}.hero h1{font-size:38px;margin:12px 0 8px}.sec{max-width:760px;margin:0 auto;padding:44px 20px}.sec h2{color:"+t[1]+"}.card{background:#f8fafc;border-radius:16px;padding:22px;margin-top:14px}footer{background:"+t[1]+";color:#fff;text-align:center;padding:22px;font-size:13px}a{color:"+t[2]+"}.chat{position:fixed;bottom:18px;right:18px;background:#25D366;color:#fff;border-radius:50%;width:58px;height:58px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 6px 18px rgba(0,0,0,.25);text-decoration:none}</style></head><body>"
+   +"<div class=\"hero\"><div style=\"font-size:60px\">"+t[0]+"</div><h1>"+esc(d.business_name)+"</h1><p>"+esc(d.tagline||"Welcome")+"</p></div>"
+   +(d.about_text?"<div class=\"sec\"><h2>About us</h2><p>"+esc(d.about_text)+"</p></div>":"")
+   +"<div class=\"sec\"><h2>Contact</h2><div class=\"card\">"+(d.address?"<div>📍 "+esc(d.address)+"</div>":"")+(d.phone?"<div>📞 <a href=\"tel:"+esc(d.phone)+"\">"+esc(d.phone)+"</a></div>":"")+(d.email?"<div>✉️ <a href=\"mailto:"+esc(d.email)+"\">"+esc(d.email)+"</a></div>":"")+"</div></div>"
+   +(wa?"<a class=\"chat\" href=\"https://wa.me/"+wa+"\" title=\"Chat with us\">💬</a>":"")
+   +"<footer>© "+(new Date().getFullYear())+" "+esc(d.business_name)+" · Website by Stashlo</footer></body></html>";
+}
+function openSiteBuilder(){
+  var ov=document.createElement('div');ov.id='cw-ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center';
+  function F(id,ph,type){return '<input id="'+id+'" placeholder="'+ph+'" type="'+(type||'text')+'" style="width:100%;padding:12px;border:1px solid var(--bg2);border-radius:10px;font-size:14px;background:var(--bg);margin-bottom:8px">';}
+  ov.innerHTML='<div style="background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:430px;max-height:90vh;overflow-y:auto;padding:20px 16px calc(env(safe-area-inset-bottom,0px) + 24px)">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:17px">🌐 Create my website</b><button onclick="document.getElementById(\'cw-ov\').remove()" style="background:var(--bg2);border:none;border-radius:8px;width:32px;height:32px;font-size:16px;cursor:pointer">✕</button></div>'
+    +F('cw-name','Your full name ★')+F('cw-email','Email ★','email')+F('cw-phone','Phone / WhatsApp (adds 💬 chat button)')
+    +F('cw-bname','Business name ★')
+    +'<select id="cw-btype" style="width:100%;padding:12px;border:1px solid var(--bg2);border-radius:10px;font-size:14px;background:var(--bg);margin-bottom:8px"><option value="restaurant">Restaurant</option><option value="food">Food / Takeaway</option><option value="grocery">Grocery</option><option value="hotel">Hotel</option><option value="shop">Shop / Retail</option><option value="services">Services</option><option value="other">Other</option></select>'
+    +F('cw-tag','Tagline')+'<textarea id="cw-about" placeholder="About your business…" style="width:100%;padding:12px;border:1px solid var(--bg2);border-radius:10px;font-size:14px;background:var(--bg);margin-bottom:8px;min-height:70px"></textarea>'
+    +F('cw-addr','Address')+F('cw-site','Website name ★ e.g. my-shop')
+    +'<div style="display:flex;gap:8px;margin-top:4px"><button onclick="cwPreview()" style="flex:1;padding:13px;background:var(--purple3,#ede9fe);color:var(--purple);border:none;border-radius:12px;font-weight:800;cursor:pointer">👁 Preview</button><button onclick="cwSubmit()" style="flex:1;padding:13px;background:var(--purple);color:#fff;border:none;border-radius:12px;font-weight:800;cursor:pointer">🚀 Submit</button></div>'
+    +'<div id="cw-status" style="font-size:12px;margin-top:8px"></div></div>';
+  document.body.appendChild(ov);
+  var s=document.getElementById('cw-site');if(s)s.oninput=function(){this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'-');};
+}
+function _cwData(){return {requester_name:V('cw-name'),email:V('cw-email'),phone:V('cw-phone'),business_name:V('cw-bname'),business_type:V('cw-btype'),tagline:V('cw-tag'),about_text:V('cw-about'),address:V('cw-addr'),site_name:V('cw-site')};}
+function cwPreview(){
+  var d=_cwData();if(!d.business_name){T('Enter your business name','error');return}
+  var pv=document.createElement('div');pv.style.cssText='position:fixed;inset:0;z-index:1500;background:#000;display:flex;flex-direction:column';
+  pv.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#0f172a;color:#fff"><b>👁 Preview</b><button style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer">✕</button></div><iframe style="flex:1;border:0;background:#fff"></iframe>';
+  pv.querySelector('button').onclick=function(){pv.remove()};document.body.appendChild(pv);
+  pv.querySelector('iframe').srcdoc=cwHTML(d);
+}
+function cwSubmit(){
+  var d=_cwData();
+  if(!d.requester_name||!d.email||!d.business_name||!d.site_name){T('Fill the ★ fields','error');return}
+  var st=document.getElementById('cw-status');st.textContent='Submitting…';
+  post('website_requests',Object.assign({user_id:UID,html:cwHTML(d),status:'pending',created_at:Date.now()},d))
+    .then(function(){st.innerHTML='<span style="color:var(--green);font-weight:700">✅ Submitted! Stashlo will publish it and your link will appear here.</span>';loadMySites();})
+    .catch(function(){st.innerHTML='<span style="color:var(--red)">Failed — please try again later.</span>';});
+}
+function loadMySites(){
+  if(!UID)return;
+  get('website_requests','user_id=eq.'+UID+'&order=created_at.desc').then(function(d){
+    var el=document.getElementById('cw-myreqs');if(!el)return;
+    var rows=Array.isArray(d)?d:[];
+    el.innerHTML=rows.map(function(r){
+      var s=r.status==='published'?'<span style="color:var(--green);font-weight:700">✅ LIVE — <a href="'+r.live_url+'" target="_blank" style="color:var(--purple)">open my website</a></span>':(r.status==='rejected'?'<span style="color:var(--red)">❌ Rejected</span>':'<span style="color:#b45309">🕐 Pending review</span>');
+      return '<div style="padding:8px 10px;background:var(--bg);border-radius:10px;margin-top:6px;font-size:12px"><b>'+(r.business_name||'')+'</b> · '+s+(r.fee>0?' · fee £'+parseFloat(r.fee).toFixed(2):'')+'</div>';
+    }).join('');
+  }).catch(function(){});
+}
+
+// ===== ORDER STATUS -> INBOX NOTIFICATIONS =====
+var ORD_STATUS_MSG={confirmed:['✅','Your order is confirmed'],ready:['📦','Ready for collection!'],dispatched:['🚚','Your order is on the way'],in_transit:['🚚','Your order is on the way'],out_for_delivery:['🏃','Out for delivery — arriving soon'],completed:['🎉','Order completed — points added to your account 💎'],delivered:['🎉','Delivered — points added to your account 💎'],collected:['🎉','Collected — points added 💎'],cancelled:['✕','Order cancelled'],rejected:['✕','Order was rejected']};
+
 function checkBirthday(){
   if(!UID||!PROF)return;
   var dob=(PROF.dob||PROF.date_of_birth||'').slice(0,10);
@@ -3705,8 +3772,11 @@ function loadInbox(){
   Promise.all(ps).then(([bc,no])=>{
     const bcast=(Array.isArray(bc)?bc:[]).map(b=>({...b,_from:'📢 Stashlo'}));
     const notifs=(Array.isArray(no)?no:[]).map(n=>({...n,_from:'🏪 Shop'}));
-    INBOX=[...bcast,...notifs].sort((a,b)=>(b.sent_at||0)-(a.sent_at||0));
-    renderInbox();updBadge();
+    get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=10').then(os=>{
+      const ordMsgs=(Array.isArray(os)?os:[]).filter(o=>o.status&&o.status!=='pending'&&ORD_STATUS_MSG[o.status]).map(o=>({id:'ord-'+o.id+'-'+o.status,_from:'📦 Your order',title:ORD_STATUS_MSG[o.status][0]+' '+(o.product_name||'Order'),body:ORD_STATUS_MSG[o.status][1],sent_at:o.created_at}));
+      INBOX=[...bcast,...notifs,...ordMsgs].sort((a,b)=>(b.sent_at||0)-(a.sent_at||0));
+      renderInbox();updBadge();
+    }).catch(()=>{INBOX=[...bcast,...notifs].sort((a,b)=>(b.sent_at||0)-(a.sent_at||0));renderInbox();updBadge();});
   }).catch(()=>{})
 }
 function renderInbox(){
