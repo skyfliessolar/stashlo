@@ -1619,6 +1619,14 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 
   <!-- ===== PROFILE / ME ===== -->
   <div class="screen" id="me-screen">
+    <div class="ic" style="margin:12px 16px 0">
+      <div style="font-weight:800;margin-bottom:6px">🎁 Promo code</div>
+      <div style="display:flex;gap:8px">
+        <input id="promo-code" placeholder="e.g. WELCOME50" autocapitalize="characters" style="flex:1;padding:12px;border:1px solid var(--bg2);border-radius:10px;font-size:14px;background:var(--bg)">
+        <button onclick="redeemPromo()" style="background:var(--purple);color:#fff;border:none;border-radius:10px;padding:0 16px;font-weight:800;cursor:pointer">Redeem</button>
+      </div>
+      <div id="promo-status" style="font-size:12px;margin-top:6px"></div>
+    </div>
     <div id="prof-summary" style="margin:14px 16px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 2px 16px -4px rgba(99,102,241,.10)"></div>
     <div style="padding:24px 16px 16px">
       <div class="prof-avatar">👤</div>
@@ -2392,7 +2400,7 @@ function boot(){
   document.getElementById('app').style.display='flex';
   txt('h-greet',greet());
   loadTheme3D();loadProf();loadCards();loadOrders();buildBrands();loadStashloProd();buildStoreCategories();loadPaymentCards();
-  setTimeout(checkOfferPopup,1200);setTimeout(checkNearbyCard,4000);
+  setTimeout(checkOfferPopup,1200);setTimeout(checkNearbyCard,4000);setTimeout(checkBirthday,2500);
   setTimeout(function(){loadInbox();startGPS();loadMyRewards();try{startGeofence();}catch(e){}},2000);
   // When the app regains focus after a notification tap, show the pending card popup.
   document.addEventListener('visibilitychange',function(){
@@ -2888,6 +2896,60 @@ function buildStoreCategories(){
 // ===== LOCATION CARD AUTO-POPUP =====
 // When the customer is physically near a shop whose card they hold, surface
 // that card automatically (once per shop per 2h). Silent if no permission.
+
+// ===== BIRTHDAY OFFER =====
+function checkBirthday(){
+  if(!UID||!PROF)return;
+  var dob=(PROF.dob||PROF.date_of_birth||'').slice(0,10);
+  if(!dob)return;
+  var now=new Date(), p=dob.split('-');
+  if(parseInt(p[1])!==now.getMonth()+1||parseInt(p[2])!==now.getDate())return;
+  var key='stashlo_bday_'+now.getFullYear();
+  if(localStorage.getItem(key))return;
+  try{localStorage.setItem(key,'1');}catch(e){}
+  var BONUS=50;
+  // credit the bonus to their Stashlo (national) card
+  get('cards','user_id=eq.'+UID+'&order=added_at.asc&limit=1').then(function(cs){
+    var c=Array.isArray(cs)&&cs[0];
+    if(c)pat('cards','user_id=eq.'+UID+'&card_id=eq.'+c.card_id,{points:(c.points||0)+BONUS}).catch(function(){});
+  }).catch(function(){});
+  var ov=document.createElement('div');ov.className='offer-pop';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1350;display:flex;align-items:center;justify-content:center;padding:24px';
+  ov.innerHTML='<div style="background:var(--card);border-radius:22px;max-width:320px;width:100%;padding:28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)">'
+    +'<div style="font-size:52px">🎂</div><div style="font-weight:900;font-size:20px;margin-top:8px">Happy Birthday'+(PROF.name?', '+PROF.name.split(' ')[0]:'')+'!</div>'
+    +'<div style="font-size:14px;color:var(--sub);margin-top:8px">We\'ve added <b style="color:var(--purple)">+'+BONUS+' bonus points</b> to your Stashlo card 🎉</div>'
+    +'<button style="margin-top:16px;width:100%;background:var(--purple);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;cursor:pointer" onclick="this.closest(\'.offer-pop\').remove();goTab(\'cards\')">💳 See my card</button></div>';
+  document.body.appendChild(ov);
+}
+
+// ===== PROMO CODES =====
+function redeemPromo(){
+  var code=(V('promo-code')||'').trim().toUpperCase();
+  if(!code){T('Enter a code','error');return}
+  if(!UID){T('Sign in first','error');return}
+  var st=document.getElementById('promo-status');st.textContent='Checking…';
+  get('promo_codes','code=eq.'+encodeURIComponent(code)+'&active=eq.true').then(function(d){
+    var pc=Array.isArray(d)&&d[0];
+    if(!pc){st.innerHTML='<span style="color:var(--red)">Invalid or expired code</span>';return}
+    if(pc.expires_at && Date.now()>pc.expires_at){st.innerHTML='<span style="color:var(--red)">This code has expired</span>';return}
+    get('promo_redemptions','user_id=eq.'+UID+'&code=eq.'+encodeURIComponent(code)).then(function(rd){
+      if(Array.isArray(rd)&&rd.length){st.innerHTML='<span style="color:var(--red)">You already used this code</span>';return}
+      if(pc.max_uses && (pc.used_count||0)>=pc.max_uses){st.innerHTML='<span style="color:var(--red)">Code fully redeemed</span>';return}
+      var pts=parseInt(pc.points||0)||0;
+      post('promo_redemptions',{user_id:UID,code:code,points:pts,created_at:Date.now()}).then(function(){
+        pat('promo_codes','code=eq.'+encodeURIComponent(code),{used_count:(pc.used_count||0)+1}).catch(function(){});
+        get('cards','user_id=eq.'+UID+'&order=added_at.asc&limit=1').then(function(cs){
+          var c=Array.isArray(cs)&&cs[0];
+          if(c)pat('cards','user_id=eq.'+UID+'&card_id=eq.'+c.card_id,{points:(c.points||0)+pts}).catch(function(){});
+          st.innerHTML='<span style="color:var(--green);font-weight:800">🎉 +'+pts+' points added!</span>';
+          document.getElementById('promo-code').value='';
+          if(typeof loadCards==='function')setTimeout(loadCards,600);
+        });
+      }).catch(function(){st.innerHTML='<span style="color:var(--red)">Failed — run the promo SQL first</span>';});
+    });
+  }).catch(function(){st.innerHTML='<span style="color:var(--red)">Failed — run the promo SQL first</span>';});
+}
+
 function checkNearbyCard(){
   if(!navigator.geolocation||!UID)return;
   navigator.geolocation.getCurrentPosition(function(pos){

@@ -526,6 +526,19 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 
   <!-- BROADCAST SCREEN -->
   <div class="screen" id="broadcast-screen">
+    <div class="ic" style="margin-bottom:14px">
+      <div style="font-weight:800;margin-bottom:4px">🎁 Promo Codes</div>
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Customers redeem these in Me → Promo code for bonus points.</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <input id="pc-code" placeholder="CODE e.g. WELCOME50" style="flex:2;min-width:130px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px;text-transform:uppercase">
+        <input id="pc-points" type="number" placeholder="Points" style="width:80px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px">
+        <input id="pc-max" type="number" placeholder="Max uses" style="width:90px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px">
+        <input id="pc-exp" type="date" style="width:130px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px">
+        <button class="sl-btn btn-xs btn-green" onclick="addPromo()">+ Create</button>
+      </div>
+      <div id="pc-list"></div>
+    </div>
+
     <div class="sh"><span class="sh-t">📢 Broadcast</span></div>
     <div style="background:var(--white);border-radius:var(--r20);padding:20px;box-shadow:var(--sh);margin-bottom:20px">
       <div class="field">
@@ -2019,6 +2032,28 @@ function sendCustReset(email){
 // ===== JOB UNLOCK APPROVALS =====
 let JOB_APPROVALS=[];
 
+
+function loadPromos(){
+  sget('promo_codes','order=created_at.desc&limit=50').then(d=>{
+    const el=document.getElementById('pc-list');if(!el)return;
+    const rows=Array.isArray(d)?d:[];
+    el.innerHTML=rows.length?rows.map(p=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;margin-bottom:6px"><div><b>'+p.code+'</b> · +'+(p.points||0)+' pts · '+(p.used_count||0)+'/'+(p.max_uses||'∞')+' used'+(p.expires_at?' · exp '+new Date(p.expires_at).toLocaleDateString():'')+(p.active?'':' · <span style=\'color:var(--red)\'>OFF</span>')+'</div><button class="sl-btn btn-xs" style="background:'+(p.active?'#7f1d1d':'var(--green)')+';color:#fff" onclick="togglePromo(\''+p.code+'\','+(!p.active)+')">'+(p.active?'Disable':'Enable')+'</button></div>').join(''):'<div style="font-size:12px;color:var(--ink3)">No codes yet.</div>';
+  }).catch(()=>{const el=document.getElementById('pc-list');if(el)el.innerHTML='<div style="font-size:12px;color:var(--red)">Run the promo SQL first.</div>';});
+}
+function addPromo(){
+  const code=(document.getElementById('pc-code').value||'').trim().toUpperCase();
+  const pts=parseInt(document.getElementById('pc-points').value)||0;
+  const mx=parseInt(document.getElementById('pc-max').value)||null;
+  const exp=document.getElementById('pc-exp').value?new Date(document.getElementById('pc-exp').value+'T23:59:59').getTime():null;
+  if(!code||!pts){T('Enter a code and points','error');return}
+  spost('promo_codes',{code,points:pts,max_uses:mx,expires_at:exp,active:true,used_count:0,created_at:Date.now()})
+    .then(()=>{T('✅ Code '+code+' created','success');logAudit('create_promo',code);['pc-code','pc-points','pc-max','pc-exp'].forEach(i=>document.getElementById(i).value='');loadPromos();})
+    .catch(()=>T('Failed — table exists?','error'));
+}
+function togglePromo(code,on){
+  spat('promo_codes','code=eq.'+encodeURIComponent(code),{active:on}).then(()=>{T(on?'Enabled':'Disabled','success');loadPromos();}).catch(()=>T('Failed','error'));
+}
+
 function loadWebsiteRequests(){
   sget('website_requests','order=created_at.desc&limit=100').then(d=>{
     const rows=Array.isArray(d)?d:[];
@@ -2332,7 +2367,7 @@ function grantUserReceipts(){
 }
 
 function switchTab(name){
-  if(name==="broadcast")setTimeout(loadBcProducts,100);
+  if(name==="broadcast"){setTimeout(loadBcProducts,100);setTimeout(loadPromos,150);}
   if(name==="websites")setTimeout(loadWebsiteRequests,100);
   try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   var aliases={'shops':'merchants','users':'customers','receipts':'admreceipts'};
