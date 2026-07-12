@@ -3091,7 +3091,25 @@ function _rememberProduct(name,price){
 }
 
 function parsePosVoice(s){
-  s=' '+s.replace(/£/g,' ').replace(/\s+/g,' ').trim()+' ';
+  // Normalise the many shapes Android speech produces:
+  // '£10 diesel' / '10-pound diesel' / 'ten pound diesel' / '10 pounds diesel'
+  s=' '+s.toLowerCase()
+    .replace(/£\s*(\d+(?:\.\d+)?)/g,'$1 pound ')          // £10 -> 10 pound
+    .replace(/(\d)\s*-\s*pound/g,'$1 pound')   // 10-pound -> 10 pound
+    .replace(/\bone\b/g,'1').replace(/\btwo\b/g,'2').replace(/\bthree\b/g,'3')
+    .replace(/\bfour\b/g,'4').replace(/\bfive\b/g,'5').replace(/\bsix\b/g,'6')
+    .replace(/\bseven\b/g,'7').replace(/\beight\b/g,'8').replace(/\bnine\b/g,'9')
+    .replace(/\bten\b/g,'10').replace(/\beleven\b/g,'11').replace(/\btwelve\b/g,'12')
+    .replace(/\bthirteen\b/g,'13').replace(/\bfourteen\b/g,'14').replace(/\bfifteen\b/g,'15')
+    .replace(/\bsixteen\b/g,'16').replace(/\bseventeen\b/g,'17').replace(/\beighteen\b/g,'18')
+    .replace(/\bnineteen\b/g,'19').replace(/\btwenty\b/g,'20').replace(/\bthirty\b/g,'30')
+    .replace(/\bforty\b/g,'40').replace(/\bfifty\b/g,'50').replace(/\bsixty\b/g,'60')
+    .replace(/\bseventy\b/g,'70').replace(/\beighty\b/g,'80').replace(/\bninety\b/g,'90')
+    .replace(/\bhundred\b/g,'100')
+    .replace(/(\d+)\s+(\d+)/g,function(_,a,b){ // 'twenty 5' -> 25 when tens+unit
+      var A=parseInt(a),B=parseInt(b);
+      return (A>=20&&A%10===0&&B<10)?String(A+B):a+' '+b;})
+    .replace(/\s+/g,' ').trim()+' ';
   // corrections / undo
   if(/\b(clear|start again|cancel all)\b/.test(s)){posClear();_pvSay('Basket cleared');return;}
   if(/\b(undo|remove last|mistake|wrong)\b/.test(s)){var r=POS_BASKET.pop();renderBasket();_pvSay(r?('Removed '+r.name):'Basket is empty');return;}
@@ -3114,12 +3132,25 @@ function parsePosVoice(s){
   // Split on "<price> pound(s)" so a size like 70cl stays inside the item name.
   // e.g. "10 pound diesel 5 pound yards red wine 70cl"
   var pairs=[];
-  var segs=stripped.split(/(\d+(?:\.\d+)?)\s*(?:pounds?|pound|quid|p)\b/i);
+  var segs=stripped.split(/(\d+(?:\.\d+)?)\s*(?:pounds?|pound|quid|p\b)?\s*/i);
+  // NOTE: 'pound' is now OPTIONAL — '10 diesel' works like '10 pound diesel'.
+  // Size units immediately after a number (70cl / 500ml / 2l / 1kg) are NOT
+  // prices: stitch them back into the previous item's name.
+  (function(){
+    var out=[],i;
+    for(i=0;i<segs.length;i++)out.push(segs[i]);
+    segs=out;
+  })();
   // segs = ['', '10', ' diesel ', '5', ' yards red wine 70cl']
   for(var i=1;i<segs.length;i+=2){
     var amt=parseFloat(segs[i]);
     var nm=(segs[i+1]||'').replace(/^\s*(?:of|for|a)\s+/,'').trim();
-    // a trailing bare number (cash tendered) has no name and no "pound" -> handled below
+    var um=nm.match(/^(cl|ml|l|litre?s?|liter?s?|kg|g|gram?s?|pack)\b\s*(.*)$/);
+    if(um&&pairs.length&&pairs[pairs.length-1].name){
+      // '70 cl' after 'wine' -> size of the previous item, not a price
+      pairs[pairs.length-1].name+=' '+segs[i]+um[1]+(um[2]?' '+um[2]:'');
+      continue;
+    }
     pairs.push({amt:amt,name:nm});
   }
   // trailing tendered amount: a number AFTER the last item with no "pound" word (cash)
