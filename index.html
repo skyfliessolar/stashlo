@@ -1211,7 +1211,8 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   <div class="amb-wrap" aria-hidden="true"><div class="amb-orb amb-orb-1"></div><div class="amb-orb amb-orb-2"></div><div class="amb-orb amb-orb-3"></div><div class="amb-orb amb-orb-4"></div></div>
 
   <!-- HEADER -->
-  <div class="app-head">
+  <div class="app-head" style="position:relative">
+    <button id="voice-head" onclick="startVoice()" aria-label="Voice assistant. Say a shop name, orders, or my points." style="position:absolute;right:64px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;background:var(--purple);color:#fff;border:none;font-size:17px;cursor:pointer;z-index:5">🎤</button>
     <div class="head-left">
       <div class="head-greet" id="h-greet">Good morning ☀️</div>
       <div class="head-name" id="h-name">Your wallet</div>
@@ -1709,7 +1710,6 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 
   <!-- BOTTOM NAV (5 tabs) -->
   <div id="err-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;font-size:12px;font-weight:700;padding:8px 16px;text-align:center"></div>
-  <button id="voice-fab" onclick="startVoice()" title="Voice assistant" aria-label="Voice assistant. Tap and say a shop name to open its loyalty card." style="position:fixed;right:16px;bottom:calc(var(--nav-h,66px) + var(--safe-bot,0px) + 14px);z-index:250;width:52px;height:52px;border-radius:50%;background:var(--purple);color:#fff;border:none;font-size:22px;box-shadow:0 6px 18px rgba(99,102,241,.45);cursor:pointer">🎤</button>
   <div class="bottom-nav">
     <div class="sl-btn nb on" id="nb-home" onclick="goTab('home')"><span class="nb-ico">🏠</span><span class="nb-lab">Home</span></div>
     <div class="sl-btn nb" id="nb-cards" onclick="goTab('cards')"><span class="nb-ico">💳</span><span class="nb-lab">Cards</span></div>
@@ -3039,14 +3039,14 @@ function startVoice(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   var rec=new SR();rec.lang='en-GB';rec.interimResults=false;rec.maxAlternatives=1;
   VOICE.rec=rec;VOICE.on=true;
-  var btn=document.getElementById('voice-fab');if(btn){btn.style.background='#ef4444';btn.textContent='👂';}
+  var btn=document.getElementById('voice-head');if(btn){btn.style.background='#ef4444';btn.textContent='👂';}
   rec.onresult=function(e){
     var said=(e.results[0][0].transcript||'').toLowerCase().trim();
     T('🎤 "'+said+'"');
     handleVoiceCommand(said);
   };
   rec.onerror=function(e){if(e.error==='not-allowed')T('Allow microphone access to use voice','error');};
-  rec.onend=function(){VOICE.on=false;var b=document.getElementById('voice-fab');if(b){b.style.background='var(--purple)';b.textContent='🎤';}};
+  rec.onend=function(){VOICE.on=false;var b=document.getElementById('voice-head');if(b){b.style.background='var(--purple)';b.textContent='🎤';}};
   var started=false;
   var go=function(){if(started)return;started=true;try{rec.start();T('🎤 Listening…');}catch(e){VOICE.on=false;}};
   try{

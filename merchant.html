@@ -2195,7 +2195,7 @@ function delClaim(id){
   if(!confirm('Delete this receipt claim permanently?'))return;
   del('points_requests','id=eq.'+id).then(function(){T('🗑 Claim deleted','success');loadClaims();}).catch(function(){
     // fallback: soft-hide if delete is blocked by RLS
-    pat('points_requests','id=eq.'+id,{status:'deleted'}).then(function(){T('Claim removed','success');loadClaims();}).catch(function(){T('Failed to delete','error');});
+    pat('points_requests','id=eq.'+id,{status:'deleted'}).then(function(){T('Claim removed','success');loadClaims();}).catch(function(){T('Delete blocked — run MASTER_V2_SAFE.sql (points_requests policies)','error');});
   });
 }
 function approveClaim(id){
@@ -2779,7 +2779,7 @@ function finalizeSale(method){
   var disc=Math.min(parseFloat((document.getElementById('pos-disc')||{}).value||0)||0,gross);
   if(disc>0){var f=(gross-disc)/gross;net*=f;vat*=f;gross-=disc;}
   var saleObj={merchant_id:MID,items:JSON.stringify(POS_BASKET.map(function(b){return {n:b.name,q:b.qty,p:b.price,v:b.vat,c:b.cost||0,k:b.cat||'general'}})),net:net.toFixed(2),vat_total:vat.toFixed(2),total:gross.toFixed(2),method:method,discount:disc.toFixed(2),refund:false,created_at:Date.now()};
-  post('pos_sales',saleObj).then(function(res){
+  post('pos_sales',saleObj).catch(function(e){T('⚠️ Sale NOT saved — run MASTER SQL (pos_sales policies): '+(((e&&e.message)||'')+'').slice(0,60),'error');_pvSay&&_pvSay('Warning. The sale was not saved to the system.');throw e;}).then(function(res){
     var saved=Array.isArray(res)&&res[0]?res[0]:saleObj;
     window._LAST_SALE=saved;
     // ===== AWARD LOYALTY POINTS to the attached customer (if any) =====
@@ -3075,6 +3075,18 @@ function parsePosVoice(s){
   if(/\b(undo|remove last|mistake|wrong)\b/.test(s)){var r=POS_BASKET.pop();renderBasket();_pvSay(r?('Removed '+r.name):'Basket is empty');return;}
   if(/\btotal\b/.test(s)&&!/\d/.test(s)){_pvSay('Total is '+_pvTotal().toFixed(2)+' pounds');return;}
   var method=/\bcard\b/.test(s)?'card':(/\bcash\b/.test(s)?'cash':null);
+  // FOLLOW-UP: basket already filled, merchant just says the payment
+  var _rest=s.replace(/\b(cash|card|pounds?|pound|quid|please)\b/g,'').replace(/[\d.]/g,'').trim();
+  if(method&&POS_BASKET.length&&_rest.length<3){
+    var totF=_pvTotal();
+    if(method==='card'){if(typeof finalizeSale==='function'){finalizeSale('card');_pvSay('Card sale complete. '+totF.toFixed(2)+' pounds.');}else posCheckout('card');return;}
+    var tm=s.match(/(\d+(?:\.\d+)?)/);
+    if(tm){var tnd=parseFloat(tm[1]);var ch=tnd-totF;
+      if(ch<0){_pvSay('Cash given is less than the total '+totF.toFixed(2));return;}
+      if(typeof finalizeSale==='function'){finalizeSale('cash');T('💵 Change £'+ch.toFixed(2),'success');_pvSay('Cash sale complete. Change due '+ch.toFixed(2)+' pounds.');}else posCheckout('cash');
+      return;}
+    posCheckout('cash');_pvSay('Total '+totF.toFixed(2)+'. Enter the cash given.');return;
+  }
   // split into (amount, words) pairs
   var stripped=s.replace(/\b(cash|card|change|and|the|please)\b/g,' ').replace(/\s+/g,' ').trim();
   // Split on "<price> pound(s)" so a size like 70cl stays inside the item name.
