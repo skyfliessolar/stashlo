@@ -1076,6 +1076,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn" style="flex:1;background:var(--bg2)" onclick="posClear()">Clear basket</button>
           <button id="pos-voice-btn" class="btn" style="flex:1;background:var(--purple);color:#fff" onclick="startPosVoice()">🎤 Voice till</button>
+          <button class="btn" style="flex:0 0 46px;background:var(--bg2)" onclick="posVoiceType()" title="Type the sale">⌨️</button>
         </div>
       </div>
       <div id="quick-grid" style="margin:0 16px 10px"></div>
@@ -3023,17 +3024,38 @@ function renderBasket(){
 // ===== VOICE TILL (hands-free POS) =====
 var PVOICE={rec:null,on:false};
 function _pvSay(t){try{var u=new SpeechSynthesisUtterance(t);u.lang='en-GB';speechSynthesis.speak(u);}catch(e){}}
+function _posVoiceBtn(txt,bg){var b=document.getElementById('pos-voice-btn');if(b){if(txt)b.textContent=txt;if(bg)b.style.background=bg;}}
 function startPosVoice(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){T('Voice needs Chrome on Android','error');return}
-  if(PVOICE.on){try{PVOICE.rec.stop();}catch(e){}return}
-  var rec=new SR();rec.lang='en-GB';rec.interimResults=false;
-  PVOICE.rec=rec;PVOICE.on=true;
-  var b=document.getElementById('pos-voice-btn');if(b){b.style.background='#ef4444';b.textContent='👂 Listening';}
-  rec.onresult=function(e){var s=(e.results[0][0].transcript||'').toLowerCase();T('🎤 "'+s+'"');parsePosVoice(s);};
-  rec.onerror=function(e){if(e.error==='not-allowed')T('Allow microphone','error');};
-  rec.onend=function(){PVOICE.on=false;var b=document.getElementById('pos-voice-btn');if(b){b.style.background='var(--purple)';b.textContent='🎤 Voice till';}};
-  try{rec.start();T('🎤 e.g. "10 pound diesel card" · "coca cola" · "cash 10 pound fuel 20 pound"');}catch(e){PVOICE.on=false;}
+  if(!SR){posVoiceType();return;} // no speech engine -> type instead
+  if(PVOICE.on){try{PVOICE.rec.stop();}catch(e){}PVOICE.on=false;_posVoiceBtn('🎤 Voice till','var(--purple)');return;}
+  var rec;try{rec=new SR();}catch(e){posVoiceType();return;}
+  rec.lang='en-GB';rec.interimResults=true;rec.continuous=false;rec.maxAlternatives=1;
+  PVOICE.rec=rec;PVOICE.on=true;PVOICE.got=false;
+  _posVoiceBtn('👂 Listening…','#ef4444');
+  rec.onresult=function(e){
+    var last=e.results[e.results.length-1];
+    var s=(last[0].transcript||'').toLowerCase().trim();
+    if(last.isFinal){PVOICE.got=true;T('🎤 "'+s+'"');parsePosVoice(s);}
+    else{_posVoiceBtn('👂 '+s.slice(0,18),'#ef4444');} // live interim so merchant SEES it working
+  };
+  rec.onerror=function(e){
+    PVOICE.on=false;
+    var msg={'not-allowed':'Microphone blocked — allow it in the address bar 🔒','service-not-allowed':'Mic blocked by browser','no-speech':'Didn\'t hear anything — tap and speak','audio-capture':'No microphone found','network':'Voice needs internet','aborted':''}[e.error]||('Voice error: '+e.error);
+    if(msg){T('🎤 '+msg,'error');}
+    _posVoiceBtn('🎤 Voice till','var(--purple)');
+  };
+  rec.onend=function(){
+    PVOICE.on=false;_posVoiceBtn('🎤 Voice till','var(--purple)');
+    if(!PVOICE.got){T('🎤 Nothing heard — tap again, or use ⌨️ type','error');}
+  };
+  try{rec.start();T('🎤 Say e.g. "10 pound diesel" then "card", or "cash 20"');}
+  catch(e){PVOICE.on=false;_posVoiceBtn('🎤 Voice till','var(--purple)');posVoiceType();}
+}
+// Manual fallback: type the same phrases (works on ANY device, no mic)
+function posVoiceType(){
+  var s=prompt('Type the sale (same as voice):\ne.g. "10 pound diesel", then run again with "card" or "cash 20"');
+  if(s)parsePosVoice(s.toLowerCase());
 }
 function _pvTotal(){var t=0;POS_BASKET.forEach(function(b){t+=b.price*b.qty});return t;}
 
