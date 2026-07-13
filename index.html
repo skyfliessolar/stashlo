@@ -1914,6 +1914,12 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <div id="o-err" class="err"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div id="o-summary" style="width:100%">
+          <div id="o-welcome" style="display:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:13px;font-weight:700">🎉 Welcome offer applied — £<span id="o-welcome-amt">0</span> off your first order!</div>
+          <div style="display:flex;gap:6px;margin-bottom:10px">
+            <input id="o-promo" placeholder="Promo code (optional)" autocapitalize="characters" style="flex:1;padding:10px;border:1px solid var(--bg2);border-radius:10px;font-size:13px;background:var(--bg)">
+            <button onclick="applyOrderPromo()" style="background:var(--ink);color:#fff;border:none;border-radius:10px;padding:0 14px;font-weight:800;cursor:pointer;font-size:12px">Apply</button>
+          </div>
+          <div id="o-promo-msg" style="font-size:11px;margin:-6px 0 8px"></div>
           <div id="o-pts-card" style="display:none;background:var(--purple3,#ede9fe);border-radius:12px;padding:10px 12px;margin-bottom:10px">
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;cursor:pointer">
               <input type="checkbox" id="o-use-pts" onchange="recalcOrderTotal()">
@@ -1922,6 +1928,8 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
             <div style="font-size:11px;color:var(--sub);margin-top:2px;margin-left:24px">100 pts = £1 · applied to this order</div>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--sub)"><span>Subtotal</span><span id="o-subtotal">£0.00</span></div>
+          <div id="o-promo-row" style="display:none;justify-content:space-between;font-size:13px;color:var(--green)"><span>🏷️ Promo</span><span id="o-promo-amt">−£0.00</span></div>
+          <div id="o-welc-row" style="display:none;justify-content:space-between;font-size:13px;color:var(--green)"><span>🎉 Welcome offer</span><span id="o-welc-amt">−£0.00</span></div>
           <div id="o-disc-row" style="display:none;justify-content:space-between;font-size:13px;color:var(--green)"><span>💎 Points credit</span><span id="o-discount">−£0.00</span></div>
           <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;margin-top:6px;border-top:1px solid var(--bg2);padding-top:8px"><span>Total</span><span style="color:var(--purple)" id="o-total">£0.00</span></div>
         </div>
@@ -2418,7 +2426,7 @@ function boot(){
   document.getElementById('app').style.display='flex';
   txt('h-greet',greet());
   loadTheme3D();loadProf();loadCards();loadOrders();buildBrands();loadStashloProd();buildStoreCategories();loadPaymentCards();
-  setTimeout(checkOfferPopup,1200);setTimeout(checkNearbyCard,4000);setTimeout(checkBirthday,2500);
+  setTimeout(checkOfferPopup,1200);setTimeout(checkNearbyCard,4000);setTimeout(function(){_getSettings().then(function(){checkBirthday();});},2500);
   setTimeout(function(){loadInbox();startGPS();loadMyRewards();try{startGeofence();}catch(e){}},2000);
   // When the app regains focus after a notification tap, show the pending card popup.
   document.addEventListener('visibilitychange',function(){
@@ -2986,7 +2994,9 @@ function checkBirthday(){
   var key='stashlo_bday_'+now.getFullYear();
   if(localStorage.getItem(key))return;
   try{localStorage.setItem(key,'1');}catch(e){}
-  var BONUS=50;
+  var BONUS=50,_ben=true;
+  if(APP_SET){_ben=String(APP_SET.birthday_enabled||'true')!=='false';BONUS=parseInt(APP_SET.birthday_points||50)||50;}
+  if(!_ben)return;
   // credit the bonus to their Stashlo (national) card
   get('cards','user_id=eq.'+UID+'&order=added_at.asc&limit=1').then(function(cs){
     var c=Array.isArray(cs)&&cs[0];
@@ -3229,27 +3239,80 @@ function openOrder(j){
   const lo=document.getElementById('o-loy');
   if(p.loyalty_type){lo.textContent='🎁 '+fmtLoy(p);lo.style.display='block';}else lo.style.display='none';
   sErr('o-err','');
-  loadOrderPoints();
+  loadOrderPoints();O_PROMO=null;var _pi=document.getElementById('o-promo');if(_pi)_pi.value='';var _pm=document.getElementById('o-promo-msg');if(_pm)_pm.textContent='';loadWelcomeOffer();
   setTimeout(recalcOrderTotal,50);
   selOType('collect');omo('orderMo');
 }
 
 var O_PTS={have:0,cardId:null};
+var O_PROMO=null;   // {code, off}  applied checkout promo
+var O_WELCOME=0;    // welcome-offer £
+var APP_SET=null;
+function _getSettings(){
+  if(APP_SET)return Promise.resolve(APP_SET);
+  return get('app_settings','select=key,value').then(function(d){
+    APP_SET={};(Array.isArray(d)?d:[]).forEach(function(r){APP_SET[r.key]=r.value});return APP_SET;
+  }).catch(function(){APP_SET={};return APP_SET;});
+}
+function loadWelcomeOffer(){
+  O_WELCOME=0;var b=document.getElementById('o-welcome');if(b)b.style.display='none';
+  if(!UID)return;
+  _getSettings().then(function(st){
+    if(String(st.welcome_enabled)!=='true')return;
+    var amt=parseFloat(st.welcome_discount||0)||0;if(amt<=0)return;
+    get('orders','user_id=eq.'+UID+'&select=id&limit=1').then(function(os){
+      if(Array.isArray(os)&&os.length)return; // not their first order
+      O_WELCOME=amt;
+      if(b){b.style.display='block';var a=document.getElementById('o-welcome-amt');if(a)a.textContent=amt.toFixed(2);}
+      recalcOrderTotal();
+    }).catch(function(){});
+  });
+}
+function applyOrderPromo(){
+  var code=(V('o-promo')||'').trim().toUpperCase();
+  var msg=document.getElementById('o-promo-msg');
+  O_PROMO=null;
+  if(!code){if(msg)msg.textContent='';recalcOrderTotal();return;}
+  if(msg)msg.textContent='Checking…';
+  get('promo_codes','code=eq.'+encodeURIComponent(code)+'&active=eq.true').then(function(d){
+    var pc=Array.isArray(d)&&d[0];
+    function bad(t){if(msg)msg.innerHTML='<span style="color:var(--red)">'+t+'</span>';recalcOrderTotal();}
+    if(!pc)return bad('Invalid or inactive code');
+    if(pc.expires_at&&Date.now()>pc.expires_at)return bad('Code expired');
+    if(pc.max_uses&&(pc.used_count||0)>=pc.max_uses)return bad('Fully redeemed');
+    var kind=pc.kind||'points';
+    if(kind==='points')return bad('This code gives points — redeem it in Me ➜ Promo code');
+    get('promo_redemptions','user_id=eq.'+UID+'&code=eq.'+encodeURIComponent(code)).then(function(rd){
+      if(Array.isArray(rd)&&rd.length)return bad('You already used this code');
+      O_PROMO={code:code,kind:kind,value:parseFloat(pc.amount||0)||0,row:pc};
+      if(msg)msg.innerHTML='<span style="color:var(--green);font-weight:700">✅ '+(kind==='percent'?O_PROMO.value+'% off':'£'+O_PROMO.value.toFixed(2)+' off')+' applied</span>';
+      recalcOrderTotal();
+    });
+  }).catch(function(){if(msg)msg.textContent='Could not check the code';});
+}
 function recalcOrderTotal(){
   var p=curOrderProd;if(!p)return;
   var qty=Math.max(1,parseInt(document.getElementById('o-qty').value)||1);
   var sub=parseFloat(p.price||0)*qty;
+  var promoOff=0;
+  if(O_PROMO){promoOff=O_PROMO.kind==='percent'?sub*O_PROMO.value/100:O_PROMO.value;promoOff=Math.min(sub,Math.floor(promoOff*100)/100);}
+  var welc=Math.min(Math.max(0,sub-promoOff),O_WELCOME||0);
+  var afterFixed=Math.max(0,sub-promoOff-welc);
   var use=document.getElementById('o-use-pts');
   var disc=0;
   if(use&&use.checked&&O_PTS.have>0){
-    disc=Math.min(sub, Math.floor(O_PTS.have)/100); // 100 pts = £1, capped at subtotal
+    disc=Math.min(afterFixed, Math.floor(O_PTS.have)/100);
     disc=Math.floor(disc*100)/100;
   }
   txt('o-subtotal','£'+sub.toFixed(2));
+  var pr=document.getElementById('o-promo-row');
+  if(pr){pr.style.display=promoOff>0?'flex':'none';txt('o-promo-amt','−£'+promoOff.toFixed(2));}
+  var wr=document.getElementById('o-welc-row');
+  if(wr){wr.style.display=welc>0?'flex':'none';txt('o-welc-amt','−£'+welc.toFixed(2));}
   var dr=document.getElementById('o-disc-row');
   if(dr){dr.style.display=disc>0?'flex':'none';txt('o-discount','−£'+disc.toFixed(2));}
-  txt('o-total','£'+(sub-disc).toFixed(2));
-  window._O_DISC=disc;
+  txt('o-total','£'+(afterFixed-disc).toFixed(2));
+  window._O_DISC=disc;window._O_PROMO_OFF=promoOff;window._O_WELC=welc;
 }
 function loadOrderPoints(){
   O_PTS={have:0,cardId:null};window._O_DISC=0;
@@ -3442,7 +3505,9 @@ function submitOrder(){
   const _sub=parseFloat(p.price||0)*qty;
   const _disc=(document.getElementById('o-use-pts')||{}).checked?Math.min(window._O_DISC||0,_sub):0;
   const _ptsUsed=Math.round(_disc*100);
-  const total=Math.max(0,_sub-_disc);
+  const _promoOff=window._O_PROMO_OFF||0;
+  const _welc=window._O_WELC||0;
+  const total=Math.max(0,_sub-_promoOff-_welc-_disc);
   const mid=p.merchant_id;
   if(type==='delivery'&&!V('o-da')){sErr('o-err','Delivery address required');return}
   const btn=document.querySelector('#orderMo .btn-p');if(btn){btn.textContent='Placing order…';btn.disabled=true;}
@@ -3450,8 +3515,8 @@ function submitOrder(){
   // (so the merchant sees where to hold/send it); delivery orders use the typed address.
   var _collectPoint=(document.getElementById('o-cp-chosen')||{}).value||'';
   var _addr = (type==='collect') ? (_collectPoint||'Shop counter') : V('o-da');
-  post('orders',{user_id:UID,user_lid:(PROF&&PROF.loyalty_id)||'',customer_name:(PROF&&PROF.name)||'',merchant_id:mid,product_id:p.id,product_name:p.name,product_emoji:p.emoji||'📦',quantity:qty,total,type,status:'pending',delivery_address:_addr,collection_point:_collectPoint,collect_time:V('o-ct'),note:V('o-note'),points_used:_ptsUsed,discount:_disc,created_at:Date.now()})
-  .then(d=>{if(_ptsUsed>0&&O_PTS.cardId){pat('cards','user_id=eq.'+UID+'&card_id=eq.'+O_PTS.cardId,{points:Math.max(0,O_PTS.have-_ptsUsed)}).catch(function(){});}
+  post('orders',{user_id:UID,user_lid:(PROF&&PROF.loyalty_id)||'',customer_name:(PROF&&PROF.name)||'',merchant_id:mid,product_id:p.id,product_name:p.name,product_emoji:p.emoji||'📦',quantity:qty,total,type,status:'pending',delivery_address:_addr,collection_point:_collectPoint,collect_time:V('o-ct'),note:V('o-note'),points_used:_ptsUsed,discount:(_disc+_promoOff+_welc),promo_code:(O_PROMO&&O_PROMO.code)||null,welcome_off:_welc,created_at:Date.now()})
+  .then(d=>{if(O_PROMO){post('promo_redemptions',{user_id:UID,code:O_PROMO.code,points:0,created_at:Date.now()}).then(function(){pat('promo_codes','code=eq.'+encodeURIComponent(O_PROMO.code),{used_count:(O_PROMO.row.used_count||0)+1}).catch(function(){});}).catch(function(){});}if(_ptsUsed>0&&O_PTS.cardId){pat('cards','user_id=eq.'+UID+'&card_id=eq.'+O_PTS.cardId,{points:Math.max(0,O_PTS.have-_ptsUsed)}).catch(function(){});}
     if(btn){btn.textContent='✅ Place Order';btn.disabled=false;}
     if(d&&d.code){sErr('o-err',d.message||'Order failed');return}
     T('✅ Order placed — '+p.name+' × '+qty);cmo('orderMo');closeShopDet();loadOrders();goTab('orders');

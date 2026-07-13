@@ -527,11 +527,28 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   <!-- BROADCAST SCREEN -->
   <div class="screen" id="broadcast-screen">
     <div class="ic" style="margin-bottom:14px">
+      <div style="font-weight:800;margin-bottom:4px">👑 Offers Control</div>
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">These apply automatically to EVERY user — new millions included.</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+        <label style="font-size:13px;font-weight:700">🎉 First-order discount £</label>
+        <input id="set-welcome" type="number" step="0.5" style="width:80px;padding:8px;border:1px solid var(--line);border-radius:8px">
+        <label style="font-size:12px"><input type="checkbox" id="set-welcome-on"> enabled</label>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <label style="font-size:13px;font-weight:700">🎂 Birthday bonus pts</label>
+        <input id="set-bday" type="number" style="width:80px;padding:8px;border:1px solid var(--line);border-radius:8px">
+        <label style="font-size:12px"><input type="checkbox" id="set-bday-on"> enabled</label>
+      </div>
+      <button class="sl-btn btn-xs btn-green" onclick="saveOffers()">💾 Save offers</button>
+      <span id="offers-status" style="font-size:12px;margin-left:8px"></span>
+    </div>
+    <div class="ic" style="margin-bottom:14px">
       <div style="font-weight:800;margin-bottom:4px">🎁 Promo Codes</div>
       <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Customers redeem these in Me → Promo code for bonus points.</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
         <input id="pc-code" placeholder="CODE e.g. WELCOME50" style="flex:2;min-width:130px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px;text-transform:uppercase">
-        <input id="pc-points" type="number" placeholder="Points" style="width:80px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px">
+        <select id="pc-kind" style="width:96px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px"><option value="points">Points</option><option value="amount">£ off</option><option value="percent">% off</option></select>
+        <input id="pc-points" type="number" placeholder="Value" style="width:80px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px">
         <input id="pc-max" type="number" placeholder="Max uses" style="width:90px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px">
         <input id="pc-exp" type="date" style="width:130px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px">
         <button class="sl-btn btn-xs btn-green" onclick="addPromo()">+ Create</button>
@@ -2033,11 +2050,33 @@ function sendCustReset(email){
 let JOB_APPROVALS=[];
 
 
+function loadOffers(){
+  sget('app_settings','select=key,value').then(d=>{
+    const s={};(Array.isArray(d)?d:[]).forEach(r=>s[r.key]=r.value);
+    const w=document.getElementById('set-welcome'),wo=document.getElementById('set-welcome-on');
+    const bd=document.getElementById('set-bday'),bo=document.getElementById('set-bday-on');
+    if(w)w.value=s.welcome_discount||'2';
+    if(wo)wo.checked=String(s.welcome_enabled)==='true';
+    if(bd)bd.value=s.birthday_points||'50';
+    if(bo)bo.checked=String(s.birthday_enabled||'true')!=='false';
+  }).catch(()=>{const el=document.getElementById('offers-status');if(el)el.innerHTML='<span style="color:var(--red)">Run the offers SQL first</span>';});
+}
+function saveOffers(){
+  const rows=[
+    {key:'welcome_discount',value:String(parseFloat(document.getElementById('set-welcome').value)||0)},
+    {key:'welcome_enabled',value:String(document.getElementById('set-welcome-on').checked)},
+    {key:'birthday_points',value:String(parseInt(document.getElementById('set-bday').value)||50)},
+    {key:'birthday_enabled',value:String(document.getElementById('set-bday-on').checked)}
+  ];
+  Promise.all(rows.map(r=>spost('app_settings',r,'key')))
+    .then(()=>{T('👑 Offers saved — live for ALL users','success');logAudit('save_offers',JSON.stringify(rows));const el=document.getElementById('offers-status');if(el)el.innerHTML='<span style="color:var(--green)">✅ live</span>';})
+    .catch(()=>T('Failed — run the offers SQL (app_settings)','error'));
+}
 function loadPromos(){
   sget('promo_codes','order=created_at.desc&limit=50').then(d=>{
     const el=document.getElementById('pc-list');if(!el)return;
     const rows=Array.isArray(d)?d:[];
-    el.innerHTML=rows.length?rows.map(p=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;margin-bottom:6px"><div><b>'+p.code+'</b> · +'+(p.points||0)+' pts · '+(p.used_count||0)+'/'+(p.max_uses||'∞')+' used'+(p.expires_at?' · exp '+new Date(p.expires_at).toLocaleDateString():'')+(p.active?'':' · <span style=\'color:var(--red)\'>OFF</span>')+'</div><button class="sl-btn btn-xs" style="background:'+(p.active?'#7f1d1d':'var(--green)')+';color:#fff" onclick="togglePromo(\''+p.code+'\','+(!p.active)+')">'+(p.active?'Disable':'Enable')+'</button> <button class="sl-btn btn-xs" style="background:#374151;color:#fff" onclick="delPromo(\''+p.code+'\')">🗑</button></div>').join(''):'<div style="font-size:12px;color:var(--ink3)">No codes yet.</div>';
+    el.innerHTML=rows.length?rows.map(p=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;margin-bottom:6px"><div><b>'+p.code+'</b> · '+((p.kind==='amount')?('£'+(p.amount||0)+' off'):((p.kind==='percent')?((p.amount||0)+'% off'):('+'+(p.points||0)+' pts')))+' · '+(p.used_count||0)+'/'+(p.max_uses||'∞')+' used'+(p.expires_at?' · exp '+new Date(p.expires_at).toLocaleDateString():'')+(p.active?'':' · <span style=\'color:var(--red)\'>OFF</span>')+'</div><button class="sl-btn btn-xs" style="background:'+(p.active?'#7f1d1d':'var(--green)')+';color:#fff" onclick="togglePromo(\''+p.code+'\','+(!p.active)+')">'+(p.active?'Disable':'Enable')+'</button> <button class="sl-btn btn-xs" style="background:#374151;color:#fff" onclick="delPromo(\''+p.code+'\')">🗑</button></div>').join(''):'<div style="font-size:12px;color:var(--ink3)">No codes yet.</div>';
   }).catch(()=>{const el=document.getElementById('pc-list');if(el)el.innerHTML='<div style="font-size:12px;color:var(--red)">Run the promo SQL first.</div>';});
 }
 function addPromo(){
@@ -2047,7 +2086,8 @@ function addPromo(){
   const exp=document.getElementById('pc-exp').value?new Date(document.getElementById('pc-exp').value+'T23:59:59').getTime():null;
   if(!code){T('Enter a code','error');return}
   if(!pts||pts<1){T('Enter POINTS value (e.g. 10) — this is what the customer receives','error');return}
-  spost('promo_codes',{code,points:pts,max_uses:mx,expires_at:exp,active:true,used_count:0,created_at:Date.now()})
+  const kind=(document.getElementById('pc-kind')||{}).value||'points';
+  spost('promo_codes',{code,kind:kind,points:kind==='points'?pts:0,amount:kind==='points'?0:pts,max_uses:mx,expires_at:exp,active:true,used_count:0,created_at:Date.now()})
     .then(()=>{T('✅ Code '+code+' created','success');logAudit('create_promo',code);['pc-code','pc-points','pc-max','pc-exp'].forEach(i=>document.getElementById(i).value='');loadPromos();})
     .catch(()=>T('Failed — table exists?','error'));
 }
@@ -2394,7 +2434,7 @@ function grantUserReceipts(){
 }
 
 function switchTab(name){
-  if(name==="broadcast"){setTimeout(loadBcProducts,100);setTimeout(loadPromos,150);}
+  if(name==="broadcast"){setTimeout(loadBcProducts,100);setTimeout(loadPromos,150);setTimeout(loadOffers,180);}
   if(name==="websites")setTimeout(loadWebsiteRequests,100);
   try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   var aliases={'shops':'merchants','users':'customers','receipts':'admreceipts'};
