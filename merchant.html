@@ -1078,6 +1078,11 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
           <button id="pos-voice-btn" class="btn" style="flex:1;background:var(--purple);color:#fff" onclick="startPosVoice()">🎤 Voice till</button>
           <button class="btn" style="flex:0 0 46px;background:var(--bg2)" onclick="posVoiceType()" title="Type the sale">⌨️</button>
         </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" style="flex:1;background:var(--bg2)" onclick="parkSale()">💾 Park</button>
+          <button class="btn" style="flex:1;background:var(--bg2)" onclick="showParked()">📂 Parked <span id="parked-n"></span></button>
+          <button class="btn" style="flex:1;background:var(--ink);color:#fff" onclick="zReport()">📊 Z-Report</button>
+        </div>
       </div>
       <div id="quick-grid" style="margin:0 16px 10px"></div>
       <!-- FAST-SALE DEPARTMENT TILES (like evoPOS right panel) -->
@@ -3024,6 +3029,94 @@ function renderBasket(){
 // ===== VOICE TILL (hands-free POS) =====
 var PVOICE={rec:null,on:false};
 function _pvSay(t){try{var u=new SpeechSynthesisUtterance(t);u.lang='en-GB';speechSynthesis.speak(u);}catch(e){}}
+
+// ===== PARKED SALES (serve the next customer, resume anytime) =====
+function _parkedList(){try{return JSON.parse(localStorage.getItem('stashlo_parked_'+MID)||'[]')}catch(e){return[]}}
+function _parkedSave(l){try{localStorage.setItem('stashlo_parked_'+MID,JSON.stringify(l))}catch(e){};var n=document.getElementById('parked-n');if(n)n.textContent=l.length?('('+l.length+')'):'';}
+function parkSale(){
+  if(!POS_BASKET.length){T('Basket is empty','error');return}
+  var l=_parkedList();
+  l.push({at:Date.now(),items:POS_BASKET.slice(),total:POS_BASKET.reduce((a,b)=>a+b.price*b.qty,0)});
+  _parkedSave(l);POS_BASKET.length=0;renderBasket();
+  T('💾 Sale parked — serve the next customer','success');
+}
+function showParked(){
+  var l=_parkedList();
+  if(!l.length){T('No parked sales','error');return}
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML='<div style="background:var(--card,#fff);border-radius:18px;max-width:360px;width:100%;max-height:70vh;overflow-y:auto;padding:18px">'
+    +'<div style="display:flex;justify-content:space-between;margin-bottom:10px"><b>📂 Parked sales</b><button style="background:var(--bg2);border:none;border-radius:8px;width:30px;height:30px;cursor:pointer">✕</button></div>'
+    +l.map((s,i)=>'<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg,#f6f6f9);border-radius:12px;padding:10px;margin-bottom:8px"><div><b>£'+s.total.toFixed(2)+'</b> · '+s.items.length+' items<br><span style="font-size:11px;color:#888">'+new Date(s.at).toLocaleTimeString()+'</span></div><div><button data-r="'+i+'" style="background:var(--purple,#6366F1);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer">Resume</button> <button data-d="'+i+'" style="background:#7f1d1d;color:#fff;border:none;border-radius:8px;padding:8px 10px;cursor:pointer">🗑</button></div></div>').join('')
+    +'</div>';
+  document.body.appendChild(ov);
+  ov.querySelector('button').onclick=()=>ov.remove();
+  ov.onclick=e=>{if(e.target===ov)ov.remove()};
+  ov.querySelectorAll('[data-r]').forEach(b=>b.onclick=function(){
+    var l2=_parkedList();var s=l2.splice(parseInt(b.dataset.r),1)[0];_parkedSave(l2);
+    if(POS_BASKET.length&&!confirm('Replace the current basket?'))return;
+    POS_BASKET.length=0;s.items.forEach(x=>POS_BASKET.push(x));renderBasket();ov.remove();T('Sale resumed','success');
+  });
+  ov.querySelectorAll('[data-d]').forEach(b=>b.onclick=function(){
+    var l2=_parkedList();l2.splice(parseInt(b.dataset.d),1);_parkedSave(l2);ov.remove();showParked();
+  });
+}
+
+// ===== Z-REPORT (end-of-day) =====
+function zReport(){
+  var start=new Date();start.setHours(0,0,0,0);
+  get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+start.getTime()+'&order=created_at.asc').then(function(d){
+    var rows=Array.isArray(d)?d:[];
+    var gross=0,refunds=0,cash=0,card=0,vat=0,count=0,itemMap={},catMap={};
+    rows.forEach(function(s){
+      var t=parseFloat(s.total||0);
+      if(t<0||s.refund){refunds+=Math.abs(t);return;}
+      count++;gross+=t;vat+=parseFloat(s.vat_total||0);
+      if((s.method||'cash')==='card')card+=t;else cash+=t;
+      try{JSON.parse(s.items||'[]').forEach(function(it){
+        var n=it.n||'Item';itemMap[n]=(itemMap[n]||0)+(it.q||1);
+        var k=it.k||'general';catMap[k]=(catMap[k]||0)+((it.p||0)*(it.q||1));
+      });}catch(e){}
+    });
+    var net=gross-refunds;
+    var top=Object.entries(itemMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    var cats=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+    var html='<div id="z-print" style="font-family:monospace;font-size:13px;line-height:1.6">'
+      +'<div style="text-align:center"><b style="font-size:16px">'+((MDATA&&MDATA.name)||'Shop')+'</b><br>Z-REPORT — '+new Date().toLocaleDateString()+'<br>Printed '+new Date().toLocaleTimeString()+'</div><hr>'
+      +'Sales count: '+count+'<br>'
+      +'Gross sales: £'+gross.toFixed(2)+'<br>'
+      +'Refunds: −£'+refunds.toFixed(2)+'<br>'
+      +'<b>NET TAKINGS: £'+net.toFixed(2)+'</b><br><hr>'
+      +'💵 Cash: £'+cash.toFixed(2)+'<br>💳 Card: £'+card.toFixed(2)+'<br>VAT collected: £'+vat.toFixed(2)+'<br>'
+      +'Avg sale: £'+(count?(gross/count).toFixed(2):'0.00')+'<br><hr>'
+      +(top.length?('<b>Top items</b><br>'+top.map(t=>t[0]+' × '+t[1]).join('<br>')+'<br><hr>'):'')
+      +(cats.length?('<b>By category</b><br>'+cats.map(c=>c[0]+': £'+c[1].toFixed(2)).join('<br>')+'<br><hr>'):'')
+      +'<div style="text-align:center">Powered by Stashlo EPOS</div></div>';
+    var ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px';
+    ov.innerHTML='<div style="background:#fff;color:#111;border-radius:18px;max-width:340px;width:100%;max-height:80vh;overflow-y:auto;padding:18px">'+html
+      +'<div style="display:flex;gap:8px;margin-top:12px"><button id="z-pr" style="flex:1;background:#111;color:#fff;border:none;border-radius:10px;padding:12px;font-weight:800;cursor:pointer">🖨 Print</button><button id="z-x" style="flex:1;background:#eee;border:none;border-radius:10px;padding:12px;font-weight:700;cursor:pointer">Close</button></div></div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#z-x').onclick=()=>ov.remove();
+    ov.onclick=e=>{if(e.target===ov)ov.remove()};
+    ov.querySelector('#z-pr').onclick=function(){_printHTML(document.getElementById('z-print').outerHTML);};
+  }).catch(function(){T('Could not load sales for today','error');});
+}
+
+// ===== PRINT helper (receipt printers / normal printers) =====
+function _printHTML(inner){
+  var f=document.createElement('iframe');
+  f.style.cssText='position:fixed;width:0;height:0;border:0';
+  document.body.appendChild(f);
+  f.srcdoc='<html><head><style>body{font-family:monospace;font-size:12px;margin:0;padding:8px;max-width:300px}hr{border:none;border-top:1px dashed #000}</style></head><body>'+inner+'</body></html>';
+  f.onload=function(){try{f.contentWindow.print();}catch(e){}setTimeout(function(){f.remove()},2000);};
+}
+function printReceiptRow(i){
+  var s=(window._HIST||[])[i];if(!s)return;
+  var items='';try{items=JSON.parse(s.items||'[]').map(it=>(it.n||'Item')+' x'+(it.q||1)+'  £'+(((it.p||0)*(it.q||1)).toFixed(2))).join('<br>');}catch(e){}
+  _printHTML('<div style="text-align:center"><b>'+((MDATA&&MDATA.name)||'Shop')+'</b><br>'+new Date(s.created_at).toLocaleString()+'</div><hr>'+items+'<hr>VAT: £'+parseFloat(s.vat_total||0).toFixed(2)+'<br><b>TOTAL: £'+parseFloat(s.total||0).toFixed(2)+'</b><br>Paid: '+(s.method||'cash')+'<hr><div style="text-align:center">Thank you!<br>Powered by Stashlo</div>');
+}
+
 function _posVoiceBtn(txt,bg){var b=document.getElementById('pos-voice-btn');if(b){if(txt)b.textContent=txt;if(bg)b.style.background=bg;}}
 function startPosVoice(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
