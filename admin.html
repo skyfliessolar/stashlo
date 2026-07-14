@@ -627,6 +627,11 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   </div>
 
   <!-- JOB APPROVALS -->
+  <div class="screen" id="drivers-screen">
+    <div class="sh"><span class="sh-t">🚚 Delivery Partners</span></div>
+    <div id="drv-list" style="padding:0 16px"></div>
+  </div>
+
   <div class="screen" id="websites-screen">
     <div class="sh"><span class="sh-t">🌐 Website Requests</span></div>
     <div id="wr-list" style="padding:0 16px"></div>
@@ -775,6 +780,10 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div style="font-size:26px">🧾</div>
         <div style="font-size:13px;font-weight:700;margin-top:6px">Receipts</div>
         <div style="font-size:11px;color:var(--ink3)">Restore · limits</div>
+      </div>
+      <div onclick="switchTab('drivers')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">🚚</div><div style="font-size:12px;font-weight:800;margin-top:4px">Drivers</div>
+        <div style="font-size:11px;color:var(--ink3)" id="d-drivers">—</div>
       </div>
       <div onclick="switchTab('websites')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:26px">🌐</div><div style="font-size:12px;font-weight:800;margin-top:4px">Websites</div>
@@ -2101,6 +2110,31 @@ function delPromo(code){
   sdel('promo_codes','code=eq.'+encodeURIComponent(code)).then(()=>{T('Deleted','success');loadPromos();}).catch(e=>T('Failed: '+((e&&e.message)||'').slice(0,60),'error'));
 }
 
+
+function loadDrivers(){
+  sget('drivers','order=created_at.desc&limit=200').then(d=>{
+    const rows=Array.isArray(d)?d:[];
+    txt('d-drivers',rows.filter(r=>r.status==='pending').length+' pending');
+    const el=document.getElementById('drv-list');if(!el)return;
+    el.innerHTML=rows.length?rows.map(r=>{
+      const s=r.status==='approved'?'<span style="color:var(--green);font-weight:800">✅ Verified</span>':(r.status==='blocked'?'<span style="color:var(--red);font-weight:800">🚫 Blocked</span>':'<span style="color:#b45309;font-weight:800">⏳ Pending</span>');
+      const veh={bike:'🚲',moped:'🛵',car:'🚗',van:'🚐',fuel:'⛽'}[r.vehicle]||'🚗';
+      return '<div class="ic" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between"><b>'+veh+' '+(r.name||'?')+'</b>'+s+'</div>'
+        +'<div style="font-size:12px;color:var(--ink3);margin:4px 0">'+(r.email||'')+' · '+(r.phone||'no phone')+' · '+(r.city||'?')+(r.vehicle==='fuel'?' · <b style="color:#b45309">⛽ FUEL — check ADR licence!</b>':'')+'</div>'
+        +'<div style="display:flex;gap:6px;margin-top:6px">'
+        +(r.status!=='approved'?'<button class="sl-btn btn-xs btn-green" onclick="setDriver(\''+r.id+'\',\'approved\')">✅ Verify</button>':'')
+        +(r.status!=='blocked'?'<button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="setDriver(\''+r.id+'\',\'blocked\')">🚫 Block</button>':'')
+        +(r.status==='blocked'?'<button class="sl-btn btn-xs btn-green" onclick="setDriver(\''+r.id+'\',\'approved\')">↩ Unblock</button>':'')
+        +'</div></div>';
+    }).join(''):'<div class="ic" style="text-align:center;color:var(--ink3)">No driver registrations yet.<br><span style="font-size:12px">Share stashlo.com/driver.html with delivery partners.</span></div>';
+  }).catch(()=>{const el=document.getElementById('drv-list');if(el)el.innerHTML='<div class="ic" style="color:var(--red)">Run add_delivery_partners.sql first.</div>';});
+}
+function setDriver(id,st){
+  spat('drivers','id=eq.'+id,{status:st,decided_at:Date.now()})
+    .then(()=>{T(st==='approved'?'✅ Driver verified — they can now see orders':'Driver '+st,'success');logAudit('driver_'+st,id);loadDrivers();})
+    .catch(()=>T('Failed','error'));
+}
+
 function loadWebsiteRequests(){
   sget('website_requests','order=created_at.desc&limit=100').then(d=>{
     const rows=Array.isArray(d)?d:[];
@@ -2436,6 +2470,7 @@ function grantUserReceipts(){
 function switchTab(name){
   if(name==="broadcast"){setTimeout(loadBcProducts,100);setTimeout(loadPromos,150);setTimeout(loadOffers,180);}
   if(name==="websites")setTimeout(loadWebsiteRequests,100);
+  if(name==="drivers")setTimeout(loadDrivers,100);
   try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   var aliases={'shops':'merchants','users':'customers','receipts':'admreceipts'};
   if(aliases[name])name=aliases[name];
