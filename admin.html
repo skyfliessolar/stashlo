@@ -632,6 +632,24 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   </div>
 
   <!-- JOB APPROVALS -->
+  <div class="screen" id="wholesale-screen">
+    <div class="sh"><span class="sh-t">🏬 Wholesale (Trade)</span></div>
+    <div class="ic" style="margin:0 16px 12px">
+      <div style="font-weight:800;margin-bottom:6px">➕ Add trade product</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <input id="wsp-emoji" placeholder="📦" style="width:52px;padding:9px;border:1px solid var(--line);border-radius:8px">
+        <input id="wsp-name" placeholder="Product e.g. Coca Cola 24×330ml" style="flex:2;min-width:150px;padding:9px;border:1px solid var(--line);border-radius:8px">
+        <input id="wsp-case" placeholder="Case size" style="width:100px;padding:9px;border:1px solid var(--line);border-radius:8px">
+        <input id="wsp-rrp" type="number" step="0.01" placeholder="RRP £" style="width:80px;padding:9px;border:1px solid var(--line);border-radius:8px">
+        <input id="wsp-trade" type="number" step="0.01" placeholder="Trade £" style="width:84px;padding:9px;border:1px solid var(--line);border-radius:8px">
+        <input id="wsp-stock" type="number" placeholder="Stock" style="width:70px;padding:9px;border:1px solid var(--line);border-radius:8px">
+        <button class="sl-btn btn-xs btn-green" onclick="wsAddProduct()">+ Add</button>
+      </div>
+      <div id="wsp-list" style="margin-top:10px"></div>
+    </div>
+    <div class="ic" style="margin:0 16px"><div style="font-weight:800;margin-bottom:6px">📦 Merchant trade orders</div><div id="wso-list"></div></div>
+  </div>
+
   <div class="screen" id="drivers-screen">
     <div class="sh"><span class="sh-t">🚚 Delivery Partners</span></div>
     <div id="drv-list" style="padding:0 16px"></div>
@@ -785,6 +803,10 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div style="font-size:26px">🧾</div>
         <div style="font-size:13px;font-weight:700;margin-top:6px">Receipts</div>
         <div style="font-size:11px;color:var(--ink3)">Restore · limits</div>
+      </div>
+      <div onclick="switchTab('wholesale')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">🏬</div><div style="font-size:12px;font-weight:800;margin-top:4px">Wholesale</div>
+        <div style="font-size:11px;color:var(--ink3)" id="d-wholesale">—</div>
       </div>
       <div onclick="switchTab('drivers')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:26px">🚚</div><div style="font-size:12px;font-weight:800;margin-top:4px">Drivers</div>
@@ -2116,6 +2138,46 @@ function delPromo(code){
 }
 
 
+
+function loadWholesaleAdmin(){
+  sget('wholesale_products','order=created_at.desc&limit=100').then(d=>{
+    const rows=Array.isArray(d)?d:[];
+    const el=document.getElementById('wsp-list');if(!el)return;
+    el.innerHTML=rows.map(p=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;margin-bottom:6px;font-size:13px"><span>'+(p.emoji||'📦')+' <b>'+p.name+'</b> · £'+parseFloat(p.trade_price).toFixed(2)+' (RRP £'+parseFloat(p.rrp||0).toFixed(2)+') · stock '+(p.stock==null?'∞':p.stock)+(p.active?'':' · <span style=\'color:var(--red)\'>OFF</span>')+'</span><span><button class="sl-btn btn-xs" style="background:var(--ink);color:#fff" onclick="wsEdit('+p.id+')">✎</button> <button class="sl-btn btn-xs" style="background:'+(p.active?'#7f1d1d':'var(--green)')+';color:#fff" onclick="wsToggle('+p.id+','+(!p.active)+')">'+(p.active?'Off':'On')+'</button></span></div>').join('')||'<div style="font-size:12px;color:var(--ink3)">No trade products yet.</div>';
+    window._WSP=rows;
+  }).catch(()=>{const el=document.getElementById('wsp-list');if(el)el.innerHTML='<div style="color:var(--red);font-size:12px">Run add_wholesale.sql first.</div>';});
+  sget('wholesale_orders','order=created_at.desc&limit=100').then(d=>{
+    const rows=Array.isArray(d)?d:[];
+    txt('d-wholesale',rows.filter(r=>r.status==='pending').length+' pending');
+    const el=document.getElementById('wso-list');if(!el)return;
+    el.innerHTML=rows.length?rows.map(o=>{
+      let items='';try{items=JSON.parse(o.items||'[]').map(i=>(i.emoji||'📦')+' '+i.name+' ×'+i.qty).join('<br>');}catch(e){}
+      const next={pending:['✅ Confirm','confirmed'],confirmed:['🚚 Dispatch','dispatched'],dispatched:['📦 Delivered','delivered']}[o.status];
+      return '<div style="padding:10px;background:var(--bg);border-radius:10px;margin-bottom:8px;font-size:13px"><div style="display:flex;justify-content:space-between"><b>'+(o.shop_name||o.merchant_id)+'</b><b>£'+parseFloat(o.total).toFixed(2)+'</b></div><div style="font-size:12px;color:var(--ink3);margin:4px 0">'+items+'</div><div>Status: <b>'+o.status+'</b> '+(next?'<button class="sl-btn btn-xs btn-green" onclick="wsOrderSt('+o.id+',\''+next[1]+'\')">'+next[0]+'</button>':'')+(o.status==='pending'?' <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="wsOrderSt('+o.id+',\'rejected\')">✕</button>':'')+'</div></div>';
+    }).join(''):'<div style="font-size:12px;color:var(--ink3)">No trade orders yet.</div>';
+  }).catch(()=>{});
+}
+function wsAddProduct(){
+  const g=id=>((document.getElementById(id)||{}).value||'').trim();
+  const name=g('wsp-name'),trade=parseFloat(g('wsp-trade'));
+  if(!name||!(trade>0)){T('Enter a name and trade price','error');return}
+  spost('wholesale_products',{emoji:g('wsp-emoji')||'📦',name,case_size:g('wsp-case'),rrp:parseFloat(g('wsp-rrp'))||0,trade_price:trade,stock:g('wsp-stock')?parseInt(g('wsp-stock')):null,active:true,created_at:Date.now()})
+    .then(()=>{T('✅ Trade product added','success');['wsp-emoji','wsp-name','wsp-case','wsp-rrp','wsp-trade','wsp-stock'].forEach(i=>document.getElementById(i).value='');loadWholesaleAdmin();})
+    .catch(()=>T('Failed — table exists?','error'));
+}
+function wsEdit(id){
+  const p=(window._WSP||[]).find(x=>x.id===id);if(!p)return;
+  const t=prompt('Trade price £ for '+p.name+':',p.trade_price);if(t===null)return;
+  const s=prompt('Stock (blank = unlimited):',p.stock==null?'':p.stock);if(s===null)return;
+  spat('wholesale_products','id=eq.'+id,{trade_price:parseFloat(t)||p.trade_price,stock:s===''?null:parseInt(s)})
+    .then(()=>{T('Updated','success');loadWholesaleAdmin();}).catch(()=>T('Failed','error'));
+}
+function wsToggle(id,on){spat('wholesale_products','id=eq.'+id,{active:on}).then(()=>loadWholesaleAdmin()).catch(()=>T('Failed','error'));}
+function wsOrderSt(id,st){
+  spat('wholesale_orders','id=eq.'+id,{status:st,decided_at:Date.now()})
+    .then(()=>{T('Order '+st,'success');logAudit('wholesale_'+st,String(id));loadWholesaleAdmin();}).catch(()=>T('Failed','error'));
+}
+
 function loadDrivers(){
   sget('drivers','order=created_at.desc&limit=200').then(d=>{
     const rows=Array.isArray(d)?d:[];
@@ -2476,6 +2538,7 @@ function switchTab(name){
   if(name==="broadcast"){setTimeout(loadBcProducts,100);setTimeout(loadPromos,150);setTimeout(loadOffers,180);}
   if(name==="websites")setTimeout(loadWebsiteRequests,100);
   if(name==="drivers")setTimeout(loadDrivers,100);
+  if(name==="wholesale")setTimeout(loadWholesaleAdmin,100);
   try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   var aliases={'shops':'merchants','users':'customers','receipts':'admreceipts'};
   if(aliases[name])name=aliases[name];

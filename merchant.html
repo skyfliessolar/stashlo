@@ -1167,6 +1167,21 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
     <div class="sl-btn nb" id="nb-more-btn" onclick="openMoreDrawer()"><span class="nb-ico">⋯</span><span class="nb-lab">More</span></div>
   </div>
   <div id="more-bd" onclick="closeMoreDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:298"></div>
+  <div class="screen" id="wholesale-screen">
+    <div class="sh"><span style="display:flex;align-items:center"><button onclick="switchTab('overview')" style="background:var(--purple3);color:var(--purple);border:none;border-radius:8px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;margin-right:8px;flex-shrink:0">‹</button><span class="sh-t">🏬 Stashlo Wholesale</span></span></div>
+    <div class="setting-card" style="padding:12px 14px">
+      <div style="font-size:12px;color:var(--ink3)">Trade prices for Stashlo merchants — order cases direct, delivered or collect. Savings shown vs RRP.</div>
+    </div>
+    <div id="ws-grid" style="padding:0 16px"></div>
+    <div class="setting-card" id="ws-basket-card" style="display:none">
+      <div style="font-weight:800;margin-bottom:6px">🧺 Your trade order</div>
+      <div id="ws-basket"></div>
+      <div style="display:flex;justify-content:space-between;font-weight:900;font-size:16px;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"><span>Total</span><span id="ws-total">£0.00</span></div>
+      <button class="btn btn-green" style="width:100%;margin-top:10px" onclick="wsPlaceOrder()">✅ Place trade order</button>
+    </div>
+    <div class="setting-card"><div style="font-weight:800;margin-bottom:6px">📦 My trade orders</div><div id="ws-myorders"></div></div>
+  </div>
+
   <div class="screen" id="website-screen">
     <div class="sh"><span style="display:flex;align-items:center"><button onclick="switchTab('overview')" style="background:var(--purple3);color:var(--purple);border:none;border-radius:8px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;margin-right:8px;flex-shrink:0">‹</button><span class="sh-t">🌐 Create Your Website</span></span></div>
     <div class="setting-card">
@@ -1205,6 +1220,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div onclick="switchTab('jobs');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">💼</div><div style="font-size:11px;font-weight:700">Jobs</div></div>
         <div onclick="switchTab('claims');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;position:relative"><div style="font-size:24px;margin-bottom:4px">🧾</div><div style="font-size:11px;font-weight:700">Receipt Claims</div><span id="claims-badge" style="display:none;position:absolute;top:6px;right:14px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;border-radius:10px;padding:1px 6px"></span></div>
         <div onclick="switchTab('website');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🌐</div><div style="font-size:11px;font-weight:700">Create Website</div></div>
+        <div onclick="switchTab('wholesale');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🏬</div><div style="font-size:11px;font-weight:700">Wholesale</div></div>
         <div onclick="merchantEmailSupport();closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">✉️</div><div style="font-size:11px;font-weight:700">Support</div></div>
         <div onclick="window.open('https://stashlo.com/privacy.html','_blank');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">🔒</div><div style="font-size:11px;font-weight:700">Privacy</div></div>
         <div onclick="window.open('https://stashlo.com/terms.html','_blank');closeMoreDrawer()" style="background:var(--bg);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer"><div style="font-size:24px;margin-bottom:4px">📄</div><div style="font-size:11px;font-weight:700">Terms</div></div>
@@ -2080,6 +2096,73 @@ function saveSettings(){
   pat("merchants","id=eq."+MID,upd).then(()=>{T("✅ Settings saved!","success");loadMerchant()}).catch(()=>T("Save failed","error"))
 }
 
+
+// ===== STASHLO WHOLESALE (Booker-style trade buying) =====
+var WS_PRODUCTS=[],WS_BASKET={};
+function loadWholesale(){
+  get('wholesale_products','active=eq.true&order=created_at.desc').then(function(d){
+    WS_PRODUCTS=Array.isArray(d)?d:[];
+    var el=document.getElementById('ws-grid');if(!el)return;
+    el.innerHTML=WS_PRODUCTS.length?WS_PRODUCTS.map(function(p){
+      var save=p.rrp>0?Math.round((1-(p.trade_price/p.rrp))*100):0;
+      var q=WS_BASKET[p.id]||0;
+      return '<div class="ic" style="margin-bottom:10px"><div style="display:flex;gap:10px;align-items:center">'
+        +'<div style="font-size:34px">'+(p.emoji||'📦')+'</div>'
+        +'<div style="flex:1"><b>'+p.name+'</b><div style="font-size:12px;color:var(--ink3)">'+(p.case_size||'')+(p.stock!=null?' · '+p.stock+' cases left':'')+'</div>'
+        +'<div style="font-size:13px;margin-top:2px"><b style="color:var(--purple)">£'+parseFloat(p.trade_price).toFixed(2)+'</b>'
+        +(p.rrp>0?' <s style="color:var(--ink3);font-size:11px">£'+parseFloat(p.rrp).toFixed(2)+'</s> <span style="color:var(--green);font-weight:800;font-size:11px">save '+save+'%</span>':'')+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px"><button onclick="wsQty('+p.id+',-1)" style="width:32px;height:32px;border:none;border-radius:8px;background:var(--bg);font-weight:900;cursor:pointer">−</button><b id="ws-q-'+p.id+'">'+q+'</b><button onclick="wsQty('+p.id+',1)" style="width:32px;height:32px;border:none;border-radius:8px;background:var(--purple);color:#fff;font-weight:900;cursor:pointer">+</button></div>'
+        +'</div></div>';
+    }).join(''):'<div class="ic" style="text-align:center;color:var(--ink3)">No wholesale products listed yet — check back soon.</div>';
+    wsRenderBasket();
+  }).catch(function(){var el=document.getElementById('ws-grid');if(el)el.innerHTML='<div class="ic" style="color:var(--red)">Run add_wholesale.sql first.</div>';});
+  wsLoadMyOrders();
+}
+function wsQty(id,d){
+  var p=WS_PRODUCTS.find(function(x){return x.id===id});if(!p)return;
+  var q=Math.max(0,(WS_BASKET[id]||0)+d);
+  if(p.stock!=null&&q>p.stock){T('Only '+p.stock+' cases in stock','error');return}
+  if(q===0)delete WS_BASKET[id];else WS_BASKET[id]=q;
+  var el=document.getElementById('ws-q-'+id);if(el)el.textContent=q;
+  wsRenderBasket();
+}
+function wsRenderBasket(){
+  var card=document.getElementById('ws-basket-card'),list=document.getElementById('ws-basket');
+  var ids=Object.keys(WS_BASKET);
+  if(!card||!list)return;
+  if(!ids.length){card.style.display='none';return}
+  card.style.display='block';
+  var tot=0;
+  list.innerHTML=ids.map(function(id){
+    var p=WS_PRODUCTS.find(function(x){return String(x.id)===String(id)});if(!p)return '';
+    var line=p.trade_price*WS_BASKET[id];tot+=line;
+    return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span>'+(p.emoji||'📦')+' '+p.name+' × '+WS_BASKET[id]+'</span><b>£'+line.toFixed(2)+'</b></div>';
+  }).join('');
+  txt('ws-total','£'+tot.toFixed(2));
+}
+function wsPlaceOrder(){
+  var ids=Object.keys(WS_BASKET);if(!ids.length)return;
+  var items=[],tot=0;
+  ids.forEach(function(id){
+    var p=WS_PRODUCTS.find(function(x){return String(x.id)===String(id)});if(!p)return;
+    items.push({id:p.id,name:p.name,emoji:p.emoji,qty:WS_BASKET[id],price:p.trade_price});
+    tot+=p.trade_price*WS_BASKET[id];
+  });
+  post('wholesale_orders',{merchant_id:MID,shop_name:(MDATA&&MDATA.name)||'Shop',items:JSON.stringify(items),total:tot.toFixed(2),status:'pending',created_at:Date.now()})
+    .then(function(){T('✅ Trade order placed — Stashlo will confirm','success');WS_BASKET={};loadWholesale();})
+    .catch(function(){T('Failed — run add_wholesale.sql','error');});
+}
+function wsLoadMyOrders(){
+  get('wholesale_orders','merchant_id=eq.'+MID+'&order=created_at.desc&limit=20').then(function(d){
+    var el=document.getElementById('ws-myorders');if(!el)return;
+    var rows=Array.isArray(d)?d:[];
+    var lbl={pending:'🕐 Pending',confirmed:'✅ Confirmed',dispatched:'🚚 Dispatched',delivered:'📦 Delivered',rejected:'✕ Rejected'};
+    el.innerHTML=rows.length?rows.map(function(o){
+      return '<div style="padding:8px 10px;background:var(--bg);border-radius:10px;margin-bottom:6px;font-size:13px"><b>£'+parseFloat(o.total).toFixed(2)+'</b> · '+(lbl[o.status]||o.status)+'<div style="font-size:11px;color:var(--ink3)">'+new Date(o.created_at).toLocaleString()+'</div></div>';
+    }).join(''):'<div style="font-size:12px;color:var(--ink3)">No trade orders yet.</div>';
+  }).catch(function(){});
+}
+
 // ===== WEBSITE BUILDER =====
 var W_THEMES={restaurant:{e:"🍽️",c1:"#7c2d12",c2:"#ea580c",hero:"Delicious food, made with love"},
  food:{e:"🍔",c1:"#78350f",c2:"#f59e0b",hero:"Fresh. Fast. Tasty."},
@@ -2379,6 +2462,7 @@ function merchantEmailSupport(){
 function openJobsSection(){ switchTab('jobs'); }
 function switchTab(name){
   if(name==="website")setTimeout(loadMyWebsites,100);
+  if(name==="wholesale")setTimeout(loadWholesale,100);
   if(!document.getElementById(name+'-screen')){T('That section is coming soon');name='overview';}
   document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("on");s.scrollTop=0;});
   document.querySelectorAll(".nb").forEach(b=>b.classList.remove("on"));
