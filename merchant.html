@@ -1108,7 +1108,11 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <div id="dept-quick-tiles" style="display:flex;gap:8px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>
       <div style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none" id="dept-keys"></div>
       <div id="pos-cats" style="display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none"></div>
-      <div id="pos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:10px"></div>
+      <div id="pos-view-toggle" style="display:flex;gap:6px;margin:0 0 8px">
+          <button onclick="setPosView('quick')" id="pv-quick" style="flex:1;padding:9px;border:none;border-radius:10px;font-weight:800;font-size:12px;cursor:pointer">⭐ Quick sale</button>
+          <button onclick="setPosView('all')" id="pv-all" style="flex:1;padding:9px;border:none;border-radius:10px;font-weight:800;font-size:12px;cursor:pointer">📦 All products</button>
+        </div>
+        <div id="pos-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;margin-bottom:10px"></div>
 
       <!-- Manual price NUMPAD modal - like evoPOS -->
       <div class="modal" id="manualModal"><div class="modal-box" style="max-width:320px">
@@ -1452,7 +1456,10 @@ function loadMerchant(){
     selectLoyalty(LT,true);
   }).catch(()=>{})
 }
-function loadProducts(){get("products","merchant_id=eq."+MID+"&order=created_at.desc").then(d=>{PRODUCTS=Array.isArray(d)?d:[];renderProducts();renderQuickGrid();if(typeof renderPOSGrid==="function")renderPOSGrid();txt("d-products",PRODUCTS.filter(p=>p.active!==false).length)}).catch(()=>{})}
+function loadProducts(){
+  try{var _pc=JSON.parse(localStorage.getItem('stashlo_prod_cache_'+MID)||'null');
+    if(_pc&&_pc.length&&!PRODUCTS.length){_pc.forEach(function(x){PRODUCTS.push(x)});if(typeof renderPOSGrid==='function')renderPOSGrid();}
+  }catch(e){}get("products","merchant_id=eq."+MID+"&order=created_at.desc").then(d=>{PRODUCTS=Array.isArray(d)?d:[];try{localStorage.setItem("stashlo_prod_cache_"+MID,JSON.stringify(PRODUCTS.slice(0,200)))}catch(e){};renderProducts();renderQuickGrid();if(typeof renderPOSGrid==="function")renderPOSGrid();txt("d-products",PRODUCTS.filter(p=>p.active!==false).length)}).catch(()=>{})}
 function _reverseCancelledPoints(list){
   // For orders cancelled after earning points, deduct them once (merchant has RLS write).
   (list||[]).forEach(function(o){
@@ -1588,7 +1595,7 @@ function editProd(id){
   setV("p-vat",p.vat_rate!=null?p.vat_rate:"20");
   setV("p-cost",p.cost_price!=null?p.cost_price:"");
   setV("p-stock",p.stock!=null?p.stock:"");
-  setV("p-barcode",p.barcode);
+  setV("p-barcode",p.barcode);var _pq=document.getElementById("p-quick");if(_pq)_pq.checked=!!p.quick;
   // Category: prefer pos_category (used by the till) then category.
   var pc=document.getElementById("p-cat");if(pc)pc.value=p.pos_category||"general";
   var psc=document.getElementById("p-shopcat");if(psc)psc.value=p.category||"other";
@@ -1604,7 +1611,7 @@ function saveProd(){
   const name=V("p-name"),price=parseFloat(document.getElementById("p-price").value||0),eid=V("edit-prod-id");
   if(!name||price<=0){const e=document.getElementById("p-err");if(e){e.textContent="Name and price required";e.style.display="block";}return}
   const btn=document.querySelector("#prodModal .btn-primary");if(btn){btn.textContent="Saving...";btn.disabled=true;}
-  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",image_url:V("p-image-url")||null,vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",barcode:V("p-barcode")||null,stock:parseInt(document.getElementById("p-stock").value||0),category:document.getElementById("p-shopcat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked,no_loyalty:!(document.getElementById("p-loyalty")||{checked:true}).checked};try{const _g=JSON.parse(document.getElementById("p-images").value||"[]");data.images=_g;if(!data.image_url&&_g.length)data.image_url=_g[0];}catch(e){}
+  const data={merchant_id:MID,name,price,emoji:V("p-emoji")||detectEmoji(name)||"🛍️",image_url:V("p-image-url")||null,vat_rate:V("p-vat")||"20",cost_price:parseFloat(document.getElementById("p-cost").value||0),pos_category:V("p-cat")||"general",barcode:V("p-barcode")||null,quick:!!(document.getElementById("p-quick")||{}).checked,stock:parseInt(document.getElementById("p-stock").value||0),category:document.getElementById("p-shopcat")?.value||"other",description:V("p-desc"),collect:document.getElementById("p-collect").checked,delivery:document.getElementById("p-delivery").checked,active:document.getElementById("p-active").checked,no_loyalty:!(document.getElementById("p-loyalty")||{checked:true}).checked};try{const _g=JSON.parse(document.getElementById("p-images").value||"[]");data.images=_g;if(!data.image_url&&_g.length)data.image_url=_g[0];}catch(e){}
   const action=eid?pat("products","id=eq."+eid,data):post("products",{...data,created_at:Date.now()});
   action.then((res)=>{
       T("✅ "+name+" saved!","success");closeModal("prodModal");
@@ -3020,13 +3027,20 @@ function requestPOS(){
   .catch(function(){T('Payment record failed','error');})
   .then(null,function(){/* pos_requested column missing — billing row is enough for admin to see */});
 }
+var POS_VIEW=localStorage.getItem('stashlo_pos_view')||'quick';
+function setPosView(v){POS_VIEW=v;try{localStorage.setItem('stashlo_pos_view',v);}catch(e){};renderPOSGrid();}
 function renderPOSGrid(){
   const el=document.getElementById('pos-grid');if(!el)return;
+  var _pq=document.getElementById('pv-quick'),_pa=document.getElementById('pv-all');
+  if(_pq){_pq.style.background=POS_VIEW==='quick'?'var(--purple)':'var(--bg2)';_pq.style.color=POS_VIEW==='quick'?'#fff':'var(--ink)';}
+  if(_pa){_pa.style.background=POS_VIEW==='all'?'var(--purple)':'var(--bg2)';_pa.style.color=POS_VIEW==='all'?'#fff':'var(--ink)';}
   posCats();
   var q=((document.getElementById('pos-scan')||{}).value||'').toLowerCase();
   const Q=String.fromCharCode(39);
+  var anyQuick=PRODUCTS.some(function(p){return p.quick&&p.active!==false});
   var list=PRODUCTS.filter(function(p){
     if(p.active===false)return false;
+    if(POS_VIEW==='quick'&&anyQuick&&!q&&POS_CAT==='all'&&!p.quick)return false; // till front page = quick items
     if(POS_CAT!=='all'&&(p.pos_category||'general')!==POS_CAT)return false;
     if(q&&(p.name||'').toLowerCase().indexOf(q)<0&&String(p.barcode||'').indexOf(q)<0)return false;
     return true;

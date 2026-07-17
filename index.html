@@ -2482,7 +2482,12 @@ function loadProf(){
 }
 
 // ===== CARDS =====
-function loadCards(){var _el=document.getElementById('cards-list');if(_el&&!_el.children.length)_el.innerHTML='<div class="skel" style="height:96px;margin-bottom:10px"></div><div class="skel" style="height:96px;margin-bottom:10px"></div><div class="skel" style="height:96px"></div>';
+function loadCards(){
+  // SPEED: paint the cached wallet instantly, refresh from network behind.
+  try{var _c=JSON.parse(localStorage.getItem('stashlo_cards_cache')||'null');
+    if(_c&&Array.isArray(_c)&&_c.length&&typeof renderAllCards==='function'&&!window._cardsPainted){window._cardsPainted=1;CARDS.length=0;_c.forEach(function(x){CARDS.push(x)});renderAllCards();}
+  }catch(e){}
+  var _el=document.getElementById('cards-list');if(_el&&!_el.children.length)_el.innerHTML='<div class="skel" style="height:96px;margin-bottom:10px"></div><div class="skel" style="height:96px;margin-bottom:10px"></div><div class="skel" style="height:96px"></div>';
   get('cards','user_id=eq.'+UID+'&order=added_at.desc').then(raw=>{
     CARDS=(Array.isArray(raw)?raw:[]).map(c=>({
       ...c,id:c.card_id,shopName:c.shop_name||c.name,
@@ -2490,6 +2495,7 @@ function loadCards(){var _el=document.getElementById('cards-list');if(_el&&!_el.
     }));
     mergeMerchantPoints().then(function(){
       renderAllCards();
+      try{localStorage.setItem('stashlo_cards_cache',JSON.stringify(CARDS.slice(0,30)));}catch(e){}
       txt('hs-c',CARDS.length);
       var totalPts=CARDS.reduce((a,c)=>a+(c.points||0),0);
       txt('hs-p',totalPts.toLocaleString());
@@ -3909,20 +3915,38 @@ function openCardDet(cardId){
     num=String((PROF&&PROF.loyalty_id)||c.card_number||c.card_id||'0000000000');
   }
   txt('bc-e',c.emoji||'🛍️');txt('bc-name',c.shopName||c.name);txt('bc-num',num);
-  // Show BOTH a QR (scans best) and the barcode, side by side.
+  // ONE big code at a time (big = scans reliably) with a QR / Barcode toggle.
   var bcWrap=document.getElementById('bc-wrap');
   var svg=document.getElementById('bc-svg');
-  // Inject a QR above the barcode if not already there.
   var qrBox=document.getElementById('cd-qr-box');
   if(!qrBox && bcWrap){
-    qrBox=document.createElement('div');qrBox.id='cd-qr-box';qrBox.style.cssText='text-align:center;margin-bottom:10px';
+    qrBox=document.createElement('div');qrBox.id='cd-qr-box';qrBox.style.cssText='text-align:center';
     bcWrap.insertBefore(qrBox,bcWrap.firstChild);
   }
-  if(qrBox){qrBox.innerHTML='<div style="font-size:10px;font-weight:800;letter-spacing:1px;color:#6366F1;margin-bottom:8px;text-transform:uppercase">Scan QR — fastest</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(num)+'" style="width:190px;height:190px;border-radius:12px;display:block;margin:0 auto">';}
-  if(typeof JsBarcode!=='undefined'){
-    try{JsBarcode(svg,num,{format:'CODE128',width:1.6,height:64,displayValue:false,margin:8,background:'#ffffff',lineColor:'#000000'});svg.style.display='block';svg.style.width='100%';svg.style.maxWidth='230px';svg.style.margin='0 auto';}
-    catch(e){svg.style.display='none';bcWrap.innerHTML+='<div style="font-size:22px;font-weight:900;letter-spacing:4px;padding:12px 0;color:#0d0d1a">'+num+'</div>';}
-  }else{svg.style.display='none';}
+  var tg=document.getElementById('cd-code-toggle');
+  if(!tg && bcWrap){
+    tg=document.createElement('div');tg.id='cd-code-toggle';
+    tg.style.cssText='display:flex;gap:6px;justify-content:center;margin-bottom:10px';
+    tg.innerHTML='<button id="cd-t-qr" style="padding:8px 18px;border:none;border-radius:999px;font-weight:800;font-size:12px;cursor:pointer">▦ QR</button><button id="cd-t-bc" style="padding:8px 18px;border:none;border-radius:999px;font-weight:800;font-size:12px;cursor:pointer">▍▍ Barcode</button>';
+    bcWrap.insertBefore(tg,bcWrap.firstChild);
+  }
+  function showCode(kind){
+    try{localStorage.setItem('stashlo_codepref',kind);}catch(e){}
+    var qb=document.getElementById('cd-t-qr'),bb=document.getElementById('cd-t-bc');
+    if(qb){qb.style.background=kind==='qr'?'var(--purple)':'var(--bg2)';qb.style.color=kind==='qr'?'#fff':'var(--ink)';}
+    if(bb){bb.style.background=kind==='bc'?'var(--purple)':'var(--bg2)';bb.style.color=kind==='bc'?'#fff':'var(--ink)';}
+    if(qrBox)qrBox.style.display=kind==='qr'?'block':'none';
+    if(svg)svg.style.display=kind==='bc'?'block':'none';
+  }
+  if(qrBox)qrBox.innerHTML='<img src="https://api.qrserver.com/v1/create-qr-code/?size=440x440&data='+encodeURIComponent(num)+'" style="width:230px;height:230px;border-radius:14px;background:#fff;padding:10px" alt="QR code"><div style="font-size:11px;color:var(--sub);margin-top:6px">Hold flat · brightness up</div>';
+  if(typeof JsBarcode!=='undefined'&&svg){
+    try{JsBarcode(svg,num,{format:'CODE128',width:2.4,height:96,displayValue:true,fontSize:15,textMargin:5,margin:10,background:'#ffffff',lineColor:'#000000'});svg.style.width='100%';svg.style.maxWidth='300px';svg.style.margin='0 auto';svg.style.background='#fff';svg.style.borderRadius='12px';svg.style.padding='4px';}
+    catch(e){if(bcWrap)bcWrap.innerHTML+='<div style="font-size:22px;font-weight:900;letter-spacing:4px;padding:12px 0;color:#0d0d1a">'+num+'</div>';}
+  }
+  var tq=document.getElementById('cd-t-qr'),tb=document.getElementById('cd-t-bc');
+  if(tq)tq.onclick=function(){showCode('qr')};
+  if(tb)tb.onclick=function(){showCode('bc')};
+  showCode(localStorage.getItem('stashlo_codepref')||'qr');
   document.getElementById('cd-loc-btn').setAttribute('data-cid',c.card_id||c.id);
   document.getElementById('cd-rows').innerHTML=`
     <div class="det-row"><div class="det-rl">Card type</div><div class="det-rv">${c.type==='national'?'🇬🇧 National':'🏪 Local shop'}</div></div>
