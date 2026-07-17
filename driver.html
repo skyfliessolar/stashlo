@@ -127,7 +127,10 @@ async function doAuth(){
     if(!TOKEN){T('Check your email to confirm, then sign in','success');signup&&toggleMode();return}
     localStorage.setItem('drv_tok',TOKEN);localStorage.setItem('drv_uid',UID);
     if(signup){
-      await post('drivers',{id:UID,email,name:V('a-name')||email.split('@')[0],phone:V('a-phone'),vehicle:V('a-vehicle'),city:V('a-city'),status:'pending',created_at:Date.now()}).catch(()=>{});
+      const prof={id:UID,email,name:V('a-name')||email.split('@')[0],phone:V('a-phone'),vehicle:V('a-vehicle'),city:V('a-city'),status:'pending',created_at:Date.now()};
+      try{localStorage.setItem('drv_pending_prof',JSON.stringify(prof));}catch(e){}
+      await post('drivers',prof).then(()=>{localStorage.removeItem('drv_pending_prof');})
+        .catch(e=>{T('Registration saved locally — will retry. ('+(((e&&e.message)||'run add_delivery_partners.sql')+'').slice(0,60)+')','error');});
     }
     boot();
   }catch(e){T('Network error','error');}
@@ -139,6 +142,10 @@ async function boot(){
   if(!TOKEN){return}
   document.getElementById('auth').classList.add('hide');
   document.getElementById('app').classList.remove('hide');
+  // retry a pending registration (e.g. SQL wasn't run yet at signup time)
+  try{const pend=JSON.parse(localStorage.getItem('drv_pending_prof')||'null');
+    if(pend&&pend.id===UID){await post('drivers',pend).then(()=>localStorage.removeItem('drv_pending_prof')).catch(()=>{});}
+  }catch(e){}
   const d=await get('drivers','id=eq.'+UID).catch(()=>[]);
   DRV=Array.isArray(d)&&d[0]?d[0]:null;
   if(!DRV){document.getElementById('d-hello').textContent='Complete registration';document.getElementById('pending-note').classList.remove('hide');return}

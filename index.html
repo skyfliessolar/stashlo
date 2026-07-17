@@ -1434,6 +1434,10 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
     <!-- Stashlo store -->
     <div id="stashlo-sec" style="display:none">
       <div class="sh pt16"><span class="sh-t">🌟 Stashlo Store</span></div>
+      <div style="display:flex;gap:6px;padding:0 16px;margin-bottom:10px">
+        <input id="store-q" placeholder="🔍 Search the Stashlo store…" style="flex:1;padding:12px;border:1px solid var(--bg2);border-radius:12px;font-size:14px;background:var(--bg)" oninput="storeSearch()" onkeydown="if(event.key==='Enter')storeSearch()">
+      </div>
+      <div id="store-results" style="padding:0 16px"></div>
       <div id="store-cat-btns" style="padding:0 16px"></div>
     </div>
   </div>
@@ -3012,14 +3016,39 @@ function saveReceiptToDevice(rid){
 // ===== BIRTHDAY OFFER =====
 
 
+
+// ===== STORE SEARCH =====
+var _SSQ=null;
+function storeSearch(){
+  clearTimeout(_SSQ);
+  _SSQ=setTimeout(function(){
+    var q=(V('store-q')||'').trim();
+    var res=document.getElementById('store-results'),cats=document.getElementById('store-cat-btns');
+    if(!res)return;
+    if(q.length<2){res.innerHTML='';if(cats)cats.style.display='block';return}
+    if(cats)cats.style.display='none';
+    res.innerHTML='<div class="skel" style="height:80px;margin-bottom:8px"></div>';
+    get('stashlo_products','active=eq.true&name=ilike.*'+encodeURIComponent(q)+'*&limit=20').then(function(d){
+      var ps=Array.isArray(d)?d:[];
+      res.innerHTML=ps.length
+        ? '<div class="prods-grid">'+ps.map(function(p){return pCard(p,{id:'stashlo',name:'Stashlo Store',loyalty_type:'points',loyalty_threshold:100})}).join('')+'</div>'
+        : '<div style="text-align:center;color:var(--sub);padding:18px 0">Nothing matching “'+q.replace(/</g,'&lt;')+'” — try another word.</div>';
+    }).catch(function(){res.innerHTML='<div style="color:var(--red);font-size:13px">Search failed — check connection.</div>';});
+  },250);
+}
+
 // ===== GIFT CARDS =====
 function buyGiftCard(amt){
   if(!UID){T('Sign in first','error');return}
-  var ref=prompt('£'+amt+' gift card = '+(amt*100)+' points.\nHow will you pay? (e.g. "bank transfer", "cash at Skyflies")','bank transfer');
+  _getSettings().then(function(st){
+    var pay=(st&&st.giftcard_pay_info)||'';
+    var msg='£'+amt+' gift card = '+(amt*100)+' points.\n'+(pay?('\n💳 HOW TO PAY:\n'+pay+'\n'):'')+'\nHow will you pay? (e.g. "bank transfer", "cash at Skyflies")';
+    var ref=prompt(msg,'bank transfer');
   if(ref===null)return;
   post('gift_card_requests',{user_id:UID,user_name:(PROF&&PROF.name)||'',amount:amt,points:amt*100,pay_ref:ref||'',status:'pending',created_at:Date.now()})
     .then(function(){T('🎁 Request sent — points arrive once Stashlo confirms your payment','success');loadGiftCards();})
     .catch(function(){T('Failed — please try later','error');});
+  });
 }
 function loadGiftCards(){
   if(!UID)return;
@@ -5589,10 +5618,18 @@ function openManualReceipt(){
 
 <script id="vh-fix">
 (function(){
+  var _maxVH=0;
   function setH(){
     try{
       var vv=window.visualViewport;
       var h = vv ? vv.height : window.innerHeight;
+      // KEYBOARD-AWARE: when an input is focused and the viewport shrank (the
+      // keyboard), DO NOT shrink the app/modals to half screen — keep full
+      // height and let the browser scroll the field into view instead.
+      if(h>_maxVH)_maxVH=h;
+      var el=document.activeElement;
+      var typing=el&&/INPUT|TEXTAREA|SELECT/.test(el.tagName);
+      if(typing && h < _maxVH-120){return;}
       var app=document.getElementById('app');
       var auth=document.getElementById('auth');
       // Pin to the REAL visible height so the bottom nav can't fall below the fold
@@ -5606,6 +5643,12 @@ function openManualReceipt(){
     window.visualViewport.addEventListener('scroll', setH);
   }
   window.addEventListener('resize', setH);
+  document.addEventListener('focusin',function(e){
+    var t=e.target;
+    if(t&&/INPUT|TEXTAREA/.test(t.tagName)){setTimeout(function(){try{t.scrollIntoView({block:'center',behavior:'smooth'});}catch(x){}},350);}
+  });
+  document.addEventListener('focusout',function(){setTimeout(setH,300);});
+
   window.addEventListener('orientationchange', function(){ setTimeout(setH,150); setTimeout(setH,400); });
   setH();
   document.addEventListener('DOMContentLoaded', setH);

@@ -1065,12 +1065,13 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <div class="field">
         <label class="field-label">Product Image</label>
         <div style="border:2px dashed var(--bg2);border-radius:var(--r12);padding:16px;text-align:center;cursor:pointer;background:#fafafa" onclick="document.getElementById('sp-img-file').click()">
-          <input type="file" id="sp-img-file" accept="image/*" style="display:none" onchange="previewUpload(this,'sp-img-prev')">
+          <input type="file" id="sp-img-file" accept="image/*" style="display:none" onchange="previewUpload(this,'sp-img-prev')"><input type="file" id="sp-img-cam" accept="image/*" capture="environment" style="display:none" onchange="previewUpload(this,'sp-img-prev')">>
           <img id="sp-img-prev" style="display:none;width:70px;height:70px;border-radius:var(--r8);object-fit:cover;margin-bottom:8px">
           <div id="sp-gallery" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"></div>
           <label style="display:inline-block;padding:8px 12px;background:var(--purple3);color:var(--purple);border-radius:var(--r8);font-weight:700;font-size:12px;cursor:pointer">➕ Add more photos<input type="file" accept="image/*" multiple style="display:none" onchange="spAddPhotos(this)"></label>
           <input type="hidden" id="sp-images">
           <div style="font-size:13px;color:var(--ink3)">📸 Upload image</div>
+          <button type="button" class="sl-btn btn-xs" style="background:var(--ink);color:#fff;margin-top:6px" onclick="event.stopPropagation();document.getElementById('sp-img-cam').click()">📷 Take a photo</button>
         </div>
       </div>
       <label style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg);border-radius:var(--r8);margin-bottom:8px;cursor:pointer">
@@ -2835,10 +2836,18 @@ try{
 </script>
 <script id="vh-fix">
 (function(){
+  var _maxVH=0;
   function setH(){
     try{
       var vv=window.visualViewport;
       var h = vv ? vv.height : window.innerHeight;
+      // KEYBOARD-AWARE: when an input is focused and the viewport shrank (the
+      // keyboard), DO NOT shrink the app/modals to half screen — keep full
+      // height and let the browser scroll the field into view instead.
+      if(h>_maxVH)_maxVH=h;
+      var el=document.activeElement;
+      var typing=el&&/INPUT|TEXTAREA|SELECT/.test(el.tagName);
+      if(typing && h < _maxVH-120){return;}
       var app=document.getElementById('app');
       var auth=document.getElementById('auth');
       if(app) app.style.height = h + 'px';
@@ -2851,6 +2860,12 @@ try{
     window.visualViewport.addEventListener('scroll', setH);
   }
   window.addEventListener('resize', setH);
+  document.addEventListener('focusin',function(e){
+    var t=e.target;
+    if(t&&/INPUT|TEXTAREA/.test(t.tagName)){setTimeout(function(){try{t.scrollIntoView({block:'center',behavior:'smooth'});}catch(x){}},350);}
+  });
+  document.addEventListener('focusout',function(){setTimeout(setH,300);});
+
   window.addEventListener('orientationchange', function(){ setTimeout(setH,150); setTimeout(setH,400); });
   setH();
   document.addEventListener('DOMContentLoaded', setH);

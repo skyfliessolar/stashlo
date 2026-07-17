@@ -4645,10 +4645,18 @@ try{
 </script>
 <script id="vh-fix">
 (function(){
+  var _maxVH=0;
   function setH(){
     try{
       var vv=window.visualViewport;
       var h = vv ? vv.height : window.innerHeight;
+      // KEYBOARD-AWARE: when an input is focused and the viewport shrank (the
+      // keyboard), DO NOT shrink the app/modals to half screen — keep full
+      // height and let the browser scroll the field into view instead.
+      if(h>_maxVH)_maxVH=h;
+      var el=document.activeElement;
+      var typing=el&&/INPUT|TEXTAREA|SELECT/.test(el.tagName);
+      if(typing && h < _maxVH-120){return;}
       var app=document.getElementById('app');
       var auth=document.getElementById('auth');
       if(app) app.style.height = h + 'px';
@@ -4661,6 +4669,12 @@ try{
     window.visualViewport.addEventListener('scroll', setH);
   }
   window.addEventListener('resize', setH);
+  document.addEventListener('focusin',function(e){
+    var t=e.target;
+    if(t&&/INPUT|TEXTAREA/.test(t.tagName)){setTimeout(function(){try{t.scrollIntoView({block:'center',behavior:'smooth'});}catch(x){}},350);}
+  });
+  document.addEventListener('focusout',function(){setTimeout(setH,300);});
+
   window.addEventListener('orientationchange', function(){ setTimeout(setH,150); setTimeout(setH,400); });
   setH();
   document.addEventListener('DOMContentLoaded', setH);
