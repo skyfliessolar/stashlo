@@ -632,6 +632,14 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   </div>
 
   <!-- JOB APPROVALS -->
+  <div class="screen" id="giftclaims-screen">
+    <div class="sh"><span class="sh-t">🎁 Gift Cards & Claims</span></div>
+    <div class="ic" style="margin:0 16px 12px"><div style="font-weight:800;margin-bottom:6px">🎁 Gift card requests</div>
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Approve ONLY after the money is received (cash/bank). Activation credits the points instantly.</div>
+      <div id="gcard-list"></div></div>
+    <div class="ic" style="margin:0 16px"><div style="font-weight:800;margin-bottom:6px">🧾 All receipt claims (incl deleted)</div><div id="aclaims-list"></div></div>
+  </div>
+
   <div class="screen" id="wholesale-screen">
     <div class="sh"><span class="sh-t">🏬 Wholesale (Trade)</span></div>
     <div class="ic" style="margin:0 16px 12px">
@@ -803,6 +811,10 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
         <div style="font-size:26px">🧾</div>
         <div style="font-size:13px;font-weight:700;margin-top:6px">Receipts</div>
         <div style="font-size:11px;color:var(--ink3)">Restore · limits</div>
+      </div>
+      <div onclick="switchTab('giftclaims')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">🎁</div><div style="font-size:12px;font-weight:800;margin-top:4px">Gift Cards & Claims</div>
+        <div style="font-size:11px;color:var(--ink3)" id="d-gift">—</div>
       </div>
       <div onclick="switchTab('wholesale')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:26px">🏬</div><div style="font-size:12px;font-weight:800;margin-top:4px">Wholesale</div>
@@ -2139,6 +2151,51 @@ function delPromo(code){
 
 
 
+
+function loadGiftClaims(){
+  sget('gift_cards','order=created_at.desc&limit=100').then(d=>{
+    const rows=Array.isArray(d)?d:[];
+    txt('d-gift',rows.filter(r=>r.status==='pending_payment').length+' waiting');
+    const el=document.getElementById('gcard-list');if(!el)return;
+    el.innerHTML=rows.length?rows.map(g=>{
+      const s=g.status==='active'?'<span style="color:var(--green);font-weight:800">✅ ACTIVE '+(g.code||'')+'</span>':(g.status==='rejected'?'<span style="color:var(--red)">✕ Rejected</span>':'<span style="color:#b45309;font-weight:800">🕐 £'+g.amount+' — payment received?</span>');
+      return '<div style="padding:10px;background:var(--bg);border-radius:10px;margin-bottom:6px;font-size:13px"><div style="display:flex;justify-content:space-between"><b>£'+g.amount+' · '+(g.user_name||g.user_id.slice(0,8))+'</b>'+s+'</div>'
+        +(g.status==='pending_payment'?'<div style="margin-top:6px"><button class="sl-btn btn-xs btn-green" onclick="gcApprove('+g.id+')">💰 Payment received — Activate</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="gcReject('+g.id+')">✕</button></div>':'')
+        +'</div>';
+    }).join(''):'<div style="font-size:12px;color:var(--ink3)">No gift card requests.</div>';
+    window._GCARDS=rows;
+  }).catch(()=>{const el=document.getElementById('gcard-list');if(el)el.innerHTML='<div style="color:var(--red);font-size:12px">Run add_giftcards.sql first.</div>';});
+  // all claims incl deleted
+  sget('points_requests','order=created_at.desc&limit=200').then(d=>{
+    const rows=Array.isArray(d)?d:[];
+    const el=document.getElementById('aclaims-list');if(!el)return;
+    el.innerHTML=rows.length?rows.map(c=>{
+      const s={pending:'🕐 pending',approved:'✅ approved',rejected:'✕ rejected',deleted:'🗑 deleted'}[c.status]||c.status;
+      return '<div style="padding:8px 10px;background:var(--bg);border-radius:10px;margin-bottom:6px;font-size:12px"><div style="display:flex;justify-content:space-between"><span><b>£'+parseFloat(c.amount||0).toFixed(2)+'</b> · '+(c.user_name||'?')+' → '+(c.shop_name||c.merchant_id||'?')+'</span><b>'+s+'</b></div>'
+        +'<div style="margin-top:5px">'
+        +(c.status==='deleted'?'<button class="sl-btn btn-xs btn-green" onclick="acRestore('+c.id+')">↩ Restore</button> <button class="sl-btn btn-xs" style="background:#111;color:#fff" onclick="acHardDel('+c.id+')">🗑 Delete forever</button>':'<button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="acSoftDel('+c.id+')">🗑 Delete</button>')
+        +'</div></div>';
+    }).join(''):'<div style="font-size:12px;color:var(--ink3)">No claims.</div>';
+  }).catch(()=>{});
+}
+function gcApprove(id){
+  const g=(window._GCARDS||[]).find(x=>x.id===id);if(!g)return;
+  if(!confirm('Confirm £'+g.amount+' has been RECEIVED? This activates the card and credits '+g.points+' pts.'))return;
+  const code='GC-'+Math.random().toString(36).slice(2,8).toUpperCase();
+  spat('gift_cards','id=eq.'+id,{status:'active',code:code,decided_at:Date.now()}).then(()=>{
+    // credit points to the user's first card
+    sget('cards','user_id=eq.'+g.user_id+'&order=added_at.asc&limit=1').then(cs=>{
+      const c=Array.isArray(cs)&&cs[0];
+      if(c)spat('cards','user_id=eq.'+g.user_id+'&card_id=eq.'+encodeURIComponent(c.card_id),{points:(c.points||0)+g.points}).catch(()=>{});
+    });
+    T('✅ Gift card '+code+' active — '+g.points+' pts credited','success');logAudit('giftcard_activate','£'+g.amount+' '+code);loadGiftClaims();
+  }).catch(()=>T('Failed','error'));
+}
+function gcReject(id){if(!confirm('Reject this gift card request?'))return;spat('gift_cards','id=eq.'+id,{status:'rejected',decided_at:Date.now()}).then(()=>loadGiftClaims()).catch(()=>T('Failed','error'));}
+function acSoftDel(id){spat('points_requests','id=eq.'+id,{status:'deleted'}).then(()=>{T('Claim deleted (restorable)','success');loadGiftClaims();}).catch(()=>T('Failed','error'));}
+function acRestore(id){spat('points_requests','id=eq.'+id,{status:'pending'}).then(()=>{T('↩ Restored to pending','success');loadGiftClaims();}).catch(()=>T('Failed','error'));}
+function acHardDel(id){if(!confirm('Delete FOREVER? Cannot be restored.'))return;sdel('points_requests','id=eq.'+id).then(()=>{T('Deleted forever','success');loadGiftClaims();}).catch(()=>T('Failed','error'));}
+
 function loadWholesaleAdmin(){
   sget('wholesale_products','order=created_at.desc&limit=100').then(d=>{
     const rows=Array.isArray(d)?d:[];
@@ -2539,6 +2596,7 @@ function switchTab(name){
   if(name==="websites")setTimeout(loadWebsiteRequests,100);
   if(name==="drivers")setTimeout(loadDrivers,100);
   if(name==="wholesale")setTimeout(loadWholesaleAdmin,100);
+  if(name==="giftclaims")setTimeout(loadGiftClaims,100);
   try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   var aliases={'shops':'merchants','users':'customers','receipts':'admreceipts'};
   if(aliases[name])name=aliases[name];

@@ -1648,6 +1648,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <div style="font-weight:800;margin-bottom:6px">🌐 Get your own website</div>
       <div style="font-size:12px;color:var(--sub);margin-bottom:8px">Stashlo builds you a professional website — free preview, published by our team.</div>
       <button onclick="openSiteBuilder()" style="width:100%;background:var(--purple);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;cursor:pointer">🌐 Create my website</button>
+      <button onclick="openGiftCards()" style="width:100%;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;cursor:pointer;margin-top:8px">🎁 Buy a Stashlo gift card</button>
       <div id="cw-myreqs" style="margin-top:8px"></div>
     </div>
     <div id="prof-summary" style="margin:14px 16px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 2px 16px -4px rgba(99,102,241,.10)"></div>
@@ -2934,6 +2935,54 @@ function buildStoreCategories(){
   }).catch(function(){});
 }
 
+
+
+// ===== STASHLO GIFT CARDS =====
+function openGiftCards(){
+  var ov=document.createElement('div');ov.id='gc-ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center';
+  ov.innerHTML='<div style="background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:430px;max-height:88vh;overflow-y:auto;padding:20px 16px calc(env(safe-area-inset-bottom,0px)+24px)">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b style="font-size:17px">🎁 Stashlo Gift Cards</b><button onclick="document.getElementById(\'gc-ov\').remove()" style="background:var(--bg2);border:none;border-radius:8px;width:32px;height:32px;cursor:pointer">✕</button></div>'
+    +'<div style="font-size:12px;color:var(--sub);margin-bottom:10px">Buy a gift card — pay the shop or Stashlo directly (cash/bank transfer). Once payment is confirmed by Stashlo, the card activates and its value lands as points (100 pts = £1) you can spend at checkout.</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:10px">'+[5,10,25,50].map(function(v){return '<button onclick="buyGiftCard('+v+')" style="flex:1;padding:16px 4px;background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:14px;font-weight:900;font-size:16px;cursor:pointer">£'+v+'</button>'}).join('')+'</div>'
+    +'<div id="gc-status" style="font-size:12px;margin-bottom:8px"></div>'
+    +'<div style="font-weight:800;margin-bottom:6px">My gift cards</div><div id="gc-list"></div></div>';
+  document.body.appendChild(ov);
+  loadGiftCards();
+}
+function buyGiftCard(amount){
+  if(!UID){T('Sign in first','error');return}
+  var st=document.getElementById('gc-status');st.textContent='Creating request…';
+  post('gift_cards',{user_id:UID,user_name:(PROF&&PROF.name)||'',amount:amount,points:amount*100,status:'pending_payment',created_at:Date.now()})
+    .then(function(){st.innerHTML='<span style="color:var(--green);font-weight:700">✅ Requested — pay £'+amount+' to the shop/Stashlo and it activates once confirmed.</span>';loadGiftCards();})
+    .catch(function(){st.innerHTML='<span style="color:var(--red)">Failed — try again later.</span>';});
+}
+function loadGiftCards(){
+  if(!UID)return;
+  get('gift_cards','user_id=eq.'+UID+'&order=created_at.desc').then(function(d){
+    var el=document.getElementById('gc-list');if(!el)return;
+    var rows=Array.isArray(d)?d:[];
+    el.innerHTML=rows.length?rows.map(function(g){
+      var s=g.status==='active'?'<span style="color:var(--green);font-weight:800">✅ ACTIVE — code '+(g.code||'')+' · +'+g.points+' pts added</span>'
+        :(g.status==='rejected'?'<span style="color:var(--red)">✕ Rejected</span>'
+        :'<span style="color:#b45309">🕐 Awaiting payment confirmation</span>');
+      return '<div style="padding:10px;background:var(--bg);border-radius:12px;margin-bottom:6px;font-size:13px"><b>£'+g.amount+' gift card</b><div style="margin-top:3px">'+s+'</div></div>';
+    }).join(''):'<div style="font-size:12px;color:var(--sub)">No gift cards yet.</div>';
+  }).catch(function(){});
+}
+
+// ===== RECEIPT SAVE-TO-DEVICE (phone or PC) =====
+function saveReceiptToDevice(rid){
+  var r=(window.MY_RECEIPTS||RECEIPTS||[]).find(function(x){return String(x.id)===String(rid)});
+  if(!r){T('Receipt not found','error');return}
+  var items='';try{items=JSON.parse(r.items||'[]').map(function(it){return (it.n||'Item')+' x'+(it.q||1)+'  £'+(((it.p||0)*(it.q||1)).toFixed(2))}).join('<br>');}catch(e){}
+  var html='<div style="text-align:center"><b>'+(r.shop_name||'Shop')+'</b><br>'+new Date(r.created_at).toLocaleString()+'</div><hr>'+items+'<hr>VAT: £'+parseFloat(r.vat||0).toFixed(2)+'<br><b>TOTAL: £'+parseFloat(r.total||0).toFixed(2)+'</b><br>Paid: '+(r.payment_method||'')+'<hr><div style="text-align:center">Stashlo e-receipt</div>';
+  var f=document.createElement('iframe');f.style.cssText='position:fixed;width:0;height:0;border:0';
+  document.body.appendChild(f);
+  f.srcdoc='<html><head><title>Receipt</title><style>body{font-family:monospace;font-size:12px;max-width:300px;margin:0 auto;padding:10px}hr{border:none;border-top:1px dashed #000}</style></head><body>'+html+'</body></html>';
+  f.onload=function(){try{f.contentWindow.print();}catch(e){}setTimeout(function(){f.remove()},2000);};
+  T('💾 Use "Save as PDF" in the print dialog to keep it on this device');
+}
 
 // ===== LOCATION CARD AUTO-POPUP =====
 // When the customer is physically near a shop whose card they hold, surface
@@ -4251,7 +4300,7 @@ function loadReceipts(){
   get('receipts','user_id=eq.'+UID+'&deleted=not.is.true&order=created_at.desc').then(function(d){
     let all=Array.isArray(d)?d:[];
     const yr=(document.getElementById('rcp-year')||{}).value||'all';
-    RECEIPTS=yr==='all'?all:all.filter(function(r){return new Date(r.created_at||0).getFullYear()===parseInt(yr)});
+    window.MY_RECEIPTS=all;RECEIPTS=yr==='all'?all:all.filter(function(r){return new Date(r.created_at||0).getFullYear()===parseInt(yr)});
     const tot=RECEIPTS.reduce(function(a,r){return a+parseFloat(r.total||0)},0);
     (function(){
   var hr=new Date().getHours();
@@ -4265,6 +4314,14 @@ txt('rcp-total','£'+tot.toFixed(2));txt('rcp-count',RECEIPTS.length+' receipts'
       +(r.image_url?'<img src="'+r.image_url+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:10px" onclick="window.open(String.fromCharCode(39)+r.image_url" onerror="this.style.display=String.fromCharCode(39)+String.fromCharCode(39)">':'')
       +'<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">🧾 '+(r.merchant_name||'Receipt')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.receipt_no||'')+' · '+(r.created_at?new Date(r.created_at).toLocaleString().slice(0,17):'')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.items||'')+'</div></div><div style="text-align:right"><div style="font-size:17px;font-weight:800;color:var(--purple)">£'+parseFloat(r.total||0).toFixed(2)+'</div><div style="margin-top:6px">'+(r.points_awarded?'<span style="background:#dcfce7;color:#166534;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800">💎 Points added</span> ':'<button onclick="claimPoints('+i+')" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">💎 Claim points</button> ')+'<button onclick="downloadReceiptPDF('+i+')" style="background:var(--purple-bg);color:var(--purple);border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">⬇ PDF</button> <button onclick="deleteReceipt('+i+')" style="background:#fef2f2;color:#ef4444;border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">🗑</button></div></div></div></div>'}).join('');
     // fix image handlers cleanly
+    Array.prototype.forEach.call(el.children,function(card,i){
+      if(!RECEIPTS[i]||card.querySelector('.rc-save'))return;
+      var b=document.createElement('button');
+      b.className='rc-save';b.textContent='💾 Save / print';
+      b.style.cssText='margin-top:8px;background:var(--bg);border:1px solid var(--bg2);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer';
+      b.onclick=function(){saveReceiptToDevice(RECEIPTS[i].id)};
+      card.appendChild(b);
+    });
     Array.prototype.forEach.call(el.querySelectorAll('img'),function(im,i){
       im.onclick=function(){window.open(RECEIPTS[i]&&RECEIPTS[i].image_url||'#','_blank')};
       im.onerror=function(){this.style.display='none'};
@@ -4504,6 +4561,7 @@ function goTab(n){
 // ===== STASHLO 3D THEME ENGINE (admin-controlled via Supabase app_settings) =====
 window.ANTH_KEY='';
 let T3D={enabled:true,depth:1,tilt:true,orbs:true,glass:true,flip:true,primary:'#6366F1',accent:'#8B5CF6',glow:'#22d3ee'};
+setTimeout(function(){try{applyTheme3D();}catch(e){}},50); // instant 3D on boot
 function loadTheme3D(){
   get('app_settings','key=eq.anthropic_key').then(function(d){if(Array.isArray(d)&&d[0]&&d[0].value)window.ANTH_KEY=d[0].value;}).catch(function(){});
   get('app_settings','key=eq.theme3d').then(d=>{
