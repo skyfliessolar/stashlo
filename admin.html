@@ -643,6 +643,14 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   <div class="screen" id="wholesale-screen">
     <div class="sh"><span class="sh-t">🏬 Wholesale (Trade)</span></div>
     <div class="ic" style="margin:0 16px 12px">
+      <div style="font-weight:800;margin-bottom:6px">🎁 Gift card requests</div>
+      <div id="gcr-list" style="font-size:13px"></div>
+    </div>
+    <div class="ic" style="margin:0 16px 12px">
+      <div style="font-weight:800;margin-bottom:6px">🧾 Receipt claims (all merchants — restore / delete)</div>
+      <div id="acl-list" style="font-size:13px"></div>
+    </div>
+    <div class="ic" style="margin:0 16px 12px">
       <div style="font-weight:800;margin-bottom:6px">➕ Add trade product</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <input id="wsp-emoji" placeholder="📦" style="width:52px;padding:9px;border:1px solid var(--line);border-radius:8px">
@@ -2196,6 +2204,39 @@ function acSoftDel(id){spat('points_requests','id=eq.'+id,{status:'deleted'}).th
 function acRestore(id){spat('points_requests','id=eq.'+id,{status:'pending'}).then(()=>{T('↩ Restored to pending','success');loadGiftClaims();}).catch(()=>T('Failed','error'));}
 function acHardDel(id){if(!confirm('Delete FOREVER? Cannot be restored.'))return;sdel('points_requests','id=eq.'+id).then(()=>{T('Deleted forever','success');loadGiftClaims();}).catch(()=>T('Failed','error'));}
 
+
+function loadGiftAdmin(){
+  sget('gift_card_requests','order=created_at.desc&limit=50').then(d=>{
+    const el=document.getElementById('gcr-list');if(!el)return;
+    const rows=Array.isArray(d)?d:[];
+    el.innerHTML=rows.length?rows.map(r=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;margin-bottom:6px"><span><b>£'+r.amount+'</b> ('+r.points+' pts) · '+(r.user_name||r.user_id.slice(0,8))+' · '+(r.pay_ref||'')+' · '+r.status+'</span>'+(r.status==='pending'?'<span><button class="sl-btn btn-xs btn-green" onclick="gcApprove('+r.id+')">✅ Paid</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="gcReject('+r.id+')">✕</button></span>':'')+'</div>').join(''):'<div style="color:var(--ink3);font-size:12px">No gift card requests.</div>';
+    window._GCR=rows;
+  }).catch(()=>{const el=document.getElementById('gcr-list');if(el)el.innerHTML='<div style="color:var(--red);font-size:12px">Run add_giftcards.sql</div>';});
+}
+function gcApprove(id){
+  const r=(window._GCR||[]).find(x=>x.id===id);if(!r)return;
+  if(!confirm('Confirm £'+r.amount+' RECEIVED? '+r.points+' points will be credited.'))return;
+  sget('cards','user_id=eq.'+r.user_id+'&order=added_at.asc&limit=1').then(cs=>{
+    const c=Array.isArray(cs)&&cs[0];
+    if(!c){T('User has no card to credit','error');return}
+    spat('cards','user_id=eq.'+r.user_id+'&card_id=eq.'+c.card_id,{points:(c.points||0)+r.points}).then(()=>{
+      spat('gift_card_requests','id=eq.'+id,{status:'approved',decided_at:Date.now()});
+      T('✅ '+r.points+' pts credited','success');logAudit('giftcard_approve','£'+r.amount);loadGiftAdmin();
+    });
+  }).catch(()=>T('Failed','error'));
+}
+function gcReject(id){spat('gift_card_requests','id=eq.'+id,{status:'rejected',decided_at:Date.now()}).then(()=>{T('Rejected','success');loadGiftAdmin();});}
+
+function loadClaimsAdmin(){
+  sget('points_requests','order=created_at.desc&limit=100').then(d=>{
+    const el=document.getElementById('acl-list');if(!el)return;
+    const rows=Array.isArray(d)?d:[];
+    el.innerHTML=rows.length?rows.map(r=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;margin-bottom:6px"><span>'+(r.user_name||'?')+' → '+(r.shop_name||r.merchant_id||'?')+' · £'+(r.amount||0)+' · <b>'+r.status+'</b></span><span>'+(r.status==='deleted'?'<button class="sl-btn btn-xs btn-green" onclick="aclRestore('+r.id+')">↩ Restore</button> ':'')+'<button class="sl-btn btn-xs" style="background:#374151;color:#fff" onclick="aclDelete('+r.id+')">🗑 Erase</button></span></div>').join(''):'<div style="color:var(--ink3);font-size:12px">No claims.</div>';
+  }).catch(()=>{});
+}
+function aclRestore(id){spat('points_requests','id=eq.'+id,{status:'pending'}).then(()=>{T('↩ Restored to pending','success');logAudit('claim_restore',String(id));loadClaimsAdmin();}).catch(()=>T('Failed','error'));}
+function aclDelete(id){if(!confirm('Erase this claim PERMANENTLY?'))return;sdel('points_requests','id=eq.'+id).then(()=>{T('Erased','success');logAudit('claim_erase',String(id));loadClaimsAdmin();}).catch(()=>T('Failed','error'));}
+
 function loadWholesaleAdmin(){
   sget('wholesale_products','order=created_at.desc&limit=100').then(d=>{
     const rows=Array.isArray(d)?d:[];
@@ -2595,7 +2636,7 @@ function switchTab(name){
   if(name==="broadcast"){setTimeout(loadBcProducts,100);setTimeout(loadPromos,150);setTimeout(loadOffers,180);}
   if(name==="websites")setTimeout(loadWebsiteRequests,100);
   if(name==="drivers")setTimeout(loadDrivers,100);
-  if(name==="wholesale")setTimeout(loadWholesaleAdmin,100);
+  if(name==="wholesale"){setTimeout(loadWholesaleAdmin,100);setTimeout(loadGiftAdmin,150);setTimeout(loadClaimsAdmin,200);}
   if(name==="giftclaims")setTimeout(loadGiftClaims,100);
   try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   var aliases={'shops':'merchants','users':'customers','receipts':'admreceipts'};

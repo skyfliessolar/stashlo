@@ -1054,6 +1054,11 @@ button:active{transform:scale(.96)}
 #boot-splash .logo{font-size:56px;animation:splashPulse 1.2s ease infinite}
 #boot-splash .name{color:#fff;font-weight:900;font-size:24px;margin-top:10px;letter-spacing:.5px}
 @keyframes splashPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+
+/* 3D wallet card flip */
+.card3d{perspective:1000px}
+.card3d .c3-inner{transition:transform .5s cubic-bezier(.4,.2,.2,1);transform-style:preserve-3d}
+.card3d.flip .c3-inner{transform:rotateY(180deg)}
 </style>
 
 
@@ -1650,6 +1655,16 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <button onclick="openSiteBuilder()" style="width:100%;background:var(--purple);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;cursor:pointer">🌐 Create my website</button>
       <button onclick="openGiftCards()" style="width:100%;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;cursor:pointer;margin-top:8px">🎁 Buy a Stashlo gift card</button>
       <div id="cw-myreqs" style="margin-top:8px"></div>
+    </div>
+    <div class="ic" style="margin:12px 16px 0">
+      <div style="font-weight:800;margin-bottom:6px">🎁 Stashlo Gift Card</div>
+      <div style="font-size:12px;color:var(--sub);margin-bottom:8px">Buy points credit as a gift (pay the shop or by bank transfer — Stashlo approves it once payment is received).</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button onclick="buyGiftCard(10)" style="flex:1;padding:12px;background:var(--bg);border:2px solid var(--purple);color:var(--purple);border-radius:12px;font-weight:900;cursor:pointer">£10</button>
+        <button onclick="buyGiftCard(25)" style="flex:1;padding:12px;background:var(--bg);border:2px solid var(--purple);color:var(--purple);border-radius:12px;font-weight:900;cursor:pointer">£25</button>
+        <button onclick="buyGiftCard(50)" style="flex:1;padding:12px;background:var(--bg);border:2px solid var(--purple);color:var(--purple);border-radius:12px;font-weight:900;cursor:pointer">£50</button>
+      </div>
+      <div id="gc-list"></div>
     </div>
     <div id="prof-summary" style="margin:14px 16px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 2px 16px -4px rgba(99,102,241,.10)"></div>
     <div style="padding:24px 16px 16px">
@@ -2989,6 +3004,28 @@ function saveReceiptToDevice(rid){
 // that card automatically (once per shop per 2h). Silent if no permission.
 
 // ===== BIRTHDAY OFFER =====
+
+
+// ===== GIFT CARDS =====
+function buyGiftCard(amt){
+  if(!UID){T('Sign in first','error');return}
+  var ref=prompt('£'+amt+' gift card = '+(amt*100)+' points.\nHow will you pay? (e.g. "bank transfer", "cash at Skyflies")','bank transfer');
+  if(ref===null)return;
+  post('gift_card_requests',{user_id:UID,user_name:(PROF&&PROF.name)||'',amount:amt,points:amt*100,pay_ref:ref||'',status:'pending',created_at:Date.now()})
+    .then(function(){T('🎁 Request sent — points arrive once Stashlo confirms your payment','success');loadGiftCards();})
+    .catch(function(){T('Failed — please try later','error');});
+}
+function loadGiftCards(){
+  if(!UID)return;
+  get('gift_card_requests','user_id=eq.'+UID+'&order=created_at.desc&limit=10').then(function(d){
+    var el=document.getElementById('gc-list');if(!el)return;
+    var rows=Array.isArray(d)?d:[];
+    var lbl={pending:'🕐 Awaiting payment confirmation',approved:'✅ Points added!',rejected:'✕ Rejected'};
+    el.innerHTML=rows.map(function(r){
+      return '<div style="padding:8px 10px;background:var(--bg);border-radius:10px;margin-top:6px;font-size:12px"><b>£'+r.amount+'</b> ('+r.points+' pts) · '+(lbl[r.status]||r.status)+'</div>';
+    }).join('');
+  }).catch(function(){});
+}
 
 // ===== CUSTOMER WEBSITE BUILDER =====
 var CW_THEMES={restaurant:["🍽️","#7c2d12","#ea580c"],food:["🍔","#78350f","#f59e0b"],grocery:["🛒","#14532d","#16a34a"],hotel:["🏨","#1e3a8a","#3b82f6"],shop:["🛍️","#312e81","#6366F1"],services:["🛠️","#134e4a","#0d9488"],other:["⭐","#0f172a","#64748b"]};

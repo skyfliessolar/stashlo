@@ -1089,6 +1089,10 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
           <button class="btn" style="flex:1;background:var(--ink);color:#fff" onclick="zReport()">📊 Z-Report</button>
         </div>
         <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" style="flex:1;background:var(--bg2)" onclick="exportSalesCSV('this')">📑 CSV this month</button>
+          <button class="btn" style="flex:1;background:var(--bg2)" onclick="exportSalesCSV('last')">📑 CSV last month</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
           <input id="hw-scan" placeholder="🔌 Scanner / type barcode ⏎" style="flex:2;padding:11px;border:2px solid var(--purple);border-radius:12px;font-size:13px;font-weight:700" onkeydown="if(event.key==='Enter'){hwScanAdd(this.value);this.value='';}">
           <button class="btn" style="flex:1;background:var(--bg2)" onclick="exportSalesCSV()">📑 HMRC CSV</button>
           <button class="btn" style="flex:1;background:var(--bg2)" onclick="bulkImportStock()">📦 Bulk add</button>
@@ -3220,6 +3224,52 @@ function showParked(){
 }
 
 // ===== Z-REPORT (end-of-day) =====
+
+// ===== GLOBAL USB-SCANNER WEDGE (laptop till mode) =====
+// Barcode scanners type fast + end with Enter. Capture bursts anywhere on the
+// POS screen so the merchant never has to click a field first.
+var _WEDGE={buf:'',last:0};
+document.addEventListener('keydown',function(e){
+  var pos=document.getElementById('pos-screen');
+  if(!pos||getComputedStyle(pos).display==='none')return;
+  var a=document.activeElement;
+  if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'))return; // typing normally
+  var now=Date.now();
+  if(now-_WEDGE.last>120)_WEDGE.buf='';  // human typing is slower than a scanner
+  _WEDGE.last=now;
+  if(e.key==='Enter'){
+    if(_WEDGE.buf.length>=6){ if(typeof posScanAdd==='function')posScanAdd(_WEDGE.buf); e.preventDefault(); }
+    _WEDGE.buf='';return;
+  }
+  if(e.key.length===1)_WEDGE.buf+=e.key;
+});
+
+// ===== HMRC-READY CSV EXPORT =====
+function exportSalesCSV(period){
+  var start=new Date(),label='';
+  if(period==='last'){start=new Date(start.getFullYear(),start.getMonth()-1,1);var end=new Date(start.getFullYear(),start.getMonth()+1,1);label='last-month';}
+  else{start=new Date(start.getFullYear(),start.getMonth(),1);label='this-month';}
+  var endMs=period==='last'?new Date(start.getFullYear(),start.getMonth()+1,1).getTime():Date.now();
+  get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+start.getTime()+'&created_at=lt.'+endMs+'&order=created_at.asc').then(function(d){
+    var rows=Array.isArray(d)?d:[];
+    if(!rows.length){T('No sales in that period','error');return}
+    var csv='Date,Time,Type,Method,Net (GBP),VAT (GBP),Gross (GBP)\n';
+    var tn=0,tv=0,tg=0;
+    rows.forEach(function(s){
+      var dt=new Date(s.created_at);
+      var net=parseFloat(s.net||0),vat=parseFloat(s.vat_total||0),g=parseFloat(s.total||0);
+      tn+=net;tv+=vat;tg+=g;
+      csv+=[dt.toLocaleDateString('en-GB'),dt.toLocaleTimeString('en-GB'),(g<0||s.refund)?'REFUND':'SALE',s.method||'cash',net.toFixed(2),vat.toFixed(2),g.toFixed(2)].join(',')+'\n';
+    });
+    csv+=['TOTAL','','','',tn.toFixed(2),tv.toFixed(2),tg.toFixed(2)].join(',')+'\n';
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download='stashlo-sales-'+label+'-'+((MDATA&&MDATA.name)||'shop').replace(/\W+/g,'-')+'.csv';
+    a.click();
+    T('⬇ CSV downloaded — VAT-ready for your accountant / HMRC software','success');
+  }).catch(function(){T('Could not load sales','error')});
+}
+
 function zReport(){
   var start=new Date();start.setHours(0,0,0,0);
   get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+start.getTime()+'&order=created_at.asc').then(function(d){
