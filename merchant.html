@@ -2332,11 +2332,27 @@ function rejectClaim(id){
     .then(function(){T('Claim rejected','success');loadClaims();})
     .catch(function(){T('Failed','error');});
 }
+
+function editJob(id){
+  var j=null; // fetch fresh to edit
+  get('jobs','id=eq.'+id).then(function(d){
+    j=Array.isArray(d)&&d[0];if(!j)return;
+    var t=prompt('Job title:',j.title||'');if(t===null)return;
+    var p=prompt('Pay:',j.pay||'');if(p===null)return;
+    var ds=prompt('Description:',j.description||'');if(ds===null)return;
+    pat('jobs','id=eq.'+id,{title:t,pay:p,description:ds}).then(function(){T('✎ Job updated','success');loadJobs();}).catch(function(){T('Failed','error');});
+  });
+}
+function delJob(id){
+  if(!confirm('Delete this job post?'))return;
+  pat('jobs','id=eq.'+id,{active:false}).then(function(){T('🗑 Job removed','success');loadJobs();}).catch(function(){T('Failed','error');});
+}
+
 function loadJobs(){
   get("jobs","merchant_id=eq."+MID+"&active=eq.true&order=created_at.desc").then(d=>{
     const jobs=Array.isArray(d)?d:[];
     const el=document.getElementById("jobs-list");if(!el)return;
-    el.innerHTML=jobs.length?jobs.map(j=>`<div class="ic"><div class="ic-row"><div><div class="ic-name">💼 ${j.title}</div><div class="ic-sub">${j.job_type||"Part-time"} · ${j.salary||"TBC"}</div></div><button class="btn-xs btn-del" onclick="confirmDelJob('${j.id}','${j.title.replace(/'/g,"")}')" >🗑</button></div></div>`).join("")
+    el.innerHTML=jobs.length?jobs.map(j=>`<div class="ic"><div class="ic-row"><div><div class="ic-name">💼 ${j.title}</div><div class="ic-sub">${j.job_type||"Part-time"} · ${j.salary||"TBC"}</div></div><button class="btn-xs btn-del" onclick="confirmDelJob('${j.id}','${j.title.replace(/'/g,"")}')" >🗑</button></div></div><div style="display:flex;gap:6px;margin-top:8px"><button class="sl-btn btn-xs" style="background:var(--ink);color:#fff" onclick="editJob('${j.id}')">✎ Edit pay</button><button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="delJob('${j.id}')">🗑 Delete</button></div>`).join("")
       :"<div style='padding:12px;text-align:center;font-size:13px;color:var(--ink3)'>No jobs posted yet</div>";
   }).catch(()=>{})
 }
