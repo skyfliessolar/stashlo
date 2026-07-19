@@ -1435,6 +1435,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
     <div id="stashlo-sec" style="display:none">
       <div class="sh pt16"><span class="sh-t">🌟 Stashlo Store</span></div>
       <div style="display:flex;gap:6px;padding:0 16px;margin-bottom:10px">
+        <button onclick="shopsNearMe()" style="padding:12px;border:none;border-radius:12px;background:var(--purple);color:#fff;font-weight:800;font-size:13px;cursor:pointer">📍 Near me</button>
         <input id="store-q" placeholder="🔍 Search the Stashlo store…" style="flex:1;padding:12px;border:1px solid var(--bg2);border-radius:12px;font-size:14px;background:var(--bg)" oninput="storeSearch()" onkeydown="if(event.key==='Enter')storeSearch()">
       </div>
       <div id="store-results" style="padding:0 16px"></div>
@@ -2414,7 +2415,22 @@ window.addEventListener('load',()=>setTimeout(()=>{
   if(s&&s.tok&&s.uid&&s.exp>Date.now()){TOK=s.tok;UID=s.uid;UEMAIL=s.email;boot();}
   else{document.getElementById('auth').style.display='flex';document.getElementById('splash').style.display='none';}
 },900));
-function saveSess(tok,uid,email,exp){TOK=tok;UID=uid;UEMAIL=email;localStorage.setItem('sl_s',JSON.stringify({tok,uid,email,exp:Date.now()+(exp||3600)*1e3}))}
+function saveSess(tok,uid,email,exp,rtok){TOK=tok;UID=uid;UEMAIL=email;localStorage.setItem('sl_s',JSON.stringify({tok,uid,email,rtok:rtok||((JSON.parse(localStorage.getItem('sl_s')||'{}')).rtok),exp:Date.now()+(exp||3600)*1e3}))}
+// ===== AUTO SESSION REFRESH (sessions used to die silently after 1h) =====
+function refreshSess(){
+  try{
+    var s=JSON.parse(localStorage.getItem('sl_s')||'null');
+    if(!s||!s.rtok)return;
+    fetch(SU+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':SK,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.rtok})})
+    .then(function(r){return r.json()}).then(function(d){
+      if(d.access_token){saveSess(d.access_token,d.user?d.user.id:s.uid,d.user?d.user.email:s.email,d.expires_in,d.refresh_token);}
+    }).catch(function(){});
+  }catch(e){}
+}
+setInterval(refreshSess,40*60*1000);
+document.addEventListener('visibilitychange',function(){ // refresh when the app is reopened
+  if(!document.hidden){try{var s=JSON.parse(localStorage.getItem('sl_s')||'null');if(s&&s.exp&&Date.now()>s.exp-5*60*1000)refreshSess();}catch(e){}}
+});
 function doLogout(){localStorage.removeItem('sl_s');location.reload()}
 function custResetPw(){
   const email=V('ai-e');
@@ -2434,7 +2450,7 @@ function doLogin(){
   .then(r=>r.json()).then(d=>{
     b.textContent='Sign in';b.disabled=false;
     if(!d.access_token){sErr('ai-err',d.error_code==='invalid_credentials'?'Wrong email or password':d.error_description||'Sign in failed');return}
-    saveSess(d.access_token,d.user.id,d.user.email,d.expires_in);
+    saveSess(d.access_token,d.user.id,d.user.email,d.expires_in,d.refresh_token);
     post('users',{id:d.user.id,email:d.user.email,created_at:Date.now(),total_points:0},'id').catch(()=>{});
     boot();
   }).catch(()=>{b.textContent='Sign in';b.disabled=false;sErr('ai-err','Connection error')})
@@ -2447,7 +2463,7 @@ function doSignup(){
   .then(r=>r.json()).then(d=>{
     b.textContent='Create account';b.disabled=false;
     if(d.access_token&&d.user){
-      saveSess(d.access_token,d.user.id,d.user.email,d.expires_in);
+      saveSess(d.access_token,d.user.id,d.user.email,d.expires_in,d.refresh_token);
       post('users',{id:d.user.id,email,name,phone:phone||null,created_at:Date.now(),total_points:0},'id').catch(()=>{});
       boot();
     }else if(d.user){showSI();document.getElementById('ai-e').value=email;document.getElementById('ai-p').value=pw;sErr('ai-err','✅ Account created! Check your email to confirm, then sign in.');}
@@ -3016,6 +3032,28 @@ function saveReceiptToDevice(rid){
 // ===== BIRTHDAY OFFER =====
 
 
+
+
+// ===== SHOPS NEAR ME (uses merchant locations) =====
+function _hav(a,b,c,d){var R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;var s=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));}
+function shopsNearMe(){
+  var res=document.getElementById('store-results'),cats=document.getElementById('store-cat-btns');
+  if(!navigator.geolocation){T('Location not available on this device','error');return}
+  if(res)res.innerHTML='<div class="skel" style="height:80px;margin-bottom:8px"></div>';
+  if(cats)cats.style.display='none';
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var la=pos.coords.latitude,ln=pos.coords.longitude;
+    get('merchants','select=id,name,logo_emoji,address,lat,lng&lat=not.is.null&limit=200').then(function(d){
+      var shops=(Array.isArray(d)?d:[]).filter(function(s){return s.lat&&s.lng})
+        .map(function(s){s.km=_hav(la,ln,parseFloat(s.lat),parseFloat(s.lng));return s})
+        .sort(function(a,b){return a.km-b.km}).slice(0,15);
+      if(!res)return;
+      res.innerHTML=shops.length?('<div style="font-weight:800;margin-bottom:8px">🏪 Shops near you</div>'+shops.map(function(s){
+        return '<div class="ic" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><b>'+(s.logo_emoji||'🏪')+' '+s.name+'</b><div style="font-size:12px;color:var(--sub)">'+(s.km<1?Math.round(s.km*1000)+' m':s.km.toFixed(1)+' km')+(s.address?' · '+s.address:'')+'</div></div><a href="https://maps.google.com/?q='+s.lat+','+s.lng+'" target="_blank" style="color:var(--purple);font-weight:800;text-decoration:none;font-size:12px">🗺 Map ↗</a></div>';
+      }).join('')):'<div style="text-align:center;color:var(--sub);padding:16px">No shops with a location yet — merchants add theirs in Settings.</div>';
+    }).catch(function(){if(res)res.innerHTML='<div style="color:var(--red)">Could not load shops.</div>';});
+  },function(){T('Allow location access to find nearby shops','error');if(res)res.innerHTML='';if(cats)cats.style.display='block';},{enableHighAccuracy:true,timeout:8000});
+}
 
 // ===== STORE SEARCH =====
 var _SSQ=null;
@@ -3733,6 +3771,7 @@ function renderOrders(){
       <div style="font-size:12px;color:var(--sub)">${o.type==='collect'?'🏪 Collect':'🚚 Delivery'}${o.collect_time?' · '+o.collect_time:''}</div></div>
     </div>
     ${statusTimeline(o.status||'pending')}
+    ${(o.driver_name&&['driver_assigned','picked_up','dispatched','out_for_delivery'].indexOf(o.status)>-1)?('<div style=\"display:flex;justify-content:space-between;align-items:center;background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;font-size:12px\"><span>🚚 '+o.driver_name+' is on the way</span>'+(o.driver_lat?('<a href=\"https://maps.google.com/?q='+o.driver_lat+','+o.driver_lng+'\" target=\"_blank\" style=\"color:var(--purple);font-weight:800;text-decoration:none\">📍 Track live ↗</a>'):'<span style=\"color:var(--sub)\">location soon…</span>')+'</div>'):''}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap">
       <div style="font-size:18px;font-weight:800;color:var(--purple)">£${parseFloat(o.total||0).toFixed(2)}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
