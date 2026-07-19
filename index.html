@@ -3034,6 +3034,57 @@ function saveReceiptToDevice(rid){
 
 
 
+
+// ===== UBER-STYLE LIVE MAP (Leaflet + OpenStreetMap, graceful fallback) =====
+var _TRK={timer:null,map:null,marker:null,oid:null};
+function trackDriver(oid){
+  _TRK.oid=oid;
+  var ov=document.createElement('div');ov.id='trk-ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:1600;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:14px';
+  ov.innerHTML='<div style="background:var(--card,#fff);border-radius:18px;width:100%;max-width:420px;overflow:hidden"><div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px"><b>🚚 Live delivery tracking</b><button onclick="closeTrack()" style="background:var(--bg2,#eee);border:none;border-radius:8px;width:30px;height:30px;cursor:pointer">✕</button></div><div id="trk-map" style="height:320px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:13px">Loading map…</div><div id="trk-info" style="padding:10px 14px;font-size:12px;color:var(--sub)">Updates every 12 seconds</div></div>';
+  document.body.appendChild(ov);
+  ov.onclick=function(e){if(e.target===ov)closeTrack();};
+  if(!window.L){
+    var css=document.createElement('link');css.rel='stylesheet';css.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';document.head.appendChild(css);
+    var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+    s.onload=function(){_trkStart();};
+    s.onerror=function(){_trkFallback();};
+    document.head.appendChild(s);
+  }else _trkStart();
+}
+function _trkFallback(){
+  get('orders','id=eq.'+_TRK.oid+'&select=driver_lat,driver_lng').then(function(d){
+    var o=Array.isArray(d)&&d[0];var el=document.getElementById('trk-map');
+    if(el&&o&&o.driver_lat)el.innerHTML='<a href="https://maps.google.com/?q='+o.driver_lat+','+o.driver_lng+'" target="_blank" style="color:var(--purple);font-weight:800">📍 Open driver location in Maps ↗</a>';
+  });
+}
+function _trkStart(){
+  var el=document.getElementById('trk-map');if(!el||!window.L)return;
+  el.innerHTML='';el.style.display='block';
+  _TRK.map=L.map('trk-map',{zoomControl:true});
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(_TRK.map);
+  _trkPoll();
+  _TRK.timer=setInterval(_trkPoll,12000);
+}
+function _trkPoll(){
+  get('orders','id=eq.'+_TRK.oid+'&select=driver_lat,driver_lng,driver_name,status').then(function(d){
+    var o=Array.isArray(d)&&d[0];if(!o||!o.driver_lat||!_TRK.map)return;
+    var ll=[parseFloat(o.driver_lat),parseFloat(o.driver_lng)];
+    if(!_TRK.marker){
+      _TRK.marker=L.marker(ll).addTo(_TRK.map).bindPopup('🚚 '+(o.driver_name||'Driver'));
+      _TRK.map.setView(ll,15);
+    }else{_TRK.marker.setLatLng(ll);}
+    var inf=document.getElementById('trk-info');
+    if(inf)inf.textContent='🚚 '+(o.driver_name||'Driver')+' · '+(o.status||'')+' · updated '+new Date().toLocaleTimeString();
+    if(o.status==='delivered'){closeTrack();T('🎉 Delivered!','success');}
+  }).catch(function(){});
+}
+function closeTrack(){
+  if(_TRK.timer){clearInterval(_TRK.timer);_TRK.timer=null;}
+  if(_TRK.map){try{_TRK.map.remove();}catch(e){}_TRK.map=null;_TRK.marker=null;}
+  var ov=document.getElementById('trk-ov');if(ov)ov.remove();
+}
+
 // ===== SHOPS NEAR ME (uses merchant locations) =====
 function _hav(a,b,c,d){var R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180;var s=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));}
 function shopsNearMe(){
@@ -3158,6 +3209,38 @@ function loadMySites(){
 }
 
 // ===== ORDER STATUS -> INBOX NOTIFICATIONS =====
+
+// ===== TESCO-STYLE: points on DELIVERY orders too =====
+// Merchant-marked orders award via the merchant app; driver-delivered orders
+// award HERE the moment the customer's app sees status=delivered.
+function awardDeliveredPoints(orders){
+  (orders||[]).forEach(function(o){
+    if(o.points_awarded)return;
+    if(['delivered','completed','collected'].indexOf(o.status)<0)return;
+    var spend=Math.max(0,parseFloat(o.total||0));
+    if(spend<=0)return;
+    // claim the flag first so two devices can't double-award
+    pat('orders','id=eq.'+o.id+'&points_awarded=eq.false',{points_awarded:true}).then(function(){
+      get('merchants','id=eq.'+encodeURIComponent(o.merchant_id)+'&select=loyalty_type,loyalty_value,name').then(function(md){
+        var mm=Array.isArray(md)&&md[0]?md[0]:{};
+        if(mm.loyalty_type==='off')return;
+        var per=parseFloat(mm.loyalty_value||1)||1;
+        var pts=Math.round(spend*per);
+        if(pts<=0)return;
+        get('cards','user_id=eq.'+UID+'&merchant_id=eq.'+encodeURIComponent(o.merchant_id)+'&limit=1').then(function(cs){
+          var c=Array.isArray(cs)&&cs[0];
+          if(!c)return; // no card for this shop yet
+          pat('cards','user_id=eq.'+UID+'&card_id=eq.'+encodeURIComponent(c.card_id),
+              {points:(c.points||0)+pts,last_updated:Date.now()}).then(function(){
+            T('💎 +'+pts+' points from your delivery — '+(mm.name||'shop'),'success');
+            if(typeof loadCards==='function')loadCards();
+          }).catch(function(){});
+        });
+      });
+    }).catch(function(){});
+  });
+}
+
 var ORD_STATUS_MSG={confirmed:['✅','Your order is confirmed'],ready:['📦','Ready for collection!'],dispatched:['🚚','Your order is on the way'],in_transit:['🚚','Your order is on the way'],out_for_delivery:['🏃','Out for delivery — arriving soon'],completed:['🎉','Order completed — points added to your account 💎'],delivered:['🎉','Delivered — points added to your account 💎'],collected:['🎉','Collected — points added 💎'],cancelled:['✕','Order cancelled'],rejected:['✕','Order was rejected']};
 
 function checkBirthday(){
@@ -3728,7 +3811,7 @@ function renderOrderTimeline(status){
 }
 function loadOrders(){
   get('orders','user_id=eq.'+UID+'&order=created_at.desc&limit=30').then(d=>{
-    ORDERS=Array.isArray(d)?d:[];
+    ORDERS=Array.isArray(d)?d:[];awardDeliveredPoints(ORDERS);
     txt('hs-o',ORDERS.length);txt('qa-orders',ORDERS.length+' orders');
     const totalSpent=ORDERS.filter(o=>o.status==='completed').reduce((a,o)=>a+(parseFloat(o.total)||0),0);
     txt('hs-spent',totalSpent.toFixed(2));
@@ -3771,7 +3854,7 @@ function renderOrders(){
       <div style="font-size:12px;color:var(--sub)">${o.type==='collect'?'🏪 Collect':'🚚 Delivery'}${o.collect_time?' · '+o.collect_time:''}</div></div>
     </div>
     ${statusTimeline(o.status||'pending')}
-    ${(o.driver_name&&['driver_assigned','picked_up','dispatched','out_for_delivery'].indexOf(o.status)>-1)?('<div style=\"display:flex;justify-content:space-between;align-items:center;background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;font-size:12px\"><span>🚚 '+o.driver_name+' is on the way</span>'+(o.driver_lat?('<a href=\"https://maps.google.com/?q='+o.driver_lat+','+o.driver_lng+'\" target=\"_blank\" style=\"color:var(--purple);font-weight:800;text-decoration:none\">📍 Track live ↗</a>'):'<span style=\"color:var(--sub)\">location soon…</span>')+'</div>'):''}
+    ${(o.driver_name&&['driver_assigned','picked_up','dispatched','out_for_delivery'].indexOf(o.status)>-1)?('<div style=\"display:flex;justify-content:space-between;align-items:center;background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;font-size:12px\"><span>🚚 '+o.driver_name+' is on the way</span>'+(o.driver_lat?('<button onclick=\"trackDriver('+o.id+')\" style=\"background:var(--purple);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-weight:800;font-size:12px;cursor:pointer\">📍 Track live</button>'):'<span style=\"color:var(--sub)\">location soon…</span>')+'</div>'):''}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap">
       <div style="font-size:18px;font-weight:800;color:var(--purple)">£${parseFloat(o.total||0).toFixed(2)}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
