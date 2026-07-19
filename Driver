@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover, interactive-widget=resizes-visual">
+<meta name="theme-color" content="#0f172a">
+<title>Stashlo Driver — Delivery Partner</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{--ink:#0f172a;--sub:#64748b;--bg:#f1f5f9;--card:#fff;--green:#16a34a;--purple:#6366F1;--red:#dc2626;--amber:#d97706}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+.wrap{max-width:430px;margin:0 auto;padding:0 16px calc(env(safe-area-inset-bottom,0px) + 90px)}
+.head{background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 18px) 16px 18px;border-radius:0 0 22px 22px}
+.head h1{font-size:20px}.head p{font-size:12px;opacity:.75;margin-top:2px}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-top:14px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
+input,select{width:100%;padding:13px;border:1px solid #e2e8f0;border-radius:12px;font-size:14px;margin-bottom:10px;background:#fff}
+.btn{width:100%;padding:14px;border:none;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer}
+.btn-p{background:var(--purple);color:#fff}.btn-g{background:var(--green);color:#fff}.btn-d{background:#e2e8f0;color:var(--ink)}
+.badge{display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:3px 10px}
+.b-pend{background:#fef3c7;color:#92400e}.b-ok{background:#dcfce7;color:#166534}.b-no{background:#fee2e2;color:#991b1b}
+.order{border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-top:10px}
+.order b{font-size:15px}.muted{font-size:12px;color:var(--sub)}
+.tabbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;max-width:430px;margin:0 auto;padding-bottom:env(safe-area-inset-bottom,0px)}
+.tab{flex:1;text-align:center;padding:10px 0 8px;font-size:11px;font-weight:700;color:var(--sub);cursor:pointer}
+.tab.on{color:var(--purple)}.tab span{display:block;font-size:20px}
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 18px;border-radius:12px;font-size:13px;font-weight:700;z-index:2000;display:none;max-width:90%}
+.stat{display:flex;gap:10px;margin-top:12px}
+.stat>div{flex:1;background:var(--card);border-radius:14px;padding:12px;text-align:center}
+.stat b{font-size:19px;display:block}
+.hide{display:none!important}
+@keyframes slideUpIn{from{opacity:0;transform:translateY(12px)}to{opacity:1}}
+.order,.card{animation:slideUpIn .25s ease both}
+
+/* ===== NATIVE FEEL (shared) ===== */
+html,body{overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
+button:active{transform:scale(.96)}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- AUTH -->
+<div id="auth" class="wrap">
+  <div class="head" style="margin:0 -16px"><h1>🚚 Stashlo Driver</h1><p>Deliver shopping, food & fuel for local shops</p></div>
+  <div class="card">
+    <div id="a-msg" class="muted" style="margin-bottom:8px"></div>
+    <input id="a-email" type="email" placeholder="Email">
+    <input id="a-pass" type="password" placeholder="Password">
+    <div id="signup-extra" class="hide">
+      <input id="a-name" placeholder="Full name">
+      <input id="a-phone" placeholder="Phone">
+      <select id="a-vehicle"><option value="bike">🚲 Bicycle</option><option value="moped">🛵 Moped</option><option value="car">🚗 Car</option><option value="van">🚐 Van</option><option value="fuel">⛽ Fuel tanker (licensed)</option></select>
+      <input id="a-city" placeholder="City / area you cover">
+    </div>
+    <button class="btn btn-p" id="a-go" onclick="doAuth()">Sign in</button>
+    <button class="btn btn-d" style="margin-top:8px" onclick="toggleMode()"><span id="a-alt">New driver? Register</span></button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="wrap hide">
+  <div class="head" style="margin:0 -16px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><h1>🚚 Stashlo Driver</h1><p id="d-hello">Welcome</p></div>
+      <span id="d-badge" class="badge b-pend">⏳ Pending</span>
+    </div>
+  </div>
+
+  <div id="pending-note" class="card hide">
+    <b>⏳ Verification pending</b>
+    <div class="muted" style="margin-top:6px">The Stashlo team is reviewing your registration. You'll see available orders here the moment you're approved. Questions: support@stashlo.com</div>
+  </div>
+
+  <!-- ORDERS TAB -->
+  <div id="tab-orders">
+    <div class="stat"><div><b id="s-avail">0</b><span class="muted">Available</span></div><div><b id="s-mine">0</b><span class="muted">My active</span></div><div><b id="s-done">0</b><span class="muted">Delivered</span></div></div>
+    <div class="card"><b>📦 Available deliveries</b><div class="muted">Orders marked ready by shops — first to accept gets it</div><div id="avail-list"></div></div>
+    <div class="card"><b>🛵 My active deliveries</b><div id="mine-list"></div></div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div id="tab-history" class="hide">
+    <div class="card"><b>✅ Completed deliveries</b><div id="done-list"></div></div>
+  </div>
+
+  <!-- PROFILE TAB -->
+  <div id="tab-me" class="hide">
+    <div class="card">
+      <b>👤 My details</b>
+      <div id="me-info" class="muted" style="margin-top:8px;line-height:1.9"></div>
+      <button class="btn btn-d" style="margin-top:10px" onclick="logout()">Log out</button>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab on" id="tb-orders" onclick="tab('orders')"><span>📦</span>Orders</div>
+    <div class="tab" id="tb-history" onclick="tab('history')"><span>✅</span>History</div>
+    <div class="tab" id="tb-me" onclick="tab('me')"><span>👤</span>Me</div>
+  </div>
+</div>
+
+<script>
+const SU='https://gcwevgaymahywqjorhnn.supabase.co';
+const AK='sb_publishable_Ow8CKO5ZFY_nOkjmqWUMeA_10jQkBe_';
+let TOKEN=null,UID=null,DRV=null,signup=false;
+
+function T(m,k){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';t.style.background=k==='error'?'#dc2626':(k==='success'?'#16a34a':'#0f172a');clearTimeout(T._x);T._x=setTimeout(()=>t.style.display='none',3200);}
+function H(){return {'apikey':AK,'Authorization':'Bearer '+(TOKEN||AK),'Content-Type':'application/json'}}
+const get=(t,q)=>fetch(SU+'/rest/v1/'+t+'?'+q,{headers:H()}).then(r=>r.json());
+const post=(t,d)=>fetch(SU+'/rest/v1/'+t,{method:'POST',headers:{...H(),'Prefer':'return=representation'},body:JSON.stringify(d)}).then(r=>r.ok?r.json():r.json().then(e=>Promise.reject(e)));
+const pat=(t,q,d)=>fetch(SU+'/rest/v1/'+t+'?'+q,{method:'PATCH',headers:H(),body:JSON.stringify(d)}).then(r=>{if(!r.ok)return r.json().then(e=>Promise.reject(e));return r;});
+
+function toggleMode(){signup=!signup;document.getElementById('signup-extra').classList.toggle('hide',!signup);document.getElementById('a-go').textContent=signup?'Register as driver':'Sign in';document.getElementById('a-alt').textContent=signup?'Already registered? Sign in':'New driver? Register';}
+function V(id){return (document.getElementById(id)||{}).value||''}
+
+async function doAuth(){
+  const email=V('a-email').trim(),pass=V('a-pass');
+  if(!email||!pass){T('Enter email and password','error');return}
+  const url=SU+'/auth/v1/'+(signup?'signup':'token?grant_type=password');
+  try{
+    const r=await fetch(url,{method:'POST',headers:{'apikey':AK,'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const d=await r.json();
+    if(!r.ok||d.error){T(d.error_description||d.msg||'Sign in failed','error');return}
+    TOKEN=d.access_token||((d.session||{}).access_token);UID=(d.user||d).id;
+    if(!TOKEN){T('Check your email to confirm, then sign in','success');signup&&toggleMode();return}
+    localStorage.setItem('drv_tok',TOKEN);localStorage.setItem('drv_uid',UID);if(d.refresh_token)localStorage.setItem('drv_rtok',d.refresh_token);
+    if(signup){
+      const prof={id:UID,email,name:V('a-name')||email.split('@')[0],phone:V('a-phone'),vehicle:V('a-vehicle'),city:V('a-city'),status:'pending',created_at:Date.now()};
+      try{localStorage.setItem('drv_pending_prof',JSON.stringify(prof));}catch(e){}
+      await post('drivers',prof).then(()=>{localStorage.removeItem('drv_pending_prof');})
+        .catch(e=>{T('Registration saved locally — will retry. ('+(((e&&e.message)||'run add_delivery_partners.sql')+'').slice(0,60)+')','error');});
+    }
+    boot();
+  }catch(e){T('Network error','error');}
+}
+function refreshSess(){
+  var rt=localStorage.getItem('drv_rtok');if(!rt)return;
+  fetch(SU+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':AK,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:rt})})
+  .then(r=>r.json()).then(d=>{if(d.access_token){TOKEN=d.access_token;localStorage.setItem('drv_tok',TOKEN);if(d.refresh_token)localStorage.setItem('drv_rtok',d.refresh_token);}}).catch(()=>{});
+}
+setInterval(refreshSess,40*60*1000);
+function logout(){localStorage.removeItem('drv_tok');localStorage.removeItem('drv_uid');location.reload();}
+
+async function boot(){
+  TOKEN=TOKEN||localStorage.getItem('drv_tok');UID=UID||localStorage.getItem('drv_uid');
+  if(!TOKEN){return}
+  document.getElementById('auth').classList.add('hide');
+  document.getElementById('app').classList.remove('hide');
+  // retry a pending registration (e.g. SQL wasn't run yet at signup time)
+  try{const pend=JSON.parse(localStorage.getItem('drv_pending_prof')||'null');
+    if(pend&&pend.id===UID){await post('drivers',pend).then(()=>localStorage.removeItem('drv_pending_prof')).catch(()=>{});}
+  }catch(e){}
+  const d=await get('drivers','id=eq.'+UID).catch(()=>[]);
+  DRV=Array.isArray(d)&&d[0]?d[0]:null;
+  if(!DRV){document.getElementById('d-hello').textContent='Complete registration';document.getElementById('pending-note').classList.remove('hide');return}
+  document.getElementById('d-hello').textContent='Hi '+(DRV.name||'driver');
+  const b=document.getElementById('d-badge');
+  if(DRV.status==='approved'){b.className='badge b-ok';b.textContent='✅ Verified';document.getElementById('pending-note').classList.add('hide');loadOrders();setInterval(loadOrders,30000);}
+  else if(DRV.status==='blocked'){b.className='badge b-no';b.textContent='🚫 Blocked';document.getElementById('pending-note').classList.remove('hide');}
+  else{b.className='badge b-pend';b.textContent='⏳ Pending';document.getElementById('pending-note').classList.remove('hide');}
+  document.getElementById('me-info').innerHTML='📧 '+(DRV.email||'')+'<br>📞 '+(DRV.phone||'—')+'<br>🚗 '+(DRV.vehicle||'—')+'<br>📍 '+(DRV.city||'—')+'<br>Status: '+(DRV.status||'pending');
+}
+
+function tab(t){['orders','history','me'].forEach(x=>{document.getElementById('tab-'+x).classList.toggle('hide',x!==t);document.getElementById('tb-'+x).classList.toggle('on',x===t);});if(t==='history')loadDone();}
+
+var _GPS={watch:null,last:0};
+function _gpsShare(on){
+  if(on&&!_GPS.watch&&navigator.geolocation){
+    _GPS.watch=navigator.geolocation.watchPosition(function(p){
+      var now=Date.now();if(now-_GPS.last<15000)return;_GPS.last=now; // every 15s max
+      pat('orders','driver_id=eq.'+UID+'&status=in.(driver_assigned,picked_up,out_for_delivery)',
+          {driver_lat:p.coords.latitude,driver_lng:p.coords.longitude}).catch(function(){});
+    },function(){},{enableHighAccuracy:true,maximumAge:10000});
+  }
+  if(!on&&_GPS.watch){navigator.geolocation.clearWatch(_GPS.watch);_GPS.watch=null;}
+}
+async function loadOrders(){
+  if(!DRV||DRV.status!=='approved')return;
+  // available: delivery orders marked ready/dispatched with no driver yet
+  const av=await get('orders','type=eq.delivery&driver_id=is.null&status=in.(ready,dispatched,confirmed)&order=created_at.desc&limit=30').catch(()=>[]);
+  const mine=await get('orders','driver_id=eq.'+UID+'&status=in.(driver_assigned,picked_up,out_for_delivery)&order=created_at.desc').catch(()=>[]);
+  const availL=Array.isArray(av)?av:[],mineL=Array.isArray(mine)?mine:[];
+  document.getElementById('s-avail').textContent=availL.length;
+  document.getElementById('s-mine').textContent=mineL.length;
+  _gpsShare(mineL.length>0); // live location shared ONLY while delivering
+  document.getElementById('avail-list').innerHTML=availL.length?availL.map(o=>orderCard(o,false)).join(''):'<div class="muted" style="padding:10px 0">No deliveries waiting right now.</div>';
+  document.getElementById('mine-list').innerHTML=mineL.length?mineL.map(o=>orderCard(o,true)).join(''):'<div class="muted" style="padding:10px 0">Accept a delivery above to start.</div>';
+  const done=await get('orders','driver_id=eq.'+UID+'&status=in.(delivered,completed)&select=id&limit=100').catch(()=>[]);
+  document.getElementById('s-done').textContent=Array.isArray(done)?done.length:0;
+}
+
+function orderCard(o,mine){
+  const fuel=/fuel|diesel|petrol/i.test(o.product_name||'');
+  const next={driver_assigned:['📦 Picked up','picked_up'],picked_up:['🛵 Out for delivery','out_for_delivery'],out_for_delivery:['✅ Delivered','delivered']}[o.status];
+  return '<div class="order">'
+    +'<div style="display:flex;justify-content:space-between"><b>'+(o.product_emoji||'📦')+' '+(o.product_name||'Order')+(fuel?' ⛽':'')+'</b><b>£'+parseFloat(o.total||0).toFixed(2)+'</b></div>'
+    +'<div class="muted">Qty '+(o.quantity||1)+' · '+(o.customer_name||'Customer')+'</div>'
+    +'<div class="muted">📍 '+(o.delivery_address||'No address given')+'</div>'
+    +(o.note?'<div class="muted">📝 '+o.note+'</div>':'')
+    +(fuel?'<div class="muted" style="color:var(--amber)">⚠️ Fuel delivery — licensed carrier & approved containers required</div>':'')
+    +(mine
+      ? (next?'<button class="btn btn-g" style="margin-top:8px" onclick="advance(\''+o.id+'\',\''+next[1]+'\')">'+next[0]+'</button>':'')
+      : '<button class="btn btn-p" style="margin-top:8px" onclick="accept(\''+o.id+'\')">✋ Accept this delivery</button>')
+    +'</div>';
+}
+
+async function accept(id){
+  try{
+    await pat('orders','id=eq.'+id+'&driver_id=is.null',{driver_id:UID,driver_name:(DRV&&DRV.name)||'Driver',status:'driver_assigned'});
+    T('✅ Delivery accepted — it\u2019s yours','success');loadOrders();
+  }catch(e){T('Could not accept — someone else may have taken it','error');loadOrders();}
+}
+async function advance(id,st){
+  try{
+    await pat('orders','id=eq.'+id+'&driver_id=eq.'+UID,{status:st});
+    T(st==='delivered'?'🎉 Delivered — great work!':'Status updated','success');loadOrders();
+  }catch(e){T('Update failed','error');}
+}
+async function loadDone(){
+  const d=await get('orders','driver_id=eq.'+UID+'&status=in.(delivered,completed)&order=created_at.desc&limit=50').catch(()=>[]);
+  const l=Array.isArray(d)?d:[];
+  document.getElementById('done-list').innerHTML=l.length?l.map(o=>'<div class="order"><b>'+(o.product_emoji||'📦')+' '+(o.product_name||'Order')+'</b> · £'+parseFloat(o.total||0).toFixed(2)+'<div class="muted">'+new Date(o.created_at).toLocaleString()+' · '+(o.delivery_address||'')+'</div></div>').join(''):'<div class="muted" style="padding:10px 0">Nothing delivered yet.</div>';
+}
+
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+boot();
+</script>
+</body>
+</html>
