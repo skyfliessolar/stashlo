@@ -77,7 +77,7 @@ button:active{transform:scale(.96)}
   <div id="tab-orders">
     <div class="stat"><div><b id="s-avail">0</b><span class="muted">Available</span></div><div><b id="s-mine">0</b><span class="muted">My active</span></div><div><b id="s-done">0</b><span class="muted">Delivered</span></div></div>
     <div class="card"><b>📦 Available deliveries</b><div class="muted">Orders marked ready by shops — first to accept gets it</div><div id="avail-list"></div></div>
-    <div class="card"><b>🛵 My active deliveries</b><div id="mine-list"></div></div>
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b>🛵 My active deliveries</b><span id="gps-chip" style="font-size:11px;font-weight:800;color:#64748b">🛰 GPS idle</span></div><button class="btn btn-d" style="margin-top:8px;padding:9px;font-size:12px" onclick="gpsSendNow()">📍 Send my location now</button><div id="mine-list"></div></div>
   </div>
 
   <!-- HISTORY TAB -->
@@ -125,7 +125,7 @@ async function doAuth(){
     if(!r.ok||d.error){T(d.error_description||d.msg||'Sign in failed','error');return}
     TOKEN=d.access_token||((d.session||{}).access_token);UID=(d.user||d).id;
     if(!TOKEN){T('Check your email to confirm, then sign in','success');signup&&toggleMode();return}
-    localStorage.setItem('drv_tok',TOKEN);localStorage.setItem('drv_uid',UID);
+    localStorage.setItem('drv_tok',TOKEN);localStorage.setItem('drv_uid',UID);if(d.refresh_token)localStorage.setItem('drv_rtok',d.refresh_token);
     if(signup){
       const prof={id:UID,email,name:V('a-name')||email.split('@')[0],phone:V('a-phone'),vehicle:V('a-vehicle'),city:V('a-city'),status:'pending',created_at:Date.now()};
       try{localStorage.setItem('drv_pending_prof',JSON.stringify(prof));}catch(e){}
@@ -135,6 +135,12 @@ async function doAuth(){
     boot();
   }catch(e){T('Network error','error');}
 }
+function refreshSess(){
+  var rt=localStorage.getItem('drv_rtok');if(!rt)return;
+  fetch(SU+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':AK,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:rt})})
+  .then(r=>r.json()).then(d=>{if(d.access_token){TOKEN=d.access_token;localStorage.setItem('drv_tok',TOKEN);if(d.refresh_token)localStorage.setItem('drv_rtok',d.refresh_token);}}).catch(()=>{});
+}
+setInterval(refreshSess,40*60*1000);
 function logout(){localStorage.removeItem('drv_tok');localStorage.removeItem('drv_uid');location.reload();}
 
 async function boot(){
@@ -159,6 +165,28 @@ async function boot(){
 
 function tab(t){['orders','history','me'].forEach(x=>{document.getElementById('tab-'+x).classList.toggle('hide',x!==t);document.getElementById('tb-'+x).classList.toggle('on',x===t);});if(t==='history')loadDone();}
 
+var _GPS={watch:null,last:0};
+function _gpsChip(on){var c=document.getElementById('gps-chip');if(c){c.textContent=on?'🛰 Sharing live':'🛰 GPS idle';c.style.color=on?'#16a34a':'#64748b';}}
+function _gpsShare(on){
+  _gpsChip(!!on);
+  if(on&&!_GPS.watch&&navigator.geolocation){
+    _GPS.watch=navigator.geolocation.watchPosition(function(p){
+      var now=Date.now();if(now-_GPS.last<15000)return;_GPS.last=now;
+      pat('orders','driver_id=eq.'+UID+'&status=in.(driver_assigned,picked_up,out_for_delivery)',
+          {driver_lat:p.coords.latitude,driver_lng:p.coords.longitude}).catch(function(){});
+    },function(){},{enableHighAccuracy:true,maximumAge:10000});
+  }
+  if(!on&&_GPS.watch){navigator.geolocation.clearWatch(_GPS.watch);_GPS.watch=null;}
+}
+function gpsSendNow(){
+  if(!navigator.geolocation){T('No GPS on this device','error');return}
+  navigator.geolocation.getCurrentPosition(function(p){
+    pat('orders','driver_id=eq.'+UID+'&status=in.(driver_assigned,picked_up,out_for_delivery)',
+        {driver_lat:p.coords.latitude,driver_lng:p.coords.longitude})
+      .then(function(){T('📍 Location sent (±'+Math.round(p.coords.accuracy)+'m)','success');_gpsChip(true);})
+      .catch(function(){T('Send failed — run ADD_driver_location.sql','error');});
+  },function(e){T('GPS error: '+e.message,'error');},{enableHighAccuracy:true,timeout:10000});
+}
 async function loadOrders(){
   if(!DRV||DRV.status!=='approved')return;
   // available: delivery orders marked ready/dispatched with no driver yet
@@ -167,6 +195,7 @@ async function loadOrders(){
   const availL=Array.isArray(av)?av:[],mineL=Array.isArray(mine)?mine:[];
   document.getElementById('s-avail').textContent=availL.length;
   document.getElementById('s-mine').textContent=mineL.length;
+  _gpsShare(mineL.length>0);
   document.getElementById('avail-list').innerHTML=availL.length?availL.map(o=>orderCard(o,false)).join(''):'<div class="muted" style="padding:10px 0">No deliveries waiting right now.</div>';
   document.getElementById('mine-list').innerHTML=mineL.length?mineL.map(o=>orderCard(o,true)).join(''):'<div class="muted" style="padding:10px 0">Accept a delivery above to start.</div>';
   const done=await get('orders','driver_id=eq.'+UID+'&status=in.(delivered,completed)&select=id&limit=100').catch(()=>[]);
