@@ -1395,6 +1395,13 @@ window.addEventListener("load",()=>{setTimeout(()=>{
   else{document.getElementById("splash").style.display="none";document.getElementById("auth").style.display="flex";}
 },900)});
 
+function refreshSess(){
+  try{var s=JSON.parse(localStorage.getItem("ms_s")||"null");if(!s||!s.rtok)return;
+  fetch(SU+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{"apikey":SK,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.rtok})})
+  .then(function(r){return r.json()}).then(function(d){if(d.access_token){TOK=d.access_token;localStorage.setItem("ms_s",JSON.stringify({tok:TOK,uid:s.uid,rtok:d.refresh_token||s.rtok,exp:Date.now()+(d.expires_in||3600)*1000}));}}).catch(function(){});}catch(e){}
+}
+setInterval(refreshSess,40*60*1000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden){try{var s=JSON.parse(localStorage.getItem("ms_s")||"null");if(s&&s.exp&&Date.now()>s.exp-5*60*1000)refreshSess();}catch(e){}}});
 function login(){
   const e=V("email"),p=document.getElementById("password").value;
   if(!e||!p){showAuthErr("Enter email and password");return}
@@ -1404,7 +1411,7 @@ function login(){
     b.textContent="Sign in";b.disabled=false;
     if(!d.access_token){showAuthErr(d.error_code==="invalid_credentials"?"Wrong email or password":d.error_description||d.msg||"Sign in failed");return}
     TOK=d.access_token;UID=d.user.id;MID=d.user.id;
-    localStorage.setItem("ms_s",JSON.stringify({tok:TOK,uid:UID,exp:Date.now()+(d.expires_in||3600)*1000}));
+    localStorage.setItem("ms_s",JSON.stringify({tok:TOK,uid:UID,rtok:d.refresh_token,exp:Date.now()+(d.expires_in||3600)*1000}));
     showApp();
   }).catch(()=>{b.textContent="Sign in";b.disabled=false;showAuthErr("Connection error")})
 }
