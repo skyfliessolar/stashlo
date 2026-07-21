@@ -895,6 +895,33 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   <!-- SETTINGS -->
   <div class="screen" id="settings-screen">
     <div class="sh"><span style="display:flex;align-items:center"><button onclick="switchTab('overview')" style="background:var(--purple3);color:var(--purple);border:none;border-radius:8px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;margin-right:8px;flex-shrink:0">‹</button><span class="sh-t">Shop Settings</span></span></div>
+    <div class="setting-card">
+      <div class="setting-title">🧾 Tax Records — other till Z-reports</div>
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:10px">Using another till as well? Save its Z-report here and Stashlo keeps every day's takings together — one CSV for your accountant or MTD software at year end.</div>
+      <div id="tz-drop" style="border:2px dashed var(--purple);border-radius:12px;padding:14px;text-align:center;background:var(--purple3);cursor:pointer;margin-bottom:10px">
+        <div style="font-size:22px">📥</div>
+        <div style="font-size:13px;font-weight:800;margin-top:4px">Drag a Z-report file here (PC)</div>
+        <div style="font-size:11px;color:var(--ink3)">or tap to choose · .txt .csv accepted · you can also paste below</div>
+        <input type="file" id="tz-file" accept=".txt,.csv,text/plain,text/csv" style="display:none">
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <input id="tz-date" type="date" style="flex:1;min-width:130px;padding:10px;border:2px solid var(--bg2);border-radius:10px;font-size:13px">
+        <input id="tz-source" placeholder="Till name e.g. Casio" style="flex:1;min-width:120px;padding:10px;border:2px solid var(--bg2);border-radius:10px;font-size:13px">
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <input id="tz-gross" type="number" step="0.01" placeholder="Gross £" style="flex:1;min-width:90px;padding:10px;border:2px solid var(--bg2);border-radius:10px;font-size:13px" oninput="tzAutoVat()">
+        <input id="tz-vat" type="number" step="0.01" placeholder="VAT £" style="flex:1;min-width:90px;padding:10px;border:2px solid var(--bg2);border-radius:10px;font-size:13px">
+        <input id="tz-cash" type="number" step="0.01" placeholder="Cash £" style="flex:1;min-width:90px;padding:10px;border:2px solid var(--bg2);border-radius:10px;font-size:13px">
+        <input id="tz-card" type="number" step="0.01" placeholder="Card £" style="flex:1;min-width:90px;padding:10px;border:2px solid var(--bg2);border-radius:10px;font-size:13px">
+      </div>
+      <textarea id="tz-raw" placeholder="Paste the Z-report text here (optional — kept as your record)" style="width:100%;min-height:60px;padding:10px;border:2px solid var(--bg2);border-radius:10px;font-size:12px;margin-bottom:8px"></textarea>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-green" style="flex:1" onclick="tzSave()">💾 Save Z-report</button>
+        <button class="btn" style="flex:1;background:var(--ink);color:#fff" onclick="tzExportAll()">📑 Export ALL for tax</button>
+      </div>
+      <div id="tz-list" style="margin-top:10px"></div>
+    </div>
+
     <!-- Shop type + POS section customise -->
     <div class="setting-card">
       <div class="setting-title">🏪 Shop Type &amp; POS Sections</div>
@@ -2020,6 +2047,118 @@ function delMerchReward(id){if(!confirm("Delete this reward?"))return;del("merch
 
 // ===== ACCOUNTING DASHBOARD =====
 let M_INVOICES=[];
+
+// ===== TAX RECORDS: other-till Z-report import =====
+function tzAutoVat(){
+  var g=parseFloat((document.getElementById('tz-gross')||{}).value||0);
+  var v=document.getElementById('tz-vat');
+  if(g>0&&v&&!v.value){v.value=(g-(g/1.2)).toFixed(2);} // UK 20% VAT-inclusive default
+}
+function _tzParse(text){
+  // Pull obvious totals out of a pasted/dropped Z-report so the merchant doesn't retype.
+  var t=(text||'').replace(/,/g,'').replace(/@?\s*[0-9]+(?:\.[0-9]+)?\s*%/g,' '); // drop '@20%' so VAT rate isn't read as the VAT amount
+  function grab(re){var m=t.match(re);return m?parseFloat(m[1]):null}
+  var gross=grab(/(?:gross|total|takings|grand total)[^0-9\-]{0,14}([0-9]+\.?[0-9]*)/i);
+  var vat=grab(/(?:vat|tax)[^0-9\-]{0,14}([0-9]+\.?[0-9]*)/i);
+  var cash=grab(/cash[^0-9\-]{0,14}([0-9]+\.?[0-9]*)/i);
+  var card=grab(/(?:card|credit)[^0-9\-]{0,14}([0-9]+\.?[0-9]*)/i);
+  if(gross!=null)document.getElementById('tz-gross').value=gross.toFixed(2);
+  if(vat!=null)document.getElementById('tz-vat').value=vat.toFixed(2);
+  if(cash!=null)document.getElementById('tz-cash').value=cash.toFixed(2);
+  if(card!=null)document.getElementById('tz-card').value=card.toFixed(2);
+  document.getElementById('tz-raw').value=text.slice(0,4000);
+  if(gross!=null||vat!=null)T('📥 Figures read from the report — check them before saving','success');
+  else T('File loaded — type the totals in','success');
+}
+function tzInit(){
+  var d=document.getElementById('tz-drop'),f=document.getElementById('tz-file');
+  if(!d||!f||d._wired)return;d._wired=1;
+  var dt=document.getElementById('tz-date');if(dt&&!dt.value)dt.value=new Date().toISOString().slice(0,10);
+  d.onclick=function(){f.click()};
+  f.onchange=function(){var file=f.files[0];if(!file)return;var r=new FileReader();r.onload=function(){_tzParse(String(r.result||''))};r.readAsText(file);};
+  ['dragenter','dragover'].forEach(function(e){d.addEventListener(e,function(ev){ev.preventDefault();d.style.background='var(--purple)';d.style.color='#fff';});});
+  ['dragleave','drop'].forEach(function(e){d.addEventListener(e,function(ev){ev.preventDefault();d.style.background='var(--purple3)';d.style.color='';});});
+  d.addEventListener('drop',function(ev){
+    var file=ev.dataTransfer&&ev.dataTransfer.files&&ev.dataTransfer.files[0];if(!file)return;
+    var r=new FileReader();r.onload=function(){_tzParse(String(r.result||''))};r.readAsText(file);
+  });
+  var raw=document.getElementById('tz-raw');
+  if(raw)raw.addEventListener('paste',function(){setTimeout(function(){if(raw.value.length>20)_tzParse(raw.value)},60)});
+  tzLoad();
+}
+function tzSave(){
+  var g=parseFloat((document.getElementById('tz-gross')||{}).value||0);
+  if(!(g>0)){T('Enter the gross takings','error');return}
+  var rec={merchant_id:MID,
+    day:(document.getElementById('tz-date')||{}).value||new Date().toISOString().slice(0,10),
+    source:(document.getElementById('tz-source')||{}).value||'Other till',
+    gross:g, vat:parseFloat((document.getElementById('tz-vat')||{}).value||0)||0,
+    cash:parseFloat((document.getElementById('tz-cash')||{}).value||0)||0,
+    card:parseFloat((document.getElementById('tz-card')||{}).value||0)||0,
+    raw:(document.getElementById('tz-raw')||{}).value||'', created_at:Date.now()};
+  post('till_imports',rec).then(function(){
+    T('💾 Z-report saved','success');
+    ['tz-gross','tz-vat','tz-cash','tz-card','tz-raw'].forEach(function(i){var e=document.getElementById(i);if(e)e.value='';});
+    tzLoad();
+  }).catch(function(){T('Failed — run ADD_till_imports.sql','error');});
+}
+function tzLoad(){
+  get('till_imports','merchant_id=eq.'+MID+'&order=day.desc&limit=40').then(function(d){
+    var el=document.getElementById('tz-list');if(!el)return;
+    var rows=Array.isArray(d)?d:[];
+    window._TZ=rows;
+    el.innerHTML=rows.length?('<div style="font-size:12px;font-weight:800;margin-bottom:4px">Saved reports</div>'+rows.map(function(r){
+      return '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg);border-radius:8px;padding:8px;margin-bottom:5px;font-size:12px"><span><b>'+r.day+'</b> · '+(r.source||'')+' · £'+parseFloat(r.gross||0).toFixed(2)+' (VAT £'+parseFloat(r.vat||0).toFixed(2)+')</span><button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="tzDel('+r.id+')">🗑</button></div>';
+    }).join('')):'<div style="font-size:12px;color:var(--ink3)">No other-till reports saved yet.</div>';
+  }).catch(function(){});
+}
+function tzDel(id){
+  if(!confirm('Delete this saved Z-report?'))return;
+  del('till_imports','id=eq.'+id).then(function(){T('Deleted','success');tzLoad();}).catch(function(){T('Failed','error');});
+}
+function tzExportAll(){
+  // Stashlo till sales + imported other-till reports, one CSV, day by day.
+  var year=new Date().getFullYear();
+  var start=new Date(year,0,1).getTime();
+  Promise.all([
+    get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+start+'&order=created_at.asc').catch(function(){return []}),
+    get('till_imports','merchant_id=eq.'+MID+'&order=day.asc').catch(function(){return []})
+  ]).then(function(res){
+    var sales=Array.isArray(res[0])?res[0]:[], imports=Array.isArray(res[1])?res[1]:[];
+    var byDay={};
+    sales.forEach(function(s){
+      var d=new Date(s.created_at).toISOString().slice(0,10);
+      byDay[d]=byDay[d]||{stashlo_gross:0,stashlo_vat:0,other_gross:0,other_vat:0,cash:0,card:0,src:[]};
+      var g=parseFloat(s.total||0);
+      byDay[d].stashlo_gross+=g; byDay[d].stashlo_vat+=parseFloat(s.vat_total||0);
+      if((s.method||'cash')==='card')byDay[d].card+=g;else byDay[d].cash+=g;
+    });
+    imports.forEach(function(r){
+      var d=r.day;
+      byDay[d]=byDay[d]||{stashlo_gross:0,stashlo_vat:0,other_gross:0,other_vat:0,cash:0,card:0,src:[]};
+      byDay[d].other_gross+=parseFloat(r.gross||0); byDay[d].other_vat+=parseFloat(r.vat||0);
+      byDay[d].cash+=parseFloat(r.cash||0); byDay[d].card+=parseFloat(r.card||0);
+      if(r.source)byDay[d].src.push(r.source);
+    });
+    var days=Object.keys(byDay).sort();
+    if(!days.length){T('Nothing to export yet','error');return}
+    var csv='Date,Stashlo gross (GBP),Stashlo VAT (GBP),Other till gross (GBP),Other till VAT (GBP),Total gross (GBP),Total VAT (GBP),Cash (GBP),Card (GBP),Other till source\n';
+    var T1=0,T2=0,T3=0,T4=0;
+    days.forEach(function(d){
+      var r=byDay[d];
+      var tg=r.stashlo_gross+r.other_gross, tv=r.stashlo_vat+r.other_vat;
+      T1+=tg;T2+=tv;T3+=r.cash;T4+=r.card;
+      csv+=[d,r.stashlo_gross.toFixed(2),r.stashlo_vat.toFixed(2),r.other_gross.toFixed(2),r.other_vat.toFixed(2),tg.toFixed(2),tv.toFixed(2),r.cash.toFixed(2),r.card.toFixed(2),'"'+r.src.join(' / ')+'"'].join(',')+'\n';
+    });
+    csv+=['TOTAL '+year,'','','','',T1.toFixed(2),T2.toFixed(2),T3.toFixed(2),T4.toFixed(2),''].join(',')+'\n';
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download='stashlo-tax-'+year+'-'+((MDATA&&MDATA.name)||'shop').replace(/\W+/g,'-')+'.csv';
+    a.click();
+    T('⬇ Tax CSV downloaded — every till, day by day','success');
+  });
+}
+
 function loadAccounting(){
   const rev=TXNS.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
   const mo=new Date();mo.setDate(1);mo.setHours(0,0,0,0);
@@ -2519,7 +2658,7 @@ function switchTab(name){
   if(name==="customers")loadCustomers();
   if(name==="till")loadTxns();
   if(name==="inbox")loadInbox();
-  if(name==="settings"){loadAccounting();loadMerchRewards();}
+  if(name==="settings"){loadAccounting();loadMerchRewards();setTimeout(tzInit,120);}
   if(name==="pos")posGuard();
   if(name==="jobs")loadJobs();
   if(name==="claims")loadClaims();
