@@ -4505,6 +4505,66 @@ async function doClaimPoints(btn,r){
     T('⚠️ Could not send — check connection','error');
   }
 }
+
+// ===== MONTH-WISE RECEIPTS: toggle + save to device =====
+function rcpToggleMonth(k){window._RCP_OPEN=(window._RCP_OPEN===k)?null:k;loadReceipts();}
+function _rcpMonth(k){
+  return (window.MY_RECEIPTS||[]).filter(function(r){
+    var d=new Date(r.created_at||0);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')===k;
+  });
+}
+function _dl(name,text,type){
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:type||'text/plain'}));
+  a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},400);
+}
+function _rcpCSV(list){
+  var csv='Date,Shop,Payment,Subtotal (GBP),VAT (GBP),Total (GBP)\n',t=0,v=0;
+  list.slice().sort(function(a,b){return (a.created_at||0)-(b.created_at||0)}).forEach(function(r){
+    var d=new Date(r.created_at||0);
+    var tot=parseFloat(r.total||0),vat=parseFloat(r.vat||0);
+    t+=tot;v+=vat;
+    csv+=[d.toLocaleDateString('en-GB'),'"'+String(r.merchant_name||r.shop_name||'').replace(/"/g,'')+'"',(r.payment_method||''),
+          (parseFloat(r.subtotal||(tot-vat))||0).toFixed(2),vat.toFixed(2),tot.toFixed(2)].join(',')+'\n';
+  });
+  csv+=['TOTAL','','','',v.toFixed(2),t.toFixed(2)].join(',')+'\n';
+  return csv;
+}
+function _rcpHTML(list,title){
+  var t=list.reduce(function(a,r){return a+parseFloat(r.total||0)},0);
+  return '<html><head><meta charset="utf-8"><title>'+title+'</title><style>body{font-family:Arial,sans-serif;max-width:640px;margin:24px auto;padding:0 16px;color:#14121F}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:14px}td,th{padding:8px;border-bottom:1px solid #eee;font-size:13px;text-align:left}th{background:#f4f4f8}td.r,th.r{text-align:right}.tot{font-weight:800;background:#faf7f2}img{max-width:100%;border-radius:8px;margin:6px 0}</style></head><body>'
+    +'<h1>🧾 '+title+'</h1><p style="color:#666;font-size:13px">'+list.length+' receipts · saved from Stashlo</p>'
+    +'<table><tr><th>Date</th><th>Shop</th><th class="r">Total</th></tr>'
+    +list.slice().sort(function(a,b){return (a.created_at||0)-(b.created_at||0)}).map(function(r){
+      return '<tr><td>'+new Date(r.created_at||0).toLocaleDateString('en-GB')+'</td><td>'+(r.merchant_name||r.shop_name||'')+'</td><td class="r">£'+parseFloat(r.total||0).toFixed(2)+'</td></tr>';
+    }).join('')
+    +'<tr class="tot"><td colspan="2">TOTAL</td><td class="r">£'+t.toFixed(2)+'</td></tr></table>'
+    +list.filter(function(r){return r.image_url}).map(function(r){return '<div><b>'+(r.merchant_name||'')+'</b><br><img src="'+r.image_url+'"></div>'}).join('')
+    +'</body></html>';
+}
+function rcpExportMonth(k,kind){
+  var list=_rcpMonth(k);
+  if(!list.length){T('Nothing to save for that month','error');return}
+  var MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var p=k.split('-'),label=MN[parseInt(p[1])-1]+' '+p[0];
+  if(kind==='csv'){_dl('stashlo-receipts-'+k+'.csv',_rcpCSV(list),'text/csv');T('⬇ Saved to your Downloads','success');}
+  else if(kind==='html'){_dl('stashlo-receipts-'+k+'.html',_rcpHTML(list,'Receipts — '+label),'text/html');T('⬇ Saved — opens in any browser','success');}
+  else{
+    var w=window.open('','_blank');
+    if(!w){T('Allow pop-ups to print','error');return}
+    w.document.write(_rcpHTML(list,'Receipts — '+label));w.document.close();
+    setTimeout(function(){try{w.print()}catch(e){}},400);
+  }
+}
+function rcpExportAll(){
+  var list=window.MY_RECEIPTS||[];
+  if(!list.length){T('No receipts yet','error');return}
+  _dl('stashlo-all-receipts.csv',_rcpCSV(list),'text/csv');
+  T('⬇ All '+list.length+' receipts saved','success');
+}
+
 function loadReceipts(){
   rcpYearInit();
   const el=document.getElementById('receipts-list');if(!el)return;
@@ -4522,18 +4582,71 @@ function loadReceipts(){
 })();
 txt('rcp-total','£'+tot.toFixed(2));txt('rcp-count',RECEIPTS.length+' receipts');
     if(!RECEIPTS.length){el.innerHTML='<div class="empty"><i>🧾</i><p>No receipts in this period.<br>Scan one with 📷 or save from completed orders.</p></div>';return}
-    el.innerHTML=RECEIPTS.map(function(r,i){return '<div class="ic" style="margin:0 0 10px">'
-      +(r.image_url?'<img src="'+r.image_url+'" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:10px" onclick="window.open(String.fromCharCode(39)+r.image_url" onerror="this.style.display=String.fromCharCode(39)+String.fromCharCode(39)">':'')
-      +'<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">🧾 '+(r.merchant_name||'Receipt')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.receipt_no||'')+' · '+(r.created_at?new Date(r.created_at).toLocaleString().slice(0,17):'')+'</div><div style="font-size:12px;color:var(--sub)">'+(r.items||'')+'</div></div><div style="text-align:right"><div style="font-size:17px;font-weight:800;color:var(--purple)">£'+parseFloat(r.total||0).toFixed(2)+'</div><div style="margin-top:6px">'+(r.points_awarded?'<span style="background:#dcfce7;color:#166534;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800">💎 Points added</span> ':'<button onclick="claimPoints('+i+')" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">💎 Claim points</button> ')+'<button onclick="downloadReceiptPDF('+i+')" style="background:var(--purple-bg);color:var(--purple);border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">⬇ PDF</button> <button onclick="deleteReceipt('+i+')" style="background:#fef2f2;color:#ef4444;border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;cursor:pointer">🗑</button></div></div></div></div>'}).join('');
-    // fix image handlers cleanly
-    Array.prototype.forEach.call(el.children,function(card,i){
-      if(!RECEIPTS[i]||card.querySelector('.rc-save'))return;
-      var b=document.createElement('button');
-      b.className='rc-save';b.textContent='💾 Save / print';
-      b.style.cssText='margin-top:8px;background:var(--bg);border:1px solid var(--bg2);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer';
-      b.onclick=function(){saveReceiptToDevice(RECEIPTS[i].id)};
-      card.appendChild(b);
+    // ===== MONTH-WISE GROUPING + MONTHLY SUMMARY =====
+    var months={};
+    RECEIPTS.forEach(function(r,i){
+      var d=new Date(r.created_at||0);
+      var key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      (months[key]=months[key]||[]).push(Object.assign({},r,{_i:i}));
     });
+    var keys=Object.keys(months).sort().reverse();
+  // ===== SPENDING INSIGHT (this month vs last) =====
+  (function(){
+    var now=new Date();
+    var kNow=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+    var pm=new Date(now.getFullYear(),now.getMonth()-1,1);
+    var kPrev=pm.getFullYear()+'-'+String(pm.getMonth()+1).padStart(2,'0');
+    var sum=function(k){return (months[k]||[]).reduce(function(a,r){return a+parseFloat(r.total||0)},0)};
+    var a=sum(kNow),b=sum(kPrev);
+    var shops={};(months[kNow]||[]).forEach(function(r){var n=r.merchant_name||r.shop_name;if(n)shops[n]=(shops[n]||0)+parseFloat(r.total||0)});
+    var top=Object.entries(shops).sort(function(x,y){return y[1]-x[1]})[0];
+    var box=document.getElementById('rcp-insight');
+    if(!box){box=document.createElement('div');box.id='rcp-insight';var host=document.getElementById('receipts-list');if(host&&host.parentNode)host.parentNode.insertBefore(box,host);}
+    if(!a&&!b){box.innerHTML='';return}
+    var diff=b>0?Math.round(((a-b)/b)*100):null;
+    box.innerHTML='<div style="background:linear-gradient(135deg,#6366F1,#4338ca);color:#fff;border-radius:16px;padding:14px;margin:0 16px 12px">'
+      +'<div style="font-size:11px;opacity:.85;letter-spacing:1px">THIS MONTH</div>'
+      +'<div style="font-size:28px;font-weight:900;margin:2px 0">£'+a.toFixed(2)+'</div>'
+      +'<div style="font-size:12px;opacity:.9">'+(diff===null?'across '+Object.keys(shops).length+' local shops':(diff<=0?'▼ '+Math.abs(diff)+'% less than last month':'▲ '+diff+'% more than last month'))+'</div>'
+      +(top?'<div style="font-size:12px;margin-top:8px;background:rgba(255,255,255,.16);border-radius:10px;padding:8px 10px">⭐ Most visited: <b>'+top[0]+'</b> · £'+top[1].toFixed(2)+'</div>':'')
+      +'</div>';
+  })();
+    var MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var openKey=window._RCP_OPEN||keys[0];
+    el.innerHTML=keys.map(function(k){
+      var list=months[k],parts=k.split('-');
+      var mTot=list.reduce(function(a,r){return a+parseFloat(r.total||0)},0);
+      var shops={};list.forEach(function(r){if(r.merchant_name||r.shop_name)shops[r.merchant_name||r.shop_name]=1});
+      var isOpen=k===openKey;
+      return '<div class="ic" style="margin:0 0 10px;padding:0;overflow:hidden">'
+        +'<div onclick="rcpToggleMonth(\''+k+'\')" style="display:flex;justify-content:space-between;align-items:center;padding:14px;cursor:pointer;background:var(--bg)">'
+          +'<div><div style="font-weight:800;font-size:15px">'+MN[parseInt(parts[1])-1]+' '+parts[0]+'</div>'
+          +'<div style="font-size:11px;color:var(--sub)">'+list.length+' receipt'+(list.length>1?'s':'')+' · '+Object.keys(shops).length+' shop'+(Object.keys(shops).length>1?'s':'')+'</div></div>'
+          +'<div style="text-align:right"><div style="font-weight:900;font-size:16px">£'+mTot.toFixed(2)+'</div>'
+          +'<div style="font-size:16px;color:var(--sub)">'+(isOpen?'⌃':'⌄')+'</div></div>'
+        +'</div>'
+        +'<div style="display:'+(isOpen?'block':'none')+';padding:0 12px 12px">'
+          +'<div style="display:flex;gap:6px;margin:10px 0">'
+            +'<button onclick="rcpExportMonth(\''+k+'\',\'csv\')" style="flex:1;padding:9px;background:var(--bg);border:1px solid var(--bg2);border-radius:10px;font-size:11px;font-weight:800;cursor:pointer">⬇ Save CSV</button>'
+            +'<button onclick="rcpExportMonth(\''+k+'\',\'html\')" style="flex:1;padding:9px;background:var(--bg);border:1px solid var(--bg2);border-radius:10px;font-size:11px;font-weight:800;cursor:pointer">⬇ Save page</button>'
+            +'<button onclick="rcpExportMonth(\''+k+'\',\'print\')" style="flex:1;padding:9px;background:var(--bg);border:1px solid var(--bg2);border-radius:10px;font-size:11px;font-weight:800;cursor:pointer">🖨 Print</button>'
+          +'</div>'
+          +list.map(function(r){
+            return '<div style="background:var(--bg);border-radius:12px;padding:11px;margin-bottom:8px">'
+              +(r.image_url?'<img src="'+r.image_url+'" style="width:100%;max-height:170px;object-fit:cover;border-radius:10px;margin-bottom:8px" onclick="window.open(this.src,\'_blank\')" onerror="this.style.display=\'none\'">':'')
+              +'<div style="display:flex;justify-content:space-between;align-items:center">'
+                +'<div><div style="font-size:14px;font-weight:700">🧾 '+(r.merchant_name||r.shop_name||'Receipt')+'</div>'
+                +'<div style="font-size:11px;color:var(--sub)">'+new Date(r.created_at||0).toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' · '+(r.payment_method||'')+'</div></div>'
+                +'<div style="font-weight:900;font-size:15px">£'+parseFloat(r.total||0).toFixed(2)+'</div>'
+              +'</div>'
+              +'<button onclick="saveReceiptToDevice('+r.id+')" style="margin-top:8px;background:var(--card);border:1px solid var(--bg2);border-radius:9px;padding:7px 11px;font-size:11px;font-weight:700;cursor:pointer">💾 Save this one</button>'
+            +'</div>';
+          }).join('')
+        +'</div></div>';
+    }).join('')
+    + '<button onclick="rcpExportAll()" style="width:100%;margin-top:6px;padding:13px;background:var(--ink,#0f172a);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:13px;cursor:pointer">⬇ Save ALL receipts to my phone (CSV)</button>';
+    // fix image handlers cleanly
+
     Array.prototype.forEach.call(el.querySelectorAll('img'),function(im,i){
       im.onclick=function(){window.open(RECEIPTS[i]&&RECEIPTS[i].image_url||'#','_blank')};
       im.onerror=function(){this.style.display='none'};
