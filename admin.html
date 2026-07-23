@@ -2333,6 +2333,15 @@ async function _scProbe(name, table, cols){
     return {name,ok:false,note:msg,hint};
   }catch(e){return {name,ok:false,note:String(e).slice(0,120)}}
 }
+
+async function scCreateBucket(){
+  try{
+    const r=await fetch(SU+'/storage/v1/bucket',{method:'POST',headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json'},body:JSON.stringify({id:'stashlo-images',name:'stashlo-images',public:true})});
+    const t=await r.text();
+    if(r.ok){T('🪣 Bucket created & PUBLIC — photos will now upload','success');runSelfCheck();}
+    else T('Bucket create failed: '+t.slice(0,90),'error');
+  }catch(e){T('Bucket create failed: '+String(e).slice(0,80),'error')}
+}
 async function runSelfCheck(){
   const el=document.getElementById('sc-results');
   el.innerHTML='<div class="ic">Running… (10–15 seconds)</div>';
@@ -2369,7 +2378,7 @@ async function runSelfCheck(){
   try{
     const r=await fetch(SU+'/storage/v1/bucket/stashlo-images',{headers:{'apikey':SK,'Authorization':'Bearer '+SK}});
     if(r.ok){const b=await r.json();out.push({name:'📸 storage bucket stashlo-images',ok:true,note:b.public?'exists & PUBLIC ✓':'exists but NOT public → set it Public or images will not display'});}
-    else out.push({name:'📸 storage bucket stashlo-images',ok:false,note:'BUCKET MISSING',hint:'Supabase → Storage → New bucket → name: stashlo-images → tick Public. This is why photo uploads vanish.'});
+    else out.push({name:'📸 storage bucket stashlo-images',ok:false,note:'BUCKET MISSING — SQL can NOT create buckets. Tap the green button below.',fix:'bucket',hint:'Supabase → Storage → New bucket → name: stashlo-images → tick Public. This is why photo uploads vanish.'});
   }catch(e){out.push({name:'📸 storage bucket',ok:false,note:String(e).slice(0,100)})}
   // offers values
   try{
@@ -2379,7 +2388,7 @@ async function runSelfCheck(){
   }catch(e){}
   const fails=out.filter(x=>!x.ok).length;
   el.innerHTML='<div class="ic" style="margin-bottom:10px;background:'+(fails?'#7f1d1d':'#065f46')+';color:#fff"><b style="font-size:16px">'+(fails?('❌ '+fails+' problem'+(fails>1?'s':'')+' found'):'✅ ALL CHECKS PASSED')+'</b><div style="font-size:12px;opacity:.9;margin-top:4px">'+(fails?'Fix what is listed below, then run again.':'Every table, column and the image bucket exist. If a feature still fails, the bug is in the app — tell Claude exactly what you tapped.')+'</div></div>'
-    + out.map(r=>'<div class="ic" style="margin-bottom:8px;display:flex;gap:10px;align-items:flex-start"><div style="font-size:18px">'+(r.ok?'✅':'❌')+'</div><div style="flex:1"><b style="font-size:13px">'+r.name+'</b><div style="font-size:11px;color:'+(r.ok?'var(--ink3)':'var(--red)')+';word-break:break-word">'+r.note+'</div>'+(r.hint?'<div style="font-size:11px;background:#fef3c7;color:#92400e;border-radius:8px;padding:6px 8px;margin-top:4px;font-weight:700">💡 '+r.hint+'</div>':'')+'</div></div>').join('');
+    + out.map(r=>'<div class="ic" style="margin-bottom:8px;display:flex;gap:10px;align-items:flex-start"><div style="font-size:18px">'+(r.ok?'✅':'❌')+'</div><div style="flex:1"><b style="font-size:13px">'+r.name+'</b><div style="font-size:11px;color:'+(r.ok?'var(--ink3)':'var(--red)')+';word-break:break-word">'+r.note+'</div>'+(r.hint?'<div style="font-size:11px;background:#fef3c7;color:#92400e;border-radius:8px;padding:6px 8px;margin-top:4px;font-weight:700">💡 '+r.hint+'</div>':'')+(r.fix==='bucket'?'<button class="sl-btn btn-green" style="margin-top:6px" onclick="scCreateBucket()">🪣 Create the bucket now</button>':'')+'</div></div>').join('');
   logAudit('selfcheck',fails+' fails');
 }
 
