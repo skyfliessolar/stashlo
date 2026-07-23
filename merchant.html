@@ -709,6 +709,24 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:#6366F1!import
 ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:rgba(99,102,241,.35);border-radius:4px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
+<style id="figma-tokens-v148">
+/* ═══ Stashlo × Figma design language v148 — exact brand tokens from the design system ═══ */
+:root{--f-purple:#6366F1;--f-indigo:#1e1b4b;--f-gold:#FBBF24;--f-paper:#FAF7F2;--f-ink:#14121F;--f-success:#166534}
+/* headers carry the poster treatment: indigo depth + gold accent underline */
+.sh-t,h1,h2{letter-spacing:-.02em}
+.sh{position:relative}
+.sh:after{content:'';position:absolute;left:16px;bottom:-2px;width:34px;height:3px;background:var(--f-gold);border-radius:2px}
+/* cards on receipt paper, ink text — the Figma receipt motif as surface language */
+.ic,.sl-card{border:1px solid rgba(20,18,31,.05)}
+/* primary actions: poster gold on indigo — unmissable, on-brand */
+.btn-green,[class*=primary]{background:linear-gradient(150deg,#6366F1,#4338ca)!important}
+/* money and points get the stamp treatment: success green, confident weight */
+[id*=pts],[id*=points],.pts{color:var(--f-success);font-weight:800}
+/* empty states framed like a blank receipt, not a void */
+[id*=-list]:empty:before{content:'— nothing here yet —';display:block;text-align:center;color:#9d9cc4;font-family:ui-monospace,monospace;font-size:12px;padding:22px;background:var(--f-paper);border-radius:12px;border:1px dashed #ddd6c8}
+/* gold focus ring everywhere = the Figma selection language */
+:focus-visible{outline:3px solid var(--f-gold)!important;outline-offset:2px}
+</style>
 </head>
 <body>
 
