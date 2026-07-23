@@ -3506,10 +3506,11 @@ var O_PTS={have:0,cardId:null};
 var O_PROMO=null;   // {code, off}  applied checkout promo
 var O_WELCOME=0;    // welcome-offer £
 var APP_SET=null;
+var _APP_SET_AT=0;
 function _getSettings(){
-  if(APP_SET)return Promise.resolve(APP_SET);
+  if(APP_SET&&Date.now()-_APP_SET_AT<5*60*1000)return Promise.resolve(APP_SET);
   return get('app_settings','select=key,value').then(function(d){
-    APP_SET={};(Array.isArray(d)?d:[]).forEach(function(r){APP_SET[r.key]=r.value});return APP_SET;
+    APP_SET={};_APP_SET_AT=Date.now();(Array.isArray(d)?d:[]).forEach(function(r){APP_SET[r.key]=r.value});return APP_SET;
   }).catch(function(){APP_SET={};return APP_SET;});
 }
 function loadWelcomeOffer(){
