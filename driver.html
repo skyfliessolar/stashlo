@@ -37,6 +37,20 @@ html,body{overscroll-behavior:none;-webkit-user-select:none;user-select:none;-we
 input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}
 button:active{transform:scale(.96)}
 </style>
+<style id="polish-v147">
+:root{--sh:0 1px 2px rgba(20,18,31,.05),0 6px 18px rgba(20,18,31,.07)}
+*{-webkit-tap-highlight-color:transparent}
+body{text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+[id*=total],[id*=price],[id*=pts],[id*=points],[id*=bal],td{font-variant-numeric:tabular-nums}
+button{transition:transform .09s ease,box-shadow .18s ease}
+button:active{transform:scale(.965)}
+button:focus-visible{outline:3px solid #FBBF24;outline-offset:2px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#6366F1!important;box-shadow:0 0 0 3px rgba(99,102,241,.18)!important}
+.screen.on{animation:pv-rise .22s ease}
+@keyframes pv-rise{from{opacity:.4;transform:translateY(5px)}to{opacity:1;transform:none}}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:rgba(99,102,241,.35);border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
 </head>
 <body>
 <div class="toast" id="toast"></div>
