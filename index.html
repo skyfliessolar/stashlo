@@ -1141,6 +1141,20 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 .pocket{display:none!important}
 .pocket-card{position:relative!important;left:auto!important;bottom:auto!important;width:100%!important;height:auto!important;min-height:96px!important;opacity:1!important;transform:none!important;animation:none!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;justify-content:center!important}
 </style>
+<style id="polish-v147">
+:root{--sh:0 1px 2px rgba(20,18,31,.05),0 6px 18px rgba(20,18,31,.07)}
+*{-webkit-tap-highlight-color:transparent}
+body{text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+[id*=total],[id*=price],[id*=pts],[id*=points],[id*=bal],td{font-variant-numeric:tabular-nums}
+button{transition:transform .09s ease,box-shadow .18s ease}
+button:active{transform:scale(.965)}
+button:focus-visible{outline:3px solid #FBBF24;outline-offset:2px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#6366F1!important;box-shadow:0 0 0 3px rgba(99,102,241,.18)!important}
+.screen.on{animation:pv-rise .22s ease}
+@keyframes pv-rise{from{opacity:.4;transform:translateY(5px)}to{opacity:1;transform:none}}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:rgba(99,102,241,.35);border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
 </head>
 <body>
 
@@ -2991,26 +3005,6 @@ function openGiftCards(){
   document.body.appendChild(ov);
   loadGiftCards();
 }
-function buyGiftCard(amount){
-  if(!UID){T('Sign in first','error');return}
-  var st=document.getElementById('gc-status');st.textContent='Creating request…';
-  post('gift_cards',{user_id:UID,user_name:(PROF&&PROF.name)||'',amount:amount,points:amount*100,status:'pending_payment',created_at:Date.now()})
-    .then(function(){st.innerHTML='<span style="color:var(--green);font-weight:700">✅ Requested — pay £'+amount+' to the shop/Stashlo and it activates once confirmed.</span>';loadGiftCards();})
-    .catch(function(){st.innerHTML='<span style="color:var(--red)">Failed — try again later.</span>';});
-}
-function loadGiftCards(){
-  if(!UID)return;
-  get('gift_cards','user_id=eq.'+UID+'&order=created_at.desc').then(function(d){
-    var el=document.getElementById('gc-list');if(!el)return;
-    var rows=Array.isArray(d)?d:[];
-    el.innerHTML=rows.length?rows.map(function(g){
-      var s=g.status==='active'?'<span style="color:var(--green);font-weight:800">✅ ACTIVE — code '+(g.code||'')+' · +'+g.points+' pts added</span>'
-        :(g.status==='rejected'?'<span style="color:var(--red)">✕ Rejected</span>'
-        :'<span style="color:#b45309">🕐 Awaiting payment confirmation</span>');
-      return '<div style="padding:10px;background:var(--bg);border-radius:12px;margin-bottom:6px;font-size:13px"><b>£'+g.amount+' gift card</b><div style="margin-top:3px">'+s+'</div></div>';
-    }).join(''):'<div style="font-size:12px;color:var(--sub)">No gift cards yet.</div>';
-  }).catch(function(){});
-}
 
 // ===== RECEIPT SAVE-TO-DEVICE (phone or PC) =====
 function saveReceiptToDevice(rid){
@@ -4391,10 +4385,6 @@ function saveProf(){
 // ===== STASHLO CREDITS & GIFT CARDS =====
 function openGiftCard(){omo('giftCardMo');}
 function openPromoCode(){omo('promoMo');}
-function renderCreditBal(){
-  var el=document.getElementById('sl-credit-bal');
-  if(el)el.textContent='£'+parseFloat(PROF.sl_credit||0).toFixed(2);
-}
 // redeemGiftCard moved to v20 FINAL section below
 
 function applyPromoCode2(){
