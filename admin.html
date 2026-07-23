@@ -430,7 +430,21 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 .modal,.bo-modal,.mo{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;height:var(--real-vh,100dvh)!important;max-height:var(--real-vh,100dvh)!important;align-items:flex-end!important;overflow:hidden!important}
 .modal-box,.bo-content,.mo-box{max-height:calc(var(--real-vh,100dvh) - 24px)!important;display:flex!important;flex-direction:column!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 90px)!important}
 .modal-box,.bo-content,.mo-box,.shop-selector-content{animation:none!important;transform:none!important}
-</style></head>
+</style><style id="polish-v147">
+:root{--sh:0 1px 2px rgba(20,18,31,.05),0 6px 18px rgba(20,18,31,.07)}
+*{-webkit-tap-highlight-color:transparent}
+body{text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+[id*=total],[id*=price],[id*=pts],[id*=points],[id*=bal],td{font-variant-numeric:tabular-nums}
+button{transition:transform .09s ease,box-shadow .18s ease}
+button:active{transform:scale(.965)}
+button:focus-visible{outline:3px solid #FBBF24;outline-offset:2px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#6366F1!important;box-shadow:0 0 0 3px rgba(99,102,241,.18)!important}
+.screen.on{animation:pv-rise .22s ease}
+@keyframes pv-rise{from{opacity:.4;transform:translateY(5px)}to{opacity:1;transform:none}}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:rgba(99,102,241,.35);border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
 <body>
 
 <!-- SPLASH -->
@@ -2216,7 +2230,7 @@ function loadGiftClaims(){
     el.innerHTML=rows.length?rows.map(g=>{
       const s=g.status==='active'?'<span style="color:var(--green);font-weight:800">✅ ACTIVE '+(g.code||'')+'</span>':(g.status==='rejected'?'<span style="color:var(--red)">✕ Rejected</span>':'<span style="color:#b45309;font-weight:800">🕐 £'+g.amount+' — payment received?</span>');
       return '<div style="padding:10px;background:var(--bg);border-radius:10px;margin-bottom:6px;font-size:13px"><div style="display:flex;justify-content:space-between"><b>£'+g.amount+' · '+(g.user_name||g.user_id.slice(0,8))+'</b>'+s+'</div>'
-        +(g.status==='pending_payment'?'<div style="margin-top:6px"><button class="sl-btn btn-xs btn-green" onclick="gcApprove('+g.id+')">💰 Payment received — Activate</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="gcReject('+g.id+')">✕</button></div>':'')
+        +(g.status!=='pending_payment'?'<div style="margin-top:6px"><button class="sl-btn btn-xs" style="background:#374151;color:#fff" onclick="gcDisable('+g.id+')">🚫</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="gcDelete('+g.id+')">🗑</button></div>':'')+(g.status==='pending_payment'?'<div style="margin-top:6px"><button class="sl-btn btn-xs btn-green" onclick="gcApprove('+g.id+')">💰 Payment received — Activate</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="gcReject('+g.id+')">✕</button></div>':'')
         +'</div>';
     }).join(''):'<div style="font-size:12px;color:var(--ink3)">No gift card requests.</div>';
     window._GCARDS=rows;
@@ -2234,12 +2248,26 @@ function loadGiftClaims(){
     }).join(''):'<div style="font-size:12px;color:var(--ink3)">No claims.</div>';
   }).catch(()=>{});
 }
-function gcApprove(id){
+function gcApprove(id,src){
+  if(src==='r'){
+    const r=(window._GCR||[]).find(x=>x.id===id);if(!r)return;
+    if(!confirm('Confirm £'+r.amount+' RECEIVED? '+r.points+' points will be credited.'))return;
+    const code='GC-'+Math.random().toString(36).slice(2,8).toUpperCase();
+    sget('cards','user_id=eq.'+r.user_id+'&order=added_at.asc&limit=1').then(cs=>{
+      const c=Array.isArray(cs)&&cs[0];
+      if(!c){T('User has no loyalty card yet','error');return}
+      spat('cards','user_id=eq.'+r.user_id+'&card_id=eq.'+encodeURIComponent(c.card_id),{points:(c.points||0)+r.points}).then(()=>{
+        spat('gift_card_requests','id=eq.'+id,{status:'approved',code:code,decided_at:Date.now()})
+          .catch(()=>spat('gift_card_requests','id=eq.'+id,{status:'approved',decided_at:Date.now()}));
+        T('✅ '+code+' — '+r.points+' pts credited','success');logAudit('giftcard_approve','£'+r.amount+' '+code);loadGiftAdmin();
+      }).catch(()=>T('Could not credit points','error'));
+    });
+    return;
+  }
   const g=(window._GCARDS||[]).find(x=>x.id===id);if(!g)return;
   if(!confirm('Confirm £'+g.amount+' has been RECEIVED? This activates the card and credits '+g.points+' pts.'))return;
   const code='GC-'+Math.random().toString(36).slice(2,8).toUpperCase();
   spat('gift_cards','id=eq.'+id,{status:'active',code:code,decided_at:Date.now()}).then(()=>{
-    // credit points to the user's first card
     sget('cards','user_id=eq.'+g.user_id+'&order=added_at.asc&limit=1').then(cs=>{
       const c=Array.isArray(cs)&&cs[0];
       if(c)spat('cards','user_id=eq.'+g.user_id+'&card_id=eq.'+encodeURIComponent(c.card_id),{points:(c.points||0)+g.points}).catch(()=>{});
@@ -2248,36 +2276,15 @@ function gcApprove(id){
   }).catch(()=>T('Failed','error'));
 }
 
-function gcDisable(id){spat('gift_card_requests','id=eq.'+id,{status:'disabled'}).then(()=>{T('🚫 Gift card disabled','success');logAudit('giftcard_disable',String(id));loadGiftAdmin();}).catch(()=>T('Failed','error'));}
-function gcDelete(id){if(!confirm('Delete this gift card record permanently?'))return;sdel('gift_card_requests','id=eq.'+id).then(()=>{T('Deleted','success');logAudit('giftcard_delete',String(id));loadGiftAdmin();}).catch(()=>T('Failed','error'));}
-function gcReject(id){if(!confirm('Reject this gift card request?'))return;spat('gift_cards','id=eq.'+id,{status:'rejected',decided_at:Date.now()}).then(()=>loadGiftClaims()).catch(()=>T('Failed','error'));}
-function acSoftDel(id){spat('points_requests','id=eq.'+id,{status:'deleted'}).then(()=>{T('Claim deleted (restorable)','success');loadGiftClaims();}).catch(()=>T('Failed','error'));}
-function acRestore(id){spat('points_requests','id=eq.'+id,{status:'pending'}).then(()=>{T('↩ Restored to pending','success');loadGiftClaims();}).catch(()=>T('Failed','error'));}
-function acHardDel(id){if(!confirm('Delete FOREVER? Cannot be restored.'))return;sdel('points_requests','id=eq.'+id).then(()=>{T('Deleted forever','success');loadGiftClaims();}).catch(()=>T('Failed','error'));}
-
-
-function loadGiftAdmin(){
-  sget('gift_card_requests','order=created_at.desc&limit=50').then(d=>{
-    const el=document.getElementById('gcr-list');if(!el)return;
-    const rows=Array.isArray(d)?d:[];
-    el.innerHTML=rows.length?rows.map(r=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;margin-bottom:6px"><span><b>£'+r.amount+'</b> ('+r.points+' pts) · '+(r.user_name||r.user_id.slice(0,8))+' · '+(r.pay_ref||'')+' · '+r.status+(r.code?' · <b>'+r.code+'</b>':'')+'</span>'+(r.status!=='pending'?'<span><button class="sl-btn btn-xs" style="background:#374151;color:#fff" onclick="gcDisable('+r.id+')">🚫</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="gcDelete('+r.id+')">🗑</button></span>':'')+(r.status==='pending'?'<span><button class="sl-btn btn-xs btn-green" onclick="gcApprove('+r.id+')">✅ Paid</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="gcReject('+r.id+')">✕</button></span>':'')+'</div>').join(''):'<div style="color:var(--ink3);font-size:12px">No gift card requests.</div>';
-    window._GCR=rows;
-  }).catch(()=>{const el=document.getElementById('gcr-list');if(el)el.innerHTML='<div style="color:var(--red);font-size:12px">Run add_giftcards.sql</div>';});
+function gcDisable(id,src){spat(src==='r'?'gift_card_requests':'gift_cards','id=eq.'+id,{status:'disabled'}).then(()=>{T('🚫 Gift card disabled','success');logAudit('giftcard_disable',String(id));(src==='r'?loadGiftAdmin():loadGiftClaims());}).catch(()=>T('Failed','error'));}
+function gcDelete(id,src){if(!confirm('Delete this gift card record permanently?'))return;sdel(src==='r'?'gift_card_requests':'gift_cards','id=eq.'+id).then(()=>{T('Deleted','success');logAudit('giftcard_delete',String(id));(src==='r'?loadGiftAdmin():loadGiftClaims());}).catch(()=>T('Failed','error'));}
+function gcReject(id,src){
+  if(!confirm('Reject this gift card request?'))return;
+  const tbl=src==='r'?'gift_card_requests':'gift_cards';
+  spat(tbl,'id=eq.'+id,{status:'rejected',decided_at:Date.now()})
+    .then(()=>{T('Rejected','success');logAudit('giftcard_reject',String(id));src==='r'?loadGiftAdmin():loadGiftClaims();})
+    .catch(()=>T('Failed','error'));
 }
-function gcApprove(id){
-  const r=(window._GCR||[]).find(x=>x.id===id);if(!r)return;
-  if(!confirm('Confirm £'+r.amount+' RECEIVED? '+r.points+' points will be credited.'))return;
-  sget('cards','user_id=eq.'+r.user_id+'&order=added_at.asc&limit=1').then(cs=>{
-    const c=Array.isArray(cs)&&cs[0];
-    if(!c){T('User has no card to credit','error');return}
-    const code='GC-'+Math.random().toString(36).slice(2,8).toUpperCase();
-    spat('cards','user_id=eq.'+r.user_id+'&card_id=eq.'+c.card_id,{points:(c.points||0)+r.points}).then(()=>{
-      spat('gift_card_requests','id=eq.'+id,{status:'approved',code:code,decided_at:Date.now()}).catch(()=>spat('gift_card_requests','id=eq.'+id,{status:'approved',decided_at:Date.now()}));
-      T('✅ '+r.points+' pts credited','success');logAudit('giftcard_approve','£'+r.amount);loadGiftAdmin();
-    });
-  }).catch(()=>T('Failed','error'));
-}
-function gcReject(id){spat('gift_card_requests','id=eq.'+id,{status:'rejected',decided_at:Date.now()}).then(()=>{T('Rejected','success');loadGiftAdmin();});}
 
 function loadClaimsAdmin(){
   sget('points_requests','order=created_at.desc&limit=100').then(d=>{
@@ -2325,7 +2332,8 @@ async function runSelfCheck(){
     ['promo_codes (kind + amount)','promo_codes','code,kind,amount,active,used_count'],
     ['promo_redemptions','promo_redemptions','user_id,code'],
     ['app_settings','app_settings','key,value'],
-    ['gift_card_requests','gift_card_requests','id,status,amount,points'],
+    ['gift_card_requests (legacy buy)','gift_card_requests','id,status,amount,points,code'],
+    ['gift_cards (new system)','gift_cards','id,status,amount,points,code'],
     ['drivers','drivers','id,status'],
     ['wholesale_products','wholesale_products','id,trade_price'],
     ['wholesale_orders','wholesale_orders','id,status'],
