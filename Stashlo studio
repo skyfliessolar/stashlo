@@ -1,0 +1,290 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stashlo Studio — design for your shops</title>
+<style>
+:root{--ink:#14121F;--paper:#FAF7F2;--purple:#6366F1;--deep:#1e1b4b;--gold:#FBBF24;--bg:#0f0d23;--panel:#191536;--line:#2d2960}
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+body{background:var(--bg);color:#fff;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+header b{font-size:16px}
+header .sp{flex:1}
+.tb{background:var(--purple);color:#fff;border:none;border-radius:9px;padding:9px 14px;font-weight:800;font-size:13px;cursor:pointer}
+.tb.g{background:var(--gold);color:#151030}.tb.d{background:#2d2960}
+main{flex:1;display:flex;min-height:0}
+aside{width:230px;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:10px}
+aside h4{font-size:10px;letter-spacing:.14em;color:#8b89b8;margin:12px 4px 6px;text-transform:uppercase}
+.tpl{background:#241f4d;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:6px;cursor:pointer;font-size:12px;font-weight:700}
+.tpl small{display:block;color:#8b89b8;font-weight:400;font-size:10px}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.tool{background:#241f4d;border:1px solid var(--line);border-radius:9px;padding:8px 4px;text-align:center;cursor:pointer;font-size:11px}
+.tool span{display:block;font-size:16px}
+.stick{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.stick div{font-size:19px;text-align:center;cursor:pointer;background:#241f4d;border-radius:7px;padding:4px}
+.artgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.artgrid img{width:100%;border-radius:8px;cursor:pointer}
+#stage-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:20px;background:
+ repeating-conic-gradient(#141130 0 25%,#0f0d23 0 50%) 0 0/22px 22px}
+#stage{position:relative;background:#fff;box-shadow:0 14px 60px rgba(0,0,0,.6);transform-origin:center;flex-shrink:0}
+.el{position:absolute;cursor:move;user-select:none}
+.el.sel{outline:2px dashed var(--gold);outline-offset:2px}
+.el .rz{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;background:var(--gold);border-radius:50%;cursor:nwse-resize;display:none}
+.el.sel .rz{display:block}
+.rightbar{width:225px;background:var(--panel);border-left:1px solid var(--line);padding:10px;overflow-y:auto}
+.rightbar label{font-size:10px;color:#8b89b8;display:block;margin:9px 0 3px;letter-spacing:.1em;text-transform:uppercase}
+.rightbar input[type=text],.rightbar textarea,.rightbar select{width:100%;background:#241f4d;border:1px solid var(--line);color:#fff;border-radius:8px;padding:7px;font-size:12px}
+.rightbar input[type=color]{width:100%;height:32px;border:none;background:none;cursor:pointer}
+.rightbar input[type=range]{width:100%}
+.rowbtns{display:flex;gap:5px;margin-top:8px}
+.rowbtns button{flex:1;background:#241f4d;border:1px solid var(--line);color:#fff;border-radius:8px;padding:7px 0;cursor:pointer;font-size:12px}
+.hint{font-size:10px;color:#8b89b8;margin-top:12px;line-height:1.5}
+#layers div{background:#241f4d;border-radius:7px;padding:5px 8px;font-size:11px;margin-bottom:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#layers div.on{background:var(--purple)}
+@media(max-width:900px){aside{width:170px}.rightbar{width:180px}}
+</style></head><body>
+<header><b>💜 Stashlo Studio</b><span style="font-size:10px;color:#8b89b8">design for your shops · works offline</span><span class="sp"></span>
+<button class="tb d" onclick="undo()">↩ Undo</button>
+<button class="tb d" onclick="saveProject()">💾 Save</button>
+<button class="tb d" onclick="loadProject()">📂 Open</button>
+<button class="tb" onclick="exportPNG(2)">⬇ PNG</button>
+<button class="tb g" onclick="printIt()">🖨 Print / PDF</button>
+</header>
+<main>
+<aside>
+<h4>New from template</h4><div id="tpls"></div>
+<h4>Add</h4>
+<div class="tools">
+<div class="tool" onclick="addText()"><span>🅣</span>Text</div>
+<div class="tool" onclick="addEl({t:'rect',w:200,h:120,fill:'#6366F1',r:16})"><span>▭</span>Box</div>
+<div class="tool" onclick="addEl({t:'circle',w:130,h:130,fill:'#FBBF24'})"><span>⬤</span>Circle</div>
+<div class="tool" onclick="addReceipt()"><span>🧾</span>Receipt</div>
+</div>
+<h4>Your QR codes</h4><div id="qrlist"></div>
+<h4>Product artwork</h4><div class="artgrid" id="arts"></div>
+<h4>Stickers</h4>
+<div class="stick" id="stickers"></div>
+<div class="hint">Drag to move · corner dot resizes · double-click text to edit · Delete key removes</div>
+</aside>
+<div id="stage-wrap"><div id="stage"></div></div>
+<div class="rightbar">
+<label>Canvas background</label><input type="color" id="bgc" value="#1e1b4b" onchange="setBG(this.value)">
+<div class="rowbtns">
+<button onclick="setBG('#1e1b4b')" style="background:#1e1b4b">🌌</button>
+<button onclick="setBG('#FAF7F2')" style="background:#FAF7F2"></button>
+<button onclick="setBG('#065f46')" style="background:#065f46"></button>
+<button onclick="setBG('#7f1d1d')" style="background:#7f1d1d"></button>
+</div>
+<div id="props"></div>
+<label>Layers</label><div id="layers"></div>
+<div class="rowbtns"><button onclick="layer(1)">⬆ Up</button><button onclick="layer(-1)">⬇ Down</button></div>
+<div class="rowbtns"><button onclick="dupe()">⧉ Duplicate</button><button onclick="delSel()" style="background:#7f1d1d">🗑 Delete</button></div>
+<div class="hint">Print sizes are exact — A4 poster prints as true A4. PNG export is 2× resolution for sharp WhatsApp/social posts.</div>
+</div>
+</main>
+<script>
+const ARTS={"headphones": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM2MzY2RjEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMzMTJlODEiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgcng9IjMwIiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTYwIDExOCB2LTE4IGE0MCA0MCAwIDAgMSA4MCAwIHYxOCIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjEwIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48cmVjdCB4PSI0OCIgeT0iMTEyIiB3aWR0aD0iMjQiIGhlaWdodD0iNDIiIHJ4PSIxMiIgZmlsbD0iI2ZmZmZmZiIvPjxyZWN0IHg9IjEyOCIgeT0iMTEyIiB3aWR0aD0iMjQiIGhlaWdodD0iNDIiIHJ4PSIxMiIgZmlsbD0iI2ZmZmZmZiIvPjwvc3ZnPg==", "earbuds": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMwZWE1ZTkiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMzY5YTEiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgcng9IjMwIiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTc4IDcwIGExNiAxNiAwIDEgMSAyMiAxNSBsMCA0MCBhMTEgMTEgMCAwIDEgLTIyIDAgeiIgZmlsbD0iI2ZmZmZmZiIvPjxwYXRoIGQ9Ik0xMTggNzAgYTE2IDE2IDAgMSAwIC0yIDE1IGwwIDQwIGExMSAxMSAwIDAgMCAyMiAwIGwwIC00MCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwuODUpIi8+PC9zdmc+", "speaker": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMxNGI4YTYiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwZjc2NmUiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgcng9IjMwIiBmaWxsPSJ1cmwoI2cpIi8+PHJlY3QgeD0iNjAiIHk9IjQ1IiB3aWR0aD0iODAiIGhlaWdodD0iMTEwIiByeD0iMTYiIGZpbGw9IiNmZmZmZmYiLz48Y2lyY2xlIGN4PSIxMDAiIGN5PSI4MCIgcj0iMTQiIGZpbGw9IiMwMzY5YTEiLz48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMjIiIHI9IjIyIiBmaWxsPSIjMDM2OWExIi8+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTIyIiByPSI5IiBmaWxsPSIjZmZmZmZmIi8+PC9zdmc+", "charger": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmNTllMGIiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNiNDUzMDkiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgcng9IjMwIiBmaWxsPSJ1cmwoI2cpIi8+PHJlY3QgeD0iNjUiIHk9IjYwIiB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHJ4PSIxNiIgZmlsbD0iI2ZmZmZmZiIvPjxyZWN0IHg9Ijg2IiB5PSIzOCIgd2lkdGg9IjgiIGhlaWdodD0iMjIiIHJ4PSIzIiBmaWxsPSIjZmZmZmZmIi8+PHJlY3QgeD0iMTA2IiB5PSIzOCIgd2lkdGg9IjgiIGhlaWdodD0iMjIiIHJ4PSIzIiBmaWxsPSIjZmZmZmZmIi8+PHBhdGggZD0iTTEwMCA3OCBsLTEyIDI0IGgxMCBsLTQgMjIgMTggLTI4IGgtMTEgbDcgLTE4IHoiIGZpbGw9IiNiNDUzMDkiLz48L3N2Zz4=", "powerbank": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMxMGI5ODEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwNjVmNDYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgcng9IjMwIiBmaWxsPSJ1cmwoI2cpIi8+PHJlY3QgeD0iNTUiIHk9IjcwIiB3aWR0aD0iOTAiIGhlaWdodD0iNjAiIHJ4PSIxNCIgZmlsbD0iI2ZmZmZmZiIvPjxwYXRoIGQ9Ik0xMDAgODAgbC0xMCAxOCBoOCBsLTQgMTYgMTQgLTIwIGgtOSBsNiAtMTQgeiIgZmlsbD0iIzA2NWY0NiIvPjxyZWN0IHg9IjY2IiB5PSIxMTIiIHdpZHRoPSI0MCIgaGVpZ2h0PSI3IiByeD0iMy41IiBmaWxsPSIjMDY1ZjQ2Ii8+PC9zdmc+", "watch": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM2NDc0OGIiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxZTI5M2IiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgcng9IjMwIiBmaWxsPSJ1cmwoI2cpIi8+PHJlY3QgeD0iNzIiIHk9IjI2IiB3aWR0aD0iNDgiIGhlaWdodD0iMTQwIiByeD0iMTgiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsLjg1KSIvPjxyZWN0IHg9IjYwIiB5PSI2MiIgd2lkdGg9IjcyIiBoZWlnaHQ9IjcyIiByeD0iMjAiIGZpbGw9IiNmZmZmZmYiLz48cmVjdCB4PSI3MCIgeT0iNzIiIHdpZHRoPSI1MiIgaGVpZ2h0PSI1MiIgcng9IjEyIiBmaWxsPSIjMWUyOTNiIi8+PHRleHQgeD0iOTYiIHk9IjEwMyIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MTA6MDg8L3RleHQ+PC9zdmc+", "bulb": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmYmJmMjQiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNhMTYyMDciLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgcng9IjMwIiBmaWxsPSJ1cmwoI2cpIi8+PGNpcmNsZSBjeD0iMTAwIiBjeT0iODgiIHI9IjM0IiBmaWxsPSIjZmZmZmZmIi8+PHBhdGggZD0iTTg4IDExOCBoMjQgdjE0IGExMiAxMiAwIDAgMSAtMjQgMCB6IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LC44NSkiLz48cGF0aCBkPSJNMTAwIDcwIGwtOCAxNiBoNyBsLTMgMTQgMTIgLTE4IGgtOCBsNSAtMTIgeiIgZmlsbD0iI2ExNjIwNyIvPjwvc3ZnPg==", "cable": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM4YjVjZjYiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1YjIxYjYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgcng9IjMwIiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTU1IDE0MCBDIDU1IDk1LCAxNDUgMTA1LCAxNDUgNjAiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIxMCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHJlY3QgeD0iMTMyIiB5PSIzNCIgd2lkdGg9IjI2IiBoZWlnaHQ9IjMwIiByeD0iNiIgZmlsbD0iI2ZmZmZmZiIvPjwvc3ZnPg=="};
+const QRS={"Customer QR \u2014 stashlo.com": "data:image/png;base64,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", "Merchant QR \u2014 /merchant": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAXIAAAFyCAIAAABnRsZeAAAHwElEQVR4nO3cQY4kNRBAURpxA8Se+5+KPeIMyRYJyULjb8JZ/d521FWurJovL0Lx9TzPTwCdn6cPAHwaWQFisgLEZAWIyQoQkxUgJitATFaAmKwAMVkBYrICxGQFiMkKEJMVICYrQExWgJisADFZAWKyAsR+2fnj3379PTrGLf7864/Fv577vHe+746dM7/xVN/t/8Ka2woQkxUgJitATFaAmKwAMVkBYrICxGQFiMkKENuasl07Nyu5485pyPWpdp7k+pXvfBo7dp7kG6eZd5z7vG4rQExWgJisADFZAWKyAsRkBYjJChCTFSAmK0Ds4JTt2nebaFw7N/35xqdx7rdx51Tx5/1fcFsBYrICxGQFiMkKEJMVICYrQExWgJisADFZAWJjU7ZvNLUJdcq56d6pueHP+47u5LYCxGQFiMkKEJMVICYrQExWgJisADFZAWKyAsRM2WZ25krX/zq1kXTqE009qzfu/b2T2woQkxUgJitATFaAmKwAMVkBYrICxGQFiMkKEBubsn3jROPOfOe5udK1O/fvTu2yvfNXd+epdritADFZAWKyAsRkBYjJChCTFSAmK0BMVoCYrACxg1O2UxOcdzq32/W7/e3a1JnXvtv/BbcVICYrQExWgJisADFZAWKyAsRkBYjJChCTFSC2NWX7eTs47/TG7a1Tc7Q73vic7+S2AsRkBYjJChCTFSAmK0BMVoCYrAAxWQFisgLEvp7nGXnjqVnJO3edrk2979obT3WnO7fk7pzKbQWIyQoQkxUgJitATFaAmKwAMVkBYrICxGQFiG3tst2Z8JuaZ71zx+qdE7pvnEie+kRr5+Zoz515h9sKEJMVICYrQExWgJisADFZAWKyAsRkBYjJChDbmrK9cwfnzvtOTbuec+dU8RufxtSk7Dnn3tdtBYjJChCTFSAmK0BMVoCYrAAxWQFisgLEZAWIfT3Pc+il75wsXLtzBvfO/axrb3xW57xxHn3nzG4rQExWgJisADFZAWKyAsRkBYjJChCTFSAmK0Bsa5ft2rl5x6mtolNnPmdq0+2ds7/nvt/P++Wsua0AMVkBYrICxGQFiMkKEJMVICYrQExWgJisALGDu2zXpra3rr1xb+janRuF3zhj7ZX/O7cVICYrQExWgJisADFZAWKyAsRkBYjJChCTFSB2cJftlKlJ2bWp7a1rd25v3XHnDt3Pmypec1sBYrICxGQFiMkKEJMVICYrQExWgJisADFZAWJju2zf6I2bbt84c7z2eROrb/xdrbmtADFZAWKyAsRkBYjJChCTFSAmK0BMVoCYrACxrV225/aGnpv/23lfM5r/NLUX9s5vYed9d5w78w63FSAmK0BMVoCYrAAxWQFisgLEZAWIyQoQkxUgtjVlu2NqBndqRvPOacipSdmpade1N06N7zh3ZrcVICYrQExWgJisADFZAWKyAsRkBYjJChCTFSA2NmV7bqJxys6pzn3eO2dDz53qu027nvtt7HBbAWKyAsRkBYjJChCTFSAmK0BMVoCYrAAxWQFiB6ds75zgXPtus79vfFZ3zqSe+z3f+btac1sBYrICxGQFiMkKEJMVICYrQExWgJisADFZAWJju2zXzk1h7piaWN0xtfl1asfquRncO7fk3rmd120FiMkKEJMVICYrQExWgJisADFZAWKyAsRkBYh9Pc/zw388NRu6NjUNeefE6tqdc7Sft3/3uz1ntxUgJitATFaAmKwAMVkBYrICxGQFiMkKEJMVIHZwynZqy+a5mdS1czOaOz5vvvPOGdwpU7O/a24rQExWgJisADFZAWKyAsRkBYjJChCTFSAmK0Dsl+kD/Ig7t9W+cUbznKmp4h137jk+9yTtsgVeQ1aAmKwAMVkBYrICxGQFiMkKEJMVICYrQGxsynZqB+e5mcXPO9UbP9Gd86xrnzef7bYCxGQFiMkKEJMVICYrQExWgJisADFZAWKyAsS+nueZPsNr3DkNeW6u9NxM6p3Pam1q0+3and+R2woQkxUgJitATFaAmKwAMVkBYrICxGQFiMkKENvaZTu1+/Oc9WThG2dDz73vG/fCTr3vGyd0d7itADFZAWKyAsRkBYjJChCTFSAmK0BMVoCYrACxrV22d+52XTt35jvnHd94Kk/jv7/vualiu2yBi8gKEJMVICYrQExWgJisADFZAWKyAsRkBYht7bLdced04Nq5acipp7HzvnfOK6/d+R3tuHOjsNsKEJMVICYrQExWgJisADFZAWKyAsRkBYjJChAbm7L9POdmcM/NDe+88tQn+rzNr+eme6eehtsKEJMVICYrQExWgJisADFZAWKyAsRkBYjJChAzZfs/mdoae25G85xzz+qcne9oau/vue/XbQWIyQoQkxUgJitATFaAmKwAMVkBYrICxGQFiI1N2U5NcO64c5713Fzp1Cu/8bexs4/2jZ93zW0FiMkKEJMVICYrQExWgJisADFZAWKyAsRkBYh9Pc/zw388tTf0nHPTrjsTulOn+m6vvPbGWdip6V63FSAmK0BMVoCYrAAxWQFisgLEZAWIyQoQkxUgtjVlC/BvbitATFaAmKwAMVkBYrICxGQFiMkKEJMVICYrQExWgJisADFZAWKyAsRkBYjJChCTFSAmK0BMVoCYrACxvwEJ/9c/E95N1gAAAABJRU5ErkJggg=="};
+let EL=[], SEL=-1, W=1240, H=1754, BG='#1e1b4b', HIST=[], SCALE=1, MMW=210, MMH=297;
+const stage=document.getElementById('stage');
+
+const TEMPLATES=[
+ {n:'A4 Poster',s:'210×297mm print',w:1240,h:1754,mw:210,mh:297,bg:'#1e1b4b',els:[
+   {t:'text',x:90,y:120,w:1060,txt:'BIG OFFER',size:130,weight:900,color:'#FBBF24',font:'sans'},
+   {t:'text',x:90,y:290,w:1060,txt:'This weekend only at your local shop',size:44,weight:600,color:'#c7d2fe',font:'sans'},
+   {t:'receipt',x:390,y:460,w:460,h:600},
+   {t:'text',x:90,y:1560,w:800,txt:'💜 Stashlo · stashlo.com',size:40,weight:800,color:'#ffffff',font:'mono'}]},
+ {n:'A5 Till Card',s:'148×210mm counter',w:874,h:1240,mw:148,mh:210,bg:'#1e1b4b',els:[
+   {t:'text',x:60,y:90,w:754,txt:'Collect points\non this purchase',size:72,weight:900,color:'#ffffff',font:'sans'},
+   {t:'img',x:262,y:380,w:350,h:350,src:Object.values(QRS)[0],label:'QR'},
+   {t:'text',x:60,y:800,w:754,txt:'📱 SCAN ME — free, no app store',size:40,weight:800,color:'#FBBF24',font:'sans'}]},
+ {n:'Instagram Post',s:'1080×1080',w:1080,h:1080,mw:0,mh:0,bg:'#FAF7F2',els:[
+   {t:'rect',x:60,y:60,w:960,h:960,fill:'#1e1b4b',r:40},
+   {t:'text',x:120,y:200,w:840,txt:'NEW IN\nTHE SHOP',size:110,weight:900,color:'#ffffff',font:'sans'},
+   {t:'text',x:120,y:860,w:840,txt:'💜 stashlo.com',size:44,weight:800,color:'#FBBF24',font:'mono'}]},
+ {n:'Story / Status',s:'1080×1920',w:1080,h:1920,mw:0,mh:0,bg:'#1e1b4b',els:[
+   {t:'text',x:80,y:220,w:920,txt:'TODAY\nONLY',size:170,weight:900,color:'#FBBF24',font:'sans'},
+   {t:'circle',x:340,y:760,w:400,h:400,fill:'#6366F1'},
+   {t:'text',x:340,y:900,w:400,txt:'20% OFF',size:70,weight:900,color:'#fff',font:'sans',align:'center'}]},
+ {n:'Price Tag',s:'800×500 shelf',w:800,h:500,mw:0,mh:0,bg:'#FAF7F2',els:[
+   {t:'text',x:50,y:50,w:700,txt:'Coca-Cola 500ml',size:52,weight:800,color:'#14121F',font:'sans'},
+   {t:'text',x:50,y:170,w:700,txt:'£1.50',size:170,weight:900,color:'#1e1b4b',font:'sans'},
+   {t:'text',x:50,y:400,w:700,txt:'💎 earn 1 point at this shop',size:34,weight:700,color:'#6366F1',font:'sans'}]},
+ {n:'Offer Banner',s:'1200×400 web/WhatsApp',w:1200,h:400,mw:0,mh:0,bg:'#065f46',els:[
+   {t:'text',x:60,y:80,w:800,txt:'FRESH BREAD DAILY',size:80,weight:900,color:'#fff',font:'sans'},
+   {t:'text',x:60,y:220,w:800,txt:'baked 7am · points on every loaf',size:40,weight:600,color:'#a7f3d0',font:'sans'}]},
+ {n:'Blank A4',s:'start empty',w:1240,h:1754,mw:210,mh:297,bg:'#FAF7F2',els:[]}
+];
+
+function snap(){HIST.push(JSON.stringify({EL,BG,W,H}));if(HIST.length>50)HIST.shift();}
+function undo(){if(!HIST.length)return;const s=JSON.parse(HIST.pop());EL=s.EL;BG=s.BG;W=s.W;H=s.H;SEL=-1;render();}
+function fit(){const wr=document.getElementById('stage-wrap');SCALE=Math.min((wr.clientWidth-60)/W,(wr.clientHeight-60)/H,1);stage.style.transform='scale('+SCALE+')';}
+function setBG(c){snap();BG=c;render();}
+function loadTemplate(i){snap();const t=TEMPLATES[i];W=t.w;H=t.h;BG=t.bg;MMW=t.mw;MMH=t.mh;EL=JSON.parse(JSON.stringify(t.els));EL.forEach(e=>{e.x=e.x||0;e.y=e.y||0});SEL=-1;render();fit();}
+function addEl(e){snap();e.x=e.x??W/2-((e.w||100)/2);e.y=e.y??H/2-((e.h||100)/2);EL.push(e);SEL=EL.length-1;render();}
+function addText(){addEl({t:'text',w:Math.min(600,W-100),txt:'Double-click to edit',size:60,weight:800,color:BG==='#FAF7F2'?'#14121F':'#ffffff',font:'sans'});}
+function addReceipt(){addEl({t:'receipt',w:420,h:560});}
+function addImg(src,label){addEl({t:'img',w:300,h:300,src,label:label||'image'});}
+
+function render(){
+  stage.style.width=W+'px';stage.style.height=H+'px';stage.style.background=BG;
+  stage.innerHTML='';
+  EL.forEach((e,i)=>{
+    const d=document.createElement('div');d.className='el'+(i===SEL?' sel':'');d.dataset.i=i;
+    d.style.left=e.x+'px';d.style.top=e.y+'px';
+    if(e.t==='text'){
+      d.style.width=e.w+'px';
+      d.style.font=(e.weight||700)+' '+e.size+'px '+(e.font==='mono'?"ui-monospace,'Courier New',monospace":e.font==='serif'?'Georgia,serif':'-apple-system,Arial,sans-serif');
+      d.style.color=e.color;d.style.lineHeight=1.08;d.style.whiteSpace='pre-wrap';
+      d.style.textAlign=e.align||'left';
+      d.textContent=e.txt;
+    }else if(e.t==='rect'){d.style.width=e.w+'px';d.style.height=e.h+'px';d.style.background=e.fill;d.style.borderRadius=(e.r||0)+'px';}
+    else if(e.t==='circle'){d.style.width=e.w+'px';d.style.height=e.h+'px';d.style.background=e.fill;d.style.borderRadius='50%';}
+    else if(e.t==='img'){const im=document.createElement('img');im.src=e.src;im.style.width=e.w+'px';im.style.height=e.h+'px';im.style.objectFit='contain';im.draggable=false;d.appendChild(im);}
+    else if(e.t==='sticker'){d.style.fontSize=e.size+'px';d.textContent=e.ch;}
+    else if(e.t==='receipt'){
+      d.style.width=e.w+'px';d.style.height=e.h+'px';d.style.background='#FAF7F2';d.style.color='#14121F';
+      d.style.fontFamily="ui-monospace,'Courier New',monospace";d.style.fontSize=(e.w/16)+'px';d.style.padding=(e.w/12)+'px';
+      d.style.clipPath='polygon(0 0,100% 0,100% 96%,90% 100%,80% 96%,70% 100%,60% 96%,50% 100%,40% 96%,30% 100%,20% 96%,10% 100%,0 96%)';
+      d.innerHTML='<div style="text-align:center;font-weight:700;letter-spacing:.1em">YOUR SHOP<br>BRISTOL</div><hr style="border:0;border-top:1px dashed #cbc5bb;margin:8% 0"><div style="display:flex;justify-content:space-between"><span>Item</span><b>£1.45</b></div><div style="display:flex;justify-content:space-between"><span>Item</span><b>£2.30</b></div><div style="display:flex;justify-content:space-between"><span>TOTAL</span><b>£3.75</b></div><div style="margin-top:10%;text-align:center;font-weight:800;color:#166534;border:2px solid #166534;border-radius:8px;padding:4%;transform:rotate(-2deg)">+37 POINTS · SAVED FOREVER</div>';
+    }
+    const rz=document.createElement('div');rz.className='rz';d.appendChild(rz);
+    stage.appendChild(d);
+  });
+  renderLayers();renderProps();
+}
+function renderLayers(){
+  document.getElementById('layers').innerHTML=EL.map((e,i)=>'<div class="'+(i===SEL?'on':'')+'" onclick="SEL='+i+';render()">'+
+    (e.t==='text'?'🅣 '+e.txt.slice(0,16):e.t==='img'?'🖼 '+(e.label||'image'):e.t==='sticker'?e.ch:e.t==='receipt'?'🧾 receipt':(e.t==='rect'?'▭':'⬤')+' shape')+'</div>').reverse().join('');
+}
+function renderProps(){
+  const p=document.getElementById('props');const e=EL[SEL];
+  if(!e){p.innerHTML='<label>Nothing selected</label>';return}
+  let h='';
+  if(e.t==='text'){
+    h+='<label>Text</label><textarea rows=3 oninput="EL[SEL].txt=this.value;render()">'+e.txt+'</textarea>';
+    h+='<label>Size '+e.size+'px</label><input type=range min=16 max=260 value='+e.size+' oninput="EL[SEL].size=+this.value;render()">';
+    h+='<label>Colour</label><input type=color value='+e.color+' onchange="EL[SEL].color=this.value;render()">';
+    h+='<label>Font</label><select onchange="EL[SEL].font=this.value;render()"><option value=sans'+(e.font==='sans'?' selected':'')+'>Modern</option><option value=mono'+(e.font==='mono'?' selected':'')+'>Receipt mono</option><option value=serif'+(e.font==='serif'?' selected':'')+'>Serif</option></select>';
+    h+='<label>Weight</label><select onchange="EL[SEL].weight=+this.value;render()"><option value=400'+(e.weight===400?' selected':'')+'>Regular</option><option value=700'+(e.weight===700?' selected':'')+'>Bold</option><option value=900'+(e.weight===900?' selected':'')+'>Black</option></select>';
+  }
+  if(e.t==='rect'||e.t==='circle'){h+='<label>Fill</label><input type=color value='+e.fill+' onchange="EL[SEL].fill=this.value;render()">';
+    if(e.t==='rect')h+='<label>Corner '+(e.r||0)+'px</label><input type=range min=0 max=80 value='+(e.r||0)+' oninput="EL[SEL].r=+this.value;render()">';}
+  if(e.t==='sticker')h+='<label>Size '+e.size+'px</label><input type=range min=30 max=300 value='+e.size+' oninput="EL[SEL].size=+this.value;render()">';
+  p.innerHTML=h;
+}
+function layer(d){if(SEL<0)return;const j=SEL+d;if(j<0||j>=EL.length)return;snap();[EL[SEL],EL[j]]=[EL[j],EL[SEL]];SEL=j;render();}
+function dupe(){if(SEL<0)return;snap();const c=JSON.parse(JSON.stringify(EL[SEL]));c.x+=30;c.y+=30;EL.push(c);SEL=EL.length-1;render();}
+function delSel(){if(SEL<0)return;snap();EL.splice(SEL,1);SEL=-1;render();}
+
+let drag=null;
+stage.addEventListener('pointerdown',ev=>{
+  const el=ev.target.closest('.el');if(!el){SEL=-1;render();return}
+  SEL=+el.dataset.i;render();
+  const e=EL[SEL];
+  if(ev.target.classList.contains('rz')){drag={rz:true,sx:ev.clientX,sy:ev.clientY,w:e.w||100,h:e.h||100,size:e.size};}
+  else drag={sx:ev.clientX,sy:ev.clientY,x:e.x,y:e.y};
+  snap();
+});
+window.addEventListener('pointermove',ev=>{
+  if(!drag||SEL<0)return;const e=EL[SEL];
+  const dx=(ev.clientX-drag.sx)/SCALE, dy=(ev.clientY-drag.sy)/SCALE;
+  if(drag.rz){
+    if(e.t==='text'){e.size=Math.max(16,Math.round(drag.size+dx/2));}
+    else if(e.t==='sticker'){e.size=Math.max(30,Math.round(drag.size+dx));}
+    else{e.w=Math.max(30,Math.round(drag.w+dx));e.h=Math.max(30,Math.round(drag.h+dy));}
+  }else{e.x=Math.round(drag.x+dx);e.y=Math.round(drag.y+dy);}
+  render();
+});
+window.addEventListener('pointerup',()=>drag=null);
+stage.addEventListener('dblclick',ev=>{
+  const el=ev.target.closest('.el');if(!el)return;const e=EL[+el.dataset.i];
+  if(e.t==='text'){const t=prompt('Edit text:',e.txt);if(t!==null){snap();e.txt=t;render();}}
+});
+window.addEventListener('keydown',ev=>{
+  if((ev.key==='Delete'||ev.key==='Backspace')&&SEL>=0&&!/TEXTAREA|INPUT/.test(document.activeElement.tagName)){ev.preventDefault();delSel();}
+});
+
+function exportPNG(mult){
+  const c=document.createElement('canvas');c.width=W*mult;c.height=H*mult;
+  const g=c.getContext('2d');g.scale(mult,mult);
+  g.fillStyle=BG;g.fillRect(0,0,W,H);
+  const jobs=EL.map(e=>()=>new Promise(res=>{
+    if(e.t==='rect'){g.fillStyle=e.fill;rr(g,e.x,e.y,e.w,e.h,e.r||0);g.fill();res();}
+    else if(e.t==='circle'){g.fillStyle=e.fill;g.beginPath();g.ellipse(e.x+e.w/2,e.y+e.h/2,e.w/2,e.h/2,0,0,7);g.fill();res();}
+    else if(e.t==='text'){g.fillStyle=e.color;g.textBaseline='top';
+      g.font=(e.weight||700)+' '+e.size+'px '+(e.font==='mono'?'monospace':e.font==='serif'?'Georgia':'Arial');
+      const lines=e.txt.split('\n');lines.forEach((ln,li)=>{
+        let tx=e.x;if((e.align||'left')==='center')tx=e.x+e.w/2;
+        g.textAlign=e.align||'left';
+        g.fillText(ln,tx,e.y+li*e.size*1.08);});res();}
+    else if(e.t==='sticker'){g.font=e.size+'px serif';g.textBaseline='top';g.fillText(e.ch,e.x,e.y);res();}
+    else if(e.t==='img'){const im=new Image();im.onload=()=>{g.drawImage(im,e.x,e.y,e.w,e.h);res()};im.onerror=res;im.src=e.src;}
+    else if(e.t==='receipt'){
+      g.fillStyle='#FAF7F2';g.fillRect(e.x,e.y,e.w,e.h);
+      g.fillStyle='#14121F';g.textAlign='center';g.textBaseline='top';
+      g.font='700 '+(e.w/16)+'px monospace';
+      g.fillText('YOUR SHOP',e.x+e.w/2,e.y+e.w/12);
+      g.fillText('BRISTOL',e.x+e.w/2,e.y+e.w/12+e.w/14);
+      g.textAlign='left';g.font=(e.w/18)+'px monospace';
+      const rows=[['Item','£1.45'],['Item','£2.30'],['TOTAL','£3.75']];
+      rows.forEach((r2,ri)=>{g.fillText(r2[0],e.x+e.w/12,e.y+e.h*0.32+ri*e.w/10);
+        g.textAlign='right';g.fillText(r2[1],e.x+e.w-e.w/12,e.y+e.h*0.32+ri*e.w/10);g.textAlign='left';});
+      g.strokeStyle='#166534';g.lineWidth=3;g.strokeRect(e.x+e.w/10,e.y+e.h*0.7,e.w*0.8,e.h*0.14);
+      g.fillStyle='#166534';g.textAlign='center';g.font='800 '+(e.w/17)+'px monospace';
+      g.fillText('+37 POINTS',e.x+e.w/2,e.y+e.h*0.73);
+      g.fillText('SAVED FOREVER',e.x+e.w/2,e.y+e.h*0.78);
+      res();}
+    else res();
+  }));
+  jobs.reduce((p2,j)=>p2.then(j),Promise.resolve()).then(()=>{
+    const a=document.createElement('a');a.download='stashlo-design.png';a.href=c.toDataURL('image/png');a.click();
+    window._LAST_PNG=a.href;
+  });
+}
+function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+function printIt(){
+  const w=window.open('','_blank');if(!w){alert('Allow pop-ups to print');return}
+  exportPNGto(png=>{
+    const size=MMW?('size:'+MMW+'mm '+MMH+'mm;'):'';
+    w.document.write('<html><head><style>@page{'+size+'margin:0}body{margin:0}img{width:100%;display:block}</style></head><body><img src="'+png+'" onload="setTimeout(()=>print(),300)"></body></html>');
+    w.document.close();
+  });
+}
+function exportPNGto(cb){
+  const c=document.createElement('canvas');c.width=W*2;c.height=H*2;const g=c.getContext('2d');g.scale(2,2);
+  g.fillStyle=BG;g.fillRect(0,0,W,H);
+  exportPNG._silent=true;
+  // reuse exportPNG job pipeline quickly: simple approach - call exportPNG logic inline via same code path is complex; draw again:
+  const ev=EL.slice();let i=0;
+  (function next(){
+    if(i>=ev.length){cb(c.toDataURL('image/png'));return}
+    const e=ev[i++];
+    if(e.t==='img'){const im=new Image();im.onload=()=>{g.drawImage(im,e.x,e.y,e.w,e.h);next()};im.onerror=next;im.src=e.src;}
+    else{const tmp=EL;/*draw same as exportPNG for non-img*/
+      if(e.t==='rect'){g.fillStyle=e.fill;rr(g,e.x,e.y,e.w,e.h,e.r||0);g.fill();}
+      else if(e.t==='circle'){g.fillStyle=e.fill;g.beginPath();g.ellipse(e.x+e.w/2,e.y+e.h/2,e.w/2,e.h/2,0,0,7);g.fill();}
+      else if(e.t==='text'){g.fillStyle=e.color;g.textBaseline='top';g.font=(e.weight||700)+' '+e.size+'px '+(e.font==='mono'?'monospace':e.font==='serif'?'Georgia':'Arial');e.txt.split('\n').forEach((ln,li)=>{let tx=e.x;g.textAlign=e.align||'left';if((e.align||'left')==='center')tx=e.x+e.w/2;g.fillText(ln,tx,e.y+li*e.size*1.08);});}
+      else if(e.t==='sticker'){g.font=e.size+'px serif';g.textBaseline='top';g.fillText(e.ch,e.x,e.y);}
+      else if(e.t==='receipt'){g.fillStyle='#FAF7F2';g.fillRect(e.x,e.y,e.w,e.h);g.fillStyle='#14121F';g.textAlign='center';g.textBaseline='top';g.font='700 '+(e.w/16)+'px monospace';g.fillText('YOUR SHOP',e.x+e.w/2,e.y+e.w/12);}
+      next();}
+  })();
+}
+function saveProject(){
+  const data=JSON.stringify({EL,BG,W,H,MMW,MMH});
+  localStorage.setItem('stashlo_studio',data);
+  const a=document.createElement('a');a.download='stashlo-design.json';
+  a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.click();
+}
+function loadProject(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=()=>{const r=new FileReader();r.onload=()=>{try{const s=JSON.parse(r.result);EL=s.EL;BG=s.BG;W=s.W;H=s.H;MMW=s.MMW;MMH=s.MMH;SEL=-1;render();fit();}catch(e){alert('Not a Stashlo design file')}};r.readAsText(inp.files[0]);};
+  inp.click();
+}
+// boot
+document.getElementById('tpls').innerHTML=TEMPLATES.map((t,i)=>'<div class="tpl" onclick="loadTemplate('+i+')">'+t.n+'<small>'+t.s+'</small></div>').join('');
+document.getElementById('qrlist').innerHTML=Object.entries(QRS).map(([k,v])=>'<div class="tpl" onclick="addImg(QRS[\''+k+'\'],\''+k.split(' ')[0]+' QR\')"><img src="'+v+'" style="width:44px;border-radius:6px;vertical-align:middle"> '+k.split('—')[0]+'</div>').join('');
+document.getElementById('arts').innerHTML=Object.entries(ARTS).map(([k,v])=>'<img src="'+v+'" title="'+k+'" onclick="addImg(ARTS[\''+k+'\'],\''+k+'\')">').join('');
+document.getElementById('stickers').innerHTML=['💜','⭐','🔥','🎉','💷','🛒','☕','🥖','⛽','📱','💎','🎁'].map(c=>'<div onclick="addEl({t:\'sticker\',ch:\''+c+'\',size:90})">'+c+'</div>').join('');
+const saved=localStorage.getItem('stashlo_studio');
+if(saved){try{const s=JSON.parse(saved);EL=s.EL;BG=s.BG;W=s.W;H=s.H;MMW=s.MMW||210;MMH=s.MMH||297;}catch(e){loadTemplate(0)}}else loadTemplate(0);
+render();fit();window.addEventListener('resize',fit);
+</script></body></html>
