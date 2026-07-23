@@ -45,7 +45,7 @@ aside h4{font-size:10px;letter-spacing:.14em;color:#8b89b8;margin:12px 4px 6px;t
 <button class="tb d" onclick="undo()">↩ Undo</button>
 <button class="tb d" onclick="saveProject()">💾 Save</button>
 <button class="tb d" onclick="loadProject()">📂 Open</button>
-<button class="tb" onclick="exportPNG(2)">⬇ PNG</button>
+<button class="tb d" onclick="zoom(-.15)">−</button><button class="tb d" onclick="zoom(.15)">+</button><button class="tb d" onclick="exportGIF()">🎞 GIF</button><button class="tb" onclick="exportPNG(2)">⬇ PNG</button>
 <button class="tb g" onclick="printIt()">🖨 Print / PDF</button>
 </header>
 <main>
@@ -56,7 +56,7 @@ aside h4{font-size:10px;letter-spacing:.14em;color:#8b89b8;margin:12px 4px 6px;t
 <div class="tool" onclick="addText()"><span>🅣</span>Text</div>
 <div class="tool" onclick="addEl({t:'rect',w:200,h:120,fill:'#6366F1',r:16})"><span>▭</span>Box</div>
 <div class="tool" onclick="addEl({t:'circle',w:130,h:130,fill:'#FBBF24'})"><span>⬤</span>Circle</div>
-<div class="tool" onclick="addReceipt()"><span>🧾</span>Receipt</div>
+<div class="tool" onclick="addReceipt()"><span>🧾</span>Receipt</div><div class="tool" onclick="uploadImage()" style="grid-column:1/3"><span>📷</span>Your photo / logo</div>
 </div>
 <h4>Your QR codes</h4><div id="qrlist"></div>
 <h4>Product artwork</h4><div class="artgrid" id="arts"></div>
@@ -111,6 +111,18 @@ const TEMPLATES=[
  {n:'Offer Banner',s:'1200×400 web/WhatsApp',w:1200,h:400,mw:0,mh:0,bg:'#065f46',els:[
    {t:'text',x:60,y:80,w:800,txt:'FRESH BREAD DAILY',size:80,weight:900,color:'#fff',font:'sans'},
    {t:'text',x:60,y:220,w:800,txt:'baked 7am · points on every loaf',size:40,weight:600,color:'#a7f3d0',font:'sans'}]},
+ {n:'Opening Hours',s:'A4 door sign',w:1240,h:1754,mw:210,mh:297,bg:'#FAF7F2',els:[
+   {t:'text',x:90,y:110,w:1060,txt:'OPENING\nHOURS',size:150,weight:900,color:'#1e1b4b',font:'sans'},
+   {t:'text',x:90,y:520,w:1060,txt:'Mon–Fri   7am – 9pm\nSaturday  8am – 9pm\nSunday    9am – 6pm',size:64,weight:700,color:'#14121F',font:'mono'},
+   {t:'text',x:90,y:1560,w:1000,txt:'💜 collect points here · stashlo.com',size:42,weight:800,color:'#6366F1',font:'sans'}]},
+ {n:'We Deliver',s:'A4 window',w:1240,h:1754,mw:210,mh:297,bg:'#065f46',els:[
+   {t:'sticker',x:480,y:120,ch:'🛵',size:280},
+   {t:'text',x:90,y:480,w:1060,txt:'WE\nDELIVER',size:170,weight:900,color:'#ffffff',font:'sans'},
+   {t:'text',x:90,y:980,w:1060,txt:'order from your sofa —\ntrack the driver to your door',size:56,weight:600,color:'#a7f3d0',font:'sans'},
+   {t:'text',x:90,y:1560,w:1000,txt:'💜 stashlo.com',size:48,weight:800,color:'#FBBF24',font:'mono'}]},
+ {n:'Now Hiring',s:'A4 job ad',w:1240,h:1754,mw:210,mh:297,bg:'#1e1b4b',els:[
+   {t:'text',x:90,y:130,w:1060,txt:'NOW\nHIRING',size:180,weight:900,color:'#FBBF24',font:'sans'},
+   {t:'text',x:90,y:640,w:1060,txt:'Part-time · friendly team\nask at the counter or apply\non the Stashlo app',size:60,weight:600,color:'#c7d2fe',font:'sans'}]},
  {n:'Blank A4',s:'start empty',w:1240,h:1754,mw:210,mh:297,bg:'#FAF7F2',els:[]}
 ];
 
@@ -130,6 +142,9 @@ function render(){
   EL.forEach((e,i)=>{
     const d=document.createElement('div');d.className='el'+(i===SEL?' sel':'');d.dataset.i=i;
     d.style.left=e.x+'px';d.style.top=e.y+'px';
+    if(e.rot)d.style.transform='rotate('+e.rot+'deg)';
+    if(e.op!==undefined&&e.op<1)d.style.opacity=e.op;
+    if(e.shadow)d.style.filter='drop-shadow(0 8px 18px rgba(0,0,0,.45))';
     if(e.t==='text'){
       d.style.width=e.w+'px';
       d.style.font=(e.weight||700)+' '+e.size+'px '+(e.font==='mono'?"ui-monospace,'Courier New',monospace":e.font==='serif'?'Georgia,serif':'-apple-system,Arial,sans-serif');
@@ -168,7 +183,11 @@ function renderProps(){
   }
   if(e.t==='rect'||e.t==='circle'){h+='<label>Fill</label><input type=color value='+e.fill+' onchange="EL[SEL].fill=this.value;render()">';
     if(e.t==='rect')h+='<label>Corner '+(e.r||0)+'px</label><input type=range min=0 max=80 value='+(e.r||0)+' oninput="EL[SEL].r=+this.value;render()">';}
-  if(e.t==='sticker')h+='<label>Size '+e.size+'px</label><input type=range min=30 max=300 value='+e.size+' oninput="EL[SEL].size=+this.value;render()">';
+  h+='<label>Rotate '+(e.rot||0)+'°</label><input type=range min=-180 max=180 value='+(e.rot||0)+' oninput="EL[SEL].rot=+this.value;render()">';
+  h+='<label>Opacity</label><input type=range min=10 max=100 value='+Math.round((e.op??1)*100)+' oninput="EL[SEL].op=+this.value/100;render()">';
+  h+='<label><input type=checkbox '+(e.shadow?'checked':'')+' onchange="EL[SEL].shadow=this.checked;render()"> Drop shadow</label>';
+  h+='<div class="rowbtns"><button onclick="alignEl(\'h\')">↔ Centre</button><button onclick="alignEl(\'v\')">↕ Middle</button></div>';
+  if(e.t==='sticker')h+='<label>Size ' +e.size+'px</label><input type=range min=30 max=300 value='+e.size+' oninput="EL[SEL].size=+this.value;render()">';
   p.innerHTML=h;
 }
 function layer(d){if(SEL<0)return;const j=SEL+d;if(j<0||j>=EL.length)return;snap();[EL[SEL],EL[j]]=[EL[j],EL[SEL]];SEL=j;render();}
@@ -191,10 +210,17 @@ window.addEventListener('pointermove',ev=>{
     if(e.t==='text'){e.size=Math.max(16,Math.round(drag.size+dx/2));}
     else if(e.t==='sticker'){e.size=Math.max(30,Math.round(drag.size+dx));}
     else{e.w=Math.max(30,Math.round(drag.w+dx));e.h=Math.max(30,Math.round(drag.h+dy));}
-  }else{e.x=Math.round(drag.x+dx);e.y=Math.round(drag.y+dy);}
+  }else{
+    e.x=Math.round(drag.x+dx);e.y=Math.round(drag.y+dy);
+    const w=e.w||(e.t==='sticker'?e.size:100), hh=e.h||(e.t==='sticker'?e.size:(e.t==='text'?e.size*1.2:100));
+    const cx=W/2-w/2, cy=H/2-hh/2; let snapOn=false;
+    if(Math.abs(e.x-cx)<14){e.x=Math.round(cx);snapOn=true}
+    if(Math.abs(e.y-cy)<14){e.y=Math.round(cy);snapOn=true}
+    render(); drawGuides(snapOn); return;
+  }
   render();
 });
-window.addEventListener('pointerup',()=>drag=null);
+window.addEventListener('pointerup',()=>{drag=null;drawGuides(false);});
 stage.addEventListener('dblclick',ev=>{
   const el=ev.target.closest('.el');if(!el)return;const e=EL[+el.dataset.i];
   if(e.t==='text'){const t=prompt('Edit text:',e.txt);if(t!==null){snap();e.txt=t;render();}}
@@ -203,11 +229,43 @@ window.addEventListener('keydown',ev=>{
   if((ev.key==='Delete'||ev.key==='Backspace')&&SEL>=0&&!/TEXTAREA|INPUT/.test(document.activeElement.tagName)){ev.preventDefault();delSel();}
 });
 
+
+function alignEl(dir){if(SEL<0)return;const e=EL[SEL];snap();
+  const w=e.w||(e.t==='sticker'?e.size:100), hh=e.h||(e.t==='sticker'?e.size:(e.t==='text'?e.size*1.2:100));
+  if(dir==='h')e.x=Math.round((W-w)/2); else e.y=Math.round((H-hh)/2);
+  render();}
+function uploadImage(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=()=>{const f=inp.files[0];if(!f)return;
+    if(f.size>4*1024*1024){alert('Max 4MB');return}
+    const r=new FileReader();
+    r.onload=()=>{const im=new Image();im.onload=()=>{
+      const maxW=Math.min(500,W*.6), sc=Math.min(1,maxW/im.width);
+      addImg(r.result,f.name.slice(0,14)); const e=EL[EL.length-1];
+      e.w=Math.round(im.width*sc); e.h=Math.round(im.height*sc); render();
+    };im.src=r.result;};
+    r.readAsDataURL(f);};
+  inp.click();}
+function zoom(d){SCALE=Math.max(.1,Math.min(2,SCALE+d));stage.style.transform='scale('+SCALE+')';}
+// ── SNAP GUIDES: centre lines while dragging ──
+function drawGuides(on){
+  let g=document.getElementById('guides');
+  if(!on){if(g)g.remove();return}
+  if(!g){g=document.createElement('div');g.id='guides';g.style.cssText='position:absolute;inset:0;pointer-events:none';
+    g.innerHTML='<div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:#FBBF24"></div><div style="position:absolute;top:50%;left:0;right:0;height:1px;background:#FBBF24"></div>';
+    stage.appendChild(g);}
+}
 function exportPNG(mult){
   const c=document.createElement('canvas');c.width=W*mult;c.height=H*mult;
   const g=c.getContext('2d');g.scale(mult,mult);
   g.fillStyle=BG;g.fillRect(0,0,W,H);
   const jobs=EL.map(e=>()=>new Promise(res=>{
+    const w=e.w||(e.t==='sticker'?e.size:100), hh=e.h||(e.t==='sticker'?e.size:(e.t==='text'?e.size*1.2:100));
+    g.save();
+    if(e.op!==undefined)g.globalAlpha=e.op;
+    if(e.shadow){g.shadowColor='rgba(0,0,0,.45)';g.shadowBlur=18;g.shadowOffsetY=8;}
+    if(e.rot){g.translate(e.x+w/2,e.y+hh/2);g.rotate(e.rot*Math.PI/180);g.translate(-(e.x+w/2),-(e.y+hh/2));}
+    const done=res; res=()=>{g.restore();done();};
     if(e.t==='rect'){g.fillStyle=e.fill;rr(g,e.x,e.y,e.w,e.h,e.r||0);g.fill();res();}
     else if(e.t==='circle'){g.fillStyle=e.fill;g.beginPath();g.ellipse(e.x+e.w/2,e.y+e.h/2,e.w/2,e.h/2,0,0,7);g.fill();res();}
     else if(e.t==='text'){g.fillStyle=e.color;g.textBaseline='top';
@@ -268,6 +326,72 @@ function exportPNGto(cb){
       next();}
   })();
 }
+
+function exportGIF(){
+  T_toast('Building GIF frames…');
+  const load=cb=>{
+    if(window.GIF)return cb();
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
+    s.onload=cb;
+    s.onerror=()=>alert('GIF export needs internet (loads one small library). PNG export works offline.');
+    document.head.appendChild(s);
+  };
+  load(()=>{
+    fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js').then(r=>r.text()).then(wk=>{
+      const workerBlob=URL.createObjectURL(new Blob([wk],{type:'application/javascript'}));
+      const scale=480/W, gw=480, gh=Math.round(H*scale);
+      const gifr=new GIF({workers:2,quality:12,width:gw,height:gh,workerScript:workerBlob});
+      const FR=14;
+      const draws=[];
+      for(let f=0;f<FR;f++){
+        const c=document.createElement('canvas');c.width=gw;c.height=gh;
+        const g2=c.getContext('2d');g2.scale(scale,scale);
+        g2.fillStyle=BG;g2.fillRect(0,0,W,H);
+        const t=f/(FR-1);
+        EL.forEach((e,i)=>{
+          const appear=Math.min(1,Math.max(0,(t*1.4)-(i/EL.length)*0.5)*3);
+          if(appear<=0)return;
+          g2.save();g2.globalAlpha=(e.op??1)*Math.min(1,appear);
+          const pop=1+(1-Math.min(1,appear))*0.25;
+          const w=e.w||(e.t==='sticker'?e.size:100), hh=e.h||(e.t==='sticker'?e.size:(e.t==='text'?e.size*1.2:100));
+          g2.translate(e.x+w/2,e.y+hh/2);g2.scale(pop,pop);if(e.rot)g2.rotate(e.rot*Math.PI/180);g2.translate(-(e.x+w/2),-(e.y+hh/2));
+          if(e.t==='rect'){g2.fillStyle=e.fill;rr(g2,e.x,e.y,e.w,e.h,e.r||0);g2.fill();}
+          else if(e.t==='circle'){g2.fillStyle=e.fill;g2.beginPath();g2.ellipse(e.x+e.w/2,e.y+e.h/2,e.w/2,e.h/2,0,0,7);g2.fill();}
+          else if(e.t==='text'){g2.fillStyle=e.color;g2.textBaseline='top';g2.font=(e.weight||700)+' '+e.size+'px '+(e.font==='mono'?'monospace':e.font==='serif'?'Georgia':'Arial');e.txt.split('\n').forEach((ln,li)=>{let tx=e.x;g2.textAlign=e.align||'left';if((e.align||'left')==='center')tx=e.x+e.w/2;g2.fillText(ln,tx,e.y+li*e.size*1.08);});}
+          else if(e.t==='sticker'){g2.font=e.size+'px serif';g2.textBaseline='top';g2.fillText(e.ch,e.x,e.y);}
+          else if(e.t==='img'&&e._el){g2.drawImage(e._el,e.x,e.y,e.w,e.h);}
+          else if(e.t==='receipt'){g2.fillStyle='#FAF7F2';g2.fillRect(e.x,e.y,e.w,e.h);g2.fillStyle='#14121F';g2.textAlign='center';g2.textBaseline='top';g2.font='700 '+(e.w/16)+'px monospace';g2.fillText('YOUR SHOP',e.x+e.w/2,e.y+e.w/12);}
+          g2.restore();
+        });
+        draws.push(c);
+      }
+      // preload imgs
+      const imgs=EL.filter(e=>e.t==='img');
+      Promise.all(imgs.map(e=>new Promise(res=>{const im=new Image();im.onload=()=>{e._el=im;res()};im.onerror=res;im.src=e.src;}))).then(()=>{
+        // redraw frames now imgs cached? simple approach: rebuild frames including imgs
+        draws.forEach((c,f)=>{
+          const g2=c.getContext('2d');
+          const t=f/(FR-1);
+          imgs.forEach((e)=>{
+            const i=EL.indexOf(e);
+            const appear=Math.min(1,Math.max(0,(t*1.4)-(i/EL.length)*0.5)*3);
+            if(appear<=0||!e._el)return;
+            g2.save();g2.scale(scale,scale);g2.globalAlpha=(e.op??1)*Math.min(1,appear);
+            g2.drawImage(e._el,e.x,e.y,e.w,e.h);g2.restore();
+          });
+          gifr.addFrame(c,{delay:f===FR-1?1200:70});
+        });
+        gifr.on('finished',blob=>{
+          const a=document.createElement('a');a.download='stashlo-animated.gif';a.href=URL.createObjectURL(blob);a.click();
+          T_toast('🎞 GIF saved — perfect for WhatsApp status');
+        });
+        gifr.render();
+      });
+    }).catch(()=>alert('GIF export needs internet. PNG works offline.'));
+  });
+}
+function T_toast(m){let t=document.getElementById('sl-toast');if(!t){t=document.createElement('div');t.id='sl-toast';t.style.cssText='position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#241f4d;border:1px solid #FBBF24;color:#fff;border-radius:12px;padding:10px 18px;font-size:13px;z-index:99';document.body.appendChild(t);}t.textContent=m;clearTimeout(t._h);t._h=setTimeout(()=>t.remove(),3500);}
 function saveProject(){
   const data=JSON.stringify({EL,BG,W,H,MMW,MMH});
   localStorage.setItem('stashlo_studio',data);
