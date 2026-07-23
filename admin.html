@@ -2376,9 +2376,10 @@ async function runSelfCheck(){
   for(const c of checks){out.push(await _scProbe(c[0],c[1],c[2]));}
   // storage bucket
   try{
-    const r=await fetch(SU+'/storage/v1/bucket/stashlo-images',{headers:{'apikey':SK,'Authorization':'Bearer '+SK}});
-    if(r.ok){const b=await r.json();out.push({name:'📸 storage bucket stashlo-images',ok:true,note:b.public?'exists & PUBLIC ✓':'exists but NOT public → set it Public or images will not display'});}
-    else out.push({name:'📸 storage bucket stashlo-images',ok:false,note:'BUCKET MISSING — SQL can NOT create buckets. Tap the green button below.',fix:'bucket',hint:'Supabase → Storage → New bucket → name: stashlo-images → tick Public. This is why photo uploads vanish.'});
+    const r=await fetch(SU+'/storage/v1/object/public/stashlo-images/__probe__');
+    const t=await r.text();
+    if(/bucket not found/i.test(t)) out.push({name:'📸 storage bucket stashlo-images',ok:false,note:'BUCKET truly missing (public URL says so)',fix:'bucket',hint:'Supabase → Storage → New bucket → stashlo-images → Public. Check spelling: all lowercase with hyphen.'});
+    else out.push({name:'📸 storage bucket stashlo-images',ok:true,note:'bucket EXISTS ✓ (public URL answers). If images still fail, ensure bucket is set PUBLIC.'});
   }catch(e){out.push({name:'📸 storage bucket',ok:false,note:String(e).slice(0,100)})}
   // offers values
   try{
