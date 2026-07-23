@@ -1290,6 +1290,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <div class="field"><label class="field-label">POS category</label><select id="p-cat" style="width:100%;padding:12px;border:2px solid var(--bg2);border-radius:var(--r12);font-size:14px"><option value="general">General</option><option value="grocery">Grocery</option><option value="crisps">Crisps & snacks</option><option value="juice">Juice & drinks</option><option value="alcohol">Alcohol</option><option value="vapes">Vapes</option><option value="tobacco">Tobacco</option><option value="cigarettes">Cigarettes</option><option value="car">Car accessories</option></select></div>
       <div class="field"><label class="field-label">Product Photo (optional — shown instead of the emoji)</label>
         <div style="display:flex;align-items:center;gap:10px">
+          <button type="button" onclick="removeProductPhoto()" id="p-photo-del" style="display:none;background:#7f1d1d;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:800;cursor:pointer;margin-right:6px">🗑 Remove photo</button>
           <div id="p-photo-preview" style="width:56px;height:56px;border-radius:12px;background:var(--bg2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><span id="p-photo-placeholder" style="font-size:22px">🖼️</span><img id="p-photo-img" style="display:none;width:100%;height:100%;object-fit:cover"></div>
           <label style="flex:1;text-align:center;padding:10px;background:var(--purple-bg);color:var(--purple);border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">📷 Upload photo<input type="file" accept="image/*" onchange="handleProductPhotoUpload(this)" style="display:none"></label>
         </div>
@@ -1596,6 +1597,7 @@ function openAddProd(){
   document.getElementById("p-image-url").value="";
   (function(){const e=document.getElementById("p-images");if(e){e.value="[]";mRenderGallery([]);}})();
   (function(){var img=document.getElementById("p-photo-img");var ph=document.getElementById("p-photo-placeholder");if(img){img.style.display="none";img.src="";}if(ph)ph.style.display="block";})();
+  (function(){var _pd=document.getElementById("p-photo-del");if(_pd)_pd.style.display=(document.getElementById("p-image-url")||{}).value?"inline-block":"none";})();
   document.getElementById("p-collect").checked=true;document.getElementById("p-delivery").checked=false;document.getElementById("p-active").checked=true;
   const pe=document.getElementById("p-err");if(pe)pe.style.display="none";
   // Adding a NEW product — use defaults, no existing product 'p' here (this was the bug)
@@ -2592,13 +2594,21 @@ async function handleProductPhotoUpload(input){
     const ext=(file.name.split(".").pop()||"jpg").toLowerCase();
     const name="products/"+MID+"/"+Date.now()+"."+ext;
     const res=await fetch(SU+"/storage/v1/object/stashlo-images/"+name,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+(TOK||SK),"Content-Type":file.type||"image/jpeg","x-upsert":"true"},body:file});
-    if(!res.ok)throw new Error("Upload failed");
+    if(!res.ok){const t=await res.text().catch(()=>"");throw new Error(res.status===404?"storage bucket \'stashlo-images\' does not exist — create it in Supabase → Storage (Public)":(res.status+" "+t.slice(0,80)));}
     const url=SU+"/storage/v1/object/public/stashlo-images/"+name;
     document.getElementById("p-image-url").value=url;
     const img=document.getElementById("p-photo-img");const ph=document.getElementById("p-photo-placeholder");
-    if(img){img.src=url;img.style.display="block";}if(ph)ph.style.display="none";
+    if(img){img.src=url;img.style.display="block";}if(ph)ph.style.display="none";var _pd=document.getElementById("p-photo-del");if(_pd)_pd.style.display="inline-block";
     T("✅ Photo added — tap Save Product to keep it","success");
   }catch(e){T("Upload failed: "+e.message,"error")}
+}
+
+function removeProductPhoto(){
+  var u=document.getElementById("p-image-url");if(u)u.value="";
+  var img=document.getElementById("p-photo-img");if(img){img.style.display="none";img.src="";}
+  var ph=document.getElementById("p-photo-placeholder");if(ph)ph.style.display="block";
+  var d=document.getElementById("p-photo-del");if(d)d.style.display="none";
+  T("Photo removed — Save Product to confirm","success");
 }
 async function handleLogoUpload(input){
   const file=input.files[0];if(!file)return;if(file.size>2*1024*1024){T("Max 2MB","error");return}
@@ -2607,7 +2617,7 @@ async function handleLogoUpload(input){
     const ext=file.name.split(".").pop().toLowerCase();
     const name="merchants/"+MID+"/logo."+ext;
     const res=await fetch(SU+"/storage/v1/object/stashlo-images/"+name,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+(TOK||SK),"Content-Type":file.type||"image/jpeg","x-upsert":"true"},body:file});
-    if(!res.ok)throw new Error("Upload failed");
+    if(!res.ok){const t=await res.text().catch(()=>"");throw new Error(res.status===404?"storage bucket \'stashlo-images\' does not exist — create it in Supabase → Storage (Public)":(res.status+" "+t.slice(0,80)));}
     const url=SU+"/storage/v1/object/public/stashlo-images/"+name;
     await pat("merchants","id=eq."+MID,{logo_url:url});
     const img=document.getElementById("logo-img-preview");const emo=document.getElementById("logo-emoji-preview");
@@ -3228,7 +3238,7 @@ function renderPOSGrid(){
     var isVape=(p.pos_category||'').toLowerCase().includes('vape')||(p.name||'').toLowerCase().includes('vape')||(p.name||'').toLowerCase().includes('tobacco')||(p.pos_category||'').toLowerCase().includes('tobacco');
     var smokeHtml=isVape?'<div class="smoke-particle" style="animation-delay:0s"></div><div class="smoke-particle" style="animation-delay:.5s;left:55%"></div><div class="smoke-particle" style="animation-delay:1s;left:35%"></div>':'';
     return '<div class="sl-btn pos-card" style="opacity:'+(out?'.45':'1')+'" onclick="posAdd('+Q+p.id+Q+')">'
-      +'<div style="font-size:22px;position:relative">'+(p.emoji||'🛒')+smokeHtml+'</div>'
+      +'<div style="font-size:22px;position:relative">'+(p.image_url?('<img src="'+p.image_url+'" style="width:36px;height:36px;border-radius:8px;object-fit:cover;vertical-align:middle">'):(p.emoji||'🛒'))+smokeHtml+'</div>'
       +'<div style="font-size:11px;font-weight:700;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'
       +'<div style="font-size:12px;font-weight:800;color:var(--purple);margin-top:2px">£'+Number(p.price||0).toFixed(2)+'</div>'
       +posStockBadge(p)+'</div>';
@@ -3800,6 +3810,17 @@ var SHOP_TYPES={
   ]}
 };
 function getShopType(){try{return localStorage.getItem('sl_shoptype_'+(MID||''))||'retail';}catch(e){return 'retail';}}
+
+function createShopType(){
+  var name=prompt('🏪 Name your shop type (e.g. Paper Shop):');if(!name)return;
+  var secs=prompt('Department buttons, comma separated:','Newspapers, Magazines, Stationery, Cards, Sweets, Drinks');
+  if(secs===null)return;
+  var cfg={label:'✎ '+name,depts:secs.split(',').map(function(s){return s.trim()}).filter(Boolean).map(function(s){return {k:s.toLowerCase().replace(/\W+/g,'_'),label:s,emoji:'🏷️'}})};
+  try{localStorage.setItem('sl_shopcustom_'+(MID||''),JSON.stringify(cfg));}catch(e){}
+  SHOP_TYPES.custom=cfg;
+  setShopType('custom');
+  T('✅ "'+name+'" saved — edit any time via ✎ Create my own type','success');
+}
 function setShopType(t){try{localStorage.setItem('sl_shoptype_'+(MID||''),t);}catch(e){} renderDeptTiles(); var lab=document.getElementById('pos-shoptype-lab'); if(lab&&SHOP_TYPES[t])lab.textContent=SHOP_TYPES[t].label;}
 function getCustomDepts(t){try{var c=JSON.parse(localStorage.getItem('sl_customdepts_'+(MID||'')+'_'+t)||'null');return c;}catch(e){return null;}}
 function renderDeptTiles(){
@@ -3817,7 +3838,10 @@ function renderDeptTiles(){
 function openShopTypePicker(){
   if(typeof slForm!=='function'){var m=document.getElementById('shopSelectorModal');if(m)m.classList.add('show');return;}
   var cur=getShopType();
+  try{var cust=JSON.parse(localStorage.getItem('sl_shopcustom_'+(MID||''))||'null');
+    if(cust&&cust.label)SHOP_TYPES.custom=cust;}catch(e){}
   var opts=Object.keys(SHOP_TYPES).map(function(k){return {v:k,label:SHOP_TYPES[k].label};});
+  opts.push({v:'__new',label:'✎ Create my own type…'});
   var html='<div style="display:grid;gap:8px">'+opts.map(function(o){
     return '<button onclick="setShopType('+String.fromCharCode(39)+o.v+String.fromCharCode(39)+');slClose();T('+String.fromCharCode(39)+'Shop type set'+String.fromCharCode(39)+','+String.fromCharCode(39)+'success'+String.fromCharCode(39)+')" style="padding:14px;border:2px solid '+(o.v===cur?'#6366F1':'#e2e8f0')+';background:'+(o.v===cur?'#eef2ff':'#fff')+';border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;text-align:left">'+o.label+(o.v===cur?' ✓':'')+'</button>';
   }).join('')+'</div>';
@@ -4288,7 +4312,7 @@ function scanCustomerQR(saleId){
 }
 
 /* FULLSCREEN long-range product scanner (hi-res, edge-to-edge) */
-function openPOSScanner(){
+function openPOSScanner(){if(location.protocol==='file:'){T('Camera needs the live site (https)','error');return}
   try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
   if(!('BarcodeDetector' in window)){openZXingScanner();return}
   var ov=document.createElement('div');ov.id='scan-ov';
