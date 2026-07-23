@@ -525,7 +525,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
 
   <!-- ORDERS SCREEN -->
   <div class="screen" id="orders-screen">
-    <div class="sh"><span class="sh-t">📦 Orders</span><button class="sh-btn" onclick="loadOrders()">🔄 Refresh</button></div>
+    <div class="sh"><span class="sh-t">📦 Orders</span><button class="sl-btn btn-xs" style="background:var(--ink);color:#fff;margin-left:auto" onclick="openDeletedChats()">🗂 Deleted chats</button><button class="sh-btn" onclick="loadOrders()">🔄 Refresh</button></div>
     <div id="orders-list"></div>
   </div>
 
@@ -638,6 +638,15 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Approve ONLY after the money is received (cash/bank). Activation credits the points instantly.</div>
       <div id="gcard-list"></div></div>
     <div class="ic" style="margin:0 16px"><div style="font-weight:800;margin-bottom:6px">🧾 All receipt claims (incl deleted)</div><div id="aclaims-list"></div></div>
+  </div>
+
+  <div class="screen" id="selfcheck-screen">
+    <div class="sh"><span class="sh-t">🩺 Database Self-Check</span></div>
+    <div class="ic" style="margin:0 16px 12px">
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Tests every table, column, setting and the image bucket against the REAL database — no guessing. If something fails, the exact error is shown.</div>
+      <button class="sl-btn btn-green" style="width:100%" onclick="runSelfCheck()">▶ Run all checks</button>
+    </div>
+    <div id="sc-results" style="padding:0 16px 20px"></div>
   </div>
 
   <div class="screen" id="wholesale-screen">
@@ -823,6 +832,10 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       <div onclick="switchTab('giftclaims')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:26px">🎁</div><div style="font-size:12px;font-weight:800;margin-top:4px">Gift Cards & Claims</div>
         <div style="font-size:11px;color:var(--ink3)" id="d-gift">—</div>
+      </div>
+      <div onclick="switchTab('selfcheck')" style="background:linear-gradient(135deg,#065f46,#10b981);color:#fff;border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
+        <div style="font-size:26px">🩺</div><div style="font-size:12px;font-weight:800;margin-top:4px">Self-Check</div>
+        <div style="font-size:11px;opacity:.85">test the database</div>
       </div>
       <div onclick="switchTab('wholesale')" style="background:var(--white);border-radius:var(--r16);padding:18px;text-align:center;cursor:pointer;box-shadow:var(--sh)">
         <div style="font-size:26px">🏬</div><div style="font-size:12px;font-weight:800;margin-top:4px">Wholesale</div>
@@ -1928,9 +1941,43 @@ function loadChats(){
   }).catch(()=>{})
 }
 
+
+// ═══ CHAT DELETE + 🗂 DELETED-CHATS FOLDER ═══
+function archiveOrderChat(orderId){
+  if(!confirm('Move this order chat to the Deleted folder?'))return;
+  spat('messages','order_id=eq.'+orderId,{deleted:true})
+    .then(()=>{T('🗂 Chat moved to Deleted','success');logAudit('chat_archive',String(orderId));var m=document.getElementById('chat-modal');if(m)m.classList.remove('open');})
+    .catch(e=>T('Failed — messages.deleted column missing? Run FIX_chat_archive.sql','error'));
+}
+function openDeletedChats(){
+  sget('messages','deleted=eq.true&order=created_at.desc&limit=500').then(d=>{
+    const rows=Array.isArray(d)?d:[];
+    const byOrder={};rows.forEach(r=>{(byOrder[r.order_id]=byOrder[r.order_id]||[]).push(r)});
+    const ids=Object.keys(byOrder);
+    var ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;z-index:1700;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px';
+    ov.innerHTML='<div style="background:var(--white);border-radius:18px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;padding:16px">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:10px"><b>🗂 Deleted chats ('+ids.length+')</b><button style="background:var(--bg2);border:none;border-radius:8px;width:30px;height:30px;cursor:pointer" onclick="this.closest(\'div[style*=fixed]\').remove()">✕</button></div>'
+      +(ids.length?ids.map(oid=>{
+        const list=byOrder[oid];
+        return '<div style="background:var(--bg);border-radius:12px;padding:10px;margin-bottom:8px">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">Order #'+oid+' · '+list.length+' messages</b>'
+          +'<span><button class="sl-btn btn-xs btn-green" onclick="restoreChat('+oid+')">↩</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="purgeChat('+oid+')">🗑 Forever</button></span></div>'
+          +'<div style="font-size:11px;color:var(--ink3);margin-top:6px;max-height:80px;overflow-y:auto">'
+          +list.slice(0,10).map(m2=>'<div><b>'+(m2.sender||'?')+':</b> '+String(m2.body||'').slice(0,60)+'</div>').join('')+'</div></div>';
+      }).join(''):'<div style="text-align:center;color:var(--ink3);padding:20px">Deleted folder is empty.</div>')
+      +'</div>';
+    document.body.appendChild(ov);
+    ov.onclick=e=>{if(e.target===ov)ov.remove()};
+  }).catch(()=>T('Run FIX_chat_archive.sql first','error'));
+}
+function restoreChat(oid){spat('messages','order_id=eq.'+oid,{deleted:false}).then(()=>{T('↩ Restored','success');document.querySelectorAll('div[style*="1700"]').forEach(x=>x.remove());openDeletedChats();});}
+function purgeChat(oid){if(!confirm('Delete order #'+oid+' chat PERMANENTLY? Cannot be undone.'))return;sdel('messages','order_id=eq.'+oid).then(()=>{T('Erased forever','success');logAudit('chat_purge',String(oid));document.querySelectorAll('div[style*="1700"]').forEach(x=>x.remove());openDeletedChats();}).catch(()=>T('Failed','error'));}
+
 function openOrderChat(orderId,name){
   CUR_CHAT_ORDER=orderId;CHAT_LAST=0;
   document.getElementById('chat-modal-title').textContent='💬 '+name;
+  (function(){var t=document.getElementById('chat-modal-title');if(t&&!document.getElementById('chat-del-btn')){var b=document.createElement('button');b.id='chat-del-btn';b.textContent='🗑';b.style.cssText='margin-left:8px;background:#7f1d1d;color:#fff;border:none;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12px';b.onclick=function(){archiveOrderChat(CUR_CHAT_ORDER)};t.parentNode.insertBefore(b,t.nextSibling);}})();
   openModal('chatModal');
   loadChatMsgs(orderId);
   stopChatPoll();
@@ -2120,14 +2167,14 @@ function loadOffers(){
 }
 function saveOffers(){
   const rows=[
-    {key:'welcome_discount',value:String(parseFloat(document.getElementById('set-welcome').value)||0)},
-    {key:'welcome_enabled',value:String(document.getElementById('set-welcome-on').checked)},
-    {key:'birthday_points',value:String(parseInt(document.getElementById('set-bday').value)||50)},
-    {key:'birthday_enabled',value:String(document.getElementById('set-bday-on').checked)}
+    {key:'welcome_discount',value:String(parseFloat((document.getElementById('set-welcome')||{}).value)||0)},
+    {key:'welcome_enabled',value:String(!!(document.getElementById('set-welcome-on')||{}).checked)},
+    {key:'birthday_points',value:String(parseInt((document.getElementById('set-bday')||{}).value)||50)},
+    {key:'birthday_enabled',value:String(!!(document.getElementById('set-bday-on')||{}).checked)}
   ];
   Promise.all(rows.map(r=>spost('app_settings',r,'key')))
     .then(()=>{T('👑 Offers saved — live for ALL users','success');logAudit('save_offers',JSON.stringify(rows));const el=document.getElementById('offers-status');if(el)el.innerHTML='<span style="color:var(--green)">✅ live</span>';})
-    .catch(()=>T('Failed — run the offers SQL (app_settings)','error'));
+    .catch(e=>{const msg=(e&&(e.message||e.hint))||JSON.stringify(e||{}).slice(0,120);T('Offers save failed: '+msg,'error');const el=document.getElementById('offers-status');if(el)el.innerHTML='<span style="color:var(--red)">'+msg.slice(0,60)+'</span>';});
 }
 function loadPromos(){
   sget('promo_codes','order=created_at.desc&limit=50').then(d=>{
@@ -2200,6 +2247,9 @@ function gcApprove(id){
     T('✅ Gift card '+code+' active — '+g.points+' pts credited','success');logAudit('giftcard_activate','£'+g.amount+' '+code);loadGiftClaims();
   }).catch(()=>T('Failed','error'));
 }
+
+function gcDisable(id){spat('gift_card_requests','id=eq.'+id,{status:'disabled'}).then(()=>{T('🚫 Gift card disabled','success');logAudit('giftcard_disable',String(id));loadGiftAdmin();}).catch(()=>T('Failed','error'));}
+function gcDelete(id){if(!confirm('Delete this gift card record permanently?'))return;sdel('gift_card_requests','id=eq.'+id).then(()=>{T('Deleted','success');logAudit('giftcard_delete',String(id));loadGiftAdmin();}).catch(()=>T('Failed','error'));}
 function gcReject(id){if(!confirm('Reject this gift card request?'))return;spat('gift_cards','id=eq.'+id,{status:'rejected',decided_at:Date.now()}).then(()=>loadGiftClaims()).catch(()=>T('Failed','error'));}
 function acSoftDel(id){spat('points_requests','id=eq.'+id,{status:'deleted'}).then(()=>{T('Claim deleted (restorable)','success');loadGiftClaims();}).catch(()=>T('Failed','error'));}
 function acRestore(id){spat('points_requests','id=eq.'+id,{status:'pending'}).then(()=>{T('↩ Restored to pending','success');loadGiftClaims();}).catch(()=>T('Failed','error'));}
@@ -2210,7 +2260,7 @@ function loadGiftAdmin(){
   sget('gift_card_requests','order=created_at.desc&limit=50').then(d=>{
     const el=document.getElementById('gcr-list');if(!el)return;
     const rows=Array.isArray(d)?d:[];
-    el.innerHTML=rows.length?rows.map(r=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;margin-bottom:6px"><span><b>£'+r.amount+'</b> ('+r.points+' pts) · '+(r.user_name||r.user_id.slice(0,8))+' · '+(r.pay_ref||'')+' · '+r.status+'</span>'+(r.status==='pending'?'<span><button class="sl-btn btn-xs btn-green" onclick="gcApprove('+r.id+')">✅ Paid</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="gcReject('+r.id+')">✕</button></span>':'')+'</div>').join(''):'<div style="color:var(--ink3);font-size:12px">No gift card requests.</div>';
+    el.innerHTML=rows.length?rows.map(r=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:8px;margin-bottom:6px"><span><b>£'+r.amount+'</b> ('+r.points+' pts) · '+(r.user_name||r.user_id.slice(0,8))+' · '+(r.pay_ref||'')+' · '+r.status+(r.code?' · <b>'+r.code+'</b>':'')+'</span>'+(r.status!=='pending'?'<span><button class="sl-btn btn-xs" style="background:#374151;color:#fff" onclick="gcDisable('+r.id+')">🚫</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="gcDelete('+r.id+')">🗑</button></span>':'')+(r.status==='pending'?'<span><button class="sl-btn btn-xs btn-green" onclick="gcApprove('+r.id+')">✅ Paid</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="gcReject('+r.id+')">✕</button></span>':'')+'</div>').join(''):'<div style="color:var(--ink3);font-size:12px">No gift card requests.</div>';
     window._GCR=rows;
   }).catch(()=>{const el=document.getElementById('gcr-list');if(el)el.innerHTML='<div style="color:var(--red);font-size:12px">Run add_giftcards.sql</div>';});
 }
@@ -2220,8 +2270,9 @@ function gcApprove(id){
   sget('cards','user_id=eq.'+r.user_id+'&order=added_at.asc&limit=1').then(cs=>{
     const c=Array.isArray(cs)&&cs[0];
     if(!c){T('User has no card to credit','error');return}
+    const code='GC-'+Math.random().toString(36).slice(2,8).toUpperCase();
     spat('cards','user_id=eq.'+r.user_id+'&card_id=eq.'+c.card_id,{points:(c.points||0)+r.points}).then(()=>{
-      spat('gift_card_requests','id=eq.'+id,{status:'approved',decided_at:Date.now()});
+      spat('gift_card_requests','id=eq.'+id,{status:'approved',code:code,decided_at:Date.now()}).catch(()=>spat('gift_card_requests','id=eq.'+id,{status:'approved',decided_at:Date.now()}));
       T('✅ '+r.points+' pts credited','success');logAudit('giftcard_approve','£'+r.amount);loadGiftAdmin();
     });
   }).catch(()=>T('Failed','error'));
@@ -2237,6 +2288,74 @@ function loadClaimsAdmin(){
 }
 function aclRestore(id){spat('points_requests','id=eq.'+id,{status:'pending'}).then(()=>{T('↩ Restored to pending','success');logAudit('claim_restore',String(id));loadClaimsAdmin();}).catch(()=>T('Failed','error'));}
 function aclDelete(id){if(!confirm('Erase this claim PERMANENTLY?'))return;sdel('points_requests','id=eq.'+id).then(()=>{T('Erased','success');logAudit('claim_erase',String(id));loadClaimsAdmin();}).catch(()=>T('Failed','error'));}
+
+
+// ═══ 🩺 SELF-CHECK: probe the real DB with the service key ═══
+async function _scProbe(name, table, cols){
+  try{
+    const r=await fetch(SU+'/rest/v1/'+table+'?select='+(cols||'*')+'&limit=1',{headers:HS()});
+    const t=await r.text();
+    if(r.ok)return {name,ok:true,note:(JSON.parse(t).length?'has data':'empty (fine)')};
+    let msg=t.slice(0,160);
+    try{const j=JSON.parse(t);msg=j.message||msg;}catch(e){}
+    const hint=/schema cache/i.test(msg)
+      ? '🔄 RELOAD SCHEMA CACHE — Supabase → Settings → API → "Reload schema cache" button. The table may already exist; Supabase just hasn\'t noticed. This is the #1 cause of \'still shows run SQL\'.'
+      : (/relation .* does not exist/i.test(msg)
+        ? 'TABLE MISSING → run STASHLO_ONE_SQL_ALL.sql'
+        : (/column .* does not exist|Could not find the .* column/i.test(msg)
+          ? 'COLUMN MISSING → re-run STASHLO_ONE_SQL_ALL.sql, then Reload schema cache'
+          : ''));
+    return {name,ok:false,note:msg,hint};
+  }catch(e){return {name,ok:false,note:String(e).slice(0,120)}}
+}
+async function runSelfCheck(){
+  const el=document.getElementById('sc-results');
+  el.innerHTML='<div class="ic">Running… (10–15 seconds)</div>';
+  const checks=[
+    ['users (dob column)','users','id,dob'],
+    ['merchants','merchants','id,name,lat,lng'],
+    ['cards','cards','user_id,card_id,points'],
+    ['merchant_customers','merchant_customers','merchant_id,points'],
+    ['products (quick, barcode, image)','products','id,quick,barcode,image_url'],
+    ['stashlo_products','stashlo_products','id,image_url'],
+    ['orders (promo/driver cols)','orders','id,promo_code,welcome_off,driver_id,driver_lat,points_used'],
+    ['receipts','receipts','id,points_awarded'],
+    ['pos_sales','pos_sales','id,total,vat_total,refund'],
+    ['points_requests (claims)','points_requests','id,status'],
+    ['promo_codes (kind + amount)','promo_codes','code,kind,amount,active,used_count'],
+    ['promo_redemptions','promo_redemptions','user_id,code'],
+    ['app_settings','app_settings','key,value'],
+    ['gift_card_requests','gift_card_requests','id,status,amount,points'],
+    ['drivers','drivers','id,status'],
+    ['wholesale_products','wholesale_products','id,trade_price'],
+    ['wholesale_orders','wholesale_orders','id,status'],
+    ['till_imports (other-till tax)','till_imports','id,day,gross'],
+    ['jobs','jobs','id,active'],
+    ['job_unlocks','job_unlocks','id,status'],
+    ['website_requests','website_requests','id,status'],
+    ['messages (order chat)','messages','id,order_id'],
+    ['broadcasts','broadcasts','id'],
+    ['collection_points','collection_points','id,active']
+  ];
+  const out=[];
+  for(const c of checks){out.push(await _scProbe(c[0],c[1],c[2]));}
+  // storage bucket
+  try{
+    const r=await fetch(SU+'/storage/v1/bucket/stashlo-images',{headers:{'apikey':SK,'Authorization':'Bearer '+SK}});
+    if(r.ok){const b=await r.json();out.push({name:'📸 storage bucket stashlo-images',ok:true,note:b.public?'exists & PUBLIC ✓':'exists but NOT public → set it Public or images will not display'});}
+    else out.push({name:'📸 storage bucket stashlo-images',ok:false,note:'BUCKET MISSING',hint:'Supabase → Storage → New bucket → name: stashlo-images → tick Public. This is why photo uploads vanish.'});
+  }catch(e){out.push({name:'📸 storage bucket',ok:false,note:String(e).slice(0,100)})}
+  // offers values
+  try{
+    const r=await fetch(SU+'/rest/v1/app_settings?select=key,value',{headers:HS()});
+    if(r.ok){const s={};(await r.json()).forEach(x=>s[x.key]=x.value);
+      out.push({name:'👑 offer values',ok:true,note:'welcome £'+(s.welcome_discount||'?')+' ('+(s.welcome_enabled==='true'?'ON':'off')+') · birthday '+(s.birthday_points||'?')+'pts ('+(String(s.birthday_enabled)!=='false'?'ON':'off')+')'});}
+  }catch(e){}
+  const fails=out.filter(x=>!x.ok).length;
+  el.innerHTML='<div class="ic" style="margin-bottom:10px;background:'+(fails?'#7f1d1d':'#065f46')+';color:#fff"><b style="font-size:16px">'+(fails?('❌ '+fails+' problem'+(fails>1?'s':'')+' found'):'✅ ALL CHECKS PASSED')+'</b><div style="font-size:12px;opacity:.9;margin-top:4px">'+(fails?'Fix what is listed below, then run again.':'Every table, column and the image bucket exist. If a feature still fails, the bug is in the app — tell Claude exactly what you tapped.')+'</div></div>'
+    + out.map(r=>'<div class="ic" style="margin-bottom:8px;display:flex;gap:10px;align-items:flex-start"><div style="font-size:18px">'+(r.ok?'✅':'❌')+'</div><div style="flex:1"><b style="font-size:13px">'+r.name+'</b><div style="font-size:11px;color:'+(r.ok?'var(--ink3)':'var(--red)')+';word-break:break-word">'+r.note+'</div>'+(r.hint?'<div style="font-size:11px;background:#fef3c7;color:#92400e;border-radius:8px;padding:6px 8px;margin-top:4px;font-weight:700">💡 '+r.hint+'</div>':'')+'</div></div>').join('');
+  logAudit('selfcheck',fails+' fails');
+}
 
 function loadWholesaleAdmin(){
   sget('wholesale_products','order=created_at.desc&limit=100').then(d=>{
