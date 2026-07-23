@@ -1066,7 +1066,7 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
   <div class="screen" id="pos-screen" style="overflow-y:auto">
     <div style="padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:center">
       <div style="font-size:18px;font-weight:800">🖥️ EPOS Till</div>
-      <button class="btn-xs btn-purple" onclick="posDayEnd()">📊 Day-End</button>
+      
     </div>
     <div id="pos-paywall" style="display:none;margin:12px 16px;background:linear-gradient(135deg,#1e1b4b,#4338ca);border-radius:18px;padding:22px;text-align:center">
       <div style="font-size:38px">🖥️</div>
@@ -1105,23 +1105,17 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
           <button class="btn btn-green" style="flex:1" onclick="posCheckout('cash')">💵 CASH</button>
           <button class="btn btn-purple" style="flex:1" onclick="posCheckout('card')">💳 CARD</button>
         </div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn" style="flex:1;background:var(--bg2)" onclick="posClear()">Clear basket</button>
-          <button id="pos-voice-btn" class="btn" style="flex:1;background:var(--purple);color:#fff" onclick="startPosVoice()">🎤 Voice till</button>
-          <button class="btn" style="flex:0 0 46px;background:var(--bg2)" onclick="posVoiceType()" title="Type the sale">⌨️</button>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn" style="flex:1;background:var(--bg2)" onclick="parkSale()">💾 Park</button>
-          <button class="btn" style="flex:1;background:var(--bg2)" onclick="showParked()">📂 Parked <span id="parked-n"></span></button>
-          <button class="btn" style="flex:1;background:var(--ink);color:#fff" onclick="zReport()">📊 Z-Report</button>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn" style="flex:1;background:var(--bg2)" onclick="exportSalesCSV('this')">📑 CSV this month</button>
-          <button class="btn" style="flex:1;background:var(--bg2)" onclick="exportSalesCSV('last')">📑 CSV last month</button>
+        <button id="pos-voice-btn" class="btn" style="width:100%;margin-top:8px;background:var(--purple);color:#fff;font-size:15px;padding:14px" onclick="startPosVoice()">🎤 Voice till</button>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px">
+          <button class="btn" style="background:var(--bg2);font-size:12px;padding:10px 4px" onclick="posVoiceType()">⌨️ Type sale</button>
+          <button class="btn" style="background:var(--bg2);font-size:12px;padding:10px 4px" onclick="parkSale()">💾 Park</button>
+          <button class="btn" style="background:var(--bg2);font-size:12px;padding:10px 4px" onclick="showParked()">📂 Parked <span id="parked-n"></span></button>
+          <button class="btn" style="background:var(--ink);color:#fff;font-size:12px;padding:10px 4px" onclick="zReport()">📊 Z-Report</button>
+          <button class="btn" style="background:var(--bg2);font-size:12px;padding:10px 4px" onclick="exportSalesCSV('this')">📑 Tax CSV</button>
+          <button class="btn" style="background:#7f1d1d;color:#fff;font-size:12px;padding:10px 4px" onclick="posClear()">🗑 Clear</button>
         </div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <input id="hw-scan" placeholder="🔌 Scanner / type barcode ⏎" style="flex:2;padding:11px;border:2px solid var(--purple);border-radius:12px;font-size:13px;font-weight:700" onkeydown="if(event.key==='Enter'){hwScanAdd(this.value);this.value='';}">
-          <button class="btn" style="flex:1;background:var(--bg2)" onclick="exportSalesCSV()">📑 HMRC CSV</button>
           <button class="btn" style="flex:1;background:var(--bg2)" onclick="bulkImportStock()">📦 Bulk add</button>
         </div>
       </div>
@@ -1186,7 +1180,11 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;position:fixed;inset:0;
       </div></div>
       <div style="margin:12px 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:13px;font-weight:800">🧾 Recent Transactions</div><button class="btn-xs btn-gray" onclick="loadPOSSales()">↻</button></div>
-        <input id="txn-search" placeholder="🔍 Search by ref, amount, date, time, or CASH/CARD" oninput="filterTxns()" style="width:100%;padding:10px 12px;border:2px solid var(--bg2);border-radius:10px;font-size:13px;margin-bottom:8px;box-sizing:border-box">
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input id="txn-date" type="date" onchange="txnByDate()" style="flex:1;padding:10px;border:2px solid var(--bg2);border-radius:10px;font-size:13px">
+          <button onclick="txnDateClear()" style="background:var(--bg2);border:none;border-radius:10px;padding:0 14px;font-weight:800;font-size:12px;cursor:pointer">All</button>
+        </div>
+        <input id="txn-search" placeholder="🔍 Search by ref, amount, time, or CASH/CARD" oninput="filterTxns()" style="width:100%;padding:10px 12px;border:2px solid var(--bg2);border-radius:10px;font-size:13px;margin-bottom:8px;box-sizing:border-box">
         <div id="pos-history" style="font-size:13px;color:var(--ink3)">Loading...</div>
       </div>
 
@@ -2906,6 +2904,24 @@ function cmComplete(){
   closeModal('cashModal');
   finalizeSale('cash');
 }
+
+// ===== DATE SEARCH: pick any day, even months back =====
+function txnByDate(){
+  var v=(document.getElementById('txn-date')||{}).value;if(!v)return;
+  var el=document.getElementById('pos-history');if(el)el.innerHTML='Loading '+v+'…';
+  var start=new Date(v+'T00:00:00').getTime(), end=start+86400000;
+  get('pos_sales','merchant_id=eq.'+MID+'&created_at=gte.'+start+'&created_at=lt.'+end+'&order=created_at.desc').then(function(d){
+    var s=Array.isArray(d)?d:[];
+    window._POS_HIST=s;
+    renderTxnList(s);
+    if(!s.length&&el)el.innerHTML='No sales on '+new Date(start).toLocaleDateString('en-GB')+'.';
+  }).catch(function(){if(el)el.innerHTML='Could not load that day';});
+}
+function txnDateClear(){
+  var i=document.getElementById('txn-date');if(i)i.value='';
+  loadPOSSales();
+}
+
 function loadPOSSales(){
   var el=document.getElementById('pos-history');if(!el)return;
   get('pos_sales','merchant_id=eq.'+MID+'&order=created_at.desc&limit=100').then(function(d){
@@ -3227,10 +3243,35 @@ function posAdd(pid){
   renderBasket();
 }
 function posScanAdd(q){
-  q=(q||'').trim().toLowerCase();if(!q)return;
-  const p=PRODUCTS.find(function(x){return (x.name||'').toLowerCase().indexOf(q)>=0||(x.barcode||'')===q});
-  document.getElementById('pos-scan').value='';
-  if(p)posAdd(p.id);else T('No product matching: '+q,'error');
+  q=(q||'').trim();if(!q)return;
+  var raw=q, ql=q.toLowerCase();
+  // 1) EXACT barcode match first (barcodes are case/space sensitive digits)
+  var p=PRODUCTS.find(function(x){return String(x.barcode||'').trim()===raw});
+  // 2) then name contains
+  if(!p)p=PRODUCTS.find(function(x){return (x.name||'').toLowerCase().indexOf(ql)>=0});
+  var inp=document.getElementById('pos-scan');if(inp)inp.value='';
+  if(p){posAdd(p.id);return}
+  // 3) unknown NUMERIC barcode -> offer to link it to a product (self-learning till)
+  if(/^[0-9]{6,}$/.test(raw)){
+    var name=prompt('🔗 New barcode '+raw+'\nType part of the product name to link it to:');
+    if(!name)return;
+    var cand=PRODUCTS.filter(function(x){return (x.name||'').toLowerCase().indexOf(name.toLowerCase())>=0});
+    if(!cand.length){T('No product named like "'+name+'" — add it in Products first','error');return}
+    var pick=cand[0];
+    if(cand.length>1){
+      var list=cand.slice(0,6).map(function(c,i){return (i+1)+') '+c.name}).join('\n');
+      var n=parseInt(prompt('Which one?\n'+list,'1'));
+      if(!(n>=1&&n<=cand.length))return;
+      pick=cand[n-1];
+    }
+    pat('products','id=eq.'+pick.id,{barcode:raw}).then(function(){
+      pick.barcode=raw;
+      T('🔗 Barcode linked to '+pick.name+' — added to basket','success');
+      posAdd(pick.id);
+    }).catch(function(){T('Could not save the barcode','error');});
+    return;
+  }
+  T('No product matching: '+raw,'error');
 }
 function posQty(pid,d){
   const b=POS_BASKET.find(function(x){return x.id===pid});if(!b)return;
