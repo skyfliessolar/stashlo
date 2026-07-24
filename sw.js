@@ -1,5 +1,5 @@
 // Stashlo Service Worker v24 - stashlo.com
-const CACHE = 'stashlo-v150';
+const CACHE = 'stashlo-v155';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE = [
   '/',
