@@ -2240,6 +2240,26 @@ function delPromo(code){
 
 
 
+
+// ═══ receipt-claim delete / restore (buttons existed, functions did not) ═══
+function acSoftDel(id){
+  if(!confirm('Move this claim to deleted?'))return;
+  spat('points_requests','id=eq.'+id,{status:'deleted'})
+    .then(()=>{T('🗑 Moved to deleted','success');logAudit('claim_soft_del',String(id));loadGiftClaims();})
+    .catch(e=>T('Failed: '+((e&&e.message)||'unknown'),'error'));
+}
+function acRestore(id){
+  spat('points_requests','id=eq.'+id,{status:'pending'})
+    .then(()=>{T('↩ Restored to pending','success');logAudit('claim_restore',String(id));loadGiftClaims();})
+    .catch(e=>T('Failed: '+((e&&e.message)||'unknown'),'error'));
+}
+function acHardDel(id){
+  if(!confirm('Delete this claim PERMANENTLY? Cannot be undone.'))return;
+  sdel('points_requests','id=eq.'+id)
+    .then(()=>{T('Deleted forever','success');logAudit('claim_hard_del',String(id));loadGiftClaims();})
+    .catch(e=>T('Failed: '+((e&&e.message)||'unknown'),'error'));
+}
+
 function loadGiftClaims(){
   sget('gift_cards','order=created_at.desc&limit=100').then(d=>{
     const rows=Array.isArray(d)?d:[];
@@ -2286,11 +2306,9 @@ function gcApprove(id,src){
   if(!confirm('Confirm £'+g.amount+' has been RECEIVED? This activates the card and credits '+g.points+' pts.'))return;
   const code='GC-'+Math.random().toString(36).slice(2,8).toUpperCase();
   spat('gift_cards','id=eq.'+id,{status:'active',code:code,decided_at:Date.now()}).then(()=>{
-    sget('cards','user_id=eq.'+g.user_id+'&order=added_at.asc&limit=1').then(cs=>{
-      const c=Array.isArray(cs)&&cs[0];
-      if(c)spat('cards','user_id=eq.'+g.user_id+'&card_id=eq.'+encodeURIComponent(c.card_id),{points:(c.points||0)+g.points}).catch(()=>{});
-    });
-    T('✅ Gift card '+code+' active — '+g.points+' pts credited','success');logAudit('giftcard_activate','£'+g.amount+' '+code);loadGiftClaims();
+    // NOTE: points are credited when the CODE is redeemed in the customer app — not here.
+    // Crediting at approval as well would hand out the value twice.
+    T('✅ Gift card '+code+' is active — give this code to the customer','success');logAudit('giftcard_activate','£'+g.amount+' '+code);loadGiftClaims();
   }).catch(()=>T('Failed','error'));
 }
 
@@ -2302,6 +2320,40 @@ function gcReject(id,src){
   spat(tbl,'id=eq.'+id,{status:'rejected',decided_at:Date.now()})
     .then(()=>{T('Rejected','success');logAudit('giftcard_reject',String(id));src==='r'?loadGiftAdmin():loadGiftClaims();})
     .catch(()=>T('Failed','error'));
+}
+
+
+// ═══ gift_card_requests panel (customer app posts here) — was referenced but never defined ═══
+function loadGiftAdmin(){
+  var host=document.getElementById('gcr-list');
+  if(!host){
+    var anchor=document.getElementById('gcard-list');
+    if(!anchor)return;
+    var wrap=document.createElement('div');
+    wrap.style.cssText='margin-top:12px';
+    wrap.innerHTML='<div style="font-weight:800;margin-bottom:6px;font-size:13px">🎁 Gift card requests (bought in app)</div><div id="gcr-list"></div>';
+    anchor.parentNode.appendChild(wrap);
+    host=document.getElementById('gcr-list');
+  }
+  sget('gift_card_requests','order=created_at.desc&limit=100').then(function(d){
+    var rows=Array.isArray(d)?d:[];
+    window._GCR=rows;
+    host.innerHTML=rows.length?rows.map(function(r){
+      var st=r.status||'pending';
+      var col=st==='approved'?'var(--green)':(st==='rejected'||st==='disabled'?'var(--red)':'var(--ink3)');
+      return '<div style="padding:9px 10px;background:var(--bg);border-radius:10px;margin-bottom:6px;font-size:12px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center">'
+        +'<span><b>£'+parseFloat(r.amount||0).toFixed(2)+'</b> · '+(r.points||0)+' pts</span>'
+        +'<span style="color:'+col+';font-weight:800">'+st+(r.code?' · '+r.code:'')+'</span></div>'
+        +'<div style="margin-top:6px">'
+        +(st==='pending'
+          ?'<button class="sl-btn btn-xs btn-green" onclick="gcApprove('+r.id+',\'r\')">✅ Approve</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="gcReject('+r.id+',\'r\')">✕ Reject</button>'
+          :'<button class="sl-btn btn-xs" style="background:#374151;color:#fff" onclick="gcDisable('+r.id+',\'r\')">🚫 Disable</button> <button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="gcDelete('+r.id+',\'r\')">🗑 Delete</button>')
+        +'</div></div>';
+    }).join(''):'<div style="font-size:12px;color:var(--ink3)">No gift card requests yet.</div>';
+  }).catch(function(e){
+    host.innerHTML='<div style="font-size:12px;color:var(--red)">Could not load: '+((e&&e.message)||'unknown')+'</div>';
+  });
 }
 
 function loadClaimsAdmin(){
@@ -3028,5 +3080,194 @@ try{
 })();
 </script>
 <div id="app-version-stamp" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:#94a3b8;z-index:5;pointer-events:none">Stashlo v138</div>
+<div style="text-align:center;font-size:11px;color:#9d9cc4;padding:10px 0 26px">Support: <a href="mailto:admin@stashlo.com" style="color:#6366F1">admin@stashlo.com</a></div>
+<script>
+/* ═══════════ STASHLO UX STATE LAYER (SLUX) ═══════════
+   Offline · Slow network · Session expired · Error recovery · Empty states
+   Additive only — observes fetch, never changes its result.            */
+(function(){
+  if (window.SLUX) return;
+  var SLUX = window.SLUX = { online: navigator.onLine !== false, pending: 0 };
+
+  // ---------- banner ----------
+  function bar(){
+    var b = document.getElementById('slux-bar');
+    if (!b) {
+      b = document.createElement('div');
+      b.id = 'slux-bar';
+      b.setAttribute('role','status');
+      b.setAttribute('aria-live','polite');
+      b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99999;padding:9px 14px;'
+        + 'font:600 13px -apple-system,Segoe UI,Roboto,Arial;text-align:center;color:#fff;'
+        + 'transform:translateY(-100%);transition:transform .25s ease;padding-top:calc(9px + env(safe-area-inset-top,0px))';
+      document.body.appendChild(b);
+    }
+    return b;
+  }
+  function show(msg, colour){
+    var b = bar();
+    b.textContent = msg;
+    b.style.background = colour;
+    b.style.transform = 'translateY(0)';
+  }
+  function hide(){ var b = document.getElementById('slux-bar'); if (b) b.style.transform = 'translateY(-100%)'; }
+  SLUX.banner = show; SLUX.hideBanner = hide;
+
+  // ---------- offline / online ----------
+  function goOffline(){
+    if (!SLUX.online) return;
+    SLUX.online = false;
+    show('📴 No internet — your work is saved and will sync when you reconnect', '#b45309');
+  }
+  function goOnline(){
+    if (SLUX.online) return;
+    SLUX.online = true;
+    show('✅ Back online — syncing', '#166534');
+    setTimeout(hide, 2600);
+  }
+  window.addEventListener('offline', goOffline);
+  window.addEventListener('online', goOnline);
+  if (navigator.onLine === false) goOffline();
+
+  // ---------- session expired ----------
+  var sessionShown = false;
+  SLUX.sessionExpired = function(){
+    if (sessionShown) return;
+    sessionShown = true;
+    var ov = document.createElement('div');
+    ov.id = 'slux-session';
+    ov.setAttribute('role','alertdialog');
+    ov.setAttribute('aria-label','Session expired');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(15,13,35,.72);display:flex;align-items:center;justify-content:center;padding:22px';
+    ov.innerHTML = '<div style="background:#fff;border-radius:18px;max-width:340px;width:100%;padding:22px;text-align:center;font-family:-apple-system,Segoe UI,Roboto,Arial">'
+      + '<div style="font-size:34px">🔑</div>'
+      + '<div style="font-size:17px;font-weight:800;color:#14121F;margin-top:8px">Please sign in again</div>'
+      + '<div style="font-size:13px;color:#5a5772;margin-top:8px;line-height:1.5">Your session timed out for security. Nothing has been lost.</div>'
+      + '<button id="slux-relogin" style="margin-top:16px;width:100%;background:#6366F1;color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;font-size:15px;cursor:pointer">Sign in</button>'
+      + '</div>';
+    document.body.appendChild(ov);
+    document.getElementById('slux-relogin').onclick = function(){ location.reload(); };
+  };
+
+  // ---------- observe fetch: slow network, offline, 401 ----------
+  var origFetch = window.fetch;
+  if (typeof origFetch === 'function' && !origFetch.__slux) {
+    var wrapped = function(){
+      var args = arguments;
+      var slowTimer = setTimeout(function(){
+        if (SLUX.online) show('🐌 Still working — the connection is slow', '#4338ca');
+      }, 5000);
+      SLUX.pending++;
+      return origFetch.apply(this, args).then(function(res){
+        clearTimeout(slowTimer); SLUX.pending--;
+        if (SLUX.pending <= 0) { SLUX.pending = 0; if (SLUX.online) hide(); }
+        if (res && res.status === 401) SLUX.sessionExpired();
+        if (res && res.status === 403 && typeof T === 'function') {
+          T('You do not have permission for that', 'error');
+        }
+        goOnline();
+        return res;
+      }).catch(function(err){
+        clearTimeout(slowTimer); SLUX.pending--;
+        if (SLUX.pending < 0) SLUX.pending = 0;
+        if (navigator.onLine === false) goOffline();
+        else show('⚠️ Connection problem — retrying will usually fix it', '#7f1d1d');
+        throw err;
+      });
+    };
+    wrapped.__slux = true;
+    window.fetch = wrapped;
+  }
+
+  // ---------- empty state helper ----------
+  SLUX.empty = function(el, icon, title, sub, actionLabel, actionFn){
+    if (!el) return;
+    var id = 'slux-act-' + Math.random().toString(36).slice(2,7);
+    el.innerHTML = '<div style="text-align:center;padding:34px 18px;color:#8a8598;font-family:-apple-system,Segoe UI,Roboto,Arial">'
+      + '<div style="font-size:38px;opacity:.75">' + (icon || '📭') + '</div>'
+      + '<div style="font-size:15px;font-weight:800;color:#5a5772;margin-top:8px">' + title + '</div>'
+      + (sub ? '<div style="font-size:12.5px;margin-top:5px;line-height:1.5">' + sub + '</div>' : '')
+      + (actionLabel ? '<button id="' + id + '" style="margin-top:14px;background:#6366F1;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-weight:800;font-size:13px;cursor:pointer">' + actionLabel + '</button>' : '')
+      + '</div>';
+    if (actionLabel && actionFn) { var btn = document.getElementById(id); if (btn) btn.onclick = actionFn; }
+  };
+
+  // ---------- error state with retry ----------
+  SLUX.errorState = function(el, message, retryFn){
+    if (!el) return;
+    var id = 'slux-retry-' + Math.random().toString(36).slice(2,7);
+    el.innerHTML = '<div style="text-align:center;padding:28px 18px;font-family:-apple-system,Segoe UI,Roboto,Arial">'
+      + '<div style="font-size:32px">⚠️</div>'
+      + '<div style="font-size:14px;font-weight:800;color:#7f1d1d;margin-top:8px">Could not load</div>'
+      + '<div style="font-size:12px;color:#8a8598;margin-top:5px;line-height:1.5">' + (message || 'Something went wrong.') + '</div>'
+      + '<button id="' + id + '" style="margin-top:14px;background:#6366F1;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-weight:800;font-size:13px;cursor:pointer">↻ Try again</button>'
+      + '</div>';
+    var btn = document.getElementById(id); if (btn && retryFn) btn.onclick = retryFn;
+  };
+
+  // ---------- loading skeleton ----------
+  SLUX.loading = function(el, rows){
+    if (!el) return;
+    var n = rows || 3, out = '';
+    for (var i = 0; i < n; i++) {
+      out += '<div style="height:56px;border-radius:12px;margin-bottom:8px;background:linear-gradient(90deg,#ece9f5 25%,#f7f5fb 40%,#ece9f5 55%);background-size:300% 100%;animation:slux-sh 1.1s infinite"></div>';
+    }
+    el.innerHTML = out + '<style>@keyframes slux-sh{to{background-position:-300% 0}}</style>';
+  };
+
+
+  // ═══ ACCESSIBILITY PASS — runs after render, safe & additive ═══
+  SLUX.a11y = function(){
+    try{
+      // 1) status messages announced to screen readers
+      document.querySelectorAll('[id*=toast],[class*=toast]').forEach(function(t){
+        if(!t.getAttribute('aria-live')){ t.setAttribute('aria-live','polite'); t.setAttribute('role','status'); }
+      });
+      // 2) label every control
+      document.querySelectorAll('input,select,textarea').forEach(function(i){
+        if(i.type==='hidden'||i.getAttribute('aria-label'))return;
+        var lab=i.getAttribute('placeholder');
+        if(!lab&&i.id){var l=document.querySelector('label[for="'+i.id+'"]'); if(l)lab=l.textContent;}
+        if(!lab&&i.closest('label'))return;
+        if(!lab){var prev=i.previousElementSibling; if(prev&&prev.textContent&&prev.textContent.trim().length<40)lab=prev.textContent;}
+        if(!lab)lab=(i.id||i.name||'input').replace(/[-_]/g,' ');
+        i.setAttribute('aria-label',String(lab).trim().slice(0,60));
+      });
+      // 3) images need alt (decorative ones get empty alt)
+      document.querySelectorAll('img:not([alt])').forEach(function(im){
+        im.setAttribute('alt', im.id||im.className? (im.id||'image').replace(/[-_]/g,' ') : '');
+      });
+      // 4) buttons: readable name + comfortable tap size
+      document.querySelectorAll('button,[onclick]').forEach(function(bt){
+        if(!bt.getAttribute('aria-label')&&!(bt.textContent||'').trim()){
+          bt.setAttribute('aria-label', bt.id? bt.id.replace(/[-_]/g,' ') : 'button');
+        }
+        bt.style.touchAction='manipulation';
+        var r=bt.getBoundingClientRect();
+        if(r.height>0&&r.height<40&&!bt.dataset.sluxTap){
+          bt.dataset.sluxTap='1';
+          bt.style.minHeight='40px';
+        }
+      });
+      // 5) modals announce themselves
+      document.querySelectorAll('[class*=modal],[id*=Modal]').forEach(function(m){
+        if(!m.getAttribute('role')){ m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true'); }
+      });
+    }catch(e){}
+  };
+  document.addEventListener('DOMContentLoaded',function(){ setTimeout(SLUX.a11y,900); });
+  setTimeout(SLUX.a11y,1600);
+  setInterval(SLUX.a11y,6000);   // covers dynamically rendered lists
+
+  // ---------- catch silent failures ----------
+  window.addEventListener('unhandledrejection', function(e){
+    var m = (e && e.reason && (e.reason.message || e.reason)) + '';
+    if (/fetch|network|load failed/i.test(m)) {
+      if (navigator.onLine === false) goOffline();
+    }
+  });
+})();
+
+</script>
 </body>
 </html>
