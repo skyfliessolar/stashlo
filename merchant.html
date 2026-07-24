@@ -2675,7 +2675,7 @@ function closeBackOfficeDrawer(){var d=document.getElementById('boDrawer');if(d)
 function merchantEmailSupport(){
   var sid=(typeof MDATA!=='undefined'&&MDATA&&MDATA.shop_id)?MDATA.shop_id:'';
   var subj='Stashlo Merchant Support'+(sid?(' — '+sid):'');
-  window.location.href='mailto:merchant@stashlo.com?subject='+encodeURIComponent(subj);
+  window.location.href='mailto:merchants@stashlo.com?subject='+encodeURIComponent(subj);
 }
 function openJobsSection(){ switchTab('jobs'); }
 function switchTab(name){
@@ -2823,7 +2823,7 @@ function openZXingScanner(){
         var val=result.text;
         if(val!==lastV||Date.now()-lastT>1600){lastV=val;lastT=Date.now();posScanHit(val);}
       }
-    }).catch(function(){T('Camera permission needed','error');ov.remove();});
+    }).catch(function(){T(location.protocol!=='https:'?'Camera needs the https site (stashlo.com)':'Camera blocked — allow camera in your browser settings','error');ov.remove();});
     window._zxReader=reader;
   });
 }
@@ -2933,7 +2933,7 @@ function applyStaffDisc(){
   renderBasket();T('👔 Staff discount '+pct+'% applied','success');
 }
 function cmQuick(n){document.getElementById('cm-tendered').value=n;cmChange();}
-function cmExact(){document.getElementById('cm-tendered').value=window._POS_DUE.toFixed(2);cmChange();}
+function cmExact(){var d=document.getElementById('cm-tendered');if(!d)return;var due=window._POS_DUE;if(typeof due!=='number'||!isFinite(due)){T('Total not set — tap Pay again','error');return}d.value=due.toFixed(2);cmChange();}
 function cmChange(){
   var t=parseFloat(document.getElementById('cm-tendered').value||0);
   var ch=t-(window._POS_DUE||0);
@@ -2941,8 +2941,11 @@ function cmChange(){
   document.getElementById('cm-change').style.color=ch>=0?'#059669':'#ef4444';
 }
 function cmComplete(){
-  var t=parseFloat(document.getElementById('cm-tendered').value||0);
-  if(t<window._POS_DUE-0.001){T('Tendered less than total','error');return}
+  var due=window._POS_DUE;
+  if(typeof due!=='number'||!isFinite(due)){T('Total not set — close this and tap Pay again','error');return}
+  var t=parseFloat((document.getElementById('cm-tendered')||{}).value||0);
+  if(!isFinite(t)){T('Enter the amount tendered','error');return}
+  if(t<due-0.001){T('Tendered less than total','error');return}
   closeModal('cashModal');
   finalizeSale('cash');
 }
@@ -3820,19 +3823,24 @@ var SHOP_TYPES={
 function getShopType(){try{return localStorage.getItem('sl_shoptype_'+(MID||''))||'retail';}catch(e){return 'retail';}}
 
 function createShopType(){
-  var name=prompt('🏪 Name your shop type (e.g. Paper Shop):');if(!name)return;
-  var secs=prompt('Department buttons, comma separated:','Newspapers, Magazines, Stationery, Cards, Sweets, Drinks');
+  var name=prompt('Name your shop type (e.g. Paper Shop):');
+  if(!name)return;
+  var secs=prompt('Your till sections, separated by commas:','Newspapers, Magazines, Stationery, Cards, Sweets, Drinks');
   if(secs===null)return;
-  var cfg={label:'✎ '+name,depts:secs.split(',').map(function(s){return s.trim()}).filter(Boolean).map(function(s){return {k:s.toLowerCase().replace(/\W+/g,'_'),label:s,emoji:'🏷️'}})};
-  try{localStorage.setItem('sl_shopcustom_'+(MID||''),JSON.stringify(cfg));}catch(e){}
+  // build using the SAME shape the till expects: {k,n,e,c}
+  var cfg={label:name.toUpperCase(),depts:[]};
   SHOP_TYPES.custom=cfg;
+  try{localStorage.setItem('sl_shopcustom_'+(MID||''),JSON.stringify(cfg));}catch(e){}
+  if(typeof MID!=='undefined'&&MID&&typeof pat==='function'){pat('merchants','id=eq.'+MID,{shop_type:'custom',pos_sections:secs}).catch(function(){});}
   setShopType('custom');
-  T('✅ "'+name+'" saved — edit any time via ✎ Create my own type','success');
+  saveCustomDepts('custom',secs);   // reuse the app's own builder (correct keys + colours)
+  T('Shop type "'+name+'" ready — tap Edit any time to change sections','success');
 }
-function setShopType(t){try{localStorage.setItem('sl_shoptype_'+(MID||''),t);}catch(e){} renderDeptTiles(); var lab=document.getElementById('pos-shoptype-lab'); if(lab&&SHOP_TYPES[t])lab.textContent=SHOP_TYPES[t].label;}
+function setShopType(t){try{localStorage.setItem('sl_shoptype_'+(MID||''),t);}catch(e){} if(typeof MID!=='undefined'&&MID&&typeof pat==='function'){pat('merchants','id=eq.'+MID,{shop_type:t}).catch(function(){});} renderDeptTiles(); var lab=document.getElementById('pos-shoptype-lab'); if(lab&&SHOP_TYPES[t])lab.textContent=SHOP_TYPES[t].label;}
 function getCustomDepts(t){try{var c=JSON.parse(localStorage.getItem('sl_customdepts_'+(MID||'')+'_'+t)||'null');return c;}catch(e){return null;}}
 function renderDeptTiles(){
   var t=getShopType();
+  if(t==='custom'&&!SHOP_TYPES.custom){try{var _c=JSON.parse(localStorage.getItem('sl_shopcustom_'+(MID||''))||'null');if(_c&&_c.label)SHOP_TYPES.custom={label:_c.label,depts:_c.depts||[]};}catch(e){}}
   var cfg=SHOP_TYPES[t]||SHOP_TYPES.retail;
   var depts=getCustomDepts(t)||cfg.depts;
   var lab=document.getElementById('pos-shoptype-lab');if(lab)lab.textContent=cfg.label;
@@ -3847,11 +3855,11 @@ function openShopTypePicker(){
   if(typeof slForm!=='function'){var m=document.getElementById('shopSelectorModal');if(m)m.classList.add('show');return;}
   var cur=getShopType();
   try{var cust=JSON.parse(localStorage.getItem('sl_shopcustom_'+(MID||''))||'null');
-    if(cust&&cust.label)SHOP_TYPES.custom=cust;}catch(e){}
+    if(cust&&cust.label)SHOP_TYPES.custom={label:cust.label,depts:(cust.depts&&cust.depts.length?cust.depts:[])};}catch(e){}
   var opts=Object.keys(SHOP_TYPES).map(function(k){return {v:k,label:SHOP_TYPES[k].label};});
   opts.push({v:'__new',label:'✎ Create my own type…'});
   var html='<div style="display:grid;gap:8px">'+opts.map(function(o){
-    return '<button onclick="setShopType('+String.fromCharCode(39)+o.v+String.fromCharCode(39)+');slClose();T('+String.fromCharCode(39)+'Shop type set'+String.fromCharCode(39)+','+String.fromCharCode(39)+'success'+String.fromCharCode(39)+')" style="padding:14px;border:2px solid '+(o.v===cur?'#6366F1':'#e2e8f0')+';background:'+(o.v===cur?'#eef2ff':'#fff')+';border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;text-align:left">'+o.label+(o.v===cur?' ✓':'')+'</button>';
+    return '<button onclick="'+(o.v==='__new'?'slClose();createShopType()':'setShopType('+String.fromCharCode(39)+o.v+String.fromCharCode(39)+');slClose();T('+String.fromCharCode(39)+'Shop type set'+String.fromCharCode(39)+','+String.fromCharCode(39)+'success'+String.fromCharCode(39)+')')+'" style="padding:14px;border:2px solid '+(o.v===cur?'#6366F1':'#e2e8f0')+';background:'+(o.v===cur?'#eef2ff':'#fff')+';border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;text-align:left">'+o.label+(o.v===cur?' ✓':'')+'</button>';
   }).join('')+'</div>';
   slOverlay('<h3 style="margin-bottom:14px;font-size:17px">🏪 Select Shop Type</h3>'+html+'<button onclick="slClose()" style="width:100%;margin-top:12px;padding:12px;background:#f1f5f9;border:none;border-radius:12px;font-weight:700;cursor:pointer">Cancel</button>');
 }
@@ -4298,17 +4306,18 @@ function scanCustomerQR(saleId){
     var m=String(raw).match(/SL-[A-Z0-9]+/i);var lid=(m?m[0]:String(raw)).toUpperCase();
     cleanup();deliverReceipt(saleId,lid);
   }
-  if('BarcodeDetector' in window){
+  if(typeof window.BarcodeDetector==='function'){
     var ov=ui();var stream=null,raf=null;
     function stop(){if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(function(t){t.stop()});ov.remove();}
     ov.querySelector('#cqr-x').onclick=stop;
     navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}}).then(function(st){
-      stream=st;var v=ov.querySelector('#cqr-vid');v.srcObject=st;
-      var det=new BarcodeDetector({formats:['qr_code','code_128','ean_13']});
+      stream=st;var v=ov.querySelector('#cqr-vid');v.srcObject=st;v.setAttribute('playsinline','');v.muted=true;try{var _pp=v.play();if(_pp&&_pp.catch)_pp.catch(function(){});}catch(_e){}
+      var det=null;try{det=new BarcodeDetector({formats:['qr_code','code_128','ean_13']});}catch(_e){det=null;}
+      if(!det){T('Using backup scanner','success');}
       function loop(){if(!document.getElementById('cqr-ov'))return;
-        det.detect(v).then(function(cs){if(cs&&cs.length&&cs[0].rawValue){got(cs[0].rawValue,stop);return}raf=requestAnimationFrame(loop);}).catch(function(){raf=requestAnimationFrame(loop)});}
-      v.onloadedmetadata=loop;
-    }).catch(function(){T('Camera permission needed','error');stop();});
+        (det?det.detect(v):Promise.reject()).then(function(cs){if(cs&&cs.length&&cs[0].rawValue){got(cs[0].rawValue,stop);return}raf=requestAnimationFrame(loop);}).catch(function(){raf=requestAnimationFrame(loop)});}
+      v.onloadedmetadata=loop;if(v.readyState>=1){try{loop();}catch(_e){}}setTimeout(function(){if(document.getElementById('cust-scan-ov')||document.getElementById('scan-ov')){try{loop();}catch(_e){}}},1200);
+    }).catch(function(){T(location.protocol!=='https:'?'Camera needs the https site (stashlo.com)':'Camera blocked — allow camera in your browser settings','error');stop();});
   }else{
     loadZXing(function(){
       var ov=ui();var reader=new ZXing.BrowserMultiFormatReader();
@@ -4322,7 +4331,7 @@ function scanCustomerQR(saleId){
 /* FULLSCREEN long-range product scanner (hi-res, edge-to-edge) */
 function openPOSScanner(){if(location.protocol==='file:'){T('Camera needs the live site (https)','error');return}
   try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(_){}
-  if(!('BarcodeDetector' in window)){openZXingScanner();return}
+  if(typeof window.BarcodeDetector!=='function'){openZXingScanner();return}
   var ov=document.createElement('div');ov.id='scan-ov';
   ov.style.cssText='position:fixed;inset:0;background:#000;z-index:900';
   ov.innerHTML='<video id="scan-vid" autoplay playsinline muted style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
@@ -4334,20 +4343,21 @@ function openPOSScanner(){if(location.protocol==='file:'){T('Camera needs the li
   document.getElementById('scan-x').onclick=closePOSScanner;
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}}).then(function(st){
     _scanStream=st;
-    var v=document.getElementById('scan-vid');v.srcObject=st;
+    var v=document.getElementById('scan-vid');v.srcObject=st;v.setAttribute('playsinline','');v.muted=true;try{var _pp=v.play();if(_pp&&_pp.catch)_pp.catch(function(){});}catch(_e){}
     try{var tr=st.getVideoTracks()[0];var caps=tr.getCapabilities?tr.getCapabilities():{};if(caps.zoom){tr.applyConstraints({advanced:[{zoom:Math.min(2,caps.zoom.max||1)}]}).catch(function(){});}}catch(e){}
-    var det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf']});
+    var det=null;try{det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf']});}catch(_e){det=null;}
+      if(!det){T('Using backup scanner','success');}
     var last='',lastT=0;
     function loop(){
       if(!document.getElementById('scan-ov'))return;
-      det.detect(v).then(function(codes){
+      (det?det.detect(v):Promise.reject()).then(function(codes){
         if(codes&&codes.length){var val=codes[0].rawValue;
           if(val&&(val!==last||Date.now()-lastT>1500)){last=val;lastT=Date.now();posScanHit(val);}}
       }).catch(function(){});
       _scanRAF=requestAnimationFrame(loop);
     }
-    v.onloadedmetadata=loop;
-  }).catch(function(){T('Camera permission needed','error');closePOSScanner();});
+    v.onloadedmetadata=loop;if(v.readyState>=1){try{loop();}catch(_e){}}setTimeout(function(){if(document.getElementById('cust-scan-ov')||document.getElementById('scan-ov')){try{loop();}catch(_e){}}},1200);
+  }).catch(function(){T(location.protocol!=='https:'?'Camera needs the https site (stashlo.com)':'Camera blocked — allow camera in your browser settings','error');closePOSScanner();});
 }
 
 /* AI invoice: image OR PDF; keyless fallback = fast bulk-add overlay */
@@ -4480,6 +4490,14 @@ function openScanCustomer(){
 }
 
 // ===== POS CUSTOMER LOOKUP =====
+
+// ═══ iOS Safari has no BarcodeDetector — jsQR fallback + always-available manual entry ═══
+function _tillManualId(){
+  var lid = prompt("Type the customer ID shown in their app (e.g. SL-AB12CD):");
+  if (lid) attachTillCustomerByLid(lid);
+}
+
+
 function posScanCustQR(){
   // Real camera scan of the customer's Stashlo QR or barcode (no typing).
   function got(raw,cleanup){
@@ -4496,39 +4514,45 @@ function posScanCustQR(){
       +'<button id="cs2-x" style="position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:16px;width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:19px;z-index:2">X</button>'
       +'<div style="position:absolute;top:50%;left:8%;right:8%;transform:translateY(-50%);height:150px;border:3px solid #34d399;border-radius:18px;pointer-events:none"></div>'
       +'<div style="position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);left:0;right:0;text-align:center;color:#fff;font-weight:700;text-shadow:0 2px 6px #000;padding:0 20px">Hold the QR or barcode in the box</div>';
-    document.body.appendChild(ov);return ov;
+    document.body.appendChild(ov);
+    var _tb=document.createElement('button');_tb.textContent='Type ID instead';
+    _tb.style.cssText='position:absolute;bottom:92px;left:50%;transform:translateX(-50%);background:#FBBF24;color:#151030;border:none;border-radius:10px;padding:10px 18px;font-weight:800;font-size:14px;z-index:6';
+    _tb.onclick=function(){var e=document.getElementById('cust-scan-ov');if(e)e.remove();_tillManualId();};
+    ov.appendChild(_tb);
+    return ov;
   }
-  if('BarcodeDetector' in window){
+  if(typeof window.BarcodeDetector==='function'){
     var ov=ui();var stream=null,raf=null;
     var stop=function(){if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(function(t){t.stop()});var e=document.getElementById('cust-scan-ov');if(e)e.remove();};
     ov.querySelector('#cs2-x').onclick=stop;
     navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}}).then(function(st){
-      stream=st;var v=document.getElementById('cs2-vid');v.srcObject=st;
-      var det=new BarcodeDetector({formats:['qr_code','code_128','ean_13','code_39']});
+      stream=st;var v=document.getElementById('cs2-vid');v.srcObject=st;v.setAttribute('playsinline','');try{var _p2=v.play();if(_p2&&_p2.catch)_p2.catch(function(){});}catch(e){}
+      var det=null;try{det=new BarcodeDetector({formats:['qr_code','code_128','ean_13','code_39']});}catch(_e){det=null;}
+      if(!det){T('Using backup scanner','success');}
       var loop=function(){
         if(!document.getElementById('cust-scan-ov'))return;
-        det.detect(v).then(function(cs){
+        (det?det.detect(v):Promise.reject()).then(function(cs){
           if(cs&&cs.length&&cs[0].rawValue){got(cs[0].rawValue,stop);return;}
           raf=requestAnimationFrame(loop);
         }).catch(function(){raf=requestAnimationFrame(loop);});
       };
-      v.onloadedmetadata=loop;
-    }).catch(function(){T('Camera permission needed','error');stop();});
-  } else {
+      v.onloadedmetadata=loop;if(v.readyState>=1){try{loop();}catch(_e){}}setTimeout(function(){if(document.getElementById('cust-scan-ov')||document.getElementById('scan-ov')){try{loop();}catch(_e){}}},1200);
+    }).catch(function(){T(location.protocol!=='https:'?'Camera needs the https site (stashlo.com)':'Camera blocked — allow camera in your browser settings','error');stop();});
+  }else {
     var ov=ui();var stream=null,raf=null;
     var stop2=function(){if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(function(t){t.stop()});var e=document.getElementById('cust-scan-ov');if(e)e.remove();};
     ov.querySelector('#cs2-x').onclick=stop2;
     var startJsQR=function(){
       navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(st){
-        stream=st;var v=document.getElementById('cs2-vid');v.srcObject=st;
+        stream=st;var v=document.getElementById('cs2-vid');v.srcObject=st;v.setAttribute('playsinline','');try{var _p=v.play();if(_p&&_p.catch)_p.catch(function(){});}catch(e){}
         var cv=document.createElement('canvas');var ctx=cv.getContext('2d');
         var tick=function(){
           if(!document.getElementById('cust-scan-ov'))return;
-          if(v.readyState===v.HAVE_ENOUGH_DATA){cv.width=v.videoWidth;cv.height=v.videoHeight;ctx.drawImage(v,0,0);try{var img=ctx.getImageData(0,0,cv.width,cv.height);var code=window.jsQR&&window.jsQR(img.data,img.width,img.height);if(code&&code.data){got(code.data,stop2);return;}}catch(e){}}
+          if(v.readyState===v.HAVE_ENOUGH_DATA){cv.width=v.videoWidth;cv.height=v.videoHeight;try{ctx.drawImage(v,0,0);var img=ctx.getImageData(0,0,cv.width,cv.height);var code=window.jsQR&&window.jsQR(img.data,img.width,img.height);if(code&&code.data){got(code.data,stop2);return;}}catch(e){}}
           raf=requestAnimationFrame(tick);
         };
         tick();
-      }).catch(function(){T('Camera permission needed','error');stop2();});
+      }).catch(function(){T(location.protocol!=='https:'?'Camera needs the https site (stashlo.com)':'Camera blocked — allow camera in your browser settings','error');stop2();});
     };
     if(window.jsQR)startJsQR();else{var sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';sc.onload=startJsQR;sc.onerror=function(){T('Scanner unavailable','error');stop2();};document.head.appendChild(sc);}
   }
@@ -4936,5 +4960,193 @@ try{
       </div>
 </div></div>
 <div id="app-version-stamp" style="position:fixed;bottom:2px;right:6px;font-size:9px;color:#94a3b8;z-index:5;pointer-events:none">Stashlo v138</div>
+<script>
+/* ═══════════ STASHLO UX STATE LAYER (SLUX) ═══════════
+   Offline · Slow network · Session expired · Error recovery · Empty states
+   Additive only — observes fetch, never changes its result.            */
+(function(){
+  if (window.SLUX) return;
+  var SLUX = window.SLUX = { online: navigator.onLine !== false, pending: 0 };
+
+  // ---------- banner ----------
+  function bar(){
+    var b = document.getElementById('slux-bar');
+    if (!b) {
+      b = document.createElement('div');
+      b.id = 'slux-bar';
+      b.setAttribute('role','status');
+      b.setAttribute('aria-live','polite');
+      b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99999;padding:9px 14px;'
+        + 'font:600 13px -apple-system,Segoe UI,Roboto,Arial;text-align:center;color:#fff;'
+        + 'transform:translateY(-100%);transition:transform .25s ease;padding-top:calc(9px + env(safe-area-inset-top,0px))';
+      document.body.appendChild(b);
+    }
+    return b;
+  }
+  function show(msg, colour){
+    var b = bar();
+    b.textContent = msg;
+    b.style.background = colour;
+    b.style.transform = 'translateY(0)';
+  }
+  function hide(){ var b = document.getElementById('slux-bar'); if (b) b.style.transform = 'translateY(-100%)'; }
+  SLUX.banner = show; SLUX.hideBanner = hide;
+
+  // ---------- offline / online ----------
+  function goOffline(){
+    if (!SLUX.online) return;
+    SLUX.online = false;
+    show('📴 No internet — your work is saved and will sync when you reconnect', '#b45309');
+  }
+  function goOnline(){
+    if (SLUX.online) return;
+    SLUX.online = true;
+    show('✅ Back online — syncing', '#166534');
+    setTimeout(hide, 2600);
+  }
+  window.addEventListener('offline', goOffline);
+  window.addEventListener('online', goOnline);
+  if (navigator.onLine === false) goOffline();
+
+  // ---------- session expired ----------
+  var sessionShown = false;
+  SLUX.sessionExpired = function(){
+    if (sessionShown) return;
+    sessionShown = true;
+    var ov = document.createElement('div');
+    ov.id = 'slux-session';
+    ov.setAttribute('role','alertdialog');
+    ov.setAttribute('aria-label','Session expired');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(15,13,35,.72);display:flex;align-items:center;justify-content:center;padding:22px';
+    ov.innerHTML = '<div style="background:#fff;border-radius:18px;max-width:340px;width:100%;padding:22px;text-align:center;font-family:-apple-system,Segoe UI,Roboto,Arial">'
+      + '<div style="font-size:34px">🔑</div>'
+      + '<div style="font-size:17px;font-weight:800;color:#14121F;margin-top:8px">Please sign in again</div>'
+      + '<div style="font-size:13px;color:#5a5772;margin-top:8px;line-height:1.5">Your session timed out for security. Nothing has been lost.</div>'
+      + '<button id="slux-relogin" style="margin-top:16px;width:100%;background:#6366F1;color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;font-size:15px;cursor:pointer">Sign in</button>'
+      + '</div>';
+    document.body.appendChild(ov);
+    document.getElementById('slux-relogin').onclick = function(){ location.reload(); };
+  };
+
+  // ---------- observe fetch: slow network, offline, 401 ----------
+  var origFetch = window.fetch;
+  if (typeof origFetch === 'function' && !origFetch.__slux) {
+    var wrapped = function(){
+      var args = arguments;
+      var slowTimer = setTimeout(function(){
+        if (SLUX.online) show('🐌 Still working — the connection is slow', '#4338ca');
+      }, 5000);
+      SLUX.pending++;
+      return origFetch.apply(this, args).then(function(res){
+        clearTimeout(slowTimer); SLUX.pending--;
+        if (SLUX.pending <= 0) { SLUX.pending = 0; if (SLUX.online) hide(); }
+        if (res && res.status === 401) SLUX.sessionExpired();
+        if (res && res.status === 403 && typeof T === 'function') {
+          T('You do not have permission for that', 'error');
+        }
+        goOnline();
+        return res;
+      }).catch(function(err){
+        clearTimeout(slowTimer); SLUX.pending--;
+        if (SLUX.pending < 0) SLUX.pending = 0;
+        if (navigator.onLine === false) goOffline();
+        else show('⚠️ Connection problem — retrying will usually fix it', '#7f1d1d');
+        throw err;
+      });
+    };
+    wrapped.__slux = true;
+    window.fetch = wrapped;
+  }
+
+  // ---------- empty state helper ----------
+  SLUX.empty = function(el, icon, title, sub, actionLabel, actionFn){
+    if (!el) return;
+    var id = 'slux-act-' + Math.random().toString(36).slice(2,7);
+    el.innerHTML = '<div style="text-align:center;padding:34px 18px;color:#8a8598;font-family:-apple-system,Segoe UI,Roboto,Arial">'
+      + '<div style="font-size:38px;opacity:.75">' + (icon || '📭') + '</div>'
+      + '<div style="font-size:15px;font-weight:800;color:#5a5772;margin-top:8px">' + title + '</div>'
+      + (sub ? '<div style="font-size:12.5px;margin-top:5px;line-height:1.5">' + sub + '</div>' : '')
+      + (actionLabel ? '<button id="' + id + '" style="margin-top:14px;background:#6366F1;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-weight:800;font-size:13px;cursor:pointer">' + actionLabel + '</button>' : '')
+      + '</div>';
+    if (actionLabel && actionFn) { var btn = document.getElementById(id); if (btn) btn.onclick = actionFn; }
+  };
+
+  // ---------- error state with retry ----------
+  SLUX.errorState = function(el, message, retryFn){
+    if (!el) return;
+    var id = 'slux-retry-' + Math.random().toString(36).slice(2,7);
+    el.innerHTML = '<div style="text-align:center;padding:28px 18px;font-family:-apple-system,Segoe UI,Roboto,Arial">'
+      + '<div style="font-size:32px">⚠️</div>'
+      + '<div style="font-size:14px;font-weight:800;color:#7f1d1d;margin-top:8px">Could not load</div>'
+      + '<div style="font-size:12px;color:#8a8598;margin-top:5px;line-height:1.5">' + (message || 'Something went wrong.') + '</div>'
+      + '<button id="' + id + '" style="margin-top:14px;background:#6366F1;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-weight:800;font-size:13px;cursor:pointer">↻ Try again</button>'
+      + '</div>';
+    var btn = document.getElementById(id); if (btn && retryFn) btn.onclick = retryFn;
+  };
+
+  // ---------- loading skeleton ----------
+  SLUX.loading = function(el, rows){
+    if (!el) return;
+    var n = rows || 3, out = '';
+    for (var i = 0; i < n; i++) {
+      out += '<div style="height:56px;border-radius:12px;margin-bottom:8px;background:linear-gradient(90deg,#ece9f5 25%,#f7f5fb 40%,#ece9f5 55%);background-size:300% 100%;animation:slux-sh 1.1s infinite"></div>';
+    }
+    el.innerHTML = out + '<style>@keyframes slux-sh{to{background-position:-300% 0}}</style>';
+  };
+
+
+  // ═══ ACCESSIBILITY PASS — runs after render, safe & additive ═══
+  SLUX.a11y = function(){
+    try{
+      // 1) status messages announced to screen readers
+      document.querySelectorAll('[id*=toast],[class*=toast]').forEach(function(t){
+        if(!t.getAttribute('aria-live')){ t.setAttribute('aria-live','polite'); t.setAttribute('role','status'); }
+      });
+      // 2) label every control
+      document.querySelectorAll('input,select,textarea').forEach(function(i){
+        if(i.type==='hidden'||i.getAttribute('aria-label'))return;
+        var lab=i.getAttribute('placeholder');
+        if(!lab&&i.id){var l=document.querySelector('label[for="'+i.id+'"]'); if(l)lab=l.textContent;}
+        if(!lab&&i.closest('label'))return;
+        if(!lab){var prev=i.previousElementSibling; if(prev&&prev.textContent&&prev.textContent.trim().length<40)lab=prev.textContent;}
+        if(!lab)lab=(i.id||i.name||'input').replace(/[-_]/g,' ');
+        i.setAttribute('aria-label',String(lab).trim().slice(0,60));
+      });
+      // 3) images need alt (decorative ones get empty alt)
+      document.querySelectorAll('img:not([alt])').forEach(function(im){
+        im.setAttribute('alt', im.id||im.className? (im.id||'image').replace(/[-_]/g,' ') : '');
+      });
+      // 4) buttons: readable name + comfortable tap size
+      document.querySelectorAll('button,[onclick]').forEach(function(bt){
+        if(!bt.getAttribute('aria-label')&&!(bt.textContent||'').trim()){
+          bt.setAttribute('aria-label', bt.id? bt.id.replace(/[-_]/g,' ') : 'button');
+        }
+        bt.style.touchAction='manipulation';
+        var r=bt.getBoundingClientRect();
+        if(r.height>0&&r.height<40&&!bt.dataset.sluxTap){
+          bt.dataset.sluxTap='1';
+          bt.style.minHeight='40px';
+        }
+      });
+      // 5) modals announce themselves
+      document.querySelectorAll('[class*=modal],[id*=Modal]').forEach(function(m){
+        if(!m.getAttribute('role')){ m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true'); }
+      });
+    }catch(e){}
+  };
+  document.addEventListener('DOMContentLoaded',function(){ setTimeout(SLUX.a11y,900); });
+  setTimeout(SLUX.a11y,1600);
+  setInterval(SLUX.a11y,6000);   // covers dynamically rendered lists
+
+  // ---------- catch silent failures ----------
+  window.addEventListener('unhandledrejection', function(e){
+    var m = (e && e.reason && (e.reason.message || e.reason)) + '';
+    if (/fetch|network|load failed/i.test(m)) {
+      if (navigator.onLine === false) goOffline();
+    }
+  });
+})();
+
+</script>
 </body>
 </html>
