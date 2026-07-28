@@ -587,6 +587,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:#6366F1!import
         <select id="pc-kind" style="width:96px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px"><option value="points">Points</option><option value="amount">£ off</option><option value="percent">% off</option></select>
         <input id="pc-points" type="number" placeholder="Value" style="width:80px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px">
         <input id="pc-max" type="number" placeholder="Max uses" style="width:90px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px">
+<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;font-weight:700;color:#334155;cursor:pointer"><input type="checkbox" id="pc-firsttime" style="width:18px;height:18px"> 🆕 New customers only (first purchase)</label><label style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;font-weight:700;color:#334155;cursor:pointer"><input type="checkbox" id="pc-once" checked style="width:18px;height:18px"> 1️⃣ One use per customer</label><div style="font-size:11.5px;color:#64748b;margin-top:6px;line-height:1.5">Leave the limit blank for unlimited. Set it to 10 and the code stops working after the 10th customer.</div>
         <input id="pc-exp" type="date" style="width:130px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px">
         <button class="sl-btn btn-xs btn-green" onclick="addPromo()">+ Create</button>
       </div>
@@ -620,6 +621,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:#6366F1!import
         </div>
       </div>
       <button class="btn btn-purple" id="bc-send-btn" onclick="sendBroadcast()">📢 Send Broadcast</button>
+<div style="display:flex;gap:8px;margin-top:8px"><button class="sl-btn" style="flex:1;background:#0891b2;color:#fff" onclick="emailBroadcast()">📧 Also email it</button><button class="sl-btn" style="background:#374151;color:#fff" onclick="emailBroadcastTest()">✉️ Test</button></div>
     </div>
     <div class="sh"><span class="sh-t">Pending Merchant Approvals</span></div>
     <div id="pending-bc-list" style="padding:0 16px;margin-bottom:10px"></div>
@@ -1845,6 +1847,45 @@ function previewBcVideo(input){
   const v=document.getElementById('bc-video-prev');v.src=URL.createObjectURL(f);v.style.display='block';
   const t=document.getElementById('bc-video-txt');if(t)t.style.display='none';
 }
+
+// ═══ Email a broadcast via the send-broadcast Edge Function (key stays server-side) ═══
+function emailBroadcast(){
+  var title=((document.getElementById('bc-title')||{}).value||'').trim();
+  var body=((document.getElementById('bc-body')||{}).value||'').trim();
+  var aud=((document.getElementById('bc-audience')||{}).value||'all');
+  if(!title||!body){T('Enter a title and message first','error');return;}
+  if(!confirm('Email this to '+(aud==='merchants'?'all merchants':'all customers')+'?\n\n"'+title+'"'))return;
+  T('Sending emails...','success');
+  fetch(SU+'/functions/v1/send-broadcast',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+SK,'apikey':SK},
+    body:JSON.stringify({title:title,body:body,audience:aud})
+  }).then(function(r){return r.json()}).then(function(d){
+    if(d&&typeof d.sent==='number'){
+      T('📧 Emailed to '+d.sent+' recipient'+(d.sent===1?'':'s'),'success');
+      logAudit('email_broadcast',title+' → '+d.sent);
+      if(typeof loadBroadcasts==='function')loadBroadcasts();
+    } else {
+      T('Email failed: '+((d&&d.error)||'is the send-broadcast function deployed?'),'error');
+    }
+  }).catch(function(e){
+    T('Email failed — deploy the send-broadcast Edge Function first','error');
+  });
+}
+function emailBroadcastTest(){
+  var to=prompt('Send a TEST email to which address?');
+  if(!to)return;
+  var title=((document.getElementById('bc-title')||{}).value||'Test broadcast').trim();
+  var body=((document.getElementById('bc-body')||{}).value||'This is a test from Stashlo.').trim();
+  fetch(SU+'/functions/v1/send-broadcast',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+SK,'apikey':SK},
+    body:JSON.stringify({title:title,body:body,test_email:to})
+  }).then(function(r){return r.json()}).then(function(d){
+    T(d&&d.sent? '📧 Test sent to '+to : 'Test failed: '+((d&&d.error)||'unknown'), d&&d.sent?'success':'error');
+  }).catch(function(){T('Test failed — is the Edge Function deployed?','error')});
+}
+
 async function sendBroadcast(){
   const title=V('bc-title'),body=document.getElementById('bc-body').value.trim(),audience=document.getElementById('bc-audience').value;
   if(!title||!body){T('Please fill title and message','error');return}
@@ -2223,7 +2264,7 @@ function addPromo(){
   if(!code){T('Enter a code','error');return}
   if(!pts||pts<1){T('Enter POINTS value (e.g. 10) — this is what the customer receives','error');return}
   const kind=(document.getElementById('pc-kind')||{}).value||'points';
-  spost('promo_codes',{code,kind:kind,points:kind==='points'?pts:0,amount:kind==='points'?0:pts,max_uses:mx,expires_at:exp,active:true,used_count:0,created_at:Date.now()})
+  spost('promo_codes',{code,kind:kind,points:kind==='points'?pts:0,amount:kind==='points'?0:pts,max_uses:mx,expires_at:exp,active:true,used_count:0,first_time_only:!!((document.getElementById('pc-firsttime')||{}).checked),once_per_user:((document.getElementById('pc-once')||{checked:true}).checked!==false),created_at:Date.now()})
     .then(()=>{T('✅ Code '+code+' created','success');logAudit('create_promo',code);['pc-code','pc-points','pc-max','pc-exp'].forEach(i=>document.getElementById(i).value='');loadPromos();})
     .catch(()=>T('Failed — table exists?','error'));
 }
