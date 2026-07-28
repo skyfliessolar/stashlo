@@ -1288,7 +1288,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:#6366F1!import
   </div>
 
   <!-- ===== HOME ===== -->
-  <div class="screen on" id="home-screen">
+  <div class="screen on" id="home-screen"><div style="padding:10px 14px 0"><button onclick="SGO.open()" style="width:100%;padding:14px;border:none;border-radius:13px;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;font-weight:800;font-size:15px;cursor:pointer">🛒 Scan &amp; Go — scan your shopping</button></div>
     <!-- COMPACT DASHBOARD - everything visible without scroll -->
 
     <!-- HEADER BAR (hidden - global .app-head serves this now) -->
@@ -5477,10 +5477,23 @@ function _promoCore(code, statusEl, inputEl){
     if(!pc) return say('❌ Code not recognised');
     if(pc.active===false) return say('❌ This code is switched off');
     if(pc.expires_at && Date.now()>Number(pc.expires_at)) return say('⌛ This code has expired');
-    if(pc.max_uses && (pc.used_count||0)>=pc.max_uses) return say('❌ Code fully redeemed');
+    if(pc.max_uses && (pc.used_count||0)>=pc.max_uses) return say('❌ This code has reached its limit of '+pc.max_uses+' customers');
     var kind=pc.kind||'points';
     get('promo_redemptions','user_id=eq.'+UID+'&code=eq.'+encodeURIComponent(code)).then(function(rd){
-      if(Array.isArray(rd)&&rd.length) return say('❌ You already used this code');
+      if(pc.once_per_user!==false && Array.isArray(rd)&&rd.length) return say('❌ You already used this code');
+      if(pc.first_time_only){
+        get('receipts','user_id=eq.'+UID+'&limit=1').then(function(rc){
+          if(Array.isArray(rc)&&rc.length){ say('❌ This code is for new customers only'); return; }
+          _promoGrant(pc,kind,code,say,inputEl);
+        }).catch(function(){ _promoGrant(pc,kind,code,say,inputEl); });
+        return;
+      }
+      _promoGrant(pc,kind,code,say,inputEl);
+    }).catch(function(){ say('Could not check your redemptions'); });
+  }).catch(function(e){ say('Connection problem: '+((e&&e.message)||'error')); });
+}
+
+function _promoGrant(pc,kind,code,say,inputEl){
       if(kind!=='points'){
         var off=parseFloat(pc.amount||0)||0;
         return say('✅ '+(kind==='percent'?off+'% off':'£'+off.toFixed(2)+' off')+' — enter it at checkout to use', true);
@@ -5500,9 +5513,9 @@ function _promoCore(code, statusEl, inputEl){
           }).catch(function(e){ say('Could not credit points: '+((e&&e.message)||'error')); });
         });
       }).catch(function(e){ say('Could not save redemption: '+((e&&e.message)||'error')); });
-    }).catch(function(){ say('Could not check your redemptions'); });
-  }).catch(function(e){ say('Connection problem: '+((e&&e.message)||'error')); });
+
 }
+
 
 function applyPromo(){
   var inp=document.getElementById('promo-in');
@@ -6134,6 +6147,454 @@ function confirmDeleteAccount(){
       if (navigator.onLine === false) goOffline();
     }
   });
+})();
+
+</script>
+<script>
+/* ═══════════ STASHLO LIVE NOTIFICATIONS (SLNOTE) ═══════════
+   New receipt · broadcast · points · chat reply → device notification,
+   in-app toast and badge, the way a messaging app behaves.
+   Additive only. Polls; no server push required.                      */
+(function () {
+  if (window.SLNOTE) return;
+  var SLNOTE = window.SLNOTE = {};
+  var POLL_MS = 20000;
+  var timer = null;
+
+  function uid(){ try { return (typeof UID !== 'undefined' && UID) ? UID : (window.UID || null); } catch(e){ return window.UID || null; } }
+  SLNOTE.uid = uid;
+  function key(k) { return 'sl_seen_' + k + '_' + (uid() || 'anon'); }
+  function seen(k) { try { return JSON.parse(localStorage.getItem(key(k)) || '[]'); } catch (e) { return []; } }
+  function remember(k, ids) { try { localStorage.setItem(key(k), JSON.stringify(ids.slice(0, 300))); localStorage.setItem(key(k) + '_init', '1'); } catch (e) {} }
+  // has this category been polled before? (an empty history must still notify its first arrival)
+  function ready(k) { try { return localStorage.getItem(key(k) + '_init') === '1'; } catch (e) { return false; } }
+
+  // ---------- permission ----------
+  SLNOTE.canNotify = function () {
+    return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  };
+  SLNOTE.ask = function (thenFn) {
+    if (typeof Notification === 'undefined') {
+      if (typeof T === 'function') T('This browser cannot show notifications', 'error');
+      return;
+    }
+    if (Notification.permission === 'granted') { if (thenFn) thenFn(true); return; }
+    if (Notification.permission === 'denied') {
+      if (typeof T === 'function') T('Notifications are blocked — turn them on in browser settings', 'error');
+      if (thenFn) thenFn(false);
+      return;
+    }
+    Notification.requestPermission().then(function (p) {
+      var ok = p === 'granted';
+      if (typeof T === 'function') T(ok ? '🔔 Notifications on — you will be told when a receipt arrives' : 'Notifications not enabled', ok ? 'success' : 'error');
+      try { localStorage.setItem('sl_notifask_' + (uid() || ''), '1'); } catch (e) {}
+      if (thenFn) thenFn(ok);
+    }).catch(function () { if (thenFn) thenFn(false); });
+  };
+
+  // ---------- show one notification ----------
+  SLNOTE.fire = function (title, body, tag, onclickTab) {
+    // in-app toast always
+    if (typeof T === 'function') T(title + ' — ' + body, 'success');
+    if (!SLNOTE.canNotify()) return;
+    try {
+      var n = new Notification(title, {
+        body: body,
+        tag: tag || ('sl-' + Date.now()),
+        badge: 'icon-192.png',
+        icon: 'icon-192.png',
+        renotify: false
+      });
+      n.onclick = function () {
+        window.focus();
+        if (onclickTab && typeof goTab === 'function') { try { goTab(onclickTab); } catch (e) {} }
+        n.close();
+      };
+    } catch (e) {}
+  };
+
+  // ---------- the poll ----------
+  function poll() {
+    var U = uid();
+    if (!U || typeof get !== 'function') return;
+    if (document.hidden === false && window.SLUX && SLUX.online === false) return;
+
+    // 1) NEW RECEIPTS from merchants
+    get('receipts', 'user_id=eq.' + U + '&order=created_at.desc&limit=15').then(function (d) {
+      if (!Array.isArray(d)) return;
+      if (!d.length) { remember('receipt', seen('receipt')); return; }
+      var known = seen('receipt');
+      var fresh = d.filter(function (r) { return known.indexOf(String(r.id)) < 0; });
+      if (ready('receipt') && fresh.length) {
+        fresh.slice(0, 3).forEach(function (r) {
+          var shop = r.shop_name || r.merchant_name || 'Your shop';
+          var amt = r.total != null ? ('£' + parseFloat(r.total || 0).toFixed(2)) : '';
+          SLNOTE.fire('🧾 Receipt from ' + shop, amt ? (amt + ' — saved to your wallet') : 'Saved to your wallet', 'rcpt-' + r.id, 'receipts');
+        });
+      }
+      remember('receipt', d.map(function (r) { return String(r.id); }).concat(known));
+    }).catch(function () {});
+
+    // 2) BROADCASTS from shops the customer follows
+    get('broadcasts', 'order=sent_at.desc&limit=10').then(function (d) {
+      if (!Array.isArray(d)) return;
+      if (!d.length) { remember('bcast', seen('bcast')); return; }
+      var known = seen('bcast');
+      var fresh = d.filter(function (b) { return known.indexOf(String(b.id)) < 0; });
+      if (ready('bcast') && fresh.length) {
+        fresh.slice(0, 2).forEach(function (b) {
+          SLNOTE.fire('📢 ' + (b.title || 'Offer'), (b.body || b.message || '').slice(0, 90), 'bc-' + b.id, 'inbox');
+        });
+      }
+      remember('bcast', d.map(function (b) { return String(b.id); }).concat(known));
+    }).catch(function () {});
+
+    // 3) CHAT replies (order chat + support) — the WhatsApp part
+    get('support_chats', 'customer_id=eq.' + U + '&sender_role=eq.admin&order=created_at.desc&limit=5').then(function (d) {
+      if (!Array.isArray(d)) return;
+      if (!d.length) { remember('chat', seen('chat')); return; }
+      var known = seen('chat');
+      var fresh = d.filter(function (m) { return known.indexOf(String(m.id)) < 0; });
+      if (ready('chat') && fresh.length) {
+        SLNOTE.fire('💬 New message', (fresh[0].body || fresh[0].message || 'You have a reply').slice(0, 90), 'chat-' + fresh[0].id, 'inbox');
+      }
+      remember('chat', d.map(function (m) { return String(m.id); }).concat(known));
+    }).catch(function () {});
+  }
+
+  SLNOTE.start = function () {
+    if (timer) return;
+    poll();
+    timer = setInterval(poll, POLL_MS);
+    // poll immediately when the app comes back to the foreground
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
+  };
+  SLNOTE.stop = function () { if (timer) { clearInterval(timer); timer = null; } };
+
+  // ---------- gentle first-time prompt ----------
+  SLNOTE.maybeAsk = function () {
+    try {
+      var U = uid();
+      if (!U) return;
+      if (localStorage.getItem('sl_notifask_' + U)) return;
+      if (typeof Notification === 'undefined' || Notification.permission !== 'default') return;
+      var bar = document.createElement('div');
+      bar.id = 'sl-notif-ask';
+      bar.style.cssText = 'position:fixed;left:12px;right:12px;bottom:88px;z-index:9998;background:#1e1b4b;color:#fff;'
+        + 'border-radius:14px;padding:13px 15px;box-shadow:0 10px 30px rgba(0,0,0,.3);font-family:-apple-system,Segoe UI,Roboto,Arial;'
+        + 'display:flex;align-items:center;gap:10px';
+      bar.innerHTML = '<div style="font-size:22px">🔔</div>'
+        + '<div style="flex:1"><div style="font-weight:800;font-size:13.5px">Get told when a receipt arrives</div>'
+        + '<div style="font-size:11.5px;color:#c7d2fe;margin-top:2px">Like a message — receipts, offers and replies</div></div>'
+        + '<button id="sl-na-yes" style="background:#FBBF24;color:#151030;border:none;border-radius:9px;padding:9px 13px;font-weight:900;font-size:12.5px;cursor:pointer">Turn on</button>'
+        + '<button id="sl-na-no" style="background:transparent;color:#8b89b8;border:none;font-size:20px;cursor:pointer;padding:0 4px">×</button>';
+      document.body.appendChild(bar);
+      document.getElementById('sl-na-yes').onclick = function () { bar.remove(); SLNOTE.ask(); };
+      document.getElementById('sl-na-no').onclick = function () {
+        bar.remove();
+        try { localStorage.setItem('sl_notifask_' + (uid()||''), '1'); } catch (e) {}
+      };
+    } catch (e) {}
+  };
+
+  // boot once the user is signed in
+  var boot = setInterval(function () {
+    if (uid()) {
+      clearInterval(boot);
+      SLNOTE.start();
+      setTimeout(SLNOTE.maybeAsk, 6000);
+    }
+  }, 2000);
+})();
+
+</script>
+<script>
+/* ═══════════ STASHLO SCAN & GO (customer side) ═══════════
+   Customer scans products around the shop → basket → "Send to till"
+   → 6-character handover code the merchant scans or types.        */
+(function () {
+  if (window.SGO) return;
+  var SGO = window.SGO = { shop: null, items: [] };
+
+  function money(n) { return '£' + (parseFloat(n) || 0).toFixed(2); }
+  function total() { return SGO.items.reduce(function (s, i) { return s + i.price * i.qty; }, 0); }
+  function uid() { try { return (typeof UID !== 'undefined' && UID) ? UID : null; } catch (e) { return null; } }
+
+  // ---------- open: pick the shop first ----------
+  SGO.open = function () {
+    if (!uid()) { if (typeof T === 'function') T('Sign in first', 'error'); return; }
+    if (SGO.shop) { SGO.render(); return; }
+    get('cards', 'user_id=eq.' + uid() + '&limit=30').then(function (cards) {
+      var ids = (Array.isArray(cards) ? cards : []).map(function (c) { return c.card_id; }).filter(Boolean);
+      if (!ids.length) { if (typeof T === 'function') T('Add a shop card first', 'error'); return; }
+      get('merchants', 'id=in.(' + ids.join(',') + ')&limit=30').then(function (ms) {
+        var list = Array.isArray(ms) ? ms : [];
+        if (list.length === 1) { SGO.shop = list[0]; SGO.render(); return; }
+        SGO.pickShop(list);
+      }).catch(function () { if (typeof T === 'function') T('Could not load your shops', 'error'); });
+    });
+  };
+
+  SGO.pickShop = function (list) {
+    var ov = shell('Which shop are you in?',
+      list.map(function (m) {
+        return '<button class="sgo-shop" data-id="' + m.id + '">🏪 ' + esc(m.name || 'Shop') + '</button>';
+      }).join('') || '<div class="sgo-empty">No shops yet</div>');
+    ov.querySelectorAll('.sgo-shop').forEach(function (b) {
+      b.onclick = function () {
+        SGO.shop = list.filter(function (m) { return String(m.id) === b.dataset.id; })[0];
+        SGO.render();
+      };
+    });
+  };
+
+  // ---------- main basket screen ----------
+  SGO.render = function () {
+    var rows = SGO.items.length ? SGO.items.map(function (i, ix) {
+      return '<div class="sgo-row">'
+        + '<div class="sgo-nm">' + (i.emoji || '🛒') + ' ' + esc(i.name) + '<span>' + money(i.price) + ' each</span></div>'
+        + '<div class="sgo-q"><button data-m="' + ix + '">−</button><b>' + i.qty + '</b><button data-p="' + ix + '">+</button></div>'
+        + '<div class="sgo-lt">' + money(i.price * i.qty) + '</div></div>';
+    }).join('') : '<div class="sgo-empty">📷<br>Scan a barcode to start<br><span>Point your camera at any product</span></div>';
+
+    var ov = shell('🛒 ' + esc((SGO.shop && SGO.shop.name) || 'Scan & Go'),
+      '<div class="sgo-list">' + rows + '</div>'
+      + '<div class="sgo-total"><span>Total</span><b>' + money(total()) + '</b></div>'
+      + '<button class="sgo-btn sgo-scan">📷 Scan a product</button>'
+      + '<button class="sgo-btn sgo-manual">⌨️ Type a barcode</button>'
+      + (SGO.items.length ? '<button class="sgo-btn sgo-go">✅ Send to till</button>' : ''));
+
+    ov.querySelector('.sgo-scan').onclick = SGO.scan;
+    ov.querySelector('.sgo-manual').onclick = function () {
+      var c = prompt('Type the barcode number:');
+      if (c) SGO.addByBarcode(c.trim());
+    };
+    var go = ov.querySelector('.sgo-go');
+    if (go) go.onclick = SGO.send;
+    ov.querySelectorAll('[data-p]').forEach(function (b) {
+      b.onclick = function () { SGO.items[+b.dataset.p].qty++; SGO.render(); };
+    });
+    ov.querySelectorAll('[data-m]').forEach(function (b) {
+      b.onclick = function () {
+        var ix = +b.dataset.m;
+        SGO.items[ix].qty--;
+        if (SGO.items[ix].qty <= 0) SGO.items.splice(ix, 1);
+        SGO.render();
+      };
+    });
+  };
+
+  // ---------- scanning ----------
+  SGO.scan = function () {
+    var ov = document.createElement('div');
+    ov.id = 'sgo-cam';
+    ov.style.cssText = 'position:fixed;inset:0;background:#000;z-index:100010;display:flex;flex-direction:column';
+    ov.innerHTML = '<video id="sgo-vid" autoplay playsinline muted style="flex:1;width:100%;object-fit:cover"></video>'
+      + '<div style="position:absolute;top:calc(env(safe-area-inset-top,0px) + 18px);left:0;right:0;text-align:center;color:#fff;font-weight:800">Point at the barcode</div>'
+      + '<button id="sgo-x" style="position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:14px;width:42px;height:42px;border-radius:50%;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:20px">✕</button>'
+      + '<button id="sgo-type" style="position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);left:50%;transform:translateX(-50%);background:#FBBF24;color:#151030;border:none;border-radius:10px;padding:11px 20px;font-weight:900">Type it instead</button>';
+    document.body.appendChild(ov);
+
+    var stream = null, raf = null;
+    function stop() {
+      if (raf) cancelAnimationFrame(raf);
+      if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+      var e = document.getElementById('sgo-cam'); if (e) e.remove();
+    }
+    document.getElementById('sgo-x').onclick = stop;
+    document.getElementById('sgo-type').onclick = function () {
+      stop();
+      var c = prompt('Type the barcode number:');
+      if (c) SGO.addByBarcode(c.trim());
+    };
+    function got(raw) { stop(); SGO.addByBarcode(String(raw).trim()); }
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(function (st) {
+      stream = st;
+      var v = document.getElementById('sgo-vid');
+      v.srcObject = st; v.setAttribute('playsinline', ''); v.muted = true;
+      try { var pp = v.play(); if (pp && pp.catch) pp.catch(function () {}); } catch (e) {}
+
+      var det = null;
+      if (typeof window.BarcodeDetector === 'function') {
+        try { det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code'] }); }
+        catch (e) { det = null; }
+      }
+      if (det) {
+        var loop = function () {
+          if (!document.getElementById('sgo-cam')) return;
+          det.detect(v).then(function (cs) {
+            if (cs && cs.length && cs[0].rawValue) { got(cs[0].rawValue); return; }
+            raf = requestAnimationFrame(loop);
+          }).catch(function () { raf = requestAnimationFrame(loop); });
+        };
+        loop(); setTimeout(loop, 1200);
+      } else {
+        var start = function () {
+          var cv = document.createElement('canvas');
+          var cx = cv.getContext('2d', { willReadFrequently: true });
+          var loop2 = function () {
+            if (!document.getElementById('sgo-cam')) return;
+            if (v.readyState >= 2 && v.videoWidth) {
+              cv.width = v.videoWidth; cv.height = v.videoHeight;
+              try {
+                cx.drawImage(v, 0, 0);
+                var img = cx.getImageData(0, 0, cv.width, cv.height);
+                var code = window.jsQR && window.jsQR(img.data, img.width, img.height);
+                if (code && code.data) { got(code.data); return; }
+              } catch (e) {}
+            }
+            raf = requestAnimationFrame(loop2);
+          };
+          loop2();
+        };
+        if (window.jsQR) start();
+        else {
+          var s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js';
+          s.onload = start;
+          s.onerror = function () { stop(); if (typeof T === 'function') T('Scanner needs internet — type the barcode', 'error'); };
+          document.head.appendChild(s);
+        }
+      }
+    }).catch(function () {
+      stop();
+      if (typeof T === 'function') T('Camera blocked — type the barcode instead', 'error');
+      var c = prompt('Type the barcode number:');
+      if (c) SGO.addByBarcode(c.trim());
+    });
+  };
+
+  // ---------- look the barcode up in that shop's products ----------
+  SGO.addByBarcode = function (code) {
+    if (!code || !SGO.shop) return;
+    get('products', 'merchant_id=eq.' + SGO.shop.id + '&barcode=eq.' + encodeURIComponent(code) + '&limit=1').then(function (d) {
+      var p = Array.isArray(d) && d[0];
+      if (!p) {
+        if (typeof T === 'function') T('Not found in this shop — the till can add it', 'error');
+        SGO.render();
+        return;
+      }
+      var ex = SGO.items.filter(function (i) { return String(i.id) === String(p.id); })[0];
+      if (ex) ex.qty++;
+      else SGO.items.push({
+        id: p.id, name: p.name, price: parseFloat(p.price || 0),
+        qty: 1, emoji: p.emoji || '', barcode: code,
+        vat: p.vat_rate || 20, cat: p.pos_category || 'general'
+      });
+      if (typeof T === 'function') T('✅ ' + p.name + ' added', 'success');
+      SGO.render();
+    }).catch(function () { if (typeof T === 'function') T('Could not look that up', 'error'); });
+  };
+
+  // ---------- hand the basket to the till ----------
+  SGO.send = function () {
+    if (!SGO.items.length || !SGO.shop) return;
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // no confusable 0/O/1/I
+    var code = 'SG-';
+    for (var i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    var payload = {
+      code: code,
+      user_id: uid(),
+      merchant_id: SGO.shop.id,
+      items: JSON.stringify(SGO.items),
+      total: total(),
+      status: 'waiting',
+      created_at: Date.now()
+    };
+    post('scan_baskets', payload).then(function () {
+      SGO.showCode(code);
+      SGO.items = [];
+    }).catch(function (e) {
+      if (typeof T === 'function') T('Could not send to till: ' + ((e && e.message) || 'error'), 'error');
+    });
+  };
+
+  SGO.showCode = function (code) {
+    var qrsrc = 'https://api.qrserver.com/v1/create-qr-code/?size=380x380&data=' + encodeURIComponent(code);
+    shell('Show this at the till',
+      '<div class="sgo-code">' + code + '</div>'
+      + '<div class="sgo-qrbox"><img src="' + qrsrc + '" alt="Basket code" onerror="this.style.display=\'none\'"></div>'
+      + '<div class="sgo-note">The shop scans this and everything you picked appears on their till. '
+      + 'Nothing is charged until you pay.</div>');
+  };
+
+  // ---------- small UI shell ----------
+  function esc(s) { return String(s == null ? '' : s).replace(/[<>&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; }); }
+  function shell(title, inner) {
+    var old = document.getElementById('sgo-ov'); if (old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'sgo-ov';
+    ov.innerHTML = '<style>'
+      + '#sgo-ov{position:fixed;inset:0;z-index:100005;background:#0f0d23;color:#fff;display:flex;flex-direction:column;font-family:-apple-system,Segoe UI,Roboto,Arial;overflow:auto}'
+      + '#sgo-ov .sgo-hd{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 12px;border-bottom:1px solid #2d2960;position:sticky;top:0;background:#0f0d23;z-index:2}'
+      + '#sgo-ov .sgo-hd b{flex:1;font-size:17px}'
+      + '#sgo-ov .sgo-close{background:none;border:none;color:#8b89b8;font-size:26px;cursor:pointer}'
+      + '#sgo-ov .sgo-body{padding:14px 16px 30px}'
+      + '#sgo-ov .sgo-row{display:flex;align-items:center;gap:10px;background:#191536;border-radius:12px;padding:11px 12px;margin-bottom:8px}'
+      + '#sgo-ov .sgo-nm{flex:1;font-weight:700;font-size:14px}'
+      + '#sgo-ov .sgo-nm span{display:block;font-weight:400;font-size:11.5px;color:#8b89b8;margin-top:2px}'
+      + '#sgo-ov .sgo-q{display:flex;align-items:center;gap:8px}'
+      + '#sgo-ov .sgo-q button{width:30px;height:30px;border-radius:50%;border:none;background:#312e81;color:#fff;font-size:17px;font-weight:800;cursor:pointer}'
+      + '#sgo-ov .sgo-lt{font-family:ui-monospace,monospace;font-weight:800;min-width:58px;text-align:right}'
+      + '#sgo-ov .sgo-total{display:flex;justify-content:space-between;align-items:baseline;padding:14px 4px;border-top:1px dashed #2d2960;margin-top:6px;font-size:15px}'
+      + '#sgo-ov .sgo-total b{font-size:26px;font-family:ui-monospace,monospace;color:#FBBF24}'
+      + '#sgo-ov .sgo-btn{width:100%;margin-top:9px;padding:15px;border:none;border-radius:13px;font-weight:800;font-size:15px;cursor:pointer;background:#312e81;color:#fff}'
+      + '#sgo-ov .sgo-go{background:linear-gradient(135deg,#6366F1,#4338ca)}'
+      + '#sgo-ov .sgo-shop{width:100%;margin-bottom:9px;padding:16px;border:none;border-radius:13px;background:#191536;color:#fff;font-weight:800;font-size:15px;text-align:left;cursor:pointer}'
+      + '#sgo-ov .sgo-empty{text-align:center;color:#8b89b8;padding:44px 10px;font-size:15px;line-height:1.7}'
+      + '#sgo-ov .sgo-empty span{font-size:12.5px}'
+      + '#sgo-ov .sgo-code{font-family:ui-monospace,monospace;font-size:42px;font-weight:900;color:#FBBF24;text-align:center;letter-spacing:3px;margin:22px 0 6px}'
+      + '#sgo-ov .sgo-qrbox{background:#fff;border-radius:16px;padding:14px;width:212px;margin:10px auto}'
+      + '#sgo-ov .sgo-qrbox img{width:184px;height:184px;display:block}'
+      + '#sgo-ov .sgo-note{text-align:center;color:#c7d2fe;font-size:13px;line-height:1.6;margin-top:16px;padding:0 10px}'
+      + '</style>'
+      + '<div class="sgo-hd"><b>' + title + '</b><button class="sgo-close">×</button></div>'
+      + '<div class="sgo-body">' + inner + '</div>';
+    document.body.appendChild(ov);
+    ov.querySelector('.sgo-close').onclick = function () { ov.remove(); };
+    return ov;
+  }
+})();
+
+
+/* ═══ Public receipt view — customer scanned the till's QR, no app account needed ═══ */
+(function(){
+  var m=(location.search||'').match(/[?&]r=([^&]+)/);
+  if(!m) return;
+  var ref=decodeURIComponent(m[1]);
+  function show(html){
+    var ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;z-index:100020;background:#FAF7F2;overflow:auto;font-family:-apple-system,Segoe UI,Roboto,Arial;padding:18px';
+    ov.innerHTML=html;
+    document.body.appendChild(ov);
+  }
+  function esc(s){return String(s==null?'':s).replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c]})}
+  setTimeout(function(){
+    if(typeof get!=='function') return;
+    get('receipts','receipt_no=eq.'+encodeURIComponent(ref)+'&limit=1').then(function(d){
+      var r=Array.isArray(d)&&d[0];
+      if(!r){ show('<div style="max-width:420px;margin:40px auto;text-align:center;color:#5a5772"><div style="font-size:38px">🧾</div><div style="font-weight:800;margin-top:8px">Receipt not found</div><div style="font-size:13px;margin-top:6px">Reference '+esc(ref)+'</div></div>'); return; }
+      var items='';
+      try{
+        var arr=typeof r.items==='string'&&r.items.charAt(0)==='['?JSON.parse(r.items):null;
+        if(arr) items=arr.map(function(i){
+          return '<div style="display:flex;justify-content:space-between;padding:5px 0"><span>'+esc(i.name)+(i.qty>1?' ×'+i.qty:'')+'</span><b>£'+((i.price||0)*(i.qty||1)).toFixed(2)+'</b></div>';
+        }).join('');
+        else items='<div style="padding:5px 0;white-space:pre-wrap">'+esc(r.items||'')+'</div>';
+      }catch(e){ items='<div style="padding:5px 0">'+esc(r.items||'')+'</div>'; }
+      show('<div style="max-width:420px;margin:0 auto;background:#fff;border-radius:16px;padding:22px;box-shadow:0 3px 16px rgba(20,18,31,.09)">'
+        +'<div style="text-align:center;border-bottom:1px dashed #ddd6c8;padding-bottom:14px">'
+        +'<div style="font-weight:800;font-size:18px;letter-spacing:.06em">'+esc(r.shop_name||r.merchant_name||'Your shop')+'</div>'
+        +'<div style="font-size:12px;color:#8a8598;margin-top:4px">'+new Date(Number(r.created_at)||Date.now()).toLocaleString('en-GB')+'</div></div>'
+        +'<div style="font-family:ui-monospace,monospace;font-size:13.5px;padding:14px 0;color:#3f3d56">'+items+'</div>'
+        +'<div style="display:flex;justify-content:space-between;border-top:1px dashed #ddd6c8;padding-top:12px;font-family:ui-monospace,monospace;font-size:19px;font-weight:900"><span>TOTAL</span><span>£'+parseFloat(r.total||0).toFixed(2)+'</span></div>'
+        +'<div style="font-family:ui-monospace,monospace;font-size:11px;color:#8a8598;text-align:center;margin-top:12px">'+esc(r.receipt_no||ref)+'</div>'
+        +'<button onclick="window.print()" style="width:100%;margin-top:18px;padding:14px;border:none;border-radius:12px;background:#1e1b4b;color:#fff;font-weight:800;font-size:15px;cursor:pointer">⬇️ Save / Print this receipt</button>'
+        +'<a href="https://stashlo.com" style="display:block;text-align:center;margin-top:12px;color:#6366F1;font-weight:800;font-size:13.5px;text-decoration:none">💜 Keep all your receipts — join Stashlo free</a>'
+        +'</div>');
+    }).catch(function(){});
+  },900);
 })();
 
 </script>
