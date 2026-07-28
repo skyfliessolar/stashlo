@@ -727,6 +727,12 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:#6366F1!import
 /* gold focus ring everywhere = the Figma selection language */
 :focus-visible{outline:3px solid var(--f-gold)!important;outline-offset:2px}
 </style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6366F1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
 
@@ -1119,7 +1125,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:#6366F1!import
         <button onclick="openBackOfficeDrawer()" style="flex:1;background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:800;cursor:pointer">🏢 Back Office</button>
       </div>
             <div style="margin:0 16px;background:var(--white);border-radius:16px;padding:14px;box-shadow:var(--sh)">
-        <div id="pos-cx-banner" style="background:linear-gradient(135deg,#1e1b4b,#4338ca);border-radius:14px;padding:11px 14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between"><div><div id="pos-cx-name" style="color:#fff;font-size:13px;font-weight:800">👤 No customer</div><div id="pos-cx-pts" style="color:rgba(255,255,255,.7);font-size:11px;margin-top:1px">Scan for loyalty points</div></div><div style="display:flex;gap:5px"><button onclick="posScanCustQR()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:9px;padding:7px 11px;font-size:12px;font-weight:800;cursor:pointer">📷</button><button onclick="posTypeCustId()" style="background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:9px;padding:7px 10px;font-size:12px;cursor:pointer">⌨️</button><button id="pos-cx-clr" onclick="clearTillCX()" style="display:none;background:#ef4444;color:#fff;border:none;border-radius:9px;padding:7px 9px;font-size:12px;cursor:pointer">✕</button></div></div>
+        <div id="pos-cx-banner" style="background:linear-gradient(135deg,#1e1b4b,#4338ca);border-radius:14px;padding:11px 14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between"><div><div id="pos-cx-name" style="color:#fff;font-size:13px;font-weight:800">👤 No customer</div><div id="pos-cx-pts" style="color:rgba(255,255,255,.7);font-size:11px;margin-top:1px">Scan for loyalty points</div></div><div style="display:flex;gap:5px"><button onclick="posScanCustQR()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:9px;padding:7px 11px;font-size:12px;font-weight:800;cursor:pointer">📷</button><button class="sl-btn" style="background:#0891b2;color:#fff" onclick="posLoadCustomerBasket()" title="Load a customer's scanned basket">🛒 Their basket</button><button onclick="posTypeCustId()" style="background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:9px;padding:7px 10px;font-size:12px;cursor:pointer">⌨️</button><button id="pos-cx-clr" onclick="clearTillCX()" style="display:none;background:#ef4444;color:#fff;border:none;border-radius:9px;padding:7px 9px;font-size:12px;cursor:pointer">✕</button></div></div>
         <div style="font-size:13px;font-weight:800;margin-bottom:8px">🧺 Basket</div>
         <div id="pos-basket"><div style="color:var(--ink3);font-size:13px;text-align:center;padding:8px">Tap products to add</div></div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
@@ -5146,6 +5152,124 @@ try{
     }
   });
 })();
+
+</script>
+<script>
+/* ═══ MERCHANT: pull in a customer's Scan & Go basket ═══ */
+function posLoadCustomerBasket(){
+  var html='<div style="font-size:17px;font-weight:800;margin-bottom:6px">🛒 Customer basket</div>'
+    +'<div style="font-size:12.5px;color:#64748b;margin-bottom:14px">The customer scanned their own shopping. Scan their code, or type it.</div>'
+    +'<button id="cb-scan" style="width:100%;padding:15px;border:none;border-radius:12px;background:#0f172a;color:#fff;font-weight:800;font-size:15px;cursor:pointer">📷 Scan their code</button>'
+    +'<div style="text-align:center;font-size:12px;color:#94a3b8;margin:10px 0">or type it</div>'
+    +'<input id="cb-code" placeholder="SG-A7K2M9" autocapitalize="characters" style="width:100%;padding:14px;border:2px solid #e2e8f0;border-radius:12px;font-size:19px;font-family:ui-monospace,monospace;text-align:center;letter-spacing:2px;text-transform:uppercase">'
+    +'<button id="cb-go" style="width:100%;margin-top:10px;padding:15px;border:none;border-radius:12px;background:linear-gradient(135deg,#6366F1,#4338ca);color:#fff;font-weight:800;font-size:15px;cursor:pointer">Load basket</button>'
+    +'<div id="cb-msg" style="font-size:13px;margin-top:10px;text-align:center"></div>';
+
+  if(typeof slModal==='function'){ slModal(html); }
+  else {
+    var ov=document.createElement('div');
+    ov.id='cb-ov';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(15,13,35,.72);z-index:99990;display:flex;align-items:center;justify-content:center;padding:20px';
+    ov.innerHTML='<div style="background:#fff;border-radius:18px;max-width:360px;width:100%;padding:20px;font-family:-apple-system,Segoe UI,Roboto,Arial">'+html
+      +'<button id="cb-x" style="width:100%;margin-top:8px;padding:12px;border:none;border-radius:10px;background:#e2e8f0;color:#334155;font-weight:700;cursor:pointer">Cancel</button></div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#cb-x').onclick=function(){ov.remove()};
+  }
+
+  setTimeout(function(){
+    var scanBtn=document.getElementById('cb-scan');
+    var goBtn=document.getElementById('cb-go');
+    if(scanBtn) scanBtn.onclick=function(){
+      if(typeof posScanCustQR==='function'){
+        window._CB_SCAN_MODE=true;   // reuse the existing scanner
+        posScanCustQR();
+      } else {
+        var c=prompt('Type the basket code:');
+        if(c) cbFetch(c);
+      }
+    };
+    if(goBtn) goBtn.onclick=function(){
+      var v=(document.getElementById('cb-code')||{}).value||'';
+      cbFetch(v.trim().toUpperCase());
+    };
+  },120);
+}
+
+function cbFetch(code){
+  var msg=document.getElementById('cb-msg');
+  function say(t,ok){ if(msg){msg.textContent=t;msg.style.color=ok?'#166534':'#b91c1c';} if(!ok&&typeof T==='function')T(t,'error'); }
+  if(!code){ say('Enter the code',false); return; }
+  if(code.indexOf('SG-')!==0) code='SG-'+code.replace(/^SG-?/i,'');
+  say('Looking up…',true);
+  get('scan_baskets','code=eq.'+encodeURIComponent(code)+'&limit=1').then(function(d){
+    var b=Array.isArray(d)&&d[0];
+    if(!b){ say('Code not found — check it and try again',false); return; }
+    if(b.status==='claimed'){ say('This basket has already been loaded',false); return; }
+    if(String(b.merchant_id)!==String(MID)){ say('That basket belongs to a different shop',false); return; }
+    var items=[];
+    try{ items=JSON.parse(b.items||'[]'); }catch(e){ items=[]; }
+    if(!items.length){ say('That basket is empty',false); return; }
+
+    items.forEach(function(i){
+      var ex=POS_BASKET.filter(function(x){return String(x.id)===String(i.id)})[0];
+      if(ex) ex.qty+=(i.qty||1);
+      else POS_BASKET.push({
+        id:i.id, name:i.name, price:parseFloat(i.price||0),
+        vat:parseFloat(i.vat||20), qty:i.qty||1, emoji:i.emoji||'',
+        cost:0, cat:i.cat||'general', no_loyalty:false
+      });
+    });
+    if(typeof renderBasket==='function') renderBasket();
+
+    // attach the customer so their points are added automatically
+    if(b.user_id && typeof attachTillCustomerById==='function'){ attachTillCustomerById(b.user_id); }
+    else if(b.user_id){
+      get('users','id=eq.'+b.user_id+'&limit=1').then(function(u){
+        var c=Array.isArray(u)&&u[0];
+        if(c){ window._TILL_CX=c; window._TILL_CX._REDEEM=0;
+          if(typeof renderTillCustomer==='function') renderTillCustomer(); }
+      }).catch(function(){});
+    }
+
+    pat('scan_baskets','code=eq.'+encodeURIComponent(code),{status:'claimed',claimed_at:Date.now()}).catch(function(){});
+    var ov=document.getElementById('cb-ov'); if(ov) ov.remove();
+    if(typeof closeModal==='function'){ try{closeModal();}catch(e){} }
+    if(typeof T==='function') T('🛒 '+items.length+' item'+(items.length===1?'':'s')+' loaded from the customer','success');
+  }).catch(function(e){ say('Could not load: '+((e&&e.message)||'error'),false); });
+}
+
+
+/* ═══ Receipt QR — for customers with no app and no printer ═══ */
+function showReceiptQR(receiptNo, totalAmt){
+  if(!receiptNo){ if(typeof T==='function')T('No receipt reference','error'); return; }
+  var url='https://stashlo.com/?r='+encodeURIComponent(receiptNo);
+  var qr='https://api.qrserver.com/v1/create-qr-code/?size=420x420&data='+encodeURIComponent(url);
+  var ov=document.createElement('div');
+  ov.id='rq-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(15,13,35,.85);z-index:99995;display:flex;align-items:center;justify-content:center;padding:18px';
+  var box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:20px;max-width:340px;width:100%;padding:22px;text-align:center;font-family:-apple-system,Segoe UI,Roboto,Arial';
+  var img=new Image();
+  img.src=qr; img.alt='Receipt QR'; img.style.cssText='width:200px;height:200px;display:block';
+  img.onerror=function(){ img.parentNode.innerHTML='<div style="font-family:ui-monospace,monospace;font-size:19px;font-weight:800;padding:30px 6px">'+receiptNo+'</div>'; };
+  var frame=document.createElement('div');
+  frame.style.cssText='background:#fff;border:2px solid #eee;border-radius:14px;padding:10px;margin:14px auto;width:224px';
+  frame.appendChild(img);
+  var h1=document.createElement('div'); h1.style.cssText='font-size:17px;font-weight:800;color:#14121F'; h1.textContent='Customer receipt';
+  var h2=document.createElement('div'); h2.style.cssText='font-size:13px;color:#64748b;margin-top:5px;line-height:1.5';
+  h2.textContent='Ask them to point their camera at this. No app needed.';
+  var tot=document.createElement('div'); tot.style.cssText='font-family:ui-monospace,monospace;font-size:24px;font-weight:900;color:#1e1b4b';
+  if(totalAmt!=null) tot.textContent='GBP '+parseFloat(totalAmt||0).toFixed(2);
+  var ref=document.createElement('div'); ref.style.cssText='font-family:ui-monospace,monospace;font-size:14px;color:#64748b;margin-top:6px'; ref.textContent=receiptNo;
+  var btn=document.createElement('button'); btn.textContent='Done';
+  btn.style.cssText='width:100%;margin-top:16px;padding:14px;border:none;border-radius:12px;background:#1e1b4b;color:#fff;font-weight:800;font-size:15px;cursor:pointer';
+  btn.onclick=function(){ ov.remove(); };
+  box.appendChild(h1); box.appendChild(h2); box.appendChild(frame);
+  if(totalAmt!=null) box.appendChild(tot);
+  box.appendChild(ref); box.appendChild(btn);
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+}
 
 </script>
 </body>
