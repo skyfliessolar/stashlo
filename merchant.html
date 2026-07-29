@@ -5272,5 +5272,396 @@ function showReceiptQR(receiptNo, totalAmt){
 }
 
 </script>
+<script>
+/* ═══════════ STASHLO PHOTO STUDIO ═══════════
+   Turns a phone snap taken under shop strip-lighting into a clean,
+   square, catalogue-consistent product image. All in the browser:
+   no API key, no cost, works offline.
+
+   What actually makes Amazon photos look good is not AI — it is
+   enforced consistency: square frame, neutral background, correct
+   exposure, product filling the frame, sharp. That is what this does. */
+(function () {
+  if (window.PSTUDIO) return;
+  var PS = window.PSTUDIO = {};
+
+  var SIZE = 1000;          // final square
+  var QUALITY = 0.87;
+
+  PS.process = function (file, opts, cb) {
+    opts = opts || {};
+    var fr = new FileReader();
+    fr.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        try { cb(null, PS.render(img, opts)); }
+        catch (e) { cb(e); }
+      };
+      img.onerror = function () { cb(new Error('Could not read that image')); };
+      img.src = fr.result;
+    };
+    fr.onerror = function () { cb(new Error('Could not read that file')); };
+    fr.readAsDataURL(file);
+  };
+
+  PS.render = function (img, opts) {
+    var c = document.createElement('canvas');
+    c.width = SIZE; c.height = SIZE;
+    var g = c.getContext('2d', { willReadFrequently: true });
+
+    // 1 ── square crop from the centre, then fit with a small margin
+    //      (product filling ~88% of frame is the catalogue convention)
+    var side = Math.min(img.width, img.height);
+    var sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, SIZE, SIZE);
+    var pad = opts.tight === false ? 0 : Math.round(SIZE * 0.06);
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(img, sx, sy, side, side, pad, pad, SIZE - pad * 2, SIZE - pad * 2);
+
+    var d = g.getImageData(0, 0, SIZE, SIZE);
+    var px = d.data;
+
+    if (opts.whiteBalance !== false) greyWorld(px);
+    if (opts.autoLevels !== false) autoLevels(px);
+    if (opts.cleanBg !== false) cleanEdges(px, SIZE, SIZE);
+    g.putImageData(d, 0, 0);
+    if (opts.sharpen !== false) sharpen(g, SIZE, SIZE, 0.55);
+
+    return {
+      dataUrl: c.toDataURL('image/jpeg', QUALITY),
+      canvas: c
+    };
+  };
+
+  // ── white balance: shop strip-lights make everything yellow/green ──
+  function greyWorld(px) {
+    var rs = 0, gs = 0, bs = 0, n = 0;
+    for (var i = 0; i < px.length; i += 40) { rs += px[i]; gs += px[i + 1]; bs += px[i + 2]; n++; }
+    var ra = rs / n, ga = gs / n, ba = bs / n;
+    var avg = (ra + ga + ba) / 3;
+    if (!ra || !ga || !ba) return;
+    var kr = avg / ra, kg = avg / ga, kb = avg / ba;
+    // hold the correction back so nothing looks alien
+    kr = 1 + (kr - 1) * 0.7; kg = 1 + (kg - 1) * 0.7; kb = 1 + (kb - 1) * 0.7;
+    for (var j = 0; j < px.length; j += 4) {
+      px[j] = clamp(px[j] * kr);
+      px[j + 1] = clamp(px[j + 1] * kg);
+      px[j + 2] = clamp(px[j + 2] * kb);
+    }
+  }
+
+  // ── auto levels: dim shop photos get their contrast back ──
+  function autoLevels(px) {
+    var hist = new Uint32Array(256), i;
+    for (i = 0; i < px.length; i += 4) {
+      var l = (px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114) | 0;
+      hist[l]++;
+    }
+    var total = px.length / 4, lo = 0, hi = 255, cut = total * 0.005, acc = 0;
+    for (i = 0; i < 256; i++) { acc += hist[i]; if (acc > cut) { lo = i; break; } }
+    acc = 0;
+    for (i = 255; i >= 0; i--) { acc += hist[i]; if (acc > cut) { hi = i; break; } }
+    if (hi - lo < 25) return;                 // already fine, leave it alone
+    var scale = 255 / (hi - lo);
+    for (i = 0; i < px.length; i += 4) {
+      px[i] = clamp((px[i] - lo) * scale);
+      px[i + 1] = clamp((px[i + 1] - lo) * scale);
+      px[i + 2] = clamp((px[i + 2] - lo) * scale);
+    }
+  }
+
+  // ── lift near-white edges to true white so backgrounds match across products ──
+  function cleanEdges(px, w, h) {
+    // sample the four corners; only act if the background really is plain
+    var samples = [], k;
+    function at(x, y) { return ((y * w + x) << 2); }
+    for (k = 0; k < 40; k++) {
+      samples.push(at(k, k), at(w - 1 - k, k), at(k, h - 1 - k), at(w - 1 - k, h - 1 - k));
+    }
+    var sum = 0, min = 255;
+    samples.forEach(function (i) {
+      var l = (px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114);
+      sum += l; if (l < min) min = l;
+    });
+    var avg = sum / samples.length;
+    if (avg < 190 || min < 150) return;       // busy background — don't touch it
+    var thr = Math.max(205, avg - 22);
+    for (var i = 0; i < px.length; i += 4) {
+      var l = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+      if (l >= thr) {
+        var t = Math.min(1, (l - thr) / (255 - thr) + 0.35);
+        px[i] = clamp(px[i] + (255 - px[i]) * t);
+        px[i + 1] = clamp(px[i + 1] + (255 - px[i + 1]) * t);
+        px[i + 2] = clamp(px[i + 2] + (255 - px[i + 2]) * t);
+      }
+    }
+  }
+
+  // ── unsharp mask ──
+  function sharpen(g, w, h, amount) {
+    var src = g.getImageData(0, 0, w, h);
+    var out = g.createImageData(w, h);
+    var s = src.data, o = out.data;
+    var kernel = [0, -1, 0, -1, 5, -1, 0, -1, 0];
+    for (var y = 1; y < h - 1; y++) {
+      for (var x = 1; x < w - 1; x++) {
+        for (var ch = 0; ch < 3; ch++) {
+          var sum = 0, ki = 0;
+          for (var ky = -1; ky <= 1; ky++) {
+            for (var kx = -1; kx <= 1; kx++) {
+              sum += s[(((y + ky) * w + (x + kx)) << 2) + ch] * kernel[ki++];
+            }
+          }
+          var idx = ((y * w + x) << 2) + ch;
+          o[idx] = clamp(s[idx] + (sum - s[idx]) * amount);
+        }
+        o[((y * w + x) << 2) + 3] = 255;
+      }
+    }
+    // copy the 1px border straight over
+    for (var i = 0; i < s.length; i += 4) {
+      if (o[i + 3] !== 255) { o[i] = s[i]; o[i + 1] = s[i + 1]; o[i + 2] = s[i + 2]; o[i + 3] = 255; }
+    }
+    g.putImageData(out, 0, 0);
+  }
+
+  function clamp(v) { return v < 0 ? 0 : v > 255 ? 255 : v; }
+
+  // ═══ before/after panel so the merchant chooses ═══
+  PS.review = function (file, onAccept) {
+    var ov = document.createElement('div');
+    ov.id = 'ps-ov';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,13,35,.9);z-index:99998;display:flex;align-items:center;justify-content:center;padding:16px;font-family:-apple-system,Segoe UI,Roboto,Arial';
+    ov.innerHTML = '<div style="background:#fff;border-radius:20px;max-width:400px;width:100%;padding:18px;max-height:94vh;overflow:auto">'
+      + '<div style="font-size:17px;font-weight:800;color:#14121F;text-align:center">✨ Tidy up this photo</div>'
+      + '<div style="font-size:12.5px;color:#64748b;text-align:center;margin-top:4px">Square, brightened and colour-corrected for the till</div>'
+      + '<div style="display:flex;gap:8px;margin-top:14px">'
+      + '<div style="flex:1;text-align:center"><div style="font-size:11px;font-weight:800;color:#8a8598;margin-bottom:5px">BEFORE</div>'
+      + '<img id="ps-before" style="width:100%;border-radius:11px;background:#f4f4f7;aspect-ratio:1;object-fit:cover"></div>'
+      + '<div style="flex:1;text-align:center"><div style="font-size:11px;font-weight:800;color:#166534;margin-bottom:5px">AFTER</div>'
+      + '<img id="ps-after" style="width:100%;border-radius:11px;background:#f4f4f7;aspect-ratio:1;object-fit:cover"></div>'
+      + '</div>'
+      + '<div id="ps-busy" style="text-align:center;font-size:13px;color:#64748b;margin-top:12px">Processing…</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">'
+      + '<button id="ps-orig" style="padding:13px;border:2px solid #e2e8f0;border-radius:11px;background:#fff;color:#334155;font-weight:800;font-size:14px;cursor:pointer">Use original</button>'
+      + '<button id="ps-use" style="padding:13px;border:none;border-radius:11px;background:linear-gradient(135deg,#6366F1,#4338ca);color:#fff;font-weight:800;font-size:14px;cursor:pointer">Use tidied ✨</button>'
+      + '</div>'
+      + '<button id="ps-cancel" style="width:100%;margin-top:8px;padding:11px;border:none;border-radius:10px;background:#f1f5f9;color:#64748b;font-weight:700;font-size:13px;cursor:pointer">Cancel</button>'
+      + '</div>';
+    document.body.appendChild(ov);
+
+    var beforeUrl = URL.createObjectURL(file);
+    document.getElementById('ps-before').src = beforeUrl;
+
+    PS.process(file, {}, function (err, res) {
+      var busy = document.getElementById('ps-busy');
+      if (err) { if (busy) busy.textContent = 'Could not process — use the original'; return; }
+      if (busy) busy.remove();
+      document.getElementById('ps-after').src = res.dataUrl;
+      document.getElementById('ps-use').onclick = function () {
+        ov.remove(); URL.revokeObjectURL(beforeUrl);
+        dataUrlToBlob(res.dataUrl, function (blob) { onAccept(blob, true); });
+      };
+    });
+    document.getElementById('ps-orig').onclick = function () { ov.remove(); URL.revokeObjectURL(beforeUrl); onAccept(file, false); };
+    document.getElementById('ps-cancel').onclick = function () { ov.remove(); URL.revokeObjectURL(beforeUrl); };
+  };
+
+  function dataUrlToBlob(u, cb) {
+    var parts = u.split(','), bstr = atob(parts[1]), n = bstr.length, arr = new Uint8Array(n);
+    while (n--) arr[n] = bstr.charCodeAt(n);
+    cb(new Blob([arr], { type: 'image/jpeg' }));
+  }
+  PS.toBlob = dataUrlToBlob;
+})();
+
+/* ═══════════ STASHLO SHOP THEMES ═══════════
+   The interface takes on the character of the trade: an ice cream shop
+   feels like an ice cream shop, a solar company feels like solar.
+   Pure CSS/SVG — no images to load, works offline, costs nothing.      */
+(function () {
+  if (window.STHEME) return;
+  var ST = window.STHEME = {};
+
+  ST.themes = {
+    retail: {
+      name: 'Corner shop', ink: '#1e1b4b', accent: '#6366F1', warm: '#FBBF24',
+      bg1: '#eef2ff', bg2: '#e0e7ff', motif: 'basket',
+      hello: 'Everything you need, round the corner'
+    },
+    icecream: {
+      name: 'Ice cream', ink: '#831843', accent: '#ec4899', warm: '#fde68a',
+      bg1: '#fff1f2', bg2: '#ffe4e6', motif: 'scoop',
+      hello: 'Two scoops or three?'
+    },
+    cafe: {
+      name: 'Café', ink: '#451a03', accent: '#b45309', warm: '#fcd34d',
+      bg1: '#fef7ed', bg2: '#fde9d0', motif: 'steam',
+      hello: 'Fresh from the machine'
+    },
+    restaurant: {
+      name: 'Restaurant', ink: '#450a0a', accent: '#dc2626', warm: '#fbbf24',
+      bg1: '#fef2f2', bg2: '#fee2e2', motif: 'cutlery',
+      hello: 'Book a table, skip the wait'
+    },
+    fuel: {
+      name: 'Forecourt', ink: '#0c4a6e', accent: '#0284c7', warm: '#38bdf8',
+      bg1: '#f0f9ff', bg2: '#e0f2fe', motif: 'road',
+      hello: 'Fill up, points on every litre'
+    },
+    solar: {
+      name: 'Solar', ink: '#14532d', accent: '#16a34a', warm: '#fde047',
+      bg1: '#f0fdf4', bg2: '#dcfce7', motif: 'panels',
+      hello: 'Power from your own roof'
+    },
+    car: {
+      name: 'Motors', ink: '#0f172a', accent: '#334155', warm: '#f59e0b',
+      bg1: '#f8fafc', bg2: '#e2e8f0', motif: 'road',
+      hello: 'Drive away happy'
+    },
+    barber: {
+      name: 'Barber', ink: '#1e1b4b', accent: '#0891b2', warm: '#f87171',
+      bg1: '#ecfeff', bg2: '#cffafe', motif: 'stripe',
+      hello: 'Chair free in ten minutes'
+    },
+    bakery: {
+      name: 'Bakery', ink: '#78350f', accent: '#d97706', warm: '#fcd34d',
+      bg1: '#fffbeb', bg2: '#fef3c7', motif: 'wheat',
+      hello: 'Baked this morning'
+    },
+    florist: {
+      name: 'Florist', ink: '#4a044e', accent: '#c026d3', warm: '#f9a8d4',
+      bg1: '#fdf4ff', bg2: '#fae8ff', motif: 'petal',
+      hello: 'Fresh cut, wrapped while you wait'
+    },
+    pharmacy: {
+      name: 'Pharmacy', ink: '#064e3b', accent: '#059669', warm: '#6ee7b7',
+      bg1: '#f0fdfa', bg2: '#ccfbf1', motif: 'cross',
+      hello: 'Advice from someone who knows'
+    }
+  };
+
+  // ── SVG motifs, drawn not downloaded ──
+  function motif(kind, c) {
+    var a = encodeURIComponent(c.accent), w = encodeURIComponent(c.warm);
+    var svg;
+    switch (kind) {
+      case 'scoop':
+        svg = '<circle cx="30" cy="26" r="16" fill="' + a + '" opacity=".16"/>'
+            + '<circle cx="58" cy="20" r="11" fill="' + w + '" opacity=".22"/>'
+            + '<path d="M14 44 L30 78 L46 44 Z" fill="' + a + '" opacity=".12"/>'; break;
+      case 'steam':
+        svg = '<path d="M20 60 q8 -18 0 -34" stroke="' + a + '" stroke-width="3" fill="none" opacity=".18"/>'
+            + '<path d="M34 62 q8 -22 0 -40" stroke="' + a + '" stroke-width="3" fill="none" opacity=".13"/>'
+            + '<rect x="8" y="62" width="40" height="20" rx="5" fill="' + a + '" opacity=".14"/>'; break;
+      case 'cutlery':
+        svg = '<rect x="22" y="14" width="4" height="52" rx="2" fill="' + a + '" opacity=".16"/>'
+            + '<rect x="52" y="14" width="4" height="52" rx="2" fill="' + a + '" opacity=".16"/>'
+            + '<circle cx="54" cy="20" r="9" fill="' + w + '" opacity=".18"/>'; break;
+      case 'road':
+        svg = '<rect x="0" y="36" width="80" height="10" fill="' + a + '" opacity=".10"/>'
+            + '<rect x="6" y="39" width="16" height="4" rx="2" fill="' + w + '" opacity=".30"/>'
+            + '<rect x="42" y="39" width="16" height="4" rx="2" fill="' + w + '" opacity=".30"/>'; break;
+      case 'panels':
+        svg = '<g opacity=".16"><rect x="10" y="26" width="26" height="18" rx="2" fill="' + a + '"/>'
+            + '<rect x="42" y="26" width="26" height="18" rx="2" fill="' + a + '"/>'
+            + '<rect x="10" y="48" width="26" height="18" rx="2" fill="' + a + '"/>'
+            + '<rect x="42" y="48" width="26" height="18" rx="2" fill="' + a + '"/></g>'
+            + '<circle cx="64" cy="14" r="8" fill="' + w + '" opacity=".35"/>'; break;
+      case 'wheat':
+        svg = '<path d="M40 74 L40 26" stroke="' + a + '" stroke-width="3" opacity=".18"/>'
+            + '<ellipse cx="32" cy="34" rx="6" ry="10" fill="' + w + '" opacity=".28" transform="rotate(-25 32 34)"/>'
+            + '<ellipse cx="48" cy="34" rx="6" ry="10" fill="' + w + '" opacity=".28" transform="rotate(25 48 34)"/>'
+            + '<ellipse cx="32" cy="50" rx="6" ry="10" fill="' + w + '" opacity=".22" transform="rotate(-25 32 50)"/>'
+            + '<ellipse cx="48" cy="50" rx="6" ry="10" fill="' + w + '" opacity=".22" transform="rotate(25 48 50)"/>'; break;
+      case 'petal':
+        svg = '<g opacity=".18"><ellipse cx="40" cy="26" rx="8" ry="14" fill="' + a + '"/>'
+            + '<ellipse cx="40" cy="54" rx="8" ry="14" fill="' + a + '"/>'
+            + '<ellipse cx="26" cy="40" rx="14" ry="8" fill="' + a + '"/>'
+            + '<ellipse cx="54" cy="40" rx="14" ry="8" fill="' + a + '"/></g>'
+            + '<circle cx="40" cy="40" r="7" fill="' + w + '" opacity=".4"/>'; break;
+      case 'cross':
+        svg = '<rect x="33" y="16" width="14" height="48" rx="3" fill="' + a + '" opacity=".15"/>'
+            + '<rect x="16" y="33" width="48" height="14" rx="3" fill="' + a + '" opacity=".15"/>'; break;
+      case 'stripe':
+        svg = '<rect x="30" y="8" width="20" height="64" rx="10" fill="' + a + '" opacity=".12"/>'
+            + '<path d="M30 20 L50 12 M30 36 L50 28 M30 52 L50 44 M30 68 L50 60" stroke="' + w + '" stroke-width="5" opacity=".3"/>'; break;
+      default:
+        svg = '<path d="M18 30 h44 l-5 34 h-34 Z" fill="' + a + '" opacity=".13"/>'
+            + '<path d="M30 30 q10 -16 20 0" stroke="' + a + '" stroke-width="3" fill="none" opacity=".2"/>';
+    }
+    return "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E"
+      + svg.replace(/</g, '%3C').replace(/>/g, '%3E').replace(/#/g, '%23').replace(/"/g, "'")
+      + "%3C/svg%3E\")";
+  }
+
+  ST.get = function (type) { return ST.themes[type] || ST.themes.retail; };
+
+  // ── apply a theme to the page ──
+  ST.apply = function (type, opts) {
+    opts = opts || {};
+    var c = ST.get(type);
+    var old = document.getElementById('stheme-css');
+    if (old) old.remove();
+    var s = document.createElement('style');
+    s.id = 'stheme-css';
+    s.textContent =
+      ':root{--th-ink:' + c.ink + ';--th-accent:' + c.accent + ';--th-warm:' + c.warm + ';--th-bg1:' + c.bg1 + ';--th-bg2:' + c.bg2 + '}'
+      + (opts.background === false ? '' :
+        'body{background-color:' + c.bg1 + ';background-image:' + motif(c.motif, c) + ';background-size:150px 150px;background-attachment:fixed}'
+        + '@media (prefers-reduced-motion:no-preference){body{animation:th-drift 70s linear infinite}}'
+        + '@keyframes th-drift{from{background-position:0 0}to{background-position:150px 300px}}')
+      + '.th-accent{color:' + c.accent + '!important}'
+      + '.th-btn{background:linear-gradient(135deg,' + c.accent + ',' + c.ink + ')!important;color:#fff!important}'
+      + '.th-chip{background:' + c.warm + ';color:' + c.ink + ';border-radius:20px;padding:3px 10px;font-weight:800;font-size:11px}'
+      + '.th-card{border-top:4px solid ' + c.accent + '}'
+      + '.th-hd{background:linear-gradient(150deg,' + c.ink + ',' + c.accent + ');color:#fff}';
+    document.head.appendChild(s);
+    ST.current = type;
+    return c;
+  };
+
+  // a small banner so the shop's character shows immediately
+  ST.header = function (shopName, type) {
+    var c = ST.get(type);
+    return '<div class="th-hd" style="border-radius:16px;padding:16px 18px;margin-bottom:12px;position:relative;overflow:hidden">'
+      + '<div style="position:absolute;inset:0;background-image:' + motif(c.motif, c) + ';background-size:110px 110px;opacity:.5"></div>'
+      + '<div style="position:relative"><div style="font-size:18px;font-weight:900">' + (shopName || c.name) + '</div>'
+      + '<div style="font-size:12.5px;opacity:.85;margin-top:3px">' + c.hello + '</div></div></div>';
+  };
+
+  ST.list = function () {
+    return Object.keys(ST.themes).map(function (k) { return { key: k, name: ST.themes[k].name }; });
+  };
+})();
+
+
+/* route every product photo through the studio */
+(function(){
+  var orig = window.mAddPhotos;
+  window.mAddPhotos = function(input){
+    var files=[].slice.call((input&&input.files)||[]);
+    if(!files.length) return;
+    if(!window.PSTUDIO || files.length>1){ return orig.call(this,input); }
+    PSTUDIO.review(files[0], function(blob){
+      var dt=new DataTransfer();
+      dt.items.add(new File([blob], (files[0].name||'photo').replace(/\.[^.]+$/,'')+'.jpg', {type:'image/jpeg'}));
+      var fake={files:dt.files};
+      orig.call(null, fake);
+    });
+  };
+})();
+/* the till wears the shop's own colours */
+(function(){
+  setTimeout(function(){
+    try{
+      var t=(typeof getShopType==='function')?getShopType():'retail';
+      if(window.STHEME) STHEME.apply(t,{background:false});
+    }catch(e){}
+  }, 2200);
+})();
+
+</script>
 </body>
 </html>
