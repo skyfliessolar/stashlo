@@ -1,3 +1,4 @@
+try{loadMerchantReview();}catch(e){}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2397,6 +2398,53 @@ function loadGiftAdmin(){
   });
 }
 
+
+// ═══ Merchant applications — approve before customers can see the shop ═══
+function loadMerchantReview(){
+  var host=document.getElementById('mrev-list');
+  if(!host){
+    var anchor=document.getElementById('shops-list')||document.body;
+    var wrap=document.createElement('div');
+    wrap.style.cssText='margin:12px 16px';
+    wrap.innerHTML='<div style="font-weight:800;margin-bottom:6px;font-size:14px">🏪 Shops awaiting approval</div><div id="mrev-list"></div>';
+    anchor.parentNode.insertBefore(wrap,anchor);
+    host=document.getElementById('mrev-list');
+  }
+  sget('merchants','status=eq.pending&order=created_at.desc&limit=50').then(function(d){
+    var rows=Array.isArray(d)?d:[];
+    window._MREV=rows;
+    if(!rows.length){host.innerHTML='<div style="font-size:12px;color:var(--ink3)">Nothing waiting — all shops reviewed.</div>';return}
+    host.innerHTML=rows.map(function(m){
+      return '<div style="padding:10px;background:var(--bg);border-radius:10px;margin-bottom:6px;font-size:12px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center">'
+        +'<b style="font-size:14px">'+(m.name||'Unnamed')+'</b>'
+        +'<span style="color:var(--ink3)">'+(m.email||'')+'</span></div>'
+        +'<div style="color:var(--ink3);margin-top:3px">'+(m.shop_type||'retail')+(m.address?' · '+m.address:'')+'</div>'
+        +'<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">'
+        +'<button class="sl-btn btn-xs btn-green" onclick="mrevApprove(\''+m.id+'\')">✅ Approve</button>'
+        +'<button class="sl-btn btn-xs" style="background:#7f1d1d;color:#fff" onclick="mrevReject(\''+m.id+'\')">✕ Reject</button>'
+        +'<button class="sl-btn btn-xs" style="background:#0e7490;color:#fff" onclick="mrevScanGo(\''+m.id+'\')">🛒 Allow Scan &amp; Go</button>'
+        +'</div></div>';
+    }).join('');
+  }).catch(function(e){ host.innerHTML='<div style="font-size:12px;color:var(--red)">Could not load: '+((e&&e.message)||'')+'</div>'; });
+}
+function mrevApprove(id){
+  spat('merchants','id=eq.'+id,{status:'approved',approved_at:Date.now()})
+    .then(function(){T('✅ Shop approved — customers can now see it','success');logAudit('merchant_approve',String(id));loadMerchantReview();})
+    .catch(function(e){T('Failed: '+((e&&e.message)||''),'error')});
+}
+function mrevReject(id){
+  if(!confirm('Reject this shop? Their till keeps working but customers will not see them.'))return;
+  spat('merchants','id=eq.'+id,{status:'rejected'})
+    .then(function(){T('Rejected','success');logAudit('merchant_reject',String(id));loadMerchantReview();})
+    .catch(function(){T('Failed','error')});
+}
+function mrevScanGo(id){
+  spat('merchants','id=eq.'+id,{scan_go:true,status:'approved'})
+    .then(function(){T('🛒 Scan & Go enabled for this shop','success');logAudit('merchant_scango',String(id));loadMerchantReview();})
+    .catch(function(){T('Failed','error')});
+}
+
 function loadClaimsAdmin(){
   sget('points_requests','order=created_at.desc&limit=100').then(d=>{
     const el=document.getElementById('acl-list');if(!el)return;
@@ -3307,6 +3355,168 @@ try{
       if (navigator.onLine === false) goOffline();
     }
   });
+})();
+
+</script>
+<script>
+/* ═══════════ STASHLO SHOP THEMES ═══════════
+   The interface takes on the character of the trade: an ice cream shop
+   feels like an ice cream shop, a solar company feels like solar.
+   Pure CSS/SVG — no images to load, works offline, costs nothing.      */
+(function () {
+  if (window.STHEME) return;
+  var ST = window.STHEME = {};
+
+  ST.themes = {
+    retail: {
+      name: 'Corner shop', ink: '#1e1b4b', accent: '#6366F1', warm: '#FBBF24',
+      bg1: '#eef2ff', bg2: '#e0e7ff', motif: 'basket',
+      hello: 'Everything you need, round the corner'
+    },
+    icecream: {
+      name: 'Ice cream', ink: '#831843', accent: '#ec4899', warm: '#fde68a',
+      bg1: '#fff1f2', bg2: '#ffe4e6', motif: 'scoop',
+      hello: 'Two scoops or three?'
+    },
+    cafe: {
+      name: 'Café', ink: '#451a03', accent: '#b45309', warm: '#fcd34d',
+      bg1: '#fef7ed', bg2: '#fde9d0', motif: 'steam',
+      hello: 'Fresh from the machine'
+    },
+    restaurant: {
+      name: 'Restaurant', ink: '#450a0a', accent: '#dc2626', warm: '#fbbf24',
+      bg1: '#fef2f2', bg2: '#fee2e2', motif: 'cutlery',
+      hello: 'Book a table, skip the wait'
+    },
+    fuel: {
+      name: 'Forecourt', ink: '#0c4a6e', accent: '#0284c7', warm: '#38bdf8',
+      bg1: '#f0f9ff', bg2: '#e0f2fe', motif: 'road',
+      hello: 'Fill up, points on every litre'
+    },
+    solar: {
+      name: 'Solar', ink: '#14532d', accent: '#16a34a', warm: '#fde047',
+      bg1: '#f0fdf4', bg2: '#dcfce7', motif: 'panels',
+      hello: 'Power from your own roof'
+    },
+    car: {
+      name: 'Motors', ink: '#0f172a', accent: '#334155', warm: '#f59e0b',
+      bg1: '#f8fafc', bg2: '#e2e8f0', motif: 'road',
+      hello: 'Drive away happy'
+    },
+    barber: {
+      name: 'Barber', ink: '#1e1b4b', accent: '#0891b2', warm: '#f87171',
+      bg1: '#ecfeff', bg2: '#cffafe', motif: 'stripe',
+      hello: 'Chair free in ten minutes'
+    },
+    bakery: {
+      name: 'Bakery', ink: '#78350f', accent: '#d97706', warm: '#fcd34d',
+      bg1: '#fffbeb', bg2: '#fef3c7', motif: 'wheat',
+      hello: 'Baked this morning'
+    },
+    florist: {
+      name: 'Florist', ink: '#4a044e', accent: '#c026d3', warm: '#f9a8d4',
+      bg1: '#fdf4ff', bg2: '#fae8ff', motif: 'petal',
+      hello: 'Fresh cut, wrapped while you wait'
+    },
+    pharmacy: {
+      name: 'Pharmacy', ink: '#064e3b', accent: '#059669', warm: '#6ee7b7',
+      bg1: '#f0fdfa', bg2: '#ccfbf1', motif: 'cross',
+      hello: 'Advice from someone who knows'
+    }
+  };
+
+  // ── SVG motifs, drawn not downloaded ──
+  function motif(kind, c) {
+    var a = encodeURIComponent(c.accent), w = encodeURIComponent(c.warm);
+    var svg;
+    switch (kind) {
+      case 'scoop':
+        svg = '<circle cx="30" cy="26" r="16" fill="' + a + '" opacity=".16"/>'
+            + '<circle cx="58" cy="20" r="11" fill="' + w + '" opacity=".22"/>'
+            + '<path d="M14 44 L30 78 L46 44 Z" fill="' + a + '" opacity=".12"/>'; break;
+      case 'steam':
+        svg = '<path d="M20 60 q8 -18 0 -34" stroke="' + a + '" stroke-width="3" fill="none" opacity=".18"/>'
+            + '<path d="M34 62 q8 -22 0 -40" stroke="' + a + '" stroke-width="3" fill="none" opacity=".13"/>'
+            + '<rect x="8" y="62" width="40" height="20" rx="5" fill="' + a + '" opacity=".14"/>'; break;
+      case 'cutlery':
+        svg = '<rect x="22" y="14" width="4" height="52" rx="2" fill="' + a + '" opacity=".16"/>'
+            + '<rect x="52" y="14" width="4" height="52" rx="2" fill="' + a + '" opacity=".16"/>'
+            + '<circle cx="54" cy="20" r="9" fill="' + w + '" opacity=".18"/>'; break;
+      case 'road':
+        svg = '<rect x="0" y="36" width="80" height="10" fill="' + a + '" opacity=".10"/>'
+            + '<rect x="6" y="39" width="16" height="4" rx="2" fill="' + w + '" opacity=".30"/>'
+            + '<rect x="42" y="39" width="16" height="4" rx="2" fill="' + w + '" opacity=".30"/>'; break;
+      case 'panels':
+        svg = '<g opacity=".16"><rect x="10" y="26" width="26" height="18" rx="2" fill="' + a + '"/>'
+            + '<rect x="42" y="26" width="26" height="18" rx="2" fill="' + a + '"/>'
+            + '<rect x="10" y="48" width="26" height="18" rx="2" fill="' + a + '"/>'
+            + '<rect x="42" y="48" width="26" height="18" rx="2" fill="' + a + '"/></g>'
+            + '<circle cx="64" cy="14" r="8" fill="' + w + '" opacity=".35"/>'; break;
+      case 'wheat':
+        svg = '<path d="M40 74 L40 26" stroke="' + a + '" stroke-width="3" opacity=".18"/>'
+            + '<ellipse cx="32" cy="34" rx="6" ry="10" fill="' + w + '" opacity=".28" transform="rotate(-25 32 34)"/>'
+            + '<ellipse cx="48" cy="34" rx="6" ry="10" fill="' + w + '" opacity=".28" transform="rotate(25 48 34)"/>'
+            + '<ellipse cx="32" cy="50" rx="6" ry="10" fill="' + w + '" opacity=".22" transform="rotate(-25 32 50)"/>'
+            + '<ellipse cx="48" cy="50" rx="6" ry="10" fill="' + w + '" opacity=".22" transform="rotate(25 48 50)"/>'; break;
+      case 'petal':
+        svg = '<g opacity=".18"><ellipse cx="40" cy="26" rx="8" ry="14" fill="' + a + '"/>'
+            + '<ellipse cx="40" cy="54" rx="8" ry="14" fill="' + a + '"/>'
+            + '<ellipse cx="26" cy="40" rx="14" ry="8" fill="' + a + '"/>'
+            + '<ellipse cx="54" cy="40" rx="14" ry="8" fill="' + a + '"/></g>'
+            + '<circle cx="40" cy="40" r="7" fill="' + w + '" opacity=".4"/>'; break;
+      case 'cross':
+        svg = '<rect x="33" y="16" width="14" height="48" rx="3" fill="' + a + '" opacity=".15"/>'
+            + '<rect x="16" y="33" width="48" height="14" rx="3" fill="' + a + '" opacity=".15"/>'; break;
+      case 'stripe':
+        svg = '<rect x="30" y="8" width="20" height="64" rx="10" fill="' + a + '" opacity=".12"/>'
+            + '<path d="M30 20 L50 12 M30 36 L50 28 M30 52 L50 44 M30 68 L50 60" stroke="' + w + '" stroke-width="5" opacity=".3"/>'; break;
+      default:
+        svg = '<path d="M18 30 h44 l-5 34 h-34 Z" fill="' + a + '" opacity=".13"/>'
+            + '<path d="M30 30 q10 -16 20 0" stroke="' + a + '" stroke-width="3" fill="none" opacity=".2"/>';
+    }
+    return "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E"
+      + svg.replace(/</g, '%3C').replace(/>/g, '%3E').replace(/#/g, '%23').replace(/"/g, "'")
+      + "%3C/svg%3E\")";
+  }
+
+  ST.get = function (type) { return ST.themes[type] || ST.themes.retail; };
+
+  // ── apply a theme to the page ──
+  ST.apply = function (type, opts) {
+    opts = opts || {};
+    var c = ST.get(type);
+    var old = document.getElementById('stheme-css');
+    if (old) old.remove();
+    var s = document.createElement('style');
+    s.id = 'stheme-css';
+    s.textContent =
+      ':root{--th-ink:' + c.ink + ';--th-accent:' + c.accent + ';--th-warm:' + c.warm + ';--th-bg1:' + c.bg1 + ';--th-bg2:' + c.bg2 + '}'
+      + (opts.background === false ? '' :
+        'body{background-color:' + c.bg1 + ';background-image:' + motif(c.motif, c) + ';background-size:150px 150px;background-attachment:fixed}'
+        + '@media (prefers-reduced-motion:no-preference){body{animation:th-drift 70s linear infinite}}'
+        + '@keyframes th-drift{from{background-position:0 0}to{background-position:150px 300px}}')
+      + '.th-accent{color:' + c.accent + '!important}'
+      + '.th-btn{background:linear-gradient(135deg,' + c.accent + ',' + c.ink + ')!important;color:#fff!important}'
+      + '.th-chip{background:' + c.warm + ';color:' + c.ink + ';border-radius:20px;padding:3px 10px;font-weight:800;font-size:11px}'
+      + '.th-card{border-top:4px solid ' + c.accent + '}'
+      + '.th-hd{background:linear-gradient(150deg,' + c.ink + ',' + c.accent + ');color:#fff}';
+    document.head.appendChild(s);
+    ST.current = type;
+    return c;
+  };
+
+  // a small banner so the shop's character shows immediately
+  ST.header = function (shopName, type) {
+    var c = ST.get(type);
+    return '<div class="th-hd" style="border-radius:16px;padding:16px 18px;margin-bottom:12px;position:relative;overflow:hidden">'
+      + '<div style="position:absolute;inset:0;background-image:' + motif(c.motif, c) + ';background-size:110px 110px;opacity:.5"></div>'
+      + '<div style="position:relative"><div style="font-size:18px;font-weight:900">' + (shopName || c.name) + '</div>'
+      + '<div style="font-size:12.5px;opacity:.85;margin-top:3px">' + c.hello + '</div></div></div>';
+  };
+
+  ST.list = function () {
+    return Object.keys(ST.themes).map(function (k) { return { key: k, name: ST.themes[k].name }; });
+  };
 })();
 
 </script>
