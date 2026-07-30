@@ -5663,5 +5663,275 @@ function showReceiptQR(receiptNo, totalAmt){
 })();
 
 </script>
+<script>
+/* ═══════════ SLFIX — scroll rescue + universal barcode scanner ═══════════ */
+(function () {
+  if (window.SLFIX) return;
+  var SLFIX = window.SLFIX = {};
+
+  /* ─────────── 1. SCROLL RESCUE ───────────
+     openModal() sets body.overflow:hidden. Any close path that isn't
+     closeModal() leaves the page frozen. This watchdog notices that no
+     modal is actually on screen and releases the lock.               */
+  // This shell deliberately locks <body> and scrolls .screen instead, so we must
+  // NOT clear body overflow. The real freeze is a stuck full-screen overlay, or
+  // a scroll container that something left locked.
+  function shellApp(){ return document.getElementById('app'); }
+
+  SLFIX.stuckOverlays = function(){
+    var ids = ['sgo-ov','sgo-cam','mapp-tb','mapp-bk','ercp-ov','ps-ov','cb-ov',
+               'rq-ov','cust-scan-ov','scan-ov','sl-scan-any'];
+    return ids.map(function(i){ return document.getElementById(i); }).filter(Boolean);
+  };
+
+  SLFIX.unfreeze = function(force){
+    var freed = false;
+    // 1. an overlay left behind with no way to close it
+    if (force) {
+      SLFIX.stuckOverlays().forEach(function(el){ el.remove(); freed = true; });
+      document.querySelectorAll('.modal.on').forEach(function(m){ m.classList.remove('on'); freed = true; });
+    }
+    // 2. the active screen must be able to scroll
+    var scr = document.querySelector('.screen.on') || document.querySelector('.screen');
+    if (scr) {
+      var cs = getComputedStyle(scr);
+      if (cs.overflowY !== 'auto' && cs.overflowY !== 'scroll') {
+        scr.style.overflowY = 'auto'; freed = true;
+      }
+      if (cs.pointerEvents === 'none') { scr.style.pointerEvents = 'auto'; freed = true; }
+    }
+    // 3. only touch <body> in apps that do NOT use the fixed flex shell
+    if (!shellApp()) {
+      var b = document.body, h = document.documentElement;
+      if (b.style.overflow === 'hidden' || h.style.overflow === 'hidden') {
+        b.style.overflow = ''; h.style.overflow = ''; freed = true;
+      }
+    } else if (force) {
+      // the shell keeps body fixed, but a modal may have added extra locks
+      if (document.body.style.touchAction === 'none') { document.body.style.touchAction = ''; freed = true; }
+    }
+    return freed;
+  };
+
+  // gentle watchdog: if nothing is genuinely open, make sure the screen scrolls
+  setInterval(function(){
+    if (SLFIX.stuckOverlays().length) return;          // a real overlay is open, leave it
+    if (document.querySelector('.modal.on')) return;
+    SLFIX.unfreeze(false);
+  }, 1500);
+
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) SLFIX.unfreeze(false); });
+  window.addEventListener('pageshow', function () { SLFIX.unfreeze(false); });
+
+  // Escape closes the top overlay and releases the lock
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var ids = ['sl-scan-any', 'sgo-cam', 'cust-scan-ov', 'scan-ov', 'ps-ov', 'ercp-ov',
+               'cb-ov', 'rq-ov', 'mapp-tb', 'mapp-bk', 'sgo-ov'];
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      if (el) { el.remove(); SLFIX.unfreeze(true); return; }
+    }
+    var m = document.querySelector('.modal.on');
+    if (m) { m.classList.remove('on'); SLFIX.unfreeze(true); }
+  });
+
+  // a visible escape hatch: tap the top-left corner three times to force-unfreeze
+  var taps = 0, tapTimer = null;
+  document.addEventListener('pointerdown', function (e) {
+    if (e.clientX > 70 || e.clientY > 70) return;
+    taps++;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(function () { taps = 0; }, 900);
+    if (taps >= 3) {
+      taps = 0;
+      var freed = SLFIX.unfreeze(true);
+      if (typeof T === 'function') T(freed ? '✅ Screen unstuck' : 'Screen was not stuck', 'success');
+    }
+  }, true);
+
+  // make closeModal forgiving: no id = close whatever is open
+  var origClose = window.closeModal;
+  window.closeModal = function (id) {
+    try {
+      if (id && typeof origClose === 'function') { origClose(id); }
+      else {
+        document.querySelectorAll('.modal.on').forEach(function (m) { m.classList.remove('on'); });
+      }
+    } catch (e) {
+      document.querySelectorAll('.modal.on').forEach(function (m) { m.classList.remove('on'); });
+    }
+    setTimeout(function () { SLFIX.unfreeze(false); }, 60);
+  };
+
+  /* ─────────── 2. UNIVERSAL BARCODE SCANNER ───────────
+     One scanner that can fill ANY input on ANY page:
+        SLFIX.scanInto('p-barcode')          → writes the code into that field
+        SLFIX.scan(function(code){ ... })    → do anything with the result
+     Handles: BarcodeDetector where it works, jsQR fallback for iOS,
+     torch toggle, manual typing, and it never leaves the screen locked. */
+
+  SLFIX.formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'codabar', 'qr_code'];
+
+  SLFIX.scan = function (onCode, opts) {
+    opts = opts || {};
+    var ov = document.createElement('div');
+    ov.id = 'sl-scan-any';
+    ov.style.cssText = 'position:fixed;inset:0;background:#000;z-index:100050;display:flex;flex-direction:column';
+    ov.innerHTML =
+      '<video id="sla-vid" autoplay playsinline muted style="flex:1;width:100%;height:100%;object-fit:cover"></video>'
+      + '<div style="position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center">'
+      + '<div style="width:78%;max-width:330px;height:150px;border:3px solid #34d399;border-radius:16px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div></div>'
+      + '<div style="position:absolute;top:calc(env(safe-area-inset-top,0px) + 20px);left:0;right:0;text-align:center;color:#fff;font:800 15px -apple-system,Segoe UI,Roboto,Arial;text-shadow:0 1px 4px rgba(0,0,0,.6)">'
+      + (opts.title || 'Line the barcode up inside the box') + '</div>'
+      + '<button id="sla-x" style="position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:14px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:21px;cursor:pointer">✕</button>'
+      + '<div style="position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);left:0;right:0;display:flex;gap:10px;justify-content:center;padding:0 16px">'
+      + '<button id="sla-torch" style="flex:1;max-width:150px;padding:13px;border:none;border-radius:11px;background:rgba(255,255,255,.22);color:#fff;font-weight:800;font-size:14px;cursor:pointer">🔦 Light</button>'
+      + '<button id="sla-type" style="flex:1;max-width:180px;padding:13px;border:none;border-radius:11px;background:#FBBF24;color:#151030;font-weight:900;font-size:14px;cursor:pointer">⌨️ Type it</button>'
+      + '</div>'
+      + '<div id="sla-note" style="position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);left:0;right:0;text-align:center;color:#c7d2fe;font-size:12px"></div>';
+    document.body.appendChild(ov);
+
+    var stream = null, raf = null, done = false, track = null;
+    function stop() {
+      done = true;
+      if (raf) cancelAnimationFrame(raf);
+      if (stream) { try { stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} }
+      var e2 = document.getElementById('sl-scan-any'); if (e2) e2.remove();
+      SLFIX.unfreeze(true);          // never leave the page frozen
+    }
+    SLFIX._stopScan = stop;
+    function got(raw) {
+      if (done) return;
+      var code = String(raw || '').trim();
+      if (!code) return;
+      if (navigator.vibrate) { try { navigator.vibrate(60); } catch (e) {} }
+      stop();
+      onCode(code);
+    }
+    function note(t) { var n = document.getElementById('sla-note'); if (n) n.textContent = t; }
+
+    document.getElementById('sla-x').onclick = stop;
+    document.getElementById('sla-type').onclick = function () {
+      stop();
+      var v = prompt(opts.typePrompt || 'Type the barcode or code:');
+      if (v) onCode(String(v).trim());
+    };
+    document.getElementById('sla-torch').onclick = function () {
+      if (!track) { note('No light on this camera'); return; }
+      try {
+        var on = !(track.getSettings && track.getSettings().torch);
+        track.applyConstraints({ advanced: [{ torch: on }] });
+        note(on ? 'Light on' : 'Light off');
+      } catch (e) { note('This phone will not let the app use the light'); }
+    };
+
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+    }).then(function (st) {
+      stream = st;
+      track = st.getVideoTracks && st.getVideoTracks()[0];
+      var v = document.getElementById('sla-vid');
+      if (!v) { stop(); return; }
+      v.srcObject = st; v.setAttribute('playsinline', ''); v.muted = true;
+      try { var pp = v.play(); if (pp && pp.catch) pp.catch(function () {}); } catch (e) {}
+
+      var det = null;
+      if (typeof window.BarcodeDetector === 'function') {
+        try { det = new BarcodeDetector({ formats: SLFIX.formats }); } catch (e) { det = null; }
+      }
+
+      if (det) {
+        var loop = function () {
+          if (done || !document.getElementById('sl-scan-any')) return;
+          det.detect(v).then(function (cs) {
+            if (cs && cs.length && cs[0].rawValue) { got(cs[0].rawValue); return; }
+            raf = requestAnimationFrame(loop);
+          }).catch(function () { raf = requestAnimationFrame(loop); });
+        };
+        loop();
+        setTimeout(loop, 1000);          // in case metadata already fired
+      } else {
+        note('Using backup scanner…');
+        var start = function () {
+          var cv = document.createElement('canvas');
+          var cx = cv.getContext('2d', { willReadFrequently: true });
+          var loop2 = function () {
+            if (done || !document.getElementById('sl-scan-any')) return;
+            if (v.readyState >= 2 && v.videoWidth) {
+              try {
+                // scan the middle band only — faster and far more reliable
+                var bw = Math.floor(v.videoWidth * 0.8), bh = Math.floor(v.videoHeight * 0.4);
+                cv.width = bw; cv.height = bh;
+                cx.drawImage(v, (v.videoWidth - bw) / 2, (v.videoHeight - bh) / 2, bw, bh, 0, 0, bw, bh);
+                var img = cx.getImageData(0, 0, bw, bh);
+                var r = window.jsQR && window.jsQR(img.data, img.width, img.height);
+                if (r && r.data) { got(r.data); return; }
+              } catch (e) {}
+            }
+            raf = requestAnimationFrame(loop2);
+          };
+          note('');
+          loop2();
+        };
+        if (window.jsQR) start();
+        else {
+          var s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js';
+          s.onload = start;
+          s.onerror = function () { note('Scanner needs internet — use Type it'); };
+          document.head.appendChild(s);
+        }
+      }
+    }).catch(function (err) {
+      stop();
+      var msg = location.protocol !== 'https:' && location.protocol !== 'file:'
+        ? 'Camera needs the secure site (stashlo.com)'
+        : (String(err && err.name) === 'NotAllowedError'
+            ? 'Camera blocked — allow it in browser settings'
+            : 'Camera not available');
+      if (typeof T === 'function') T(msg, 'error');
+      var v2 = prompt((opts.typePrompt || 'Type the barcode:') + '\n(' + msg + ')');
+      if (v2) onCode(String(v2).trim());
+    });
+  };
+
+  // fill any input on the page by scanning
+  SLFIX.scanInto = function (inputId, opts) {
+    SLFIX.scan(function (code) {
+      var el = document.getElementById(inputId);
+      if (!el) { if (typeof T === 'function') T('Field not found: ' + inputId, 'error'); return; }
+      el.value = code;
+      // let the app's own listeners react (search boxes, lookups, etc.)
+      ['input', 'change', 'keyup'].forEach(function (ev) {
+        try { el.dispatchEvent(new Event(ev, { bubbles: true })); } catch (e) {}
+      });
+      el.focus();
+      if (typeof T === 'function') T('📷 ' + code, 'success');
+      if (opts && typeof opts.then === 'function') opts.then(code, el);
+    }, opts);
+  };
+
+  /* ─── 3. put a scan button beside every barcode-ish field, automatically ─── */
+  SLFIX.decorate = function () {
+    var sel = 'input[id*="barcode" i], input[id*="scan" i], input[placeholder*="barcode" i], input[id*="ean" i]';
+    document.querySelectorAll(sel).forEach(function (inp) {
+      if (inp.dataset.slfixDone) return;
+      inp.dataset.slfixDone = '1';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = '📷';
+      b.title = 'Scan a barcode into this field';
+      b.setAttribute('aria-label', 'Scan a barcode');
+      b.style.cssText = 'margin-left:6px;padding:9px 12px;border:none;border-radius:9px;background:#1e1b4b;color:#fff;font-size:15px;cursor:pointer;vertical-align:middle;min-height:40px';
+      b.onclick = function (e) { e.preventDefault(); SLFIX.scanInto(inp.id || (inp.id = 'slfix-' + Math.random().toString(36).slice(2, 7))); };
+      if (inp.parentNode) inp.parentNode.insertBefore(b, inp.nextSibling);
+    });
+  };
+  setTimeout(SLFIX.decorate, 1800);
+  setInterval(SLFIX.decorate, 6000);      // covers fields added later
+})();
+
+</script>
 </body>
 </html>
